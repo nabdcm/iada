@@ -343,8 +343,14 @@ function PatientModal({ lang, patient, onSave, onClose }) {
             fontSize:15, fontWeight:700, cursor:"pointer",
             boxShadow:"0 4px 16px rgba(8,99,186,.25)", transition:"all .2s",
           }}
-            onMouseEnter={e=>{ e.target.style.background="#054a8c"; e.target.style.transform="translateY(-1px)"; }}
-            onMouseLeave={e=>{ e.target.style.background="#0863ba"; e.target.style.transform="translateY(0)"; }}
+            onMouseEnter={(e) => {
+  (e.currentTarget as HTMLButtonElement).style.background = "#054a8c";
+  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+}}
+onMouseLeave={(e) => {
+  (e.currentTarget as HTMLButtonElement).style.background = "#0863ba";
+  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+}}
           >
             {isEdit ? tr.modal.update : tr.modal.save}
           </button>
