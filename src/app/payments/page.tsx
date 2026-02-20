@@ -175,7 +175,19 @@ function PaymentModal({ lang, onSave, onClose }) {
     onSave({ ...form, patientId:Number(form.patientId), amount:parseFloat(form.amount), status: asPending?"pending":"paid" });
   };
 
-  const inputSt = { width:"100%",padding:"11px 14px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:14,color:"#353535",background:"#fafbfc",outline:"none",transition:"border .2s",direction:isAr?"rtl":"ltr" };
+  const inputSt: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 14px",
+  border: "1.5px solid #e8eaed",
+  borderRadius: 10,
+  fontFamily: "Rubik,sans-serif",
+  fontSize: 14,
+  color: "#353535",
+  background: "#fafbfc",
+  outline: "none",
+  transition: "border .2s",
+  direction: isAr ? "rtl" : "ltr"
+};
   const F = ({
   label,
   children,
