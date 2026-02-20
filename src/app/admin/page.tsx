@@ -334,9 +334,31 @@ const F = ({ label, children, half }: { label: any; children: React.ReactNode; h
           </div>
         </div>
         <div style={{ padding:"14px 26px 22px",display:"flex",gap:12,borderTop:"1.5px solid #eef0f3" }}>
-          <button onClick={handleSave} style={{ flex:1,padding:"12px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }} onMouseEnter={e=>e.target.style.background="#054a8c"} onMouseLeave={e=>e.target.style.background="#0863ba"}>
-            {isEdit?tr.modal.update:tr.modal.save}
-          </button>
+         <button
+  onClick={handleSave}
+  style={{
+    flex: 1,
+    padding: "12px",
+    background: "#0863ba",
+    color: "#fff",
+    border: "none",
+    borderRadius: 12,
+    fontFamily: "Rubik, sans-serif",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(8,99,186,.25)",
+    transition: "all .2s"
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background = "#054a8c";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "#0863ba";
+  }}
+>
+  {isEdit ? tr.modal.update : tr.modal.save}
+</button>
           <button onClick={onClose} style={{ padding:"12px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>{tr.modal.cancel}</button>
         </div>
       </div>
