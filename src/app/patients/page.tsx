@@ -213,6 +213,14 @@ function Sidebar({ lang, setLang, activePage = "patients" }) {
   );
 }
 
+// ─── Field Component (خارج Modal لمنع إعادة الإنشاء) ─────
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div style={{ marginBottom:18 }}>
+    <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{label}</label>
+    {children}
+  </div>
+);
+
 // ─── Modal إضافة/تعديل ───────────────────────────────────
 function PatientModal({ lang, patient, onSave, onClose }) {
   const tr = T[lang];
@@ -233,13 +241,6 @@ function PatientModal({ lang, patient, onSave, onClose }) {
     if (!form.name.trim() || !form.gender) { setError(tr.modal.required); return; }
     onSave({ ...patient, ...form, id: patient?.id });
   };
-
-  const Field = ({ label, children }) => (
-    <div style={{ marginBottom:18 }}>
-      <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{label}</label>
-      {children}
-    </div>
-  );
 
   const inputSt = useMemo((): React.CSSProperties => ({
     width: "100%",
