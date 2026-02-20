@@ -413,7 +413,7 @@ function ResetPassModal({ lang, clinic, onClose }: ResetPassModalProps) {
 
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function AdminPage() {
-  const [lang, setLang]         = useState("ar");
+  <span style={{ flex:1 }}>{v as string}</span> = useState<Lang>("ar");
   const isAr = lang==="ar";
   const tr = T[lang];
 
