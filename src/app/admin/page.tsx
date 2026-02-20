@@ -468,8 +468,15 @@ export default function AdminPage() {
   };
 
   const fmtDate = (d) => new Date(d).toLocaleDateString(isAr?"ar-SA":"en-US",{year:"numeric",month:"short",day:"numeric"});
-  const isExpiringSoon = (d) => { const diff=new Date(d)-new Date(); return diff>0&&diff<30*24*60*60*1000; };
-  const isExpired = (d) => new Date(d)<new Date();
+  const isExpiringSoon = (d: string) => {
+  const diff =
+    new Date(d).getTime() - new Date().getTime();
+  return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
+};
+
+const isExpired = (d: string) => {
+  return new Date(d).getTime() < new Date().getTime();
+};
 
   return (
     <>
