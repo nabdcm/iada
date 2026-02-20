@@ -555,9 +555,15 @@ export default function PatientsPage() {
                 </div>
                 {/* Filter chips */}
                 <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-                  {Object.entries(tr.filters).map(([k,v])=>(
-                    <button key={k} className={`filter-chip${filter===k?" active":""}`} onClick={()=>setFilter(k)}>{v}</button>
-                  ))}
+                  {Object.entries(tr.filters as Record<string, string>).map(([k, v]) => (
+  <button
+    key={k}
+    className={`filter-chip${filter===k ? " active" : ""}`}
+    onClick={() => setFilter(k)}
+  >
+    {v}
+  </button>
+))}
                 </div>
                 {/* Toggle hidden */}
                 <button
