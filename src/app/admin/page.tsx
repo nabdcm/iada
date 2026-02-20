@@ -221,7 +221,7 @@ function ClinicModal({
   outline: "none",
   transition: "border .2s",
   direction: isAr ? "rtl" : "ltr"
-}; width:"100%",padding:"10px 14px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fafbfc",outline:"none",transition:"border .2s",direction:isAr?"rtl":"ltr" };
+}; 
 const F = ({ label, children, half }: { label: any; children: React.ReactNode; half?: boolean }) => (
   <div style={{ marginBottom: 14, flex: half ? "1" : undefined }}>
     <label
