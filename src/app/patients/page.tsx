@@ -283,14 +283,14 @@ function PatientModal({ lang, patient, onSave, onClose }) {
             </div>
           )}
           <Field label={tr.modal.name}>
-            <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder={tr.modal.namePh} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
+            <input value={form.name} onChange={e=>setForm(prev=>({...prev,name:e.target.value}))} placeholder={tr.modal.namePh} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
           </Field>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
             <Field label={tr.modal.phone}>
-              <input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder={tr.modal.phonePh} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
+              <input value={form.phone} onChange={e=>setForm(prev=>({...prev,phone:e.target.value}))} placeholder={tr.modal.phonePh} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
             </Field>
             <Field label={tr.modal.gender}>
-              <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})} style={{ ...inputSt, cursor: "pointer" }}>
+              <select value={form.gender} onChange={e=>setForm(prev=>({...prev,gender:e.target.value}))} style={{ ...inputSt, cursor: "pointer" }}>
                 <option value="">{tr.modal.selectGender}</option>
                 <option value="male">{tr.modal.male}</option>
                 <option value="female">{tr.modal.female}</option>
@@ -298,7 +298,7 @@ function PatientModal({ lang, patient, onSave, onClose }) {
             </Field>
           </div>
           <Field label={tr.modal.dob}>
-            <input type="date" value={form.dob} onChange={e=>setForm({...form,dob:e.target.value})} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
+            <input type="date" value={form.dob} onChange={e=>setForm(prev=>({...prev,dob:e.target.value}))} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
           </Field>
           {/* Checkboxes */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:18 }}>
@@ -324,12 +324,12 @@ function PatientModal({ lang, patient, onSave, onClose }) {
                 }}>
                   {form[c.key] && <span style={{ color:"#fff",fontSize:10,fontWeight:900 }}>✓</span>}
                 </div>
-                <input type="checkbox" checked={form[c.key]} onChange={e=>setForm({...form,[c.key]:e.target.checked})} style={{ display:"none" }} />
+                <input type="checkbox" checked={form[c.key]} onChange={e=>setForm(prev=>({...prev,[c.key]:e.target.checked}))} style={{ display:"none" }} />
               </label>
             ))}
           </div>
           <Field label={tr.modal.notes}>
-            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.modal.notesPh} rows={3}
+            <textarea value={form.notes} onChange={e=>setForm(prev=>({...prev,notes:e.target.value}))} placeholder={tr.modal.notesPh} rows={3}
               style={{ ...inputSt, resize: "vertical", lineHeight: 1.6 }}
               onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"}
             />
