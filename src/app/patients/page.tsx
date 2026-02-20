@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 // ============================================================
 // NABD - نبض | Patients Page
@@ -150,14 +150,14 @@ function Sidebar({ lang, setLang, activePage = "patients" }) {
       }}>
         {!collapsed && (
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:38,height:38,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }}>💗</div>
+            <img src="/Logo_Nabd.svg" alt="NABD Logo" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }} />
             <div>
               <div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div>
               <div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div>
             </div>
           </div>
         )}
-        {collapsed && <div style={{ width:38,height:38,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💗</div>}
+        {collapsed && <img src="/Logo_Nabd.svg" alt="NABD Logo" style={{ width:38,height:38,borderRadius:10 }} />}
         {!collapsed && (
           <button onClick={()=>setCollapsed(!collapsed)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>
             {isAr ? "›" : "‹"}
@@ -241,19 +241,19 @@ function PatientModal({ lang, patient, onSave, onClose }) {
     </div>
   );
 
-  const inputSt: React.CSSProperties = {
-  width: "100%",
-  padding: "11px 14px",
-  border: "1.5px solid #e8eaed",
-  borderRadius: 10,
-  fontFamily: "Rubik,sans-serif",
-  fontSize: 14,
-  color: "#353535",
-  background: "#fafbfc",
-  outline: "none",
-  transition: "border .2s",
-  direction: isAr ? "rtl" : "ltr"
-};
+  const inputSt = useMemo((): React.CSSProperties => ({
+    width: "100%",
+    padding: "11px 14px",
+    border: "1.5px solid #e8eaed",
+    borderRadius: 10,
+    fontFamily: "Rubik,sans-serif",
+    fontSize: 14,
+    color: "#353535",
+    background: "#fafbfc",
+    outline: "none",
+    transition: "border .2s",
+    direction: isAr ? "rtl" : "ltr"
+  }), [isAr]);
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
