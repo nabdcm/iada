@@ -376,7 +376,9 @@ export default function PaymentsPage() {
     if (filter==="cash"    && p.method!=="cash")    return false;
     if (filter==="card"    && p.method!=="card")    return false;
     return true;
-  }).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  }).sort((a, b) =>
+  new Date(b.date).getTime() - new Date(a.date).getTime()
+);
 
   const pendingPayments = payments.filter(p=>p.status==="pending");
 
