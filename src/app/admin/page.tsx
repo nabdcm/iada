@@ -445,7 +445,11 @@ export default function AdminPage() {
     total:   clinics.length,
     active:  clinics.filter(c=>c.status==="active").length,
     users:   clinics.length,
-    expiring: clinics.filter(c=>{ const d=new Date(c.expiry); const n=new Date(); return (d-n)<30*24*60*60*1000&&d>n; }).length,
+    expiring: clinics.filter(c => {
+  const d = new Date(c.expiry).getTime();
+  const n = new Date().getTime();
+  return d > n && (d - n) < 30 * 24 * 60 * 60 * 1000;
+}).length,
   };
 
   const handleSave = (data) => {
