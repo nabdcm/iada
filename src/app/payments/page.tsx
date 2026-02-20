@@ -289,8 +289,6 @@ function PaymentModal({ lang, onSave, onClose }) {
     (e.currentTarget as HTMLButtonElement).style.background = "#2e7d32";
   }}
 >
-  {tr.modal.save}
-</button>
             {tr.modal.save}
           </button>
           <button onClick={()=>handleSave(true)} style={{ padding:"13px 16px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
