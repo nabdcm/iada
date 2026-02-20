@@ -569,8 +569,14 @@ export default function AppointmentsPage() {
                 {/* Today button */}
                 <button onClick={()=>{ setSelectedKey(todayKey); setViewMonth(now.getMonth()); setViewYear(now.getFullYear()); }}
                   style={{ width:"100%",padding:"11px",background:"#fff",color:"#0863ba",border:"1.5px solid #a4c4e4",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                  onMouseEnter={e=>{ e.target.style.background="#0863ba"; e.target.style.color="#fff"; }}
-                  onMouseLeave={e=>{ e.target.style.background="#fff"; e.target.style.color="#0863ba"; }}
+                  onMouseEnter={(e) => {
+  (e.currentTarget as HTMLButtonElement).style.background = "#0863ba";
+  (e.currentTarget as HTMLButtonElement).style.color = "#fff";
+}}
+onMouseLeave={(e) => {
+  (e.currentTarget as HTMLButtonElement).style.background = "#fff";
+  (e.currentTarget as HTMLButtonElement).style.color = "#0863ba";
+}}
                 >
                   🗓 {tr.today}
                 </button>
