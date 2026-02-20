@@ -636,7 +636,7 @@ export default function PaymentsPage() {
               <div>
                 {/* Chart */}
                 <div style={{ marginBottom:16 }}>
-                  <RevenueChart lang={lang}/>
+                  <RevenueChart lang={lang} months={tr.months} />
                 </div>
 
                 {/* Pending Dues */}
