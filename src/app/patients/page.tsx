@@ -290,7 +290,7 @@ function PatientModal({ lang, patient, onSave, onClose }) {
               <input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder={tr.modal.phonePh} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
             </Field>
             <Field label={tr.modal.gender}>
-              <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})} style={{ ...inputStyle, cursor:"pointer" }}>
+              <select value={form.gender} onChange={e=>setForm({...form,gender:e.target.value})} style={{ ...inputSt, cursor: "pointer" }}>
                 <option value="">{tr.modal.selectGender}</option>
                 <option value="male">{tr.modal.male}</option>
                 <option value="female">{tr.modal.female}</option>
