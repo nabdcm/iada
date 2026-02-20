@@ -413,21 +413,21 @@ function ResetPassModal({ lang, clinic, onClose }: ResetPassModalProps) {
 
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function AdminPage() {
-  <span style={{ flex:1 }}>{v as string}</span> = useState<Lang>("ar");
-  const isAr = lang==="ar";
+
+  const [lang, setLang] = useState<Lang>("ar");
+  const isAr = lang === "ar";
   const tr = T[lang];
 
   const [activeTab, setActiveTab] = useState("clinics");
-  const [clinics, setClinics]   = useState(INIT_CLINICS);
-  const [nextId, setNextId]     = useState(INIT_CLINICS.length+1);
-  const [search, setSearch]     = useState("");
-  const [filter, setFilter]     = useState("all");
-  const [addModal,  setAddModal]  = useState(false);
-  const [editClinic,setEditClinic]= useState(null);
-  const [deleteClinic,setDeleteClinic] = useState(null);
-  const [resetClinic,setResetClinic]   = useState(null);
-  const [openMenuId, setOpenMenuId]    = useState(null);
-
+  const [clinics, setClinics] = useState(INIT_CLINICS);
+  const [nextId, setNextId] = useState(INIT_CLINICS.length + 1);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [addModal, setAddModal] = useState(false);
+  const [editClinic, setEditClinic] = useState(null);
+  const [deleteClinic, setDeleteClinic] = useState(null);
+  const [resetClinic, setResetClinic] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
   useEffect(()=>{
     const h = ()=>setOpenMenuId(null);
     window.addEventListener("click",h);
