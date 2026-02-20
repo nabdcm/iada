@@ -176,7 +176,30 @@ function PaymentModal({ lang, onSave, onClose }) {
   };
 
   const inputSt = { width:"100%",padding:"11px 14px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:14,color:"#353535",background:"#fafbfc",outline:"none",transition:"border .2s",direction:isAr?"rtl":"ltr" };
-  const F = ({label,children,half})=>(<div style={{ marginBottom:16,flex:half?"1":undefined }}><label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{label}</label>{children}</div>);
+  const F = ({
+  label,
+  children,
+  half
+}: {
+  label: any;
+  children: React.ReactNode;
+  half?: boolean;
+}) => (
+  <div style={{ marginBottom: 16, flex: half ? "1" : undefined }}>
+    <label
+      style={{
+        display: "block",
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#555",
+        marginBottom: 7
+      }}
+    >
+      {label}
+    </label>
+    {children}
+  </div>
+);
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
