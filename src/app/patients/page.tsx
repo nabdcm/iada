@@ -330,7 +330,7 @@ function PatientModal({ lang, patient, onSave, onClose }) {
           </div>
           <Field label={tr.modal.notes}>
             <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.modal.notesPh} rows={3}
-              style={{ ...inputStyle, resize:"vertical", lineHeight:1.6 }}
+              style={{ ...inputSt, resize: "vertical", lineHeight: 1.6 }}
               onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"}
             />
           </Field>
