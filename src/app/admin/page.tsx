@@ -530,13 +530,13 @@ const isExpired = (d: string) => {
 
           {/* Nav */}
           <nav style={{ flex:1,padding:"16px 12px" }}>
-            {Object.entries(tr.nav).map(([k,v])=>{
+            {Object.entries(tr.nav).map(([k, v]) => {
               const icons = { clinics:"🏥", users:"👥", subscriptions:"💳", settings:"⚙️" };
               const isActive = activeTab===k;
               return (
                 <button key={k} onClick={()=>setActiveTab(k)} style={{ width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:10,marginBottom:4,border:"none",cursor:"pointer",background:isActive?"rgba(8,99,186,.15)":"transparent",color:isActive?"#a4c4e4":"#555",fontWeight:isActive?600:400,fontSize:13,fontFamily:"Rubik,sans-serif",transition:"all .18s",textAlign:isAr?"right":"left" }}>
                   <span style={{ fontSize:16 }}>{icons[k]}</span>
-                  <span style={{ flex:1 }}>{v}</span>
+                  <span style={{ flex:1 }}>{v as string}</span>
                   {k==="clinics"&&<span style={{ fontSize:11,background:"rgba(8,99,186,.2)",color:"#a4c4e4",padding:"2px 8px",borderRadius:20 }}>{clinics.length}</span>}
                 </button>
               );
