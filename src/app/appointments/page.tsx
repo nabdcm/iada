@@ -210,8 +210,19 @@ function AppointmentModal({ lang, appt, defaultDate, onSave, onClose, onStatusCh
     onSave({ ...appt, ...form, patientId:Number(form.patientId), duration:Number(form.duration) });
   };
 
-  const inputSt = { width:"100%",padding:"11px 14px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:14,color:"#353535",background:"#fafbfc",outline:"none",transition:"border .2s",direction:isAr?"rtl":"ltr" };
-const Field = ({
+const inputSt: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 14px",
+  border: "1.5px solid #e8eaed",
+  borderRadius: 10,
+  fontFamily: "Rubik,sans-serif",
+  fontSize: 14,
+  color: "#353535",
+  background: "#fafbfc",
+  outline: "none",
+  transition: "border .2s",
+  direction: isAr ? "rtl" : "ltr"
+};const Field = ({
   label,
   children,
   half
