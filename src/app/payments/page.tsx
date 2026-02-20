@@ -545,9 +545,15 @@ export default function PaymentsPage() {
                     {search&&<button onClick={()=>setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#bbb" }}>✕</button>}
                   </div>
                   <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-                    {Object.entries(tr.filter).map(([k,v])=>(
-                      <button key={k} className={`filter-chip${filter===k?" active":""}`} onClick={()=>setFilter(k)}>{v}</button>
-                    ))}
+                    {Object.entries(tr.filter as Record<string, string>).map(([k, v]) => (
+  <button
+    key={k}
+    className={`filter-chip${filter===k ? " active" : ""}`}
+    onClick={() => setFilter(k)}
+  >
+    {v}
+  </button>
+))}
                   </div>
                 </div>
 
