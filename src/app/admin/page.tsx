@@ -283,10 +283,34 @@ const F = ({ label, children, half }: { label: any; children: React.ReactNode; h
 
           {/* Credentials Section */}
           <div style={{ borderTop:"1.5px dashed #eee",paddingTop:16,marginTop:4 }}>
-            <button onClick={handleGenCreds} style={{ width:"100%",padding:"11px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px dashed rgba(8,99,186,.3)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(8,99,186,.1)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(8,99,186,.06)")}
-              🔑 {tr.modal.generateCredentials}
-            </button>
+            <button
+  onClick={handleGenCreds}
+  style={{
+    width: "100%",
+    padding: "11px",
+    background: "rgba(8,99,186,.06)",
+    color: "#0863ba",
+    border: "1.5px dashed rgba(8,99,186,.3)",
+    borderRadius: 10,
+    fontFamily: "Rubik, sans-serif",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all .2s",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background = "rgba(8,99,186,.1)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "rgba(8,99,186,.06)";
+  }}
+>
+  🔑 {tr.modal.generateCredentials}
+</button>
 
             {creds&&(
               <div style={{ marginTop:14,background:"#1a1a2e",borderRadius:12,padding:"16px",animation:"modalIn .2s ease" }}>
