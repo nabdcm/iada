@@ -241,13 +241,19 @@ function PatientModal({ lang, patient, onSave, onClose }) {
     </div>
   );
 
-  const inputStyle = {
-    width:"100%", padding:"11px 14px",
-    border:"1.5px solid #e8eaed", borderRadius:10,
-    fontFamily:"Rubik,sans-serif", fontSize:14, color:"#353535",
-    background:"#fafbfc", outline:"none", transition:"border .2s",
-    direction: isAr ? "rtl" : "ltr",
-  };
+  const inputSt: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 14px",
+  border: "1.5px solid #e8eaed",
+  borderRadius: 10,
+  fontFamily: "Rubik,sans-serif",
+  fontSize: 14,
+  color: "#353535",
+  background: "#fafbfc",
+  outline: "none",
+  transition: "border .2s",
+  direction: isAr ? "rtl" : "ltr"
+};
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
