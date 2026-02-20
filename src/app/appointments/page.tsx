@@ -586,7 +586,7 @@ onMouseLeave={(e) => {
                   {Object.entries(tr.statuses).map(([k,v])=>(
                     <div key={k} style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
                       <div style={{ width:12,height:12,borderRadius:3,background:tr.statusColors[k],flexShrink:0 }}/>
-                      <span style={{ fontSize:12,color:"#666" }}>{v}</span>
+                      <span style={{ fontSize:12,color:"#666" }}>{v as string}</span>
                     </div>
                   ))}
                 </div>
