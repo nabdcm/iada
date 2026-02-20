@@ -266,12 +266,31 @@ function PaymentModal({ lang, onSave, onClose }) {
         </div>
         {/* Footer */}
         <div style={{ padding:"14px 26px 22px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3" }}>
-          <button onClick={()=>handleSave(false)} style={{ flex:1,padding:"13px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }} onMouseEnter={(e) => {
-  (e.currentTarget as HTMLButtonElement).style.background = "#1b5e20";
-}}
-onMouseLeave={(e) => {
-  (e.currentTarget as HTMLButtonElement).style.background = "#2e7d32";
-}}
+          <button
+  onClick={() => handleSave(false)}
+  style={{
+    flex: 1,
+    padding: "13px",
+    background: "#2e7d32",
+    color: "#fff",
+    border: "none",
+    borderRadius: 12,
+    fontFamily: "Rubik,sans-serif",
+    fontSize: 15,
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(46,125,50,.25)",
+    transition: "all .2s"
+  }}
+  onMouseEnter={(e) => {
+    (e.currentTarget as HTMLButtonElement).style.background = "#1b5e20";
+  }}
+  onMouseLeave={(e) => {
+    (e.currentTarget as HTMLButtonElement).style.background = "#2e7d32";
+  }}
+>
+  {tr.modal.save}
+</button>
             {tr.modal.save}
           </button>
           <button onClick={()=>handleSave(true)} style={{ padding:"13px 16px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
