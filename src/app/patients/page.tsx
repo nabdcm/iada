@@ -777,8 +777,15 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
                     {/* DOB */}
                     <div style={{ fontSize:12,color:"#888",paddingLeft:8 }}>
                       {p.date_of_birth
-  ? new Date(p.date_of_birth).toLocaleDateString(...)
-  : "—"}.toLocaleDateString(lang==="ar"?"ar-SA":"en-US",{year:"numeric",month:"short",day:"numeric"}) : "—"}
+  ? new Date(p.date_of_birth).toLocaleDateString(
+      lang === "ar" ? "ar-SA" : "en-US",
+      {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }
+    )
+  : "—"}
                     </div>
 
                     {/* Conditions */}
