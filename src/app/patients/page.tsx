@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
+import type { Patient } from "@/lib/supabase";
 
 // ============================================================
 // NABD - نبض | Patients Page
@@ -105,18 +107,9 @@ const T = {
   },
 };
 
-// ─── بيانات تجريبية ───────────────────────────────────────
-const INITIAL_PATIENTS = [
-  { id: 1, name: "Ahmed Ali / أحمد علي",      phone: "0501234567", gender: "male",   dob: "1985-05-15", diabetes: false, hypertension: false, notes: "", hidden: false },
-  { id: 2, name: "Fatima Hassan / فاطمة حسن", phone: "0559876543", gender: "female", dob: "1992-11-20", diabetes: true,  hypertension: false, notes: "متابعة دورية", hidden: false },
-  { id: 3, name: "Khalid Othman / خالد عثمان",phone: "0543210987", gender: "male",   dob: "1978-03-10", diabetes: true,  hypertension: true,  notes: "", hidden: false },
-  { id: 4, name: "Mariam Salem / مريم سالم",  phone: "0567890123", gender: "female", dob: "2000-07-04", diabetes: false, hypertension: false, notes: "", hidden: false },
-  { id: 5, name: "Yousef Nasser / يوسف ناصر", phone: "0512345678", gender: "male",   dob: "1970-01-30", diabetes: false, hypertension: true,  notes: "حساسية من البنسلين", hidden: true  },
-];
-
 const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2980b9","#8e44ad"];
-const getColor = (id) => AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length];
-const getInitials = (name) => name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
+const getColor = (id: number) => AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length];
+const getInitials = (name: string) => name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
 
 // ─── Sidebar (مشتركة) ─────────────────────────────────────
 function Sidebar({ lang, setLang, activePage = "patients" }) {
@@ -398,16 +391,60 @@ export default function PatientsPage() {
   const isAr = lang === "ar";
   const tr = T[lang];
 
-  const [patients, setPatients] = useState(INITIAL_PATIENTS);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [showHidden, setShowHidden] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [addModal, setAddModal] = useState(false);
-  const [editPatient, setEditPatient] = useState(null);
-  const [deletePatient, setDeletePatient] = useState(null);
-  const [nextId, setNextId] = useState(INITIAL_PATIENTS.length + 1);
-  const [animIds, setAnimIds] = useState([]);
+  const [editPatient, setEditPatient] = useState<Patient | null>(null);
+  const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
+  const [animIds, setAnimIds] = useState<number[]>([]);
+
+  // جلب المرضى من Supabase
+  const loadPatients = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("User not authenticated");
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // تحويل أسماء الأعمدة من snake_case إلى camelCase
+      const formattedPatients = data.map(p => ({
+        id: p.id,
+        name: p.name,
+        phone: p.phone || "",
+        gender: p.gender || "",
+        dob: p.date_of_birth || "",
+        diabetes: p.has_diabetes,
+        hypertension: p.has_hypertension,
+        notes: p.notes || "",
+        hidden: p.is_hidden,
+      }));
+
+      setPatients(formattedPatients);
+    } catch (error) {
+      console.error("Error loading patients:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPatients();
+  }, []);
 
   // إغلاق القائمة عند الضغط خارجها
   useEffect(() => {
@@ -420,7 +457,7 @@ export default function PatientsPage() {
   const filtered = patients.filter(p => {
     if (!showHidden && p.hidden) return false;
     const q = search.toLowerCase();
-    if (q && !p.name.toLowerCase().includes(q) && !p.phone.includes(q)) return false;
+    if (q && !p.name.toLowerCase().includes(q) && !(p.phone || "").includes(q)) return false;
     if (filter === "male"        && p.gender !== "male")   return false;
     if (filter === "female"      && p.gender !== "female") return false;
     if (filter === "diabetic"    && !p.diabetes)           return false;
@@ -438,30 +475,114 @@ export default function PatientsPage() {
   };
 
   // حفظ (إضافة / تعديل)
-  const handleSave = (data) => {
-    if (data.id) {
-      setPatients(prev => prev.map(p => p.id===data.id ? { ...p, ...data } : p));
-    } else {
-      const id = nextId;
-      const newP = { ...data, id, hidden:false };
-      setPatients(prev => [newP, ...prev]);
-      setNextId(id + 1);
-      setAnimIds(prev => [...prev, id]);
-      setTimeout(() => setAnimIds(prev => prev.filter(x => x !== id)), 600);
+  const handleSave = async (data: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      if (data.id) {
+        // تعديل
+        const { error } = await supabase
+          .from('patients')
+          .update({
+            name: data.name,
+            phone: data.phone,
+            gender: data.gender,
+            date_of_birth: data.dob,
+            has_diabetes: data.diabetes,
+            has_hypertension: data.hypertension,
+            notes: data.notes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', data.id)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // إضافة
+        const { data: newPatient, error } = await supabase
+          .from('patients')
+          .insert({
+            user_id: user.id,
+            name: data.name,
+            phone: data.phone,
+            gender: data.gender,
+            date_of_birth: data.dob,
+            has_diabetes: data.diabetes,
+            has_hypertension: data.hypertension,
+            notes: data.notes,
+            is_hidden: false,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        // أنيميشن للصف الجديد
+        if (newPatient) {
+          setAnimIds(prev => [...prev, newPatient.id]);
+          setTimeout(() => setAnimIds(prev => prev.filter(x => x !== newPatient.id)), 600);
+        }
+      }
+
+      // إعادة تحميل البيانات
+      await loadPatients();
+    } catch (error) {
+      console.error("Error saving patient:", error);
+      alert(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving patient");
+    } finally {
+      setAddModal(false);
+      setEditPatient(null);
     }
-    setAddModal(false);
-    setEditPatient(null);
   };
 
   // حذف
-  const handleDelete = () => {
-    setPatients(prev => prev.filter(p => p.id !== deletePatient.id));
-    setDeletePatient(null);
+  const handleDelete = async () => {
+    if (!deletePatient) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', deletePatient.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await loadPatients();
+    } catch (error) {
+      console.error("Error deleting patient:", error);
+      alert(isAr ? "حدث خطأ أثناء الحذف" : "Error deleting patient");
+    } finally {
+      setDeletePatient(null);
+    }
   };
 
   // إخفاء / إظهار
-  const toggleHide = (id) => {
-    setPatients(prev => prev.map(p => p.id===id ? { ...p, hidden:!p.hidden } : p));
+  const toggleHide = async (id: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const patient = patients.find(p => p.id === id);
+      if (!patient) return;
+
+      const { error } = await supabase
+        .from('patients')
+        .update({ is_hidden: !patient.hidden })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // تحديث محلي
+      setPatients(prev => prev.map(p => p.id === id ? { ...p, hidden: !p.hidden } : p));
+    } catch (error) {
+      console.error("Error toggling hide:", error);
+    }
   };
 
   // عمر المريض
@@ -482,6 +603,7 @@ export default function PatientsPage() {
         @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes rowIn{from{opacity:0;transform:translateX(${isAr?"-":"+"}16px)}to{opacity:1;transform:translateX(0)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
         .main-anim{animation:fadeUp .4s ease both}
         .patient-row{transition:background .15s;border-bottom:1px solid #f0f2f5}
         .patient-row:last-child{border-bottom:none}
@@ -587,7 +709,12 @@ export default function PatientsPage() {
               </div>
 
               {/* Rows */}
-              {filtered.length === 0 ? (
+              {loading ? (
+                <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
+                  <div style={{ fontSize:40,marginBottom:12,animation:"spin 1s linear infinite" }}>⚙️</div>
+                  <div style={{ fontSize:15,fontWeight:600 }}>{isAr ? "جاري التحميل..." : "Loading..."}</div>
+                </div>
+              ) : filtered.length === 0 ? (
                 <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
                   <div style={{ fontSize:40,marginBottom:12 }}>🔍</div>
                   <div style={{ fontSize:15,fontWeight:600 }}>{search ? tr.noResults : tr.noPatients}</div>
