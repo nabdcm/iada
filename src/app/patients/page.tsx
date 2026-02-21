@@ -223,7 +223,7 @@ function PatientModal({ lang, patient, onSave, onClose }) {
     name: patient?.name || "",
     phone: patient?.phone || "",
     gender: patient?.gender || "",
-    dob: patient?.dob || "",
+    dob: patient?.date_of_birth || "",
     diabetes: patient?.has_diabetes || false,
     hypertension: patient?.has_hypertension || false,
     notes: patient?.notes || "",
@@ -428,7 +428,7 @@ export default function PatientsPage() {
   name: p.name,
   phone: p.phone,
   gender: p.gender,
-  dob: p.dob,
+  date_of_birth: p.date_of_birth,
   has_diabetes: p.has_diabetes,
   has_hypertension: p.has_hypertension,
   notes: p.notes,
@@ -581,7 +581,13 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
       if (error) throw error;
 
       // تحديث محلي
-      setPatients(prev => prev.map(p => p.id === id ? { ...p, hidden: !p.is_hidden } : p));
+      setPatients(prev =>
+  prev.map(p =>
+    p.id === id
+      ? { ...p, is_hidden: !p.is_hidden }
+      : p
+  )
+);
     } catch (error) {
       console.error("Error toggling hide:", error);
     }
@@ -749,7 +755,7 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
                           )}
                         </div>
                         <div style={{ fontSize:11,color:"#bbb",marginTop:2 }}>
-                          {calcAge(p.birth_date) !== "—" ? `${calcAge(p.birth_date)} ${isAr?"سنة":"yrs"}` : "—"}
+                          {calcAge(p.date_of_birth) !== "—" ? `${calcAge(p.date_of_birth)} ${isAr?"سنة":"yrs"}` : "—"}
                         </div>
                       </div>
                     </div>
@@ -770,7 +776,9 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
 
                     {/* DOB */}
                     <div style={{ fontSize:12,color:"#888",paddingLeft:8 }}>
-                      {p.dob ? new Date(p.dob).toLocaleDateString(lang==="ar"?"ar-SA":"en-US",{year:"numeric",month:"short",day:"numeric"}) : "—"}
+                      {p.date_of_birth
+  ? new Date(p.date_of_birth).toLocaleDateString(...)
+  : "—"}.toLocaleDateString(lang==="ar"?"ar-SA":"en-US",{year:"numeric",month:"short",day:"numeric"}) : "—"}
                     </div>
 
                     {/* Conditions */}
