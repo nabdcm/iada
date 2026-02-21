@@ -422,17 +422,19 @@ export default function PatientsPage() {
       if (error) throw error;
 
       // تحويل أسماء الأعمدة من snake_case إلى camelCase
-      const formattedPatients = data.map(p => ({
-        id: p.id,
-        name: p.name,
-        phone: p.phone || "",
-        gender: p.gender || "",
-        dob: p.date_of_birth || "",
-        diabetes: p.has_diabetes,
-        hypertension: p.has_hypertension,
-        notes: p.notes || "",
-        hidden: p.is_hidden,
-      }));
+      const formattedPatients: Patient[] = data.map((p) => ({
+  id: p.id,
+  user_id: p.user_id,
+  name: p.name,
+  phone: p.phone,
+  gender: p.gender,
+  dob: p.dob,
+  has_diabetes: p.has_diabetes,
+  has_hypertension: p.has_hypertension,
+  notes: p.notes,
+  is_hidden: p.is_hidden,
+  created_at: p.created_at,
+}));
 
       setPatients(formattedPatients);
     } catch (error) {
