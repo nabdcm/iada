@@ -224,8 +224,8 @@ function PatientModal({ lang, patient, onSave, onClose }) {
     phone: patient?.phone || "",
     gender: patient?.gender || "",
     dob: patient?.dob || "",
-    diabetes: patient?.diabetes || false,
-    hypertension: patient?.hypertension || false,
+    diabetes: patient?.has_diabetes || false,
+    hypertension: patient?.has_hypertension || false,
     notes: patient?.notes || "",
   });
   const [error, setError] = useState("");
@@ -297,8 +297,8 @@ function PatientModal({ lang, patient, onSave, onClose }) {
           {/* Checkboxes */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:18 }}>
             {[
-              { key:"diabetes",     label:tr.modal.diabetes,     icon:"🩸", color:"#c0392b" },
-              { key:"hypertension", label:tr.modal.hypertension, icon:"💊", color:"#e67e22" },
+              { key:"diabetes",     label:tr.modal.has_diabetes,     icon:"🩸", color:"#c0392b" },
+              { key:"hypertension", label:tr.modal.has_hypertension, icon:"💊", color:"#e67e22" },
             ].map(c => (
               <label key={c.key} style={{
                 display:"flex", alignItems:"center", gap:10,
@@ -473,7 +473,7 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
     total:      visibleAll.length,
     male:       visibleAll.filter(p=>p.gender==="male").length,
     female:     visibleAll.filter(p=>p.gender==="female").length,
-    diabetic:   visibleAll.filter(p=>p.diabetes).length,
+    diabetic:   visibleAll.filter(p=>p.has_diabetes).length,
   };
 
   // حفظ (إضافة / تعديل)
@@ -491,8 +491,8 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
             phone: data.phone,
             gender: data.gender,
             date_of_birth: data.dob,
-            has_diabetes: data.diabetes,
-            has_hypertension: data.hypertension,
+            has_diabetes: data.has_diabetes,
+            has_hypertension: data.has_hypertension,
             notes: data.notes,
             updated_at: new Date().toISOString(),
           })
@@ -510,8 +510,8 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
             phone: data.phone,
             gender: data.gender,
             date_of_birth: data.dob,
-            has_diabetes: data.diabetes,
-            has_hypertension: data.hypertension,
+            has_diabetes: data.has_diabetes,
+            has_hypertension: data.has_hypertension,
             notes: data.notes,
             is_hidden: false,
           })
@@ -574,7 +574,7 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
 
       const { error } = await supabase
         .from('patients')
-        .update({ is_hidden: !patient.hidden })
+        .update({ is_hidden: !patient.is_hidden })
         .eq('id', id)
         .eq('user_id', user.id);
 
@@ -745,7 +745,7 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
                         <div style={{ fontSize:14,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6 }}>
                           {p.name}
                           {p.is_hidden && (
-                            <span style={{ fontSize:10,background:"#f0f0f0",color:"#999",padding:"2px 7px",borderRadius:10,fontWeight:500 }}>{tr.hiddenBadge}</span>
+                            <span style={{ fontSize:10,background:"#f0f0f0",color:"#999",padding:"2px 7px",borderRadius:10,fontWeight:500 }}>{tr.is_hiddenBadge}</span>
                           )}
                         </div>
                         <div style={{ fontSize:11,color:"#bbb",marginTop:2 }}>
@@ -775,13 +775,13 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
 
                     {/* Conditions */}
                     <div style={{ display:"flex",gap:5,flexWrap:"wrap",paddingLeft:8 }}>
-                      {p.diabetes && (
-                        <span style={{ fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"rgba(192,57,43,.1)",color:"#c0392b" }}>🩸 {tr.conditions.diabetes}</span>
+                      {p.has_diabetes && (
+                        <span style={{ fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"rgba(192,57,43,.1)",color:"#c0392b" }}>🩸 {tr.conditions.has_diabetes}</span>
                       )}
-                      {p.hypertension && (
-                        <span style={{ fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"rgba(230,126,34,.1)",color:"#e67e22" }}>💊 {tr.conditions.hypertension}</span>
+                      {p.has_hypertension && (
+                        <span style={{ fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"rgba(230,126,34,.1)",color:"#e67e22" }}>💊 {tr.conditions.has_hypertension}</span>
                       )}
-                      {!p.diabetes && !p.hypertension && <span style={{ fontSize:12,color:"#ddd" }}>—</span>}
+                      {!p.has_diabetes && !p.has_hypertension && <span style={{ fontSize:12,color:"#ddd" }}>—</span>}
                     </div>
 
                     {/* Actions */}
