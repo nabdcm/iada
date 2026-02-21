@@ -749,7 +749,7 @@ if (filter === "hypertension" && !p.has_hypertension)   return false;
                           )}
                         </div>
                         <div style={{ fontSize:11,color:"#bbb",marginTop:2 }}>
-                          {calcAge(p.dob) !== "—" ? `${calcAge(p.dob)} ${isAr?"سنة":"yrs"}` : "—"}
+                          {calcAge(p.birth_date) !== "—" ? `${calcAge(p.birth_date)} ${isAr?"سنة":"yrs"}` : "—"}
                         </div>
                       </div>
                     </div>
