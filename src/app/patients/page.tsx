@@ -462,8 +462,8 @@ export default function PatientsPage() {
     if (q && !p.name.toLowerCase().includes(q) && !(p.phone || "").includes(q)) return false;
     if (filter === "male"        && p.gender !== "male")   return false;
     if (filter === "female"      && p.gender !== "female") return false;
-    if (filter === "diabetic"    && !p.diabetes)           return false;
-    if (filter === "hypertension"&& !p.hypertension)       return false;
+    if (filter === "diabetic"     && !p.has_diabetes)       return false;
+if (filter === "hypertension" && !p.has_hypertension)   return false;
     return true;
   });
 
