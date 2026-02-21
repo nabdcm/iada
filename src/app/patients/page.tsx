@@ -457,7 +457,7 @@ export default function PatientsPage() {
 
   // تصفية
   const filtered = patients.filter(p => {
-    if (!showHidden && p.hidden) return false;
+    if (!showHidden && p.is_hidden) return false;
     const q = search.toLowerCase();
     if (q && !p.name.toLowerCase().includes(q) && !(p.phone || "").includes(q)) return false;
     if (filter === "male"        && p.gender !== "male")   return false;
@@ -468,7 +468,7 @@ export default function PatientsPage() {
   });
 
   // إحصائيات
-  const visibleAll = patients.filter(p => !p.hidden);
+  const visibleAll = patients.filter(p => !p.is_hidden);
   const stats = {
     total:      visibleAll.length,
     male:       visibleAll.filter(p=>p.gender==="male").length,
@@ -581,7 +581,7 @@ export default function PatientsPage() {
       if (error) throw error;
 
       // تحديث محلي
-      setPatients(prev => prev.map(p => p.id === id ? { ...p, hidden: !p.hidden } : p));
+      setPatients(prev => prev.map(p => p.id === id ? { ...p, hidden: !p.is_hidden } : p));
     } catch (error) {
       console.error("Error toggling hide:", error);
     }
@@ -727,7 +727,7 @@ export default function PatientsPage() {
                     style={{
                       display:"grid", gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 110px",
                       gap:0, padding:"14px 20px", alignItems:"center",
-                      opacity: p.hidden ? 0.5 : 1,
+                      opacity: p.is_hidden ? 0.5 : 1,
                       animation: animIds.includes(p.id) ? "rowIn .4s ease" : undefined,
                     }}
                   >
@@ -744,7 +744,7 @@ export default function PatientsPage() {
                       <div>
                         <div style={{ fontSize:14,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6 }}>
                           {p.name}
-                          {p.hidden && (
+                          {p.is_hidden && (
                             <span style={{ fontSize:10,background:"#f0f0f0",color:"#999",padding:"2px 7px",borderRadius:10,fontWeight:500 }}>{tr.hiddenBadge}</span>
                           )}
                         </div>
@@ -791,8 +791,8 @@ export default function PatientsPage() {
                       {/* Edit */}
                       <button className="action-icon-btn" title={tr.actions.edit} onClick={()=>setEditPatient(p)}>✏️</button>
                       {/* Hide/Show */}
-                      <button className="action-icon-btn" title={p.hidden?tr.actions.show:tr.actions.hide} onClick={()=>toggleHide(p.id)}>
-                        {p.hidden?"👁":"🙈"}
+                      <button className="action-icon-btn" title={p.is_hidden?tr.actions.show:tr.actions.hide} onClick={()=>toggleHide(p.id)}>
+                        {p.is_hidden?"👁":"🙈"}
                       </button>
                       {/* More */}
                       <div style={{ position:"relative" }}>
@@ -817,7 +817,7 @@ export default function PatientsPage() {
 
             {/* Count */}
             <div style={{ textAlign:"center",marginTop:14,fontSize:12,color:"#bbb" }}>
-              {isAr ? `عرض ${filtered.length} من ${patients.filter(p=>showHidden||!p.hidden).length} مريض` : `Showing ${filtered.length} of ${patients.filter(p=>showHidden||!p.hidden).length} patients`}
+              {isAr ? `عرض ${filtered.length} من ${patients.filter(p=>showHidden||!p.is_hidden).length} مريض` : `Showing ${filtered.length} of ${patients.filter(p=>showHidden||!p.is_hidden).length} patients`}
             </div>
 
           </div>
