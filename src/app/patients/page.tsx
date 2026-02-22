@@ -130,7 +130,9 @@ function Sidebar({ lang, setLang, activePage = "patients" }: { lang: Lang; setLa
       borderLeft:  isAr ? "1.5px solid #eef0f3" : "none",
       display:"flex", flexDirection:"column",
       transition:"width .3s cubic-bezier(.4,0,.2,1)",
-      position:"fixed", top:0, [isAr?"right":"left"]:0,
+      position:"fixed", top:0,
+      right: isAr ? 0 : undefined,
+      left: isAr ? undefined : 0,
       zIndex:50, boxShadow:"4px 0 24px rgba(8,99,186,.06)",
     }}>
       {/* Logo */}
@@ -173,7 +175,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: { lang: Lang; setLa
               fontWeight: isActive ? 600 : 400, fontSize:14,
               transition:"all .18s", position:"relative",
             }}>
-              {isActive && <div style={{ position:"absolute",[isAr?"right":"left"]:-12,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }} />}
+              {isActive && <div style={{ position:"absolute", right: isAr ? -12 : undefined, left: isAr ? undefined : -12, top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }} />}
               <span style={{ fontSize:18, flexShrink:0 }}>{item.icon}</span>
               {!collapsed && <span>{tr.nav[item.key as keyof typeof tr.nav]}</span>}
             </a>
@@ -623,7 +625,7 @@ setPatients(formattedPatients);
       <div style={{ fontFamily:"'Rubik',sans-serif", direction:isAr?"rtl":"ltr", minHeight:"100vh", background:"#f7f9fc" }}>
         <Sidebar lang={lang} setLang={setLang} activePage="patients" />
 
-        <main className="main-anim" style={{ [isAr?"marginRight":"marginLeft"]:240, padding:"0 32px 48px", transition:"margin .3s" }}>
+        <main className="main-anim" style={{ marginRight: isAr ? 240 : undefined, marginLeft: isAr ? undefined : 240, padding:"0 32px 48px", transition:"margin .3s" }}>
 
           {/* ── TOP BAR ── */}
           <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
