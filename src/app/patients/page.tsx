@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient } from "@/lib/supabase";
 
@@ -116,6 +116,8 @@ const getInitials = (name: string) => name.split(" ").slice(0,2).map(w => w[0]).
 // ─── Sidebar (مشتركة) ─────────────────────────────────────
 function Sidebar({ lang, setLang, activePage = "patients" }: { lang: Lang; setLang: (l: Lang) => void; activePage?: string }) {
   const tr = T[lang as Lang];
+  const isAr = lang === "ar";
+  const [collapsed, setCollapsed] = useState(false);
   const navItems = [
     { key:"dashboard",    icon:"⊞", href:"/dashboard" },
     { key:"patients",     icon:"👥", href:"/patients"  },
@@ -209,7 +211,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: { lang: Lang; setLa
 }
 
 // ─── Field Component (خارج Modal لمنع إعادة الإنشاء) ─────
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div style={{ marginBottom:18 }}>
     <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{label}</label>
     {children}
@@ -218,7 +220,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 
 // ─── Modal إضافة/تعديل ───────────────────────────────────
 function PatientModal({ lang, patient, onSave, onClose }: { lang: Lang; patient: Patient | null; onSave: (data: Partial<Patient> & Record<string, unknown>) => void; onClose: () => void }) {
-  const tr = T[lang];
+  const tr = T[lang as Lang];
   const isAr = lang === "ar";
   const isEdit = !!patient?.id;
   const [form, setForm] = useState({
@@ -237,7 +239,7 @@ function PatientModal({ lang, patient, onSave, onClose }: { lang: Lang; patient:
     onSave({ ...patient, ...form, id: patient?.id });
   };
 
-  const inputSt = useMemo((): React.CSSProperties => ({
+  const inputSt = useMemo((): CSSProperties => ({
     width: "100%",
     padding: "11px 14px",
     border: "1.5px solid #e8eaed",
@@ -279,7 +281,7 @@ function PatientModal({ lang, patient, onSave, onClose }: { lang: Lang; patient:
             </div>
           )}
           <Field label={tr.modal.name}>
-            <input value={form.name} onChange={e=>setForm(prev=>({...prev,name:e.target.value}))} placeholder={tr.modal.namePh} style={inputSt} onFocus={e=>e.target.style.borderColor="#0863ba"} onBlur={e=>e.target.style.borderColor="#e8eaed"} />
+            <input value={form.name} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setForm(prev=>({...prev,name:e.target.value}))} placeholder={tr.modal.namePh} style={inputSt} onFocus={(e: React.FocusEvent<HTMLInputElement>)=>e.target.style.borderColor="#0863ba"} onBlur={(e: React.FocusEvent<HTMLInputElement>)=>e.target.style.borderColor="#e8eaed"} />
           </Field>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
             <Field label={tr.modal.phone}>
@@ -364,7 +366,7 @@ onMouseLeave={(e) => {
 
 // ─── Modal حذف ───────────────────────────────────────────
 function DeleteModal({ lang, patient, onConfirm, onClose }: { lang: Lang; patient: Patient | null; onConfirm: () => void; onClose: () => void }) {
-  const tr = T[lang];
+  const tr = T[lang as Lang];
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
       <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)" }} />
@@ -394,7 +396,7 @@ function DeleteModal({ lang, patient, onConfirm, onClose }: { lang: Lang; patien
 export default function PatientsPage() {
   const [lang, setLang] = useState<Lang>("ar");
   const isAr = lang === "ar";
-  const tr = T[lang];
+  const tr = T[lang as Lang];
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
