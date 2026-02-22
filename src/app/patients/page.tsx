@@ -602,7 +602,7 @@ export default function PatientsPage() {
         ::-webkit-scrollbar{width:5px}
         ::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
         @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
-        @keyframes rowIn{from{opacity:0;transform:translateX(${isAr?"-":"+"}16px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes rowIn{from{opacity:0;transform:translateX(${isAr ? "-16px" : "+16px"})}to{opacity:1;transform:translateX(0)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
         .main-anim{animation:fadeUp .4s ease both}
@@ -614,7 +614,7 @@ export default function PatientsPage() {
         .filter-chip{padding:7px 16px;border-radius:20px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;font-family:'Rubik',sans-serif;font-weight:500;color:#888;transition:all .2s;white-space:nowrap}
         .filter-chip.active{background:#0863ba;color:#fff;border-color:#0863ba}
         .filter-chip:hover:not(.active){border-color:#a4c4e4;color:#0863ba}
-        .dropdown-menu{position:absolute;top:calc(100% + 6px);${isAr?"left:0":"right:0"};background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);border:1.5px solid #eef0f3;min-width:160px;z-index:100;overflow:hidden;animation:modalIn .18s ease}
+        .dropdown-menu{position:absolute;top:calc(100% + 6px);${isAr ? "left:0" : "right:0"};background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);border:1.5px solid #eef0f3;min-width:160px;z-index:100;overflow:hidden;animation:modalIn .18s ease}
         .dropdown-item{padding:10px 16px;font-size:13px;color:#555;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s;font-family:'Rubik',sans-serif}
         .dropdown-item:hover{background:#f7f9fc}
         .dropdown-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
