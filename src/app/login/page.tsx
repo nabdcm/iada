@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -23,10 +23,10 @@ const T = {
     backToSite: "العودة للصفحة الرئيسية",
     copyright: "© ٢٠٢٦ نبض - جميع الحقوق محفوظة",
     errors: {
-      invalid:   "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
-      network:   "تعذّر الاتصال. تحقق من الإنترنت وحاول مجدداً.",
-      notFound:  "لا يوجد حساب بهذا البريد الإلكتروني.",
-      unknown:   "حدث خطأ غير متوقع. حاول مجدداً.",
+      invalid:  "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      network:  "تعذّر الاتصال. تحقق من الإنترنت وحاول مجدداً.",
+      notFound: "لا يوجد حساب بهذا البريد الإلكتروني.",
+      unknown:  "حدث خطأ غير متوقع. حاول مجدداً.",
     },
     features: [
       { icon: "👥", text: "إدارة كاملة لملفات المرضى" },
@@ -47,10 +47,10 @@ const T = {
     backToSite: "Back to homepage",
     copyright: "© 2026 NABD — All rights reserved",
     errors: {
-      invalid:   "Incorrect email or password.",
-      network:   "Connection failed. Check your internet and try again.",
-      notFound:  "No account found with this email.",
-      unknown:   "An unexpected error occurred. Please try again.",
+      invalid:  "Incorrect email or password.",
+      network:  "Connection failed. Check your internet and try again.",
+      notFound: "No account found with this email.",
+      unknown:  "An unexpected error occurred. Please try again.",
     },
     features: [
       { icon: "👥", text: "Complete patient record management" },
@@ -61,32 +61,21 @@ const T = {
   },
 } as const;
 
-// المكوّن الداخلي — يستخدم useSearchParams داخل Suspense
+// ─── المكوّن الداخلي ──────────────────────────────────────
 function LoginContent() {
-  const router       = useRouter();
   const searchParams = useSearchParams();
   const redirectTo   = searchParams.get("redirect") ?? "/dashboard";
 
-  const [lang, setLang]       = useState<Lang>("ar");
-  const [email, setEmail]     = useState("");
-  const [password, setPass]   = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [error, setError]     = useState("");
+  const [lang, setLang]         = useState<Lang>("ar");
+  const [email, setEmail]       = useState("");
+  const [password, setPass]     = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
   const [showPass, setShowPass] = useState(false);
 
   const isAr = lang === "ar";
   const tr   = T[lang];
 
-  // إذا المستخدم مسجل مسبقاً → انتقل للـ dashboard
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace(redirectTo);
-      else setChecking(false);
-    });
-  }, []);
-
-  // ── تسجيل الدخول ─────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -109,31 +98,18 @@ function LoginContent() {
         } else {
           setError(tr.errors.unknown);
         }
+        setLoading(false);
         return;
       }
 
-      // نجح تسجيل الدخول
-      router.replace(redirectTo);
+      // نجح تسجيل الدخول — full reload لضمان قراءة الـ cookies في الـ middleware
+      window.location.href = redirectTo;
 
     } catch {
       setError(tr.errors.network);
-    } finally {
       setLoading(false);
     }
   };
-
-  // شاشة تحميل أثناء التحقق من الجلسة
-  if (checking) {
-    return (
-      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f2f2f2" }}>
-        <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:36, marginBottom:12 }}>💗</div>
-          <div style={{ width:32,height:32,border:"3px solid #e0e0e0",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto" }} />
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -143,7 +119,6 @@ function LoginContent() {
 
         .page { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
 
-        /* LEFT */
         .left-panel {
           background: linear-gradient(155deg, #0863ba 0%, #054a8c 60%, #03346e 100%);
           display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -165,50 +140,32 @@ function LoginContent() {
           border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(8px);
         }
         .panel-name { font-size: 42px; font-weight: 800; letter-spacing:-1px; margin-bottom:6px; }
-        .panel-tag  { font-size: 15px; opacity: 0.75; margin-bottom: 48px; font-weight:400; }
+        .panel-tag  { font-size: 15px; opacity: 0.75; margin-bottom: 48px; }
         .features { text-align: ${isAr ? "right" : "left"}; }
         .feature { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
-        .feature-icon {
-          width:40px; height:40px; border-radius:10px;
-          background:rgba(255,255,255,0.12);
-          display:flex; align-items:center; justify-content:center;
-          font-size:18px; flex-shrink:0;
-        }
-        .feature-text { font-size:15px; opacity:0.85; font-weight:400; }
+        .feature-icon { width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+        .feature-text { font-size:15px; opacity:0.85; }
 
-        /* RIGHT */
         .right-panel {
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
           padding: 60px; background: #f2f2f2; position: relative;
         }
-        .top-bar {
-          position: absolute; top: 24px;
-          ${isAr ? "left" : "right"}: 24px;
-          display: flex; align-items: center; gap: 12px;
-        }
-        .lang-btn {
-          background: #fff; border: 1.5px solid #ddd; color: #353535;
-          border-radius: 8px; padding: 6px 14px;
-          font-family: 'Rubik', sans-serif; font-size:13px; font-weight:600;
-          cursor: pointer; transition: all .2s;
-        }
+        .top-bar { position: absolute; top: 24px; ${isAr ? "left" : "right"}: 24px; display: flex; align-items: center; gap: 12px; }
+        .lang-btn { background: #fff; border: 1.5px solid #ddd; color: #353535; border-radius: 8px; padding: 6px 14px; font-family: 'Rubik', sans-serif; font-size:13px; font-weight:600; cursor: pointer; transition: all .2s; }
         .lang-btn:hover { border-color: #0863ba; color: #0863ba; }
         .back-link { font-size:13px; color:#999; text-decoration:none; display:flex; align-items:center; gap:6px; transition:color .2s; }
         .back-link:hover { color: #0863ba; }
 
         .form-box { width:100%; max-width:400px; }
         .form-title { font-size:28px; font-weight:800; color:#353535; margin-bottom:8px; }
-        .form-sub   { font-size:15px; color:#888; margin-bottom:36px; font-weight:400; }
+        .form-sub   { font-size:15px; color:#888; margin-bottom:36px; }
 
         .field { margin-bottom: 20px; }
         .field-label { display:block; font-size:13px; font-weight:600; color:#353535; margin-bottom:8px; }
         .field-wrap  { position: relative; }
         .field-input {
-          width:100%; padding:13px 16px;
-          border:1.5px solid #e0e0e0; border-radius:12px;
-          font-family:'Rubik',sans-serif; font-size:15px;
-          color:#353535; background:#fff;
+          width:100%; padding:13px 16px; border:1.5px solid #e0e0e0; border-radius:12px;
+          font-family:'Rubik',sans-serif; font-size:15px; color:#353535; background:#fff;
           transition:all .2s; outline:none;
         }
         .field-input:focus { border-color:#0863ba; box-shadow:0 0 0 3px rgba(8,99,186,.1); }
@@ -216,8 +173,7 @@ function LoginContent() {
         .pass-toggle {
           position:absolute; top:50%; transform:translateY(-50%);
           ${isAr ? "left" : "right"}: 14px;
-          background:none; border:none; cursor:pointer;
-          font-size:16px; color:#aaa; padding:4px; transition:color .2s;
+          background:none; border:none; cursor:pointer; font-size:16px; color:#aaa; padding:4px; transition:color .2s;
         }
         .pass-toggle:hover { color: #0863ba; }
 
@@ -227,20 +183,12 @@ function LoginContent() {
           margin-bottom:20px; display:flex; align-items:center; gap:8px;
           animation: shake .4s ease;
         }
-        @keyframes shake {
-          0%,100%{transform:translateX(0)}
-          20%{transform:translateX(-6px)}
-          40%{transform:translateX(6px)}
-          60%{transform:translateX(-4px)}
-          80%{transform:translateX(4px)}
-        }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
 
         .submit-btn {
-          width:100%; padding:14px;
-          background:#0863ba; color:#fff; border:none; border-radius:12px;
-          font-family:'Rubik',sans-serif; font-size:16px; font-weight:700;
-          cursor:pointer; transition:all .25s;
-          box-shadow:0 6px 20px rgba(8,99,186,.25);
+          width:100%; padding:14px; background:#0863ba; color:#fff; border:none; border-radius:12px;
+          font-family:'Rubik',sans-serif; font-size:16px; font-weight:700; cursor:pointer;
+          transition:all .25s; box-shadow:0 6px 20px rgba(8,99,186,.25);
           display:flex; align-items:center; justify-content:center; gap:8px;
         }
         .submit-btn:hover:not(:disabled) { background:#054a8c; transform:translateY(-2px); box-shadow:0 10px 28px rgba(8,99,186,.35); }
@@ -260,7 +208,7 @@ function LoginContent() {
 
       <div className="page" style={{ fontFamily:"'Rubik',sans-serif", direction:isAr?"rtl":"ltr" }}>
 
-        {/* ── LEFT PANEL ── */}
+        {/* LEFT */}
         <div className="left-panel">
           <div className="blob blob-1" />
           <div className="blob blob-2" />
@@ -279,12 +227,10 @@ function LoginContent() {
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ── */}
+        {/* RIGHT */}
         <div className="right-panel">
           <div className="top-bar">
-            <a href="/" className="back-link">
-              {isAr ? "→" : "←"} {tr.backToSite}
-            </a>
+            <a href="/" className="back-link">{isAr ? "→" : "←"} {tr.backToSite}</a>
             <button className="lang-btn" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
               {lang === "ar" ? "EN" : "عر"}
             </button>
@@ -301,23 +247,16 @@ function LoginContent() {
                 </div>
               )}
 
-              {/* Email */}
               <div className="field">
                 <label className="field-label">{tr.emailLabel}</label>
-                <div className="field-wrap">
-                  <input
-                    type="email"
-                    className="field-input"
-                    placeholder={tr.emailPlaceholder}
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    autoComplete="email"
-                    required
-                  />
-                </div>
+                <input
+                  type="email" className="field-input"
+                  placeholder={tr.emailPlaceholder}
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  autoComplete="email" required
+                />
               </div>
 
-              {/* Password */}
               <div className="field">
                 <label className="field-label">{tr.passLabel}</label>
                 <div className="field-wrap">
@@ -325,13 +264,9 @@ function LoginContent() {
                     type={showPass ? "text" : "password"}
                     className="field-input"
                     placeholder={tr.passPlaceholder}
-                    value={password}
-                    onChange={e => setPass(e.target.value)}
+                    value={password} onChange={e => setPass(e.target.value)}
                     autoComplete="current-password"
-                    style={{
-                      paddingLeft:  isAr ? "44px" : undefined,
-                      paddingRight: isAr ? undefined : "44px",
-                    }}
+                    style={{ paddingLeft: isAr ? "44px" : undefined, paddingRight: isAr ? undefined : "44px" }}
                     required
                   />
                   <button type="button" className="pass-toggle" onClick={() => setShowPass(!showPass)}>
@@ -341,11 +276,7 @@ function LoginContent() {
               </div>
 
               <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? (
-                  <><div className="spinner" /> {tr.loading}</>
-                ) : (
-                  tr.btn
-                )}
+                {loading ? <><div className="spinner" /> {tr.loading}</> : tr.btn}
               </button>
             </form>
 
@@ -357,13 +288,13 @@ function LoginContent() {
   );
 }
 
-// ─── Export مع Suspense لحل مشكلة prerendering ───────────
+// ─── Export مع Suspense ───────────────────────────────────
 export default function LoginPage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f2f2f2" }}>
         <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:36, marginBottom:16 }}>💗</div>
+          <div style={{ fontSize:40, marginBottom:16 }}>💗</div>
           <div style={{ width:32,height:32,border:"3px solid #e0e0e0",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto" }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
