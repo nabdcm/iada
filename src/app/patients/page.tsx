@@ -421,19 +421,19 @@ export default function PatientsPage() {
       if (error) throw error;
 
       // تحويل أسماء الأعمدة من snake_case إلى camelCase
-      const formattedPatients = (data || []).map(p => ({
-        id: p.id,
-        name: p.name,
-        phone: p.phone || "",
-        gender: p.gender || "",
-        dob: p.date_of_birth || "",
-        diabetes: p.has_diabetes || false,
-        hypertension: p.has_hypertension || false,
-        notes: p.notes || "",
-        hidden: p.is_hidden || false,
-      }));
+      const formattedPatients: Patient[] = (data || []).map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  phone: p.phone ?? "",
+  gender: p.gender ?? "",
+  dob: p.date_of_birth ?? "",
+  diabetes: p.has_diabetes ?? false,
+  hypertension: p.has_hypertension ?? false,
+  notes: p.notes ?? "",
+  hidden: p.is_hidden ?? false,
+}));
 
-      setPatients(formattedPatients);
+setPatients(formattedPatients);
     } catch (error) {
       console.error("Error loading patients:", error);
     } finally {
