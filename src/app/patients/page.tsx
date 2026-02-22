@@ -357,7 +357,6 @@ onMouseLeave={(e) => {
           </button>
         </div>
       </div>
-    </div>
   );
 }
 
