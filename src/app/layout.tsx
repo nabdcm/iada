@@ -1,24 +1,19 @@
 // ============================================================
-// src/app/layout.tsx
-// الملف الجذري — يُطبَّق على جميع الصفحات
+// src/app/layout.tsx — مع دعم Supabase Auth Session
 // ============================================================
 
-import type { Metadata } from 'next'
-import './globals.css'
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'نبض | NABD — Clinic Manager',
-  description: 'نظام إدارة العيادات الطبية — مرضى، مواعيد، مدفوعات',
+  title: "نبض | NABD — Clinic Manager",
+  description: "نظام إدارة العيادات الطبية — مرضى، مواعيد، مدفوعات",
   icons: {
     icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💗</text></svg>',
   },
-}
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ar" dir="rtl">
       <head>
@@ -29,9 +24,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body style={{ fontFamily: "'Rubik', sans-serif", margin: 0, padding: 0 }}>
+      <body style={{ fontFamily: "'Rubik', sans-serif", margin: 0, padding: 0, background: "#f7f9fc" }}>
         {children}
       </body>
     </html>
-  )
+  );
 }
