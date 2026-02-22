@@ -1,63 +1,50 @@
 // ============================================================
-// middleware.ts — حماية الصفحات وإدارة الجلسة
+// middleware.ts — حماية الصفحات
 // ============================================================
+
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// الصفحات المحمية التي تتطلب تسجيل دخول
-const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/admin"];
+const supabaseUrl     = "https://ldqaohjnlxiwvaijcsbm.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkcWFvaGpubHhpd3ZhaWpjc2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1Nzk3MDUsImV4cCI6MjA4NzE1NTcwNX0.2vo-DqFGbJqa8MEgotfujz23QjU2bfMEDIDDnbDQ1Jo";
 
-// الصفحات العامة (لا تحتاج تسجيل دخول)
-const PUBLIC = ["/login", "/"];
+const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/admin"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // تجاهل الملفات الثابتة
   if (pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname.includes(".")) {
     return NextResponse.next();
   }
 
+  const isProtected = PROTECTED.some(p => pathname.startsWith(p));
+  if (!isProtected) return NextResponse.next();
+
   let response = NextResponse.next({ request });
 
-  // إنشاء Supabase client للـ middleware
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        );
+        response = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
 
-  // التحقق من الجلسة
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isProtected = PROTECTED.some(path => pathname.startsWith(path));
-  const isPublic    = PUBLIC.includes(pathname);
-
-  // إذا الصفحة محمية والمستخدم غير مسجل → redirect للـ login
-  if (isProtected && !user) {
+  if (!user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // إذا المستخدم مسجل وحاول الوصول للـ login → redirect للـ dashboard
-  if (isPublic && user && pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return response;
