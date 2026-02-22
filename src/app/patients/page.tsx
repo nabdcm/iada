@@ -107,15 +107,15 @@ const T = {
   },
 };
 
+type Lang = "ar" | "en";
+
 const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2980b9","#8e44ad"];
 const getColor = (id: number) => AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length];
 const getInitials = (name: string) => name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
 
 // ─── Sidebar (مشتركة) ─────────────────────────────────────
-function Sidebar({ lang, setLang, activePage = "patients" }) {
-  const tr = T[lang];
-  const isAr = lang === "ar";
-  const [collapsed, setCollapsed] = useState(false);
+function Sidebar({ lang, setLang, activePage = "patients" }: { lang: Lang; setLang: (l: Lang) => void; activePage?: string }) {
+  const tr = T[lang as Lang];
   const navItems = [
     { key:"dashboard",    icon:"⊞", href:"/dashboard" },
     { key:"patients",     icon:"👥", href:"/patients"  },
@@ -175,7 +175,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }) {
             }}>
               {isActive && <div style={{ position:"absolute",[isAr?"right":"left"]:-12,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }} />}
               <span style={{ fontSize:18, flexShrink:0 }}>{item.icon}</span>
-              {!collapsed && <span>{tr.nav[item.key]}</span>}
+              {!collapsed && <span>{tr.nav[item.key as keyof typeof tr.nav]}</span>}
             </a>
           );
         })}
@@ -215,7 +215,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 );
 
 // ─── Modal إضافة/تعديل ───────────────────────────────────
-function PatientModal({ lang, patient, onSave, onClose }) {
+function PatientModal({ lang, patient, onSave, onClose }: { lang: Lang; patient: Patient | null; onSave: (data: Partial<Patient> & Record<string, unknown>) => void; onClose: () => void }) {
   const tr = T[lang];
   const isAr = lang === "ar";
   const isEdit = !!patient?.id;
@@ -361,7 +361,7 @@ onMouseLeave={(e) => {
 }
 
 // ─── Modal حذف ───────────────────────────────────────────
-function DeleteModal({ lang, patient, onConfirm, onClose }) {
+function DeleteModal({ lang, patient, onConfirm, onClose }: { lang: Lang; patient: Patient | null; onConfirm: () => void; onClose: () => void }) {
   const tr = T[lang];
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
@@ -390,7 +390,7 @@ function DeleteModal({ lang, patient, onConfirm, onClose }) {
 
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function PatientsPage() {
-  const [lang, setLang] = useState("ar");
+  const [lang, setLang] = useState<Lang>("ar");
   const isAr = lang === "ar";
   const tr = T[lang];
 
@@ -474,7 +474,7 @@ setPatients(formattedPatients);
   };
 
   // حفظ (إضافة / تعديل)
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: Partial<Patient> & Record<string, unknown>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -586,7 +586,7 @@ setPatients(formattedPatients);
   };
 
   // عمر المريض
-  const calcAge = (dob) => {
+  const calcAge = (dob: string | null | undefined): string | number => {
     if (!dob) return "—";
     const diff = Date.now() - new Date(dob).getTime();
     return Math.floor(diff / (1000*60*60*24*365.25));
@@ -762,7 +762,7 @@ setPatients(formattedPatients);
                         background:p.gender==="male"?"rgba(41,128,185,.1)":"rgba(142,68,173,.1)",
                         color:p.gender==="male"?"#2980b9":"#8e44ad",
                       }}>
-                        {tr.gender[p.gender] || "—"}
+                        {tr.gender[p.gender as keyof typeof tr.gender] || "—"}
                       </span>
                     </div>
 
