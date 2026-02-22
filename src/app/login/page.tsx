@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -61,7 +61,8 @@ const T = {
   },
 } as const;
 
-export default function LoginPage() {
+// المكوّن الداخلي — يستخدم useSearchParams داخل Suspense
+function LoginContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const redirectTo   = searchParams.get("redirect") ?? "/dashboard";
@@ -353,5 +354,22 @@ export default function LoginPage() {
         </div>
       </div>
     </>
+  );
+}
+
+// ─── Export مع Suspense لحل مشكلة prerendering ───────────
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f2f2f2" }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:36, marginBottom:16 }}>💗</div>
+          <div style={{ width:32,height:32,border:"3px solid #e0e0e0",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto" }} />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
