@@ -79,6 +79,46 @@ const T = {
     filterAll:"الكل", filterActive:"نشط", filterInactive:"موقوف",
     loading:"جاري التحميل...",
     comingSoon:"قريباً",
+    subModal: {
+      title:"تعديل الاشتراك",
+      tabInfo:"البيانات",
+      tabSub:"الاشتراك",
+      tabSecurity:"الأمان",
+      username:"البريد الإلكتروني",
+      usernamePh:"clinic@example.com",
+      ownerName:"اسم المالك",
+      ownerPh:"الدكتور ...",
+      phone:"رقم الهاتف",
+      phonePh:"05xxxxxxxx",
+      plan:"الخطة",
+      expiry:"تاريخ الانتهاء",
+      status:"الحالة",
+      newPassword:"كلمة المرور الجديدة",
+      generatePass:"توليد تلقائي",
+      copyPass:"نسخ",
+      copiedPass:"✓ تم",
+      freezeTitle:"تجميد الاشتراك",
+      freezeDesc:"سيتم إيقاف وصول العيادة مؤقتاً مع الحفاظ على البيانات.",
+      freeze:"تجميد",
+      unfreeze:"رفع التجميد",
+      cancelTitle:"إلغاء الاشتراك",
+      cancelDesc:"سيتم إنهاء الاشتراك. يمكن إعادة تفعيله لاحقاً.",
+      cancelSub:"إلغاء الاشتراك",
+      deleteTitle:"حذف العيادة",
+      deleteDesc:"سيتم حذف جميع البيانات نهائياً ولا يمكن التراجع.",
+      delete:"حذف نهائي",
+      save:"حفظ التغييرات",
+      saving:"جاري الحفظ...",
+      cancel:"إلغاء",
+      changePlan:"تغيير الخطة إلى",
+      plans:{ basic:"أساسي", pro:"احترافي", enterprise:"مؤسسي" },
+      planDesc:{ basic:"للعيادات الصغيرة", pro:"للعيادات المتوسطة", enterprise:"للمستشفيات والمجمعات" },
+      deleteConfirmTitle:"تأكيد الحذف النهائي",
+      deleteConfirmMsg:"هل أنت متأكد من حذف عيادة",
+      deleteConfirmWarning:"سيتم حذف جميع البيانات نهائياً ولا يمكن التراجع.",
+      deleteConfirm:"نعم، احذف نهائياً",
+      deleteCancel:"لا، تراجع",
+    },
   },
   en: {
     appName: "NABD", adminBadge: "Admin Panel",
@@ -133,6 +173,46 @@ const T = {
     filterAll:"All", filterActive:"Active", filterInactive:"Suspended",
     loading:"Loading...",
     comingSoon:"Coming Soon",
+    subModal: {
+      title:"Edit Subscription",
+      tabInfo:"Info",
+      tabSub:"Subscription",
+      tabSecurity:"Security",
+      username:"Email",
+      usernamePh:"clinic@example.com",
+      ownerName:"Owner Name",
+      ownerPh:"Dr. ...",
+      phone:"Phone",
+      phonePh:"05xxxxxxxx",
+      plan:"Plan",
+      expiry:"Expiry Date",
+      status:"Status",
+      newPassword:"New Password",
+      generatePass:"Auto Generate",
+      copyPass:"Copy",
+      copiedPass:"✓ Copied",
+      freezeTitle:"Freeze Subscription",
+      freezeDesc:"Temporarily suspend clinic access while keeping data intact.",
+      freeze:"Freeze",
+      unfreeze:"Unfreeze",
+      cancelTitle:"Cancel Subscription",
+      cancelDesc:"End the subscription. Can be reactivated later.",
+      cancelSub:"Cancel Subscription",
+      deleteTitle:"Delete Clinic",
+      deleteDesc:"Permanently delete all data. This cannot be undone.",
+      delete:"Permanent Delete",
+      save:"Save Changes",
+      saving:"Saving...",
+      cancel:"Cancel",
+      changePlan:"Change Plan To",
+      plans:{ basic:"Basic", pro:"Pro", enterprise:"Enterprise" },
+      planDesc:{ basic:"For small clinics", pro:"For medium clinics", enterprise:"For hospitals & complexes" },
+      deleteConfirmTitle:"Confirm Permanent Delete",
+      deleteConfirmMsg:"Are you sure you want to delete clinic",
+      deleteConfirmWarning:"All data will be permanently deleted and cannot be recovered.",
+      deleteConfirm:"Yes, Delete Permanently",
+      deleteCancel:"No, Cancel",
+    },
   },
 };
 
@@ -484,6 +564,310 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
   );
 };
 
+// ─── Subscription Modal ────────────────────────────────────
+interface SubModalProps {
+  lang: Lang;
+  clinic: ClinicData;
+  onSave: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}
+
+const SubscriptionModal = ({ lang, clinic, onSave, onDelete, onClose }: SubModalProps) => {
+  const tr   = T[lang];
+  const sm   = tr.subModal;
+  const isAr = lang === "ar";
+
+  const [activeTab, setActiveTab] = useState<"info"|"sub"|"security">("info");
+  const [form, setForm] = useState({
+    email:  clinic.email  || "",
+    owner:  clinic.owner  || "",
+    phone:  clinic.phone  || "",
+    plan:   clinic.plan   || "basic",
+    expiry: clinic.expiry || "",
+    status: clinic.status || "active",
+  });
+  const [newPass,  setNewPass]  = useState("");
+  const [copied,   setCopied]   = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [actionLoading, setActionLoading] = useState("");
+
+  const genAndSetPass = useCallback(() => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#";
+    setNewPass(Array.from({length:12}, ()=>chars[Math.floor(Math.random()*chars.length)]).join(""));
+  }, []);
+
+  const copyPass = async () => {
+    await navigator.clipboard.writeText(newPass).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSave = async () => {
+    setSaving(true); setError("");
+    try {
+      const body: Record<string,unknown> = {
+        userId: clinic.user_id,
+        name: clinic.name,
+        owner: form.owner,
+        email: form.email,
+        phone: form.phone,
+        plan: form.plan,
+        expiry: form.expiry,
+        status: form.status,
+      };
+      if (newPass.trim()) body.newPassword = newPass.trim();
+      const res  = await fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error || (isAr?"حدث خطأ":"An error occurred")); setSaving(false); return; }
+      onSave(); onClose();
+    } catch { setError(isAr?"خطأ في الاتصال":"Connection error"); }
+    finally { setSaving(false); }
+  };
+
+  const handleFreeze = async () => {
+    setActionLoading("freeze");
+    const newStatus = form.status === "inactive" ? "active" : "inactive";
+    try {
+      await fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ userId: clinic.user_id, name: clinic.name, owner: form.owner, email: form.email, phone: form.phone, plan: form.plan, expiry: form.expiry, status: newStatus }) });
+      setForm(p => ({ ...p, status: newStatus }));
+      onSave();
+    } catch {}
+    finally { setActionLoading(""); }
+  };
+
+  const handleCancelSub = async () => {
+    setActionLoading("cancel");
+    try {
+      await fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ userId: clinic.user_id, name: clinic.name, owner: form.owner, email: form.email, phone: form.phone, plan: form.plan, expiry: new Date().toISOString().split("T")[0], status: "expired" }) });
+      setForm(p => ({ ...p, status: "expired", expiry: new Date().toISOString().split("T")[0] }));
+      onSave();
+    } catch {}
+    finally { setActionLoading(""); }
+  };
+
+  const inputSt: React.CSSProperties = {
+    width:"100%", padding:"10px 14px", border:"1.5px solid #e8eaed", borderRadius:10,
+    fontFamily:"Rubik,sans-serif", fontSize:13, color:"#353535", background:"#fafbfc",
+    outline:"none", direction: isAr?"rtl":"ltr",
+  };
+
+  const PLAN_INFO: { key:"basic"|"pro"|"enterprise"; color:string }[] = [
+    { key:"basic",      color:"#0863ba" },
+    { key:"pro",        color:"#7b2d8b" },
+    { key:"enterprise", color:"#e67e22" },
+  ];
+
+  const tabStyle = (t: string): React.CSSProperties => ({
+    padding:"9px 18px", border:"none", borderRadius:10, cursor:"pointer",
+    fontFamily:"Rubik,sans-serif", fontSize:13, fontWeight: activeTab===t?700:400,
+    background: activeTab===t?"#fff":"transparent",
+    color: activeTab===t?"#0863ba":"#888",
+    boxShadow: activeTab===t?"0 2px 8px rgba(8,99,186,.1)":"none",
+    transition:"all .18s",
+  });
+
+  return (
+    <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)" }} />
+      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:24,width:"100%",maxWidth:520,maxHeight:"94vh",overflowY:"auto",boxShadow:"0 32px 100px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+
+        {/* Header */}
+        <div style={{ padding:"22px 26px 0",background:"linear-gradient(135deg,rgba(8,99,186,.04),transparent)" }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
+            <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+              <div style={{ width:44,height:44,background:"rgba(8,99,186,.08)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}>💳</div>
+              <div>
+                <h2 style={{ fontSize:17,fontWeight:800,color:"#353535",lineHeight:1.2 }}>{sm.title}</h2>
+                <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{clinic.name}</p>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:16,color:"#aaa",display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display:"flex",gap:4,background:"#f7f9fc",borderRadius:12,padding:4 }}>
+            <button style={tabStyle("info")}    onClick={() => setActiveTab("info")}>{sm.tabInfo}</button>
+            <button style={tabStyle("sub")}     onClick={() => setActiveTab("sub")}>{sm.tabSub}</button>
+            <button style={tabStyle("security")} onClick={() => setActiveTab("security")}>{sm.tabSecurity}</button>
+          </div>
+          <div style={{ height:1,background:"#eef0f3",marginTop:16 }} />
+        </div>
+
+        <div style={{ padding:"20px 26px 0" }}>
+          {error && <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>⚠️ {error}</div>}
+
+          {/* ── TAB: INFO ── */}
+          {activeTab === "info" && (
+            <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.username}</label>
+                <input value={form.email} onChange={e => setForm(p=>({...p,email:e.target.value}))} placeholder={sm.usernamePh} style={inputSt} />
+              </div>
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.ownerName}</label>
+                <input value={form.owner} onChange={e => setForm(p=>({...p,owner:e.target.value}))} placeholder={sm.ownerPh} style={inputSt} />
+              </div>
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.phone}</label>
+                <input value={form.phone} onChange={e => setForm(p=>({...p,phone:e.target.value}))} placeholder={sm.phonePh} style={inputSt} />
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB: SUBSCRIPTION ── */}
+          {activeTab === "sub" && (
+            <div style={{ display:"flex",flexDirection:"column",gap:18 }}>
+
+              {/* Plan selector */}
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:10,textTransform:"uppercase",letterSpacing:.4 }}>{sm.changePlan}</label>
+                <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                  {PLAN_INFO.map(p => {
+                    const isSelected = form.plan === p.key;
+                    const isCurrent  = clinic.plan === p.key;
+                    return (
+                      <button key={p.key} onClick={() => setForm(prev=>({...prev,plan:p.key}))}
+                        style={{ display:"flex",alignItems:"center",gap:14,padding:"12px 16px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:"start",transition:"all .18s",fontFamily:"Rubik,sans-serif" }}>
+                        <div style={{ width:10,height:10,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{sm.plans[p.key]}</div>
+                          <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{sm.planDesc[p.key]}</div>
+                        </div>
+                        {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:20,background:`${p.color}15`,color:p.color }}>{isAr?"الحالية":"Current"}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Expiry */}
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.expiry}</label>
+                <input type="date" value={form.expiry} onChange={e => setForm(p=>({...p,expiry:e.target.value}))} style={inputSt} />
+              </div>
+
+              {/* Action cards */}
+              <div style={{ display:"flex",flexDirection:"column",gap:10,borderTop:"1.5px solid #eef0f3",paddingTop:16,marginTop:4 }}>
+
+                {/* Freeze */}
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:"#f7f9fc",borderRadius:12,border:"1.5px solid #eef0f3" }}>
+                  <div>
+                    <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
+                      {form.status==="inactive"?"▶":"⏸"} {sm.freezeTitle}
+                    </div>
+                    <div style={{ fontSize:11,color:"#aaa",marginTop:3 }}>{sm.freezeDesc}</div>
+                  </div>
+                  <button onClick={handleFreeze} disabled={actionLoading==="freeze"}
+                    style={{ padding:"8px 16px",background:form.status==="inactive"?"rgba(46,125,50,.08)":"rgba(230,126,34,.08)",color:form.status==="inactive"?"#2e7d32":"#e67e22",border:`1.5px solid ${form.status==="inactive"?"rgba(46,125,50,.2)":"rgba(230,126,34,.2)"}`,borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap" }}>
+                    {actionLoading==="freeze"?"...":(form.status==="inactive"?sm.unfreeze:sm.freeze)}
+                  </button>
+                </div>
+
+                {/* Cancel */}
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:"#f7f9fc",borderRadius:12,border:"1.5px solid #eef0f3" }}>
+                  <div>
+                    <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>🚫 {sm.cancelTitle}</div>
+                    <div style={{ fontSize:11,color:"#aaa",marginTop:3 }}>{sm.cancelDesc}</div>
+                  </div>
+                  <button onClick={handleCancelSub} disabled={actionLoading==="cancel"||form.status==="expired"}
+                    style={{ padding:"8px 16px",background:"rgba(192,57,43,.06)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:form.status==="expired"?"not-allowed":"pointer",opacity:form.status==="expired"?.5:1,whiteSpace:"nowrap" }}>
+                    {actionLoading==="cancel"?"...":sm.cancelSub}
+                  </button>
+                </div>
+
+                {/* Delete */}
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:"rgba(192,57,43,.03)",borderRadius:12,border:"1.5px solid rgba(192,57,43,.12)" }}>
+                  <div>
+                    <div style={{ fontSize:13,fontWeight:600,color:"#c0392b",display:"flex",alignItems:"center",gap:8 }}>🗑️ {sm.deleteTitle}</div>
+                    <div style={{ fontSize:11,color:"#aaa",marginTop:3 }}>{sm.deleteDesc}</div>
+                  </div>
+                  <button onClick={() => setConfirmDelete(true)}
+                    style={{ padding:"8px 16px",background:"#c0392b",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap" }}>
+                    {sm.delete}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB: SECURITY ── */}
+          {activeTab === "security" && (
+            <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.newPassword}</label>
+                <div style={{ display:"flex",gap:8 }}>
+                  <input value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="••••••••••••" style={{ ...inputSt, flex:1, fontFamily:"monospace", letterSpacing: newPass ? 2 : 0 }} />
+                  <button onClick={genAndSetPass}
+                    style={{ padding:"0 14px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
+                    🎲 {sm.generatePass}
+                  </button>
+                </div>
+              </div>
+              {newPass && (
+                <div style={{ display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",borderRadius:10,padding:"12px 14px",border:"1.5px solid #eef0f3" }}>
+                  <code style={{ flex:1,fontSize:14,color:"#0863ba",fontFamily:"monospace",letterSpacing:1.5,wordBreak:"break-all" }}>{newPass}</code>
+                  <button onClick={copyPass}
+                    style={{ padding:"6px 14px",background:copied?"rgba(46,125,50,.08)":"rgba(8,99,186,.06)",color:copied?"#2e7d32":"#0863ba",border:`1.5px solid ${copied?"rgba(46,125,50,.2)":"rgba(8,99,186,.15)"}`,borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
+                    {copied?sm.copiedPass:sm.copyPass}
+                  </button>
+                </div>
+              )}
+              <div style={{ background:"rgba(8,99,186,.04)",border:"1.5px solid rgba(8,99,186,.1)",borderRadius:10,padding:"12px 14px" }}>
+                <p style={{ fontSize:12,color:"#666",lineHeight:1.7,margin:0 }}>
+                  {isAr
+                    ? "⚠️ ستُرسَل كلمة المرور الجديدة فوراً. تأكد من إبلاغ صاحب العيادة بها قبل الإغلاق."
+                    : "⚠️ The new password will be applied immediately. Make sure to inform the clinic owner before closing."}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding:"20px 26px",display:"flex",gap:10,marginTop:8,borderTop:"1.5px solid #eef0f3" }}>
+          <button onClick={handleSave} disabled={saving}
+            style={{ flex:1,padding:"12px",background:saving?"#93b8dc":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}>
+            {saving?sm.saving:sm.save}
+          </button>
+          <button onClick={onClose}
+            style={{ padding:"12px 20px",background:"#f7f9fc",color:"#666",border:"1.5px solid #eef0f3",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>
+            {sm.cancel}
+          </button>
+        </div>
+
+        {/* Delete confirmation overlay */}
+        {confirmDelete && (
+          <div style={{ position:"absolute",inset:0,zIndex:10,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,.9)",backdropFilter:"blur(4px)",borderRadius:24 }}>
+            <div style={{ textAlign:"center",padding:"40px 32px",maxWidth:340 }}>
+              <div style={{ fontSize:48,marginBottom:16 }}>🗑️</div>
+              <h3 style={{ fontSize:18,fontWeight:800,color:"#353535",marginBottom:10 }}>{sm.deleteConfirmTitle}</h3>
+              <p style={{ fontSize:13,color:"#888",lineHeight:1.6,marginBottom:24 }}>
+                {sm.deleteConfirmMsg} <strong style={{ color:"#353535" }}>{clinic.name}</strong>؟<br/>
+                <span style={{ color:"#c0392b",fontSize:12 }}>{sm.deleteConfirmWarning}</span>
+              </p>
+              <div style={{ display:"flex",gap:10 }}>
+                <button onClick={() => { onDelete(); onClose(); }}
+                  style={{ flex:1,padding:"12px",background:"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>
+                  {sm.deleteConfirm}
+                </button>
+                <button onClick={() => setConfirmDelete(false)}
+                  style={{ flex:1,padding:"12px",background:"#f7f9fc",color:"#666",border:"1.5px solid #eef0f3",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
+                  {sm.deleteCancel}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Reset Password Modal ──────────────────────────────────
 interface ResetPassModalProps {
   lang: Lang;
@@ -587,6 +971,7 @@ export default function AdminPage() {
   const [editClinic,   setEditClinic]   = useState<ClinicData | null>(null);
   const [deleteClinic, setDeleteClinic] = useState<ClinicData | null>(null);
   const [resetClinic,  setResetClinic]  = useState<ClinicData | null>(null);
+  const [subClinic,    setSubClinic]    = useState<ClinicData | null>(null);
   const [openMenuId,   setOpenMenuId]   = useState<number | null>(null);
 
   useEffect(() => { loadClinics(); }, []);
@@ -848,7 +1233,7 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
-                    <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 50px",padding:"11px 20px",background:"#f7f9fc",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
+                    <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 160px",padding:"11px 20px",background:"#f7f9fc",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
                       {[tr.clinics.table.name,tr.clinics.table.owner,tr.clinics.table.email,tr.clinics.table.status,tr.clinics.table.plan,tr.clinics.table.expiry,tr.clinics.table.actions].map((h,i) => (
                         <div key={i} style={{ fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.6,paddingLeft:i>0&&i<6?8:0,textAlign:i===6?"center":"start" }}>{h}</div>
                       ))}
@@ -866,7 +1251,7 @@ export default function AdminPage() {
                         const expSoon = isExpiringSoon(c.expiry);
                         const exp     = isExpired(c.expiry);
                         return (
-                          <div key={c.id} className="admin-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 50px",padding:"14px 20px",alignItems:"center",gap:0 }}>
+                          <div key={c.id} className="admin-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 160px",padding:"14px 20px",alignItems:"center",gap:0 }}>
                             <div>
                               <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{c.name}</div>
                               <div style={{ fontSize:11,color:"#ccc",marginTop:2 }}>ID: #{c.id}</div>
@@ -888,7 +1273,12 @@ export default function AdminPage() {
                               {expSoon && !exp && <div style={{ fontSize:9,color:"#e67e22",fontWeight:600,marginTop:2,animation:"pulse 2s infinite" }}>⚠ {isAr?"تنتهي قريباً":"Expiring soon"}</div>}
                               {exp      && <div style={{ fontSize:9,color:"#c0392b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
                             </div>
-                            <div style={{ display:"flex",justifyContent:"center",position:"relative" }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,position:"relative" }} onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={e => { e.stopPropagation(); setSubClinic(c); }}
+                                style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",transition:"all .18s" }}>
+                                💳 {isAr?"تعديل الاشتراك":"Edit Sub"}
+                              </button>
                               <button className="icon-btn-dark" onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }}>⋯</button>
                               {openMenuId === c.id && (
                                 <div className="dropdown-dark">
@@ -932,6 +1322,22 @@ export default function AdminPage() {
           />
         )}
         {resetClinic && <ResetPassModal lang={lang} clinic={resetClinic} onClose={() => { setResetClinic(null); loadClinics(); }} />}
+
+        {subClinic && (
+          <SubscriptionModal
+            lang={lang}
+            clinic={subClinic}
+            onSave={loadClinics}
+            onDelete={() => {
+              supabase.from("clinics").delete().eq("user_id", subClinic.user_id);
+              supabase.from("clinic_profiles").delete().eq("id", subClinic.user_id);
+              fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: subClinic.user_id, delete: true }) });
+              setSubClinic(null);
+              loadClinics();
+            }}
+            onClose={() => setSubClinic(null)}
+          />
+        )}
 
         {deleteClinic && (
           <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center" }}>
