@@ -262,21 +262,39 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
             />
           </Field>
 
-          {/* أزرار تغيير الحالة عند التعديل */}
-          {isEdit && appt!.status==="scheduled" && (
-            <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginBottom:8 }}>
-              {([
-                { status:"completed" as Status, label:tr.modal.markCompleted, color:"#2e7d32", bg:"rgba(46,125,50,.08)"   },
-                { status:"cancelled" as Status, label:tr.modal.markCancelled, color:"#c0392b", bg:"rgba(192,57,43,.08)"  },
-                { status:"no-show"  as Status,  label:tr.modal.markNoShow,   color:"#888",   bg:"rgba(136,136,136,.08)" },
-              ]).map(s=>(
-                <button key={s.status}
-                  onClick={()=>onStatusChange(appt!.id, s.status)}
-                  style={{ padding:"8px 14px",borderRadius:10,border:`1.5px solid ${s.color}30`,background:s.bg,color:s.color,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Rubik,sans-serif" }}
-                >
-                  {s.label}
-                </button>
-              ))}
+          {/* أزرار تغيير الحالة — تظهر دائماً عند التعديل */}
+          {isEdit && (
+            <div style={{ marginBottom:8 }}>
+              <div style={{ fontSize:11,fontWeight:700,color:"#aaa",marginBottom:8,textTransform:"uppercase",letterSpacing:.5 }}>
+                {lang==="ar" ? "تغيير حالة الموعد" : "Update Status"}
+              </div>
+              <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                {([
+                  { status:"scheduled" as Status, label: lang==="ar"?"✓ جاري (محدد)":"✓ Scheduled",   color:"#0863ba", bg:"rgba(8,99,186,.08)"    },
+                  { status:"completed" as Status, label: lang==="ar"?"✓ اكتمل الموعد":"✓ Completed",  color:"#2e7d32", bg:"rgba(46,125,50,.08)"   },
+                  { status:"cancelled" as Status, label: lang==="ar"?"✕ تم الإلغاء":"✕ Cancelled",    color:"#c0392b", bg:"rgba(192,57,43,.08)"  },
+                  { status:"no-show"  as Status,  label: lang==="ar"?"⊘ لم يحضر":"⊘ No-Show",        color:"#888",   bg:"rgba(136,136,136,.08)" },
+                ]).map(s => {
+                  const isCurrent = appt!.status === s.status;
+                  return (
+                    <button key={s.status}
+                      onClick={()=>{ if(!isCurrent) onStatusChange(appt!.id, s.status); }}
+                      style={{
+                        padding:"8px 14px", borderRadius:10, fontFamily:"Rubik,sans-serif",
+                        fontSize:12, fontWeight:600, cursor:isCurrent?"default":"pointer",
+                        border: isCurrent ? `2px solid ${s.color}` : `1.5px solid ${s.color}30`,
+                        background: isCurrent ? s.color : s.bg,
+                        color: isCurrent ? "#fff" : s.color,
+                        opacity: isCurrent ? 1 : 0.85,
+                        transition:"all .2s",
+                        boxShadow: isCurrent ? `0 4px 12px ${s.color}40` : "none",
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
