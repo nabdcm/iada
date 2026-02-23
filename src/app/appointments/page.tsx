@@ -4,10 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Appointment } from "@/lib/supabase";
 
-// ============================================================
-// NABD - نبض | Appointments Page — مربوط مع Supabase
-// ============================================================
-
 type Lang = "ar" | "en";
 type Status = "scheduled" | "completed" | "cancelled" | "no-show";
 
@@ -33,12 +29,17 @@ const T = {
       typePh:"مثال: متابعة، فحص عام", notes:"ملاحظات", notesPh:"أي ملاحظات...",
       save:"حفظ الموعد", update:"تحديث الموعد", cancel:"إلغاء",
       required:"المريض والتاريخ والوقت مطلوبة",
-      markCompleted:"تمت الزيارة ✓", markCancelled:"إلغاء الموعد", markNoShow:"لم يحضر",
+      delete:"حذف الموعد", deleting:"جاري الحذف...",
+      deleteConfirmTitle:"تأكيد حذف الموعد",
+      deleteConfirmMsg:"هل أنت متأكد من حذف هذا الموعد؟ لا يمكن التراجع عن هذه العملية.",
+      deleteConfirm:"نعم، احذف",
+      deleteCancel:"لا، تراجع",
     },
     stats:{ total:"مواعيد الشهر", today:"مواعيد اليوم", completed:"مكتملة", pending:"قادمة" },
     signOut:"تسجيل الخروج", selectedDay:"المحدد", appointments:"مواعيد", appt:"موعد",
     notification:{ title:"تذكير بموعد", msg:"سيحين موعد المريض", in:"خلال ١٥ دقيقة", dismiss:"تجاهل" },
     errorSave:"حدث خطأ أثناء الحفظ", errorLoad:"حدث خطأ أثناء التحميل",
+    errorDelete:"حدث خطأ أثناء الحذف",
   },
   en: {
     appName:"NABD", appSub:"Clinic Manager",
@@ -61,16 +62,20 @@ const T = {
       typePh:"e.g. Follow-up, General", notes:"Notes", notesPh:"Any notes...",
       save:"Save Appointment", update:"Update Appointment", cancel:"Cancel",
       required:"Patient, date and time are required",
-      markCompleted:"Mark Completed ✓", markCancelled:"Cancel Appointment", markNoShow:"Mark No-Show",
+      delete:"Delete Appointment", deleting:"Deleting...",
+      deleteConfirmTitle:"Confirm Delete",
+      deleteConfirmMsg:"Are you sure you want to delete this appointment? This cannot be undone.",
+      deleteConfirm:"Yes, Delete",
+      deleteCancel:"No, Cancel",
     },
     stats:{ total:"Monthly Appts", today:"Today's Appts", completed:"Completed", pending:"Upcoming" },
     signOut:"Sign Out", selectedDay:"Selected", appointments:"Appointments", appt:"appt",
     notification:{ title:"Appointment Reminder", msg:"Upcoming appointment for", in:"in 15 minutes", dismiss:"Dismiss" },
     errorSave:"Error saving appointment", errorLoad:"Error loading data",
+    errorDelete:"Error deleting appointment",
   },
 } as const;
 
-// ─── Helpers ──────────────────────────────────────────────
 const AVT_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085"];
 const getColor    = (id: number) => AVT_COLORS[(id - 1) % AVT_COLORS.length];
 const getInitials = (name: string) => name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
@@ -131,7 +136,7 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
   );
 }
 
-// ─── Field component (خارج أي modal لمنع إعادة الإنشاء) ──
+// ─── Field component ──────────────────────────────────────
 const Field = ({ label, children, half }: { label: string; children: React.ReactNode; half?: boolean }) => (
   <div style={{ marginBottom:16, flex:half?"1":undefined }}>
     <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{label}</label>
@@ -139,7 +144,6 @@ const Field = ({ label, children, half }: { label: string; children: React.React
   </div>
 );
 
-// ─── نوع الفورم ───────────────────────────────────────────
 type ApptForm = {
   patient_id: number | "";
   date: string;
@@ -150,8 +154,8 @@ type ApptForm = {
   status: Status;
 };
 
-// ─── Modal إضافة/تعديل موعد ──────────────────────────────
-function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, onStatusChange, saving }: {
+// ─── Modal إضافة/تعديل/حذف موعد ─────────────────────────
+function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, onStatusChange, onDelete, saving }: {
   lang: Lang;
   appt: Appointment | null;
   defaultDate: string;
@@ -159,6 +163,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
   onSave: (form: ApptForm, id?: number) => void;
   onClose: () => void;
   onStatusChange: (id: number, status: Status) => void;
+  onDelete: (id: number) => void;   // ← جديد
   saving: boolean;
 }) {
   const tr   = T[lang];
@@ -174,7 +179,8 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
     notes:      appt?.notes      ?? "",
     status:     appt?.status     ?? "scheduled",
   });
-  const [error, setError] = useState("");
+  const [error,          setError]          = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);  // ← جديد
 
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
@@ -187,22 +193,65 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
     outline:"none", transition:"border .2s", direction:isAr?"rtl":"ltr",
   }), [isAr]);
 
+  // ── شاشة تأكيد الحذف ─────────────────────────────────
+  if (showDeleteConfirm) {
+    return (
+      <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
+        <div onClick={()=>setShowDeleteConfirm(false)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+        <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:380,padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(192,57,43,.15)",animation:"modalIn .25s ease",direction:isAr?"rtl":"ltr" }}>
+          <div style={{ width:72,height:72,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px" }}>🗑️</div>
+          <h3 style={{ fontSize:18,fontWeight:800,color:"#353535",marginBottom:10 }}>{tr.modal.deleteConfirmTitle}</h3>
+          <p style={{ fontSize:14,color:"#888",lineHeight:1.7,marginBottom:28 }}>{tr.modal.deleteConfirmMsg}</p>
+          <div style={{ display:"flex",gap:12 }}>
+            <button
+              onClick={() => { onDelete(appt!.id); }}
+              style={{ flex:1,padding:"13px",background:"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(192,57,43,.25)" }}
+            >
+              {tr.modal.deleteConfirm}
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{ flex:1,padding:"13px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}
+            >
+              {tr.modal.deleteCancel}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
       <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+
+        {/* Header */}
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div>
             <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{isEdit?tr.modal.editTitle:tr.modal.addTitle}</h2>
             {isEdit&&<p style={{ fontSize:11,color:"#aaa",marginTop:2 }}>ID: #{appt!.id}</p>}
           </div>
-          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+          <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+            {/* زر الحذف — يظهر فقط عند التعديل */}
+            {isEdit && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                title={tr.modal.delete}
+                style={{ width:36,height:36,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",color:"#c0392b" }}
+                onMouseEnter={e=>{ e.currentTarget.style.background="rgba(192,57,43,.15)"; e.currentTarget.style.borderColor="rgba(192,57,43,.4)"; }}
+                onMouseLeave={e=>{ e.currentTarget.style.background="rgba(192,57,43,.08)"; e.currentTarget.style.borderColor="rgba(192,57,43,.2)"; }}
+              >
+                🗑️
+              </button>
+            )}
+            <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+          </div>
         </div>
 
         <div style={{ padding:"20px 26px" }}>
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
 
-          {/* اختيار المريض — من Supabase */}
           <Field label={tr.modal.patient}>
             <select
               value={form.patient_id}
@@ -220,15 +269,13 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
             <Field label={tr.modal.date} half>
               <input type="date" value={form.date}
                 onChange={e=>setForm({...form,date:e.target.value})}
-                style={inputSt}
-                className="appt-input"
+                style={inputSt} className="appt-input"
               />
             </Field>
             <Field label={tr.modal.time} half>
               <input type="time" value={form.time}
                 onChange={e=>setForm({...form,time:e.target.value})}
-                style={inputSt}
-                className="appt-input"
+                style={inputSt} className="appt-input"
               />
             </Field>
           </div>
@@ -247,8 +294,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
             <Field label={tr.modal.type} half>
               <input value={form.type}
                 onChange={e=>setForm({...form,type:e.target.value})}
-                placeholder={tr.modal.typePh} style={inputSt}
-                className="appt-input"
+                placeholder={tr.modal.typePh} style={inputSt} className="appt-input"
               />
             </Field>
           </div>
@@ -262,7 +308,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
             />
           </Field>
 
-          {/* أزرار تغيير الحالة — تظهر دائماً عند التعديل */}
+          {/* أزرار تغيير الحالة */}
           {isEdit && (
             <div style={{ marginBottom:8 }}>
               <div style={{ fontSize:11,fontWeight:700,color:"#aaa",marginBottom:8,textTransform:"uppercase",letterSpacing:.5 }}>
@@ -272,8 +318,8 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
                 {([
                   { status:"scheduled" as Status, label: lang==="ar"?"✓ جاري (محدد)":"✓ Scheduled",   color:"#0863ba", bg:"rgba(8,99,186,.08)"    },
                   { status:"completed" as Status, label: lang==="ar"?"✓ اكتمل الموعد":"✓ Completed",  color:"#2e7d32", bg:"rgba(46,125,50,.08)"   },
-                  { status:"cancelled" as Status, label: lang==="ar"?"✕ تم الإلغاء":"✕ Cancelled",    color:"#c0392b", bg:"rgba(192,57,43,.08)"  },
-                  { status:"no-show"  as Status,  label: lang==="ar"?"⊘ لم يحضر":"⊘ No-Show",        color:"#888",   bg:"rgba(136,136,136,.08)" },
+                  { status:"cancelled" as Status, label: lang==="ar"?"✕ تم الإلغاء":"✕ Cancelled",    color:"#c0392b", bg:"rgba(192,57,43,.08)"   },
+                  { status:"no-show"  as Status,  label: lang==="ar"?"⊘ لم يحضر":"⊘ No-Show",         color:"#888",    bg:"rgba(136,136,136,.08)" },
                 ]).map(s => {
                   const isCurrent = appt!.status === s.status;
                   return (
@@ -299,6 +345,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
           )}
         </div>
 
+        {/* Footer */}
         <div style={{ padding:"14px 26px 22px",display:"flex",gap:12,borderTop:"1.5px solid #eef0f3" }}>
           <button onClick={handleSave} disabled={saving}
             style={{ flex:1,padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}
@@ -343,8 +390,6 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
       <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,boxShadow:"0 24px 80px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)",overflow:"hidden" }}>
-
-        {/* Header */}
         <div style={{ background:"linear-gradient(135deg,#0863ba,#054a8c)",padding:"28px 28px 24px",textAlign:"center",position:"relative" }}>
           <button onClick={onClose} style={{ position:"absolute",top:16,left:isAr?16:undefined,right:isAr?undefined:16,width:32,height:32,borderRadius:8,background:"rgba(255,255,255,.15)",border:"none",cursor:"pointer",fontSize:15,color:"#fff" }}>✕</button>
           <div style={{ width:60,height:60,borderRadius:16,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 14px",border:"1px solid rgba(255,255,255,.2)" }}>🔗</div>
@@ -355,19 +400,13 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
             {isAr ? "شارك هذا الرابط مع مرضاك ليحجزوا مواعيدهم بأنفسهم" : "Share this link so patients can book appointments themselves"}
           </p>
         </div>
-
-        {/* Body */}
         <div style={{ padding:"24px 28px" }}>
-
-          {/* الرابط */}
           <div style={{ marginBottom:20 }}>
             <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:8 }}>
               {isAr ? "رابط الحجز الخاص بعيادتك" : "Your Clinic Booking Link"}
             </label>
             <div style={{ display:"flex",gap:8,alignItems:"center",background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:12,padding:"10px 14px" }}>
-              <span style={{ flex:1,fontSize:13,color:"#0863ba",fontWeight:500,wordBreak:"break-all",direction:"ltr",textAlign:"left" }}>
-                {bookingUrl}
-              </span>
+              <span style={{ flex:1,fontSize:13,color:"#0863ba",fontWeight:500,wordBreak:"break-all",direction:"ltr",textAlign:"left" }}>{bookingUrl}</span>
               <button onClick={handleCopy}
                 style={{ flexShrink:0,padding:"7px 14px",background:copied?"#2e7d32":"#0863ba",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .3s",whiteSpace:"nowrap" }}
               >
@@ -375,31 +414,19 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
               </button>
             </div>
           </div>
-
-          {/* أزرار المشاركة */}
           <div style={{ marginBottom:20 }}>
-            <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:8 }}>
-              {isAr ? "مشاركة عبر" : "Share via"}
-            </label>
+            <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:8 }}>{isAr ? "مشاركة عبر" : "Share via"}</label>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
               <button onClick={handleWhatsApp}
-                style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:"rgba(37,211,102,.1)",color:"#128c7e",border:"1.5px solid rgba(37,211,102,.25)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                onMouseEnter={e=>e.currentTarget.style.background="rgba(37,211,102,.18)"}
-                onMouseLeave={e=>e.currentTarget.style.background="rgba(37,211,102,.1)"}
-              >
+                style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:"rgba(37,211,102,.1)",color:"#128c7e",border:"1.5px solid rgba(37,211,102,.25)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
                 <span style={{ fontSize:18 }}>📱</span> WhatsApp
               </button>
               <button onClick={handleCopy}
-                style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                onMouseEnter={e=>e.currentTarget.style.background="rgba(8,99,186,.15)"}
-                onMouseLeave={e=>e.currentTarget.style.background="rgba(8,99,186,.08)"}
-              >
+                style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
                 <span style={{ fontSize:18 }}>📋</span> {isAr ? "نسخ الرابط" : "Copy Link"}
               </button>
             </div>
           </div>
-
-          {/* تنبيه */}
           <div style={{ background:"rgba(8,99,186,.05)",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:12,padding:"12px 16px",display:"flex",gap:10,alignItems:"flex-start" }}>
             <span style={{ fontSize:16,flexShrink:0 }}>💡</span>
             <p style={{ fontSize:12,color:"#555",lineHeight:1.7,margin:0 }}>
@@ -445,7 +472,6 @@ export default function AppointmentsPage() {
   const isAr = lang === "ar";
   const tr   = T[lang];
 
-  // ── State ──────────────────────────────────────────────
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients,     setPatients]     = useState<Patient[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -460,7 +486,6 @@ export default function AppointmentsPage() {
   const [editAppt,     setEditAppt]     = useState<Appointment | null>(null);
   const [notification, setNotification] = useState<Appointment | null>(null);
 
-  // ── جلب المرضى ────────────────────────────────────────
   const loadPatients = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
@@ -473,7 +498,6 @@ export default function AppointmentsPage() {
     setPatients((data ?? []) as Patient[]);
   };
 
-  // ── جلب المواعيد ──────────────────────────────────────
   const loadAppointments = async () => {
     setLoading(true);
     try {
@@ -502,7 +526,6 @@ export default function AppointmentsPage() {
     });
   }, []);
 
-  // تنبيه تلقائي لأول موعد اليوم
   useEffect(() => {
     if (appointments.length === 0) return;
     const timer = setTimeout(() => {
@@ -512,7 +535,7 @@ export default function AppointmentsPage() {
     return () => clearTimeout(timer);
   }, [appointments]);
 
-  // ── حفظ موعد (إضافة أو تعديل) ───────────────────────
+  // ── حفظ موعد ─────────────────────────────────────────
   const handleSave = async (form: ApptForm, id?: number) => {
     setSaving(true);
     try {
@@ -520,7 +543,6 @@ export default function AppointmentsPage() {
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
 
       if (id) {
-        // تعديل
         const { error } = await supabase
           .from("appointments")
           .update({
@@ -528,14 +550,13 @@ export default function AppointmentsPage() {
             date:       form.date,
             time:       form.time,
             duration:   form.duration,
-            type:       form.type   || null,
-            notes:      form.notes  || null,
+            type:       form.type  || null,
+            notes:      form.notes || null,
             status:     form.status,
           })
           .eq("id", id);
         if (error) throw error;
       } else {
-        // إضافة
         const { error } = await supabase
           .from("appointments")
           .insert({
@@ -555,7 +576,6 @@ export default function AppointmentsPage() {
       setSelectedKey(form.date);
     } catch (err) {
       console.error("Error saving appointment:", err);
-      alert(isAr ? tr.errorSave : tr.errorSave);
     } finally {
       setSaving(false);
       setAddModal(false);
@@ -579,80 +599,87 @@ export default function AppointmentsPage() {
     }
   };
 
+  // ── حذف موعد ← جديد ─────────────────────────────────
+  const handleDelete = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      // إزالة فورية من الـ state بدون reload
+      setAppointments(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error("Error deleting appointment:", err);
+      alert(isAr ? tr.errorDelete : tr.errorDelete);
+    } finally {
+      setEditAppt(null);
+      setAddModal(false);
+    }
+  };
+
   // ── Computed ──────────────────────────────────────────
-  // مواعيد اليوم المحدد (date يُخزّن كـ YYYY-MM-DD في Supabase)
   const dayAppointments = appointments
     .filter(a => a.date === selectedKey)
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  // عدد المواعيد لكل يوم
   const countByKey: Record<string, number> = {};
   appointments.forEach(a => { countByKey[a.date] = (countByKey[a.date] || 0) + 1; });
 
-  // بناء أيام التقويم
   const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const calDays: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) calDays.push(null);
   for (let d = 1; d <= daysInMonth; d++) calDays.push(d);
 
-  // إحصائيات
   const monthKey   = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
   const monthAppts = appointments.filter(a => a.date.startsWith(monthKey));
+
   const stats = {
     total:     monthAppts.length,
     today:     appointments.filter(a => a.date === todayKey).length,
     completed: monthAppts.filter(a => a.status === "completed").length,
-    pending:   monthAppts.filter(a => a.status === "scheduled").length,
+    pending:   appointments.filter(a => a.status === "scheduled" && a.date >= todayKey).length,
   };
 
-  const statusStyle = (status: string) => ({
-    scheduled: { bg:"rgba(8,99,186,.08)",    color:"#0863ba" },
-    completed: { bg:"rgba(46,125,50,.08)",   color:"#2e7d32" },
-    cancelled: { bg:"rgba(192,57,43,.08)",   color:"#c0392b" },
-    "no-show": { bg:"rgba(136,136,136,.08)", color:"#888"    },
-  }[status] ?? { bg:"#f0f0f0", color:"#888" });
+  const getPatientName = (pid: number) =>
+    patients.find(p => p.id === pid)?.name ?? "—";
 
-  const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
-  const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+  const statusStyle = (s: string) => ({
+    scheduled: { bg:"rgba(8,99,186,.06)",  border:"rgba(8,99,186,.2)"  },
+    completed: { bg:"rgba(46,125,50,.06)", border:"rgba(46,125,50,.2)" },
+    cancelled: { bg:"rgba(192,57,43,.04)", border:"rgba(192,57,43,.15)"},
+    "no-show": { bg:"rgba(136,136,136,.04)", border:"rgba(136,136,136,.15)" },
+  }[s] ?? { bg:"#f7f9fc", border:"#eef0f3" });
 
-  const selDateObj = new Date(selectedKey + "T00:00:00");
-  const selLabel   = `${tr.weekDaysFull[selDateObj.getDay()]}، ${selDateObj.getDate()} ${tr.months[selDateObj.getMonth()]} ${selDateObj.getFullYear()}`;
+  const selDate = selectedKey.split("-");
+  const selLabel = selDate.length === 3
+    ? `${parseInt(selDate[2])} ${tr.months[parseInt(selDate[1])-1]} ${selDate[0]}`
+    : selectedKey;
 
-  // إيجاد اسم المريض
-  const getPatientName = (patientId: number) =>
-    patients.find(p => p.id === patientId)?.name ?? "—";
-
-  // ── Render ─────────────────────────────────────────────
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Rubik',sans-serif;background:#f7f9fc;color:#353535}
-        ::-webkit-scrollbar{width:5px}
-        ::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
-        @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .page-anim{animation:fadeUp .4s ease both}
-        .cal-day{border-radius:10px;cursor:pointer;transition:all .15s;position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
-        .cal-day:hover{background:#f0f6ff}
-        .cal-day.selected{background:#0863ba !important;color:#fff !important}
-        .cal-day.today-cell{font-weight:800}
-        .appt-block{border-radius:10px;padding:12px 14px;margin-bottom:10px;border-style:solid;border-width:0;transition:all .2s;cursor:pointer}
-        .appt-block:hover{transform:translateX(${isAr?"2px":"-2px"});box-shadow:0 4px 16px rgba(0,0,0,.08)}
-        .stat-card{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;box-shadow:0 2px 10px rgba(8,99,186,.05)}
-        .appt-input:focus{border-color:#0863ba !important;box-shadow:0 0 0 3px rgba(8,99,186,.08)}
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Rubik', sans-serif; background: #f7f9fc; direction: ${isAr ? "rtl" : "ltr"}; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes fadeUp  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin    { to   { transform: rotate(360deg); } }
+        .appt-block { border: 1.5px solid; border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all .18s; }
+        .appt-block:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(8,99,186,.12); }
+        .appt-input:focus { border-color: #0863ba !important; box-shadow: 0 0 0 3px rgba(8,99,186,.1); }
+        .cal-day { border-radius: 8px; cursor: pointer; transition: all .15s; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+        .cal-day:hover { background: rgba(8,99,186,.06); }
       `}</style>
 
-      <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="appointments"/>
+      <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc",display:"flex" }}>
+        <Sidebar lang={lang} setLang={setLang} activePage="appointments" />
 
-        <main className="page-anim" style={{ marginRight:isAr?240:undefined,marginLeft:isAr?undefined:240,padding:"0 32px 48px",transition:"margin .3s" }}>
+        <main style={{ [isAr?"marginRight":"marginLeft"]:240,flex:1,padding:"0 32px 48px",minHeight:"100vh",maxWidth:"calc(100vw - 240px)" }}>
 
           {/* TOP BAR */}
-          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
+          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"20px 0 16px",borderBottom:"1.5px solid #eef0f3",marginBottom:24 }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
                 <h1 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
@@ -660,179 +687,160 @@ export default function AppointmentsPage() {
               </div>
               <div style={{ display:"flex",gap:10 }}>
                 <button onClick={()=>setShareModal(true)}
-                  style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #a4c4e4",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                  onMouseEnter={e=>{e.currentTarget.style.background="#f0f6ff"}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="#fff"}}
-                ><span style={{ fontSize:16 }}>🔗</span> {lang==="ar"?"رابط الحجز":"Booking Link"}</button>
+                  style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}>
+                  🔗 {isAr ? "رابط الحجز" : "Booking Link"}
+                </button>
                 <button onClick={()=>setAddModal(true)}
-                  style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}
-                  onMouseEnter={e=>{e.currentTarget.style.background="#054a8c";e.currentTarget.style.transform="translateY(-1px)"}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="#0863ba";e.currentTarget.style.transform="translateY(0)"}}
-                ><span style={{ fontSize:18,lineHeight:1 }}>＋</span> {tr.addAppointment}</button>
+                  style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}>
+                  ＋ {tr.addAppointment}
+                </button>
               </div>
             </div>
           </div>
 
-          <div style={{ paddingTop:24 }}>
-
-            {/* STATS */}
-            <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24 }}>
-              {[
-                {label:tr.stats.total,    value:stats.total,    icon:"📅",color:"#0863ba",bg:"rgba(8,99,186,.08)"},
-                {label:tr.stats.today,    value:stats.today,    icon:"🗓️",color:"#2980b9",bg:"rgba(41,128,185,.08)"},
-                {label:tr.stats.completed,value:stats.completed,icon:"✅",color:"#2e7d32",bg:"rgba(46,125,50,.08)"},
-                {label:tr.stats.pending,  value:stats.pending,  icon:"⏳",color:"#e67e22",bg:"rgba(230,126,34,.08)"},
-              ].map((s,i)=>(
-                <div key={i} className="stat-card" style={{ animation:`fadeUp .4s ${i*60}ms ease both` }}>
-                  <div style={{ width:38,height:38,borderRadius:10,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}>{s.icon}</div>
-                  <div style={{ fontSize:26,fontWeight:800,color:s.color,lineHeight:1 }}>{s.value}</div>
-                  <div style={{ fontSize:12,color:"#aaa",marginTop:5,fontWeight:500 }}>{s.label}</div>
+          {/* STATS */}
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24,animation:"fadeUp .4s ease" }}>
+            {[
+              { label:tr.stats.total,     value:stats.total,     icon:"📅", color:"#0863ba" },
+              { label:tr.stats.today,     value:stats.today,     icon:"🕐", color:"#e67e22" },
+              { label:tr.stats.completed, value:stats.completed, icon:"✅", color:"#2e7d32" },
+              { label:tr.stats.pending,   value:stats.pending,   icon:"⏳", color:"#7b2d8b" },
+            ].map((s,i) => (
+              <div key={i} style={{ background:"#fff",borderRadius:14,padding:"18px 20px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
+                  <span style={{ fontSize:20 }}>{s.icon}</span>
+                  <span style={{ fontSize:11,fontWeight:700,color:s.color,background:`${s.color}14`,padding:"3px 10px",borderRadius:20 }}>{s.label}</span>
                 </div>
-              ))}
-            </div>
+                <div style={{ fontSize:28,fontWeight:900,color:"#353535",lineHeight:1 }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
 
-            {/* MAIN GRID */}
-            <div style={{ display:"grid",gridTemplateColumns:"340px 1fr",gap:20 }}>
+          {/* CALENDAR + DAY VIEW */}
+          <div style={{ display:"grid",gridTemplateColumns:"320px 1fr",gap:20 }}>
 
-              {/* ── CALENDAR ── */}
-              <div>
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"hidden",marginBottom:16 }}>
-                  <div style={{ padding:"18px 20px",borderBottom:"1.5px solid #f5f7fa",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-                    <button onClick={prevMonth} style={{ width:32,height:32,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f9fafb",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>‹</button>
-                    <span style={{ fontSize:15,fontWeight:700,color:"#353535" }}>{tr.months[viewMonth]} {viewYear}</span>
-                    <button onClick={nextMonth} style={{ width:32,height:32,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f9fafb",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>›</button>
-                  </div>
-                  <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",padding:"10px 14px 4px",gap:4 }}>
-                    {tr.weekDays.map(d=>(
-                      <div key={d} style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#bbb",padding:"4px 0" }}>{d}</div>
-                    ))}
-                  </div>
-                  <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",padding:"4px 14px 18px",gap:4 }}>
-                    {calDays.map((d,i)=>{
-                      if (!d) return <div key={`e-${i}`}/>;
-                      const key     = toKey(viewYear,viewMonth,d);
-                      const count   = countByKey[key] || 0;
-                      const isFull  = count >= MAX_PER_DAY;
-                      const isToday = key === todayKey;
-                      const isSel   = key === selectedKey;
-                      return (
-                        <div key={key}
-                          className={`cal-day${isSel?" selected":""}${isToday&&!isSel?" today-cell":""}`}
-                          onClick={()=>setSelectedKey(key)}
-                          style={{ background:isSel?"#0863ba":isToday?"rgba(8,99,186,.08)":"transparent", color:isSel?"#fff":isToday?"#0863ba":"#353535" }}
-                        >
-                          <span style={{ fontSize:13,fontWeight:isToday?800:400 }}>{d}</span>
-                          {count>0&&<div style={{ width:6,height:6,borderRadius:"50%",background:isSel?"rgba(255,255,255,.8)":isFull?"#c0392b":"#0863ba" }}/>}
-                        </div>
-                      );
-                    })}
-                  </div>
+            {/* التقويم */}
+            <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)",alignSelf:"start" }}>
+              <div style={{ padding:"16px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                <button onClick={()=>{ let m=viewMonth-1,y=viewYear; if(m<0){m=11;y--;} setViewMonth(m); setViewYear(y); }}
+                  style={{ width:30,height:30,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>‹</button>
+                <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>
+                  {tr.months[viewMonth]} {viewYear}
                 </div>
-
-                <button
-                  onClick={()=>{ setSelectedKey(todayKey); setViewMonth(now.getMonth()); setViewYear(now.getFullYear()); }}
-                  style={{ width:"100%",padding:"11px",background:"#fff",color:"#0863ba",border:"1.5px solid #a4c4e4",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s",marginBottom:16 }}
-                  onMouseEnter={e=>{e.currentTarget.style.background="#0863ba";e.currentTarget.style.color="#fff"}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.color="#0863ba"}}
-                >
-                  🗓 {tr.today}
-                </button>
-
-                <div style={{ background:"#fff",borderRadius:14,padding:"14px 16px",border:"1.5px solid #eef0f3" }}>
-                  {(Object.entries(tr.statuses) as [Status, string][]).map(([k,v])=>(
-                    <div key={k} style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-                      <div style={{ width:12,height:12,borderRadius:3,background:tr.statusColors[k],flexShrink:0 }}/>
-                      <span style={{ fontSize:12,color:"#666" }}>{v}</span>
-                    </div>
-                  ))}
-                </div>
+                <button onClick={()=>{ let m=viewMonth+1,y=viewYear; if(m>11){m=0;y++;} setViewMonth(m); setViewYear(y); }}
+                  style={{ width:30,height:30,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>›</button>
               </div>
 
-              {/* ── DAY VIEW ── */}
-              <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"hidden" }}>
-                <div style={{ padding:"18px 22px",borderBottom:"1.5px solid #f5f7fa",display:"flex",alignItems:"center",justifyContent:"space-between",background:selectedKey===todayKey?"rgba(8,99,186,.03)":"#fff" }}>
-                  <div>
-                    <h3 style={{ fontSize:15,fontWeight:800,color:"#353535" }}>{selLabel}</h3>
-                    <p style={{ fontSize:12,color:"#aaa",marginTop:3 }}>
-                      {dayAppointments.length} {tr.appointments}
-                      {dayAppointments.length>=MAX_PER_DAY&&<span style={{ marginRight:8,marginLeft:8,color:"#c0392b",fontWeight:600 }}>• {tr.fullDay}</span>}
-                    </p>
-                  </div>
-                  <button onClick={()=>setAddModal(true)}
-                    style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}
-                  >＋ {tr.appt}</button>
+              <div style={{ padding:"12px 14px" }}>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:6 }}>
+                  {tr.weekDays.map(d=>(
+                    <div key={d} style={{ textAlign:"center",fontSize:10,fontWeight:700,color:"#bbb",padding:"4px 0" }}>{d}</div>
+                  ))}
+                </div>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2 }}>
+                  {calDays.map((d,i) => {
+                    if (!d) return <div key={i}/>;
+                    const k     = toKey(viewYear, viewMonth, d);
+                    const cnt   = countByKey[k] || 0;
+                    const isSel = k === selectedKey;
+                    const isTod = k === todayKey;
+                    return (
+                      <div key={i} className="cal-day"
+                        onClick={()=>setSelectedKey(k)}
+                        style={{ background:isSel?"#0863ba":isTod?"rgba(8,99,186,.08)":"transparent",color:isSel?"#fff":isTod?"#0863ba":"#353535",border:isTod&&!isSel?"1.5px solid rgba(8,99,186,.2)":"1.5px solid transparent" }}
+                      >
+                        <span style={{ fontSize:13,fontWeight:isSel||isTod?700:400 }}>{d}</span>
+                        {cnt>0&&<div style={{ width:16,height:5,borderRadius:3,background:isSel?"rgba(255,255,255,.6)":"#0863ba",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",color:isSel?"rgba(255,255,255,.9)":"#fff",fontWeight:700 }}>{cnt}</div>}
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div style={{ padding:"8px 22px 24px",maxHeight:"calc(100vh - 280px)",overflowY:"auto" }}>
-                  {loading ? (
-                    <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                      <div style={{ width:36,height:36,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px" }}/>
-                      <div style={{ fontSize:14,fontWeight:600 }}>{tr.loading}</div>
-                    </div>
-                  ) : dayAppointments.length===0 ? (
-                    <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                      <div style={{ fontSize:44,marginBottom:14 }}>📅</div>
-                      <div style={{ fontSize:15,fontWeight:600 }}>{tr.noAppointments}</div>
-                      <button onClick={()=>setAddModal(true)} style={{ marginTop:20,padding:"10px 24px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer" }}>
-                        ＋ {tr.addAppointment}
-                      </button>
-                    </div>
-                  ) : (
-                    HOURS.map(h => {
-                      const hStr    = String(h).padStart(2,"0") + ":";
-                      const hourAppts = dayAppointments.filter(a => a.time.startsWith(hStr));
-                      return (
-                        <div key={h} style={{ display:"flex",alignItems:"flex-start",gap:16,padding:"8px 0",borderBottom:"1px solid #f5f7fa",minHeight:52 }}>
-                          <div style={{ width:46,flexShrink:0,paddingTop:4,textAlign:"center" }}>
-                            <span style={{ fontSize:12,color:hourAppts.length>0?"#0863ba":"#ccc",fontWeight:hourAppts.length>0?700:400 }}>
-                              {String(h).padStart(2,"0")}:00
-                            </span>
-                          </div>
-                          <div style={{ flex:1,display:"flex",flexDirection:"column",gap:8,paddingTop:2 }}>
-                            {hourAppts.map(appt => {
-                              const name   = getPatientName(appt.patient_id);
-                              const ss     = statusStyle(appt.status);
-                              const bColor = tr.statusColors[appt.status as Status];
-                              return (
-                                <div key={appt.id}
-                                  className="appt-block"
-                                  onClick={()=>setEditAppt(appt)}
-                                  style={{
-                                    background: ss.bg,
-                                    borderColor: bColor,
-                                    borderLeftWidth:  isAr ? 0 : 4,
-                                    borderRightWidth: isAr ? 4 : 0,
-                                  }}
-                                >
-                                  <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                                    <div style={{ width:32,height:32,borderRadius:8,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
-                                      {name !== "—" ? getInitials(name) : "?"}
-                                    </div>
-                                    <div style={{ flex:1,minWidth:0 }}>
-                                      <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
-                                        {name}
-                                      </div>
-                                      <div style={{ fontSize:11,color:"#888",marginTop:2 }}>
-                                        {appt.time} · {appt.duration} {tr.duration.min}
-                                        {appt.type && ` · ${appt.type}`}
-                                      </div>
-                                    </div>
-                                    <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4 }}>
-                                      <span style={{ fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
-                                        {tr.statuses[appt.status as Status]}
-                                      </span>
-                                      {appt.notes && <span style={{ fontSize:10,color:"#bbb" }}>📝</span>}
+                <button onClick={()=>setSelectedKey(todayKey)}
+                  style={{ width:"100%",marginTop:12,padding:"8px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer" }}>
+                  📅 {tr.today}
+                </button>
+              </div>
+            </div>
+
+            {/* قائمة مواعيد اليوم */}
+            <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
+              <div style={{ padding:"18px 22px 14px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                <div>
+                  <h3 style={{ fontSize:15,fontWeight:800,color:"#353535" }}>{selLabel}</h3>
+                  <p style={{ fontSize:12,color:"#aaa",marginTop:3 }}>
+                    {dayAppointments.length} {tr.appointments}
+                    {dayAppointments.length>=MAX_PER_DAY&&<span style={{ marginRight:8,marginLeft:8,color:"#c0392b",fontWeight:600 }}>• {tr.fullDay}</span>}
+                  </p>
+                </div>
+                <button onClick={()=>setAddModal(true)}
+                  style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
+                  ＋ {tr.appt}
+                </button>
+              </div>
+
+              <div style={{ padding:"8px 22px 24px",maxHeight:"calc(100vh - 280px)",overflowY:"auto" }}>
+                {loading ? (
+                  <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
+                    <div style={{ width:36,height:36,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px" }}/>
+                    <div style={{ fontSize:14,fontWeight:600 }}>{tr.loading}</div>
+                  </div>
+                ) : dayAppointments.length===0 ? (
+                  <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
+                    <div style={{ fontSize:44,marginBottom:14 }}>📅</div>
+                    <div style={{ fontSize:15,fontWeight:600 }}>{tr.noAppointments}</div>
+                    <button onClick={()=>setAddModal(true)} style={{ marginTop:20,padding:"10px 24px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer" }}>
+                      ＋ {tr.addAppointment}
+                    </button>
+                  </div>
+                ) : (
+                  HOURS.map(h => {
+                    const hStr      = String(h).padStart(2,"0") + ":";
+                    const hourAppts = dayAppointments.filter(a => a.time.startsWith(hStr));
+                    return (
+                      <div key={h} style={{ display:"flex",alignItems:"flex-start",gap:16,padding:"8px 0",borderBottom:"1px solid #f5f7fa",minHeight:52 }}>
+                        <div style={{ width:46,flexShrink:0,paddingTop:4,textAlign:"center" }}>
+                          <span style={{ fontSize:12,color:hourAppts.length>0?"#0863ba":"#ccc",fontWeight:hourAppts.length>0?700:400 }}>
+                            {String(h).padStart(2,"0")}:00
+                          </span>
+                        </div>
+                        <div style={{ flex:1,display:"flex",flexDirection:"column",gap:8,paddingTop:2 }}>
+                          {hourAppts.map(appt => {
+                            const name   = getPatientName(appt.patient_id);
+                            const ss     = statusStyle(appt.status);
+                            const bColor = tr.statusColors[appt.status as Status];
+                            return (
+                              <div key={appt.id}
+                                className="appt-block"
+                                onClick={()=>setEditAppt(appt)}
+                                style={{ background:ss.bg, borderColor:bColor, borderLeftWidth:isAr?0:4, borderRightWidth:isAr?4:0 }}
+                              >
+                                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                                  <div style={{ width:32,height:32,borderRadius:8,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
+                                    {name !== "—" ? getInitials(name) : "?"}
+                                  </div>
+                                  <div style={{ flex:1,minWidth:0 }}>
+                                    <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{name}</div>
+                                    <div style={{ fontSize:11,color:"#888",marginTop:2 }}>
+                                      {appt.time} · {appt.duration} {tr.duration.min}
+                                      {appt.type && ` · ${appt.type}`}
                                     </div>
                                   </div>
+                                  <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4 }}>
+                                    <span style={{ fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
+                                      {tr.statuses[appt.status as Status]}
+                                    </span>
+                                    {appt.notes && <span style={{ fontSize:10,color:"#bbb" }}>📝</span>}
+                                  </div>
                                 </div>
-                              );
-                            })}
-                          </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })
-                  )}
-                </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -848,11 +856,11 @@ export default function AppointmentsPage() {
             onSave={handleSave}
             onClose={()=>{ setAddModal(false); setEditAppt(null); }}
             onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
             saving={saving}
           />
         )}
 
-        {/* Share Modal */}
         {shareModal && (
           <ShareModal
             lang={lang}
