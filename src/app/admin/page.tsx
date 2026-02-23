@@ -569,11 +569,10 @@ interface SubModalProps {
   lang: Lang;
   clinic: ClinicData;
   onSave: () => void;
-  onDelete: () => void;
   onClose: () => void;
 }
 
-const SubscriptionModal = ({ lang, clinic, onSave, onDelete, onClose }: SubModalProps) => {
+const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => {
   const tr   = T[lang];
   const sm   = tr.subModal;
   const isAr = lang === "ar";
@@ -583,17 +582,19 @@ const SubscriptionModal = ({ lang, clinic, onSave, onDelete, onClose }: SubModal
     email:  clinic.email  || "",
     owner:  clinic.owner  || "",
     phone:  clinic.phone  || "",
-    plan:   clinic.plan   || "basic",
+    plan:   clinic.plan   as "basic"|"pro"|"enterprise",
     expiry: clinic.expiry || "",
-    status: clinic.status || "active",
+    status: clinic.status as "active"|"inactive"|"expired",
   });
-  const [newPass,  setNewPass]  = useState("");
-  const [copied,   setCopied]   = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState("");
+  const [newPass,       setNewPass]       = useState("");
+  const [copied,        setCopied]        = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [error,         setError]         = useState("");
+  const [successMsg,    setSuccessMsg]    = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
 
+  // ── helpers ──────────────────────────────────────────────
   const genAndSetPass = useCallback(() => {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#";
     setNewPass(Array.from({length:12}, ()=>chars[Math.floor(Math.random()*chars.length)]).join(""));
@@ -605,49 +606,101 @@ const SubscriptionModal = ({ lang, clinic, onSave, onDelete, onClose }: SubModal
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // ── بناء body مشترك للـ API ──────────────────────────────
+  const buildBody = (overrides: Record<string,unknown> = {}): Record<string,unknown> => ({
+    userId: clinic.user_id,
+    name:   clinic.name,
+    owner:  form.owner,
+    email:  form.email,
+    phone:  form.phone,
+    plan:   form.plan,
+    expiry: form.expiry,
+    status: form.status,
+    ...overrides,
+  });
+
+  const callAPI = async (body: Record<string,unknown>): Promise<{ok:boolean; error?:string}> => {
+    try {
+      const res  = await fetch("/api/update-clinic", {
+        method:  "POST",
+        headers: {"Content-Type":"application/json"},
+        body:    JSON.stringify(body),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok:false, error: json.error || (isAr?"حدث خطأ":"An error occurred") };
+      return { ok:true };
+    } catch {
+      return { ok:false, error: isAr?"خطأ في الاتصال":"Connection error" };
+    }
+  };
+
+  // ── حفظ التعديلات (بيانات + اشتراك + كلمة مرور) ─────────
   const handleSave = async () => {
-    setSaving(true); setError("");
-    try {
-      const body: Record<string,unknown> = {
-        userId: clinic.user_id,
-        name: clinic.name,
-        owner: form.owner,
-        email: form.email,
-        phone: form.phone,
-        plan: form.plan,
-        expiry: form.expiry,
-        status: form.status,
-      };
-      if (newPass.trim()) body.newPassword = newPass.trim();
-      const res  = await fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
-      const json = await res.json();
-      if (!res.ok) { setError(json.error || (isAr?"حدث خطأ":"An error occurred")); setSaving(false); return; }
-      onSave(); onClose();
-    } catch { setError(isAr?"خطأ في الاتصال":"Connection error"); }
-    finally { setSaving(false); }
+    setSaving(true); setError(""); setSuccessMsg("");
+    const body = buildBody();
+    if (newPass.trim()) body.newPassword = newPass.trim();
+    const result = await callAPI(body);
+    setSaving(false);
+    if (!result.ok) { setError(result.error!); return; }
+    setSuccessMsg(isAr?"✓ تم الحفظ بنجاح":"✓ Saved successfully");
+    setNewPass("");
+    onSave(); // تحديث القائمة في الخلفية
+    setTimeout(() => { setSuccessMsg(""); onClose(); }, 800);
   };
 
+  // ── تجميد / رفع تجميد ──────────────────────────────────
   const handleFreeze = async () => {
-    setActionLoading("freeze");
+    setActionLoading("freeze"); setError("");
     const newStatus = form.status === "inactive" ? "active" : "inactive";
-    try {
-      await fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ userId: clinic.user_id, name: clinic.name, owner: form.owner, email: form.email, phone: form.phone, plan: form.plan, expiry: form.expiry, status: newStatus }) });
-      setForm(p => ({ ...p, status: newStatus }));
-      onSave();
-    } catch {}
-    finally { setActionLoading(""); }
+    const result = await callAPI(buildBody({ status: newStatus }));
+    setActionLoading("");
+    if (!result.ok) { setError(result.error!); return; }
+    setForm(p => ({ ...p, status: newStatus }));
+    onSave();
   };
 
+  // ── إلغاء الاشتراك (تعيين الحالة expired + تاريخ اليوم) ─
   const handleCancelSub = async () => {
-    setActionLoading("cancel");
+    setActionLoading("cancel"); setError("");
+    const today = new Date().toISOString().split("T")[0];
+    const result = await callAPI(buildBody({ status: "expired", expiry: today }));
+    setActionLoading("");
+    if (!result.ok) { setError(result.error!); return; }
+    setForm(p => ({ ...p, status: "expired", expiry: today }));
+    onSave();
+  };
+
+  // ── حذف نهائي: clinics + clinic_profiles + auth user ─────
+  const handleDelete = async () => {
+    setActionLoading("delete"); setError("");
     try {
-      await fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ userId: clinic.user_id, name: clinic.name, owner: form.owner, email: form.email, phone: form.phone, plan: form.plan, expiry: new Date().toISOString().split("T")[0], status: "expired" }) });
-      setForm(p => ({ ...p, status: "expired", expiry: new Date().toISOString().split("T")[0] }));
-      onSave();
-    } catch {}
-    finally { setActionLoading(""); }
+      // 1. حذف من جدول clinics
+      const { error: e1 } = await supabase
+        .from("clinics")
+        .delete()
+        .eq("user_id", clinic.user_id!);
+      if (e1) throw new Error(e1.message);
+
+      // 2. حذف من جدول clinic_profiles
+      await supabase
+        .from("clinic_profiles")
+        .delete()
+        .eq("id", clinic.user_id!);
+
+      // 3. حذف مستخدم Auth عبر API
+      await fetch("/api/update-clinic", {
+        method:  "POST",
+        headers: {"Content-Type":"application/json"},
+        body:    JSON.stringify({ userId: clinic.user_id, delete: true }),
+      });
+
+      onSave();   // إعادة تحميل القائمة
+      onClose();  // إغلاق المودال — الصف اختفى نهائياً
+    } catch (err: unknown) {
+      setActionLoading("");
+      setError(err instanceof Error ? err.message : (isAr?"حدث خطأ أثناء الحذف":"Error during deletion"));
+      setConfirmDelete(false);
+    }
   };
 
   const inputSt: React.CSSProperties = {
@@ -700,6 +753,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onDelete, onClose }: SubModal
 
         <div style={{ padding:"20px 26px 0" }}>
           {error && <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>⚠️ {error}</div>}
+          {successMsg && <div style={{ background:"rgba(46,125,50,.06)",border:"1.5px solid rgba(46,125,50,.15)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#2e7d32",marginBottom:14 }}>{successMsg}</div>}
 
           {/* ── TAB: INFO ── */}
           {activeTab === "info" && (
@@ -851,11 +905,11 @@ const SubscriptionModal = ({ lang, clinic, onSave, onDelete, onClose }: SubModal
                 <span style={{ color:"#c0392b",fontSize:12 }}>{sm.deleteConfirmWarning}</span>
               </p>
               <div style={{ display:"flex",gap:10 }}>
-                <button onClick={() => { onDelete(); onClose(); }}
-                  style={{ flex:1,padding:"12px",background:"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>
-                  {sm.deleteConfirm}
+                <button onClick={handleDelete} disabled={actionLoading==="delete"}
+                  style={{ flex:1,padding:"12px",background:actionLoading==="delete"?"#e57373":"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:actionLoading==="delete"?"not-allowed":"pointer" }}>
+                  {actionLoading==="delete"?(isAr?"جاري الحذف...":"Deleting..."):sm.deleteConfirm}
                 </button>
-                <button onClick={() => setConfirmDelete(false)}
+                <button onClick={() => setConfirmDelete(false)} disabled={actionLoading==="delete"}
                   style={{ flex:1,padding:"12px",background:"#f7f9fc",color:"#666",border:"1.5px solid #eef0f3",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
                   {sm.deleteCancel}
                 </button>
@@ -1328,14 +1382,7 @@ export default function AdminPage() {
             lang={lang}
             clinic={subClinic}
             onSave={loadClinics}
-            onDelete={() => {
-              supabase.from("clinics").delete().eq("user_id", subClinic.user_id);
-              supabase.from("clinic_profiles").delete().eq("id", subClinic.user_id);
-              fetch("/api/update-clinic", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ userId: subClinic.user_id, delete: true }) });
-              setSubClinic(null);
-              loadClinics();
-            }}
-            onClose={() => setSubClinic(null)}
+            onClose={() => { setSubClinic(null); loadClinics(); }}
           />
         )}
 
