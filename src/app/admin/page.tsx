@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -19,19 +19,6 @@ interface ClinicData {
   expiry: string;
   status: "active" | "inactive" | "expired";
   user_id?: string;
-}
-
-interface ModalProps {
-  lang: Lang;
-  clinic?: ClinicData | null;
-  onSave: (data: ClinicData) => void;
-  onClose: () => void;
-}
-
-interface ResetPassModalProps {
-  lang: Lang;
-  clinic: ClinicData | null;
-  onClose: () => void;
 }
 
 // ============================================================
@@ -65,12 +52,14 @@ const T = {
       plan:"خطة الاشتراك *",
       expiry:"تاريخ انتهاء الاشتراك *",
       generateCredentials:"توليد بيانات الدخول",
-      username:"اسم المستخدم", password:"كلمة المرور",
+      username:"البريد الإلكتروني", password:"كلمة المرور",
       copyBtn:"نسخ", copiedBtn:"✓ تم النسخ",
       save:"حفظ العيادة", update:"تحديث", cancel:"إلغاء",
       required:"الاسم والبريد والخطة مطلوبة",
       credNote:"احفظ بيانات الدخول قبل الإغلاق — لن تظهر مجدداً",
       password_label:"كلمة المرور",
+      bookLink:"رابط الحجز",
+      creating:"جاري الإنشاء...",
     },
     passModal: {
       title:"إعادة تعيين كلمة المرور",
@@ -78,6 +67,7 @@ const T = {
       generate:"توليد تلقائي",
       save:"حفظ كلمة المرور",
       cancel:"إلغاء",
+      saving:"جاري الحفظ...",
     },
     deleteModal: { title:"تأكيد الحذف", msg:"هل تريد حذف عيادة", warning:"سيتم حذف جميع بيانات هذه العيادة نهائياً.", confirm:"نعم، احذف", cancel:"إلغاء" },
     noResults:"لا توجد نتائج",
@@ -116,12 +106,14 @@ const T = {
       plan:"Subscription Plan *",
       expiry:"Subscription Expiry *",
       generateCredentials:"Generate Login Credentials",
-      username:"Username", password:"Password",
+      username:"Email", password:"Password",
       copyBtn:"Copy", copiedBtn:"✓ Copied",
       save:"Save Clinic", update:"Update", cancel:"Cancel",
       required:"Name, email and plan are required",
       credNote:"Save these credentials before closing — they won't be shown again",
       password_label:"Password",
+      bookLink:"Booking Link",
+      creating:"Creating...",
     },
     passModal: {
       title:"Reset Password",
@@ -129,6 +121,7 @@ const T = {
       generate:"Auto Generate",
       save:"Save Password",
       cancel:"Cancel",
+      saving:"Saving...",
     },
     deleteModal: { title:"Confirm Delete", msg:"Delete clinic", warning:"All data for this clinic will be permanently deleted.", confirm:"Yes, Delete", cancel:"Cancel" },
     noResults:"No results found",
@@ -154,199 +147,337 @@ const genPass = (): string => {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#";
   return Array.from({length:12}, ()=>chars[Math.floor(Math.random()*chars.length)]).join("");
 };
-const genUser = (name: string): string => name.toLowerCase().replace(/[^a-z]/g,"").slice(0,8) + Math.floor(Math.random()*99);
+
+// ─── Field Wrapper — خارج كل المكونات لتجنب فقدان الـ focus ──
+// ⚠️ تعريف هذا المكون هنا خارج ClinicModal هو المفتاح لحل مشكلة الـ focus
+interface FieldProps {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  half?: boolean;
+}
+const Field = ({ label, children, half }: FieldProps) => (
+  <div style={{ marginBottom: 14, flex: half ? "1" : undefined }}>
+    <label style={{
+      display: "block", fontSize: 11, fontWeight: 700, color: "#555",
+      marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.4
+    }}>
+      {label}
+    </label>
+    {children}
+  </div>
+);
 
 // ─── Clinic Modal ──────────────────────────────────────────
-const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
-  const tr = T[lang as Lang];
-  const isAr = lang==="ar";
-  const isEdit = !!clinic?.id;
-  
-  const [form, setForm] = useState({
-    name: clinic?.name||"",
-    owner: clinic?.owner||"",
-    email: clinic?.email||"",
-    phone: clinic?.phone||"",
-    plan: clinic?.plan||"basic" as "basic" | "pro" | "enterprise",
-    expiry: clinic?.expiry||"",
-    status: clinic?.status||"active" as "active" | "inactive" | "expired",
-  });
-  
-  const [creds, setCreds] = useState<{username: string; password: string} | null>(null);
-  const [copied, setCopied] = useState({u:false,p:false});
-  const [error, setError] = useState("");
+interface ModalProps {
+  lang: Lang;
+  clinic?: ClinicData | null;
+  onSave: () => void;  // نستدعي فقط reload بعد الحفظ
+  onClose: () => void;
+}
 
-  const handleGenCreds = () => {
-    const u = genUser(form.owner||"clinic");
-    const p = genPass();
-    setCreds({username:u, password:p});
-  };
+const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
+  const tr   = T[lang];
+  const isAr = lang === "ar";
+  const isEdit = !!clinic?.id;
+
+  const [form, setForm] = useState({
+    name:   clinic?.name   || "",
+    owner:  clinic?.owner  || "",
+    email:  clinic?.email  || "",
+    phone:  clinic?.phone  || "",
+    plan:   (clinic?.plan  || "basic") as "basic" | "pro" | "enterprise",
+    expiry: clinic?.expiry || "",
+    status: (clinic?.status || "active") as "active" | "inactive" | "expired",
+  });
+
+  const [creds,    setCreds]    = useState<{ password: string } | null>(null);
+  const [copied,   setCopied]   = useState({ e: false, p: false });
+  const [error,    setError]    = useState("");
+  const [saving,   setSaving]   = useState(false);
+  const [savedUserId, setSavedUserId] = useState<string | null>(null);
+
+  // inputSt ثابت ومعرّف خارج render
+  const inputSt: React.CSSProperties = useMemo(() => ({
+    width: "100%", padding: "10px 14px",
+    border: "1.5px solid #e8eaed", borderRadius: 10,
+    fontFamily: "Rubik, sans-serif", fontSize: 13,
+    color: "#353535", background: "#fafbfc",
+    outline: "none", transition: "border .2s",
+    direction: isAr ? "rtl" : "ltr",
+  }), [isAr]);
+
+  const handleGenCreds = useCallback(() => {
+    setCreds({ password: genPass() });
+  }, []);
+
+  const copy = useCallback(async (text: string, key: "e" | "p") => {
+    await navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(p => ({ ...p, [key]: true }));
+    setTimeout(() => setCopied(p => ({ ...p, [key]: false })), 2000);
+  }, []);
 
   const handleSave = async () => {
-    if (!form.name.trim()||!form.email.trim()||!form.plan) {
+    if (!form.name.trim() || !form.email.trim() || !form.plan) {
       setError(tr.modal.required);
       return;
     }
+    setSaving(true);
+    setError("");
 
-    // إنشاء مستخدم في Supabase Auth
-    if (!isEdit && creds) {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: form.email,
-        password: creds.password,
-        options: {
-          data: {
-            clinic_name: form.name,
-            owner_name: form.owner,
-            phone: form.phone,
-            plan: form.plan,
-            expiry: form.expiry,
-            status: form.status,
-          }
+    try {
+      if (!isEdit) {
+        // ─── إنشاء عيادة جديدة ───────────────────────────────
+        if (!creds) {
+          setError(isAr ? "يرجى توليد بيانات الدخول أولاً" : "Please generate credentials first");
+          setSaving(false);
+          return;
         }
-      });
 
-      if (authError) {
-        setError(authError.message);
-        return;
+        const res  = await fetch("/api/create-clinic", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ ...form, password: creds.password }),
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+          setError(json.error || (isAr ? "حدث خطأ" : "An error occurred"));
+          setSaving(false);
+          return;
+        }
+
+        setSavedUserId(json.userId);
+        // لا نغلق — نعرض الرابط والبيانات النهائية
+      } else {
+        // ─── تحديث عيادة موجودة ──────────────────────────────
+        const res  = await fetch("/api/update-clinic", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ userId: clinic?.user_id, ...form }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          setError(json.error || (isAr ? "حدث خطأ" : "An error occurred"));
+          setSaving(false);
+          return;
+        }
+        onSave();
+        onClose();
       }
-
-      onSave({ ...form, user_id: authData.user?.id });
-    } else {
-      onSave(form as ClinicData);
+    } catch {
+      setError(isAr ? "خطأ في الاتصال" : "Connection error");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const copy = async (text: string, key: string) => {
-    await navigator.clipboard.writeText(text).catch(()=>{});
-    setCopied(p=>({...p,[key]:true}));
-    setTimeout(()=>setCopied(p=>({...p,[key]:false})),2000);
-  };
-
-  // تعريف الـ styles خارج الـ return لتجنب فقدان الـ focus
-  const inputSt = useMemo((): React.CSSProperties => ({
-    width: "100%",
-    padding: "10px 14px",
-    border: "1.5px solid #e8eaed",
-    borderRadius: 10,
-    fontFamily: "Rubik, sans-serif",
-    fontSize: 13,
-    color: "#353535",
-    background: "#fafbfc",
-    outline: "none",
-    transition: "border .2s",
-    direction: isAr ? "rtl" : "ltr"
-  }), [isAr]);
-
-  const F = ({ label, children, half }: { label: any; children: React.ReactNode; half?: boolean }) => (
-    <div style={{ marginBottom: 14, flex: half ? "1" : undefined }}>
-      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#555", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  );
+  const bookingUrl = savedUserId
+    ? `${typeof window !== "undefined" ? window.location.origin : "https://www.nabd.clinic"}/book/${savedUserId}`
+    : "";
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)" }}/>
-      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:500,maxHeight:"92vh",overflowY:"auto",boxShadow:"0 32px 100px rgba(8,99,186,.2)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)" }} />
+      <div style={{
+        position:"relative", zIndex:1, background:"#fff", borderRadius:20,
+        width:"100%", maxWidth:500, maxHeight:"92vh", overflowY:"auto",
+        boxShadow:"0 32px 100px rgba(8,99,186,.2)",
+        animation:"modalIn .25s cubic-bezier(.4,0,.2,1)"
+      }}>
+        {/* Header */}
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",background:"linear-gradient(135deg,rgba(8,99,186,.03),transparent)" }}>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
             <div style={{ width:40,height:40,background:"rgba(8,99,186,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>🏥</div>
-            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{isEdit?tr.modal.editTitle:tr.modal.addTitle}</h2>
+            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>
+              {isEdit ? tr.modal.editTitle : tr.modal.addTitle}
+            </h2>
           </div>
           <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
         </div>
+
         <div style={{ padding:"20px 26px" }}>
-          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>⚠️ {error}</div>}
-
-          <F label={tr.modal.clinicName}>
-            <input 
-              value={form.name} 
-              onChange={e=>setForm(prev=>({...prev,name:e.target.value}))} 
-              placeholder={tr.modal.clinicNamePh} 
-              style={inputSt}
-            />
-          </F>
-          <div style={{ display:"flex",gap:12 }}>
-            <F label={tr.modal.ownerName} half>
-              <input 
-                value={form.owner} 
-                onChange={e=>setForm(prev=>({...prev,owner:e.target.value}))} 
-                placeholder={tr.modal.ownerPh} 
-                style={inputSt}
-              />
-            </F>
-            <F label={tr.modal.phone} half>
-              <input 
-                value={form.phone} 
-                onChange={e=>setForm(prev=>({...prev,phone:e.target.value}))} 
-                placeholder={tr.modal.phonePh} 
-                style={inputSt}
-              />
-            </F>
-          </div>
-          <F label={tr.modal.email}>
-            <input 
-              type="email" 
-              value={form.email} 
-              onChange={e=>setForm(prev=>({...prev,email:e.target.value}))} 
-              placeholder={tr.modal.emailPh} 
-              style={inputSt}
-            />
-          </F>
-          <div style={{ display:"flex",gap:12 }}>
-            <F label={tr.modal.plan} half>
-              <select value={form.plan} onChange={e=>setForm(prev=>({...prev,plan:e.target.value as any}))} style={{ ...inputSt,cursor:"pointer" }}>
-                <option value="basic">{tr.clinics.plans.basic}</option>
-                <option value="pro">{tr.clinics.plans.pro}</option>
-                <option value="enterprise">{tr.clinics.plans.enterprise}</option>
-              </select>
-            </F>
-            <F label={tr.modal.expiry} half>
-              <input 
-                type="date" 
-                value={form.expiry} 
-                onChange={e=>setForm(prev=>({...prev,expiry:e.target.value}))} 
-                style={inputSt}
-              />
-            </F>
-          </div>
-
-          {/* Credentials Section */}
-          {!isEdit && (
-            <div style={{ borderTop:"1.5px dashed #eee",paddingTop:16,marginTop:4 }}>
-              <button onClick={handleGenCreds} style={{ width:"100%",padding:"11px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px dashed rgba(8,99,186,.3)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
-                🔑 {tr.modal.generateCredentials}
-              </button>
-
-              {creds&&(
-                <div style={{ marginTop:14,background:"#1a1a2e",borderRadius:12,padding:"16px",animation:"modalIn .2s ease" }}>
-                  <div style={{ fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
-                    ⚠️ {tr.modal.credNote}
-                  </div>
-                  {[
-                    {label:tr.modal.username, value:creds.username, key:"u"},
-                    {label:tr.modal.password_label, value:creds.password, key:"p"},
-                  ].map(c=>(
-                    <div key={c.key} style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-                      <span style={{ fontSize:11,color:"rgba(255,255,255,.4)",width:90,flexShrink:0 }}>{c.label}:</span>
-                      <code style={{ flex:1,background:"rgba(255,255,255,.08)",padding:"6px 10px",borderRadius:8,fontSize:13,color:"#a4c4e4",fontFamily:"monospace",letterSpacing:.5 }}>{c.value}</code>
-                      <button onClick={()=>copy(c.value,c.key)} style={{ padding:"5px 12px",background:copied[c.key as 'u'|'p']?"rgba(46,125,50,.3)":"rgba(255,255,255,.1)",color:copied[c.key as 'u'|'p']?"#66bb6a":"rgba(255,255,255,.7)",border:"none",borderRadius:8,fontSize:11,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",whiteSpace:"nowrap" }}>
-                        {copied[c.key as 'u'|'p']?tr.modal.copiedBtn:tr.modal.copyBtn}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {error && (
+            <div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>
+              ⚠️ {error}
             </div>
           )}
+
+          {/* ─── بعد الحفظ الناجح: عرض الرابط والبيانات ─── */}
+          {savedUserId ? (
+            <div>
+              <div style={{ textAlign:"center",marginBottom:24 }}>
+                <div style={{ fontSize:48,marginBottom:8 }}>🎉</div>
+                <h3 style={{ fontSize:16,fontWeight:800,color:"#2e7d32" }}>
+                  {isAr ? "تم إنشاء العيادة بنجاح!" : "Clinic Created Successfully!"}
+                </h3>
+              </div>
+
+              {/* بيانات الدخول */}
+              <div style={{ background:"#1a1a2e",borderRadius:12,padding:"16px",marginBottom:16 }}>
+                <div style={{ fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
+                  ⚠️ {tr.modal.credNote}
+                </div>
+                {[
+                  { label: tr.modal.username,       value: form.email,          key: "e" as const },
+                  { label: tr.modal.password_label, value: creds?.password || "", key: "p" as const },
+                ].map(c => (
+                  <div key={c.key} style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
+                    <span style={{ fontSize:11,color:"rgba(255,255,255,.4)",width:90,flexShrink:0 }}>{c.label}:</span>
+                    <code style={{ flex:1,background:"rgba(255,255,255,.08)",padding:"6px 10px",borderRadius:8,fontSize:13,color:"#a4c4e4",fontFamily:"monospace",letterSpacing:.5,wordBreak:"break-all" }}>
+                      {c.value}
+                    </code>
+                    <button onClick={() => copy(c.value, c.key)}
+                      style={{ padding:"5px 12px",background:copied[c.key]?"rgba(46,125,50,.3)":"rgba(255,255,255,.1)",color:copied[c.key]?"#66bb6a":"rgba(255,255,255,.7)",border:"none",borderRadius:8,fontSize:11,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",whiteSpace:"nowrap" }}>
+                      {copied[c.key] ? tr.modal.copiedBtn : tr.modal.copyBtn}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* رابط الحجز */}
+              <div style={{ background:"rgba(8,99,186,.06)",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,padding:"14px 16px" }}>
+                <div style={{ fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:8,textTransform:"uppercase",letterSpacing:.5 }}>
+                  🔗 {tr.modal.bookLink}
+                </div>
+                <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+                  <span style={{ flex:1,fontSize:12,color:"#555",direction:"ltr",wordBreak:"break-all" }}>{bookingUrl}</span>
+                  <button onClick={() => { navigator.clipboard.writeText(bookingUrl); }}
+                    style={{ flexShrink:0,padding:"7px 14px",background:"#0863ba",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif" }}>
+                    {isAr ? "نسخ" : "Copy"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ─── فورم الإضافة / التعديل ─── */
+            <>
+              <Field label={tr.modal.clinicName}>
+                <input
+                  value={form.name}
+                  onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder={tr.modal.clinicNamePh}
+                  style={inputSt}
+                />
+              </Field>
+
+              <div style={{ display:"flex", gap:12 }}>
+                <Field label={tr.modal.ownerName} half>
+                  <input
+                    value={form.owner}
+                    onChange={e => setForm(prev => ({ ...prev, owner: e.target.value }))}
+                    placeholder={tr.modal.ownerPh}
+                    style={inputSt}
+                  />
+                </Field>
+                <Field label={tr.modal.phone} half>
+                  <input
+                    value={form.phone}
+                    onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder={tr.modal.phonePh}
+                    style={inputSt}
+                  />
+                </Field>
+              </div>
+
+              <Field label={tr.modal.email}>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder={tr.modal.emailPh}
+                  style={inputSt}
+                />
+              </Field>
+
+              <div style={{ display:"flex", gap:12 }}>
+                <Field label={tr.modal.plan} half>
+                  <select
+                    value={form.plan}
+                    onChange={e => setForm(prev => ({ ...prev, plan: e.target.value as "basic"|"pro"|"enterprise" }))}
+                    style={{ ...inputSt, cursor:"pointer" }}
+                  >
+                    <option value="basic">{tr.clinics.plans.basic}</option>
+                    <option value="pro">{tr.clinics.plans.pro}</option>
+                    <option value="enterprise">{tr.clinics.plans.enterprise}</option>
+                  </select>
+                </Field>
+                <Field label={tr.modal.expiry} half>
+                  <input
+                    type="date"
+                    value={form.expiry}
+                    onChange={e => setForm(prev => ({ ...prev, expiry: e.target.value }))}
+                    style={inputSt}
+                  />
+                </Field>
+              </div>
+
+              {/* توليد بيانات الدخول — فقط عند الإضافة */}
+              {!isEdit && (
+                <div style={{ borderTop:"1.5px dashed #eee", paddingTop:16, marginTop:4 }}>
+                  <button
+                    type="button"
+                    onClick={handleGenCreds}
+                    style={{ width:"100%",padding:"11px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px dashed rgba(8,99,186,.3)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}
+                  >
+                    🔑 {tr.modal.generateCredentials}
+                  </button>
+
+                  {creds && (
+                    <div style={{ marginTop:14,background:"#1a1a2e",borderRadius:12,padding:"16px",animation:"modalIn .2s ease" }}>
+                      <div style={{ fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
+                        ⚠️ {tr.modal.credNote}
+                      </div>
+                      {[
+                        { label: tr.modal.username,       value: form.email || (isAr ? "أدخل البريد أولاً" : "Enter email first"), key: "e" as const },
+                        { label: tr.modal.password_label, value: creds.password, key: "p" as const },
+                      ].map(c => (
+                        <div key={c.key} style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
+                          <span style={{ fontSize:11,color:"rgba(255,255,255,.4)",width:90,flexShrink:0 }}>{c.label}:</span>
+                          <code style={{ flex:1,background:"rgba(255,255,255,.08)",padding:"6px 10px",borderRadius:8,fontSize:12,color:"#a4c4e4",fontFamily:"monospace",letterSpacing:.5,wordBreak:"break-all" }}>
+                            {c.value}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => copy(c.value, c.key)}
+                            style={{ padding:"5px 12px",background:copied[c.key]?"rgba(46,125,50,.3)":"rgba(255,255,255,.1)",color:copied[c.key]?"#66bb6a":"rgba(255,255,255,.7)",border:"none",borderRadius:8,fontSize:11,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",whiteSpace:"nowrap" }}
+                          >
+                            {copied[c.key] ? tr.modal.copiedBtn : tr.modal.copyBtn}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
+
         <div style={{ padding:"14px 26px 22px",display:"flex",gap:12,borderTop:"1.5px solid #eef0f3" }}>
-          <button onClick={handleSave} style={{ flex:1,padding:"12px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}>
-            {isEdit?tr.modal.update:tr.modal.save}
-          </button>
-          <button onClick={onClose} style={{ padding:"12px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>{tr.modal.cancel}</button>
+          {savedUserId ? (
+            <button
+              onClick={() => { onSave(); onClose(); }}
+              style={{ flex:1,padding:"12px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}
+            >
+              ✓ {isAr ? "إغلاق" : "Close"}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{ flex:1,padding:"12px",background:saving?"#a4c4e4":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}
+              >
+                {saving ? tr.modal.creating : (isEdit ? tr.modal.update : tr.modal.save)}
+              </button>
+              <button
+                onClick={onClose}
+                style={{ padding:"12px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}
+              >
+                {tr.modal.cancel}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -354,49 +485,83 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
 };
 
 // ─── Reset Password Modal ──────────────────────────────────
+interface ResetPassModalProps {
+  lang: Lang;
+  clinic: ClinicData | null;
+  onClose: () => void;
+}
+
 const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
-  const tr = T[lang as Lang];
-  const [pass, setPass] = useState(genPass());
+  const tr = T[lang];
+  const isAr = lang === "ar";
+  const [pass,   setPass]   = useState(genPass());
   const [copied, setCopied] = useState(false);
-  
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+
   const copy = async () => {
-    await navigator.clipboard.writeText(pass).catch(()=>{});
+    await navigator.clipboard.writeText(pass).catch(() => {});
     setCopied(true);
-    setTimeout(()=>setCopied(false),2000);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSave = async () => {
-    // هنا يمكنك إضافة كود تحديث كلمة المرور في Supabase
-    // مثال: await supabase.auth.admin.updateUserById(...)
-    onClose();
+    if (!clinic?.user_id) return;
+    setSaving(true);
+    try {
+      const res  = await fetch("/api/update-clinic", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          userId:      clinic.user_id,
+          name:        clinic.name,
+          owner:       clinic.owner,
+          email:       clinic.email,
+          phone:       clinic.phone,
+          plan:        clinic.plan,
+          expiry:      clinic.expiry,
+          status:      clinic.status,
+          newPassword: pass,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error || "Error"); setSaving(false); return; }
+      onClose();
+    } catch {
+      setError(isAr ? "خطأ في الاتصال" : "Connection error");
+      setSaving(false);
+    }
   };
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(6px)" }}/>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(6px)" }} />
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"28px",boxShadow:"0 24px 80px rgba(0,0,0,.15)",animation:"modalIn .25s ease" }}>
         <div style={{ textAlign:"center",marginBottom:20 }}>
           <div style={{ fontSize:36,marginBottom:12 }}>🔑</div>
           <h3 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.passModal.title}</h3>
           <p style={{ fontSize:13,color:"#888",marginTop:6 }}>{clinic?.name}</p>
         </div>
+        {error && <div style={{ fontSize:13,color:"#c0392b",marginBottom:12,textAlign:"center" }}>⚠️ {error}</div>}
         <div style={{ marginBottom:16 }}>
-          <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:8,textTransform:"uppercase",letterSpacing:.4 }}>{tr.passModal.newPass}</label>
+          <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:8,textTransform:"uppercase",letterSpacing:.4 }}>
+            {tr.passModal.newPass}
+          </label>
           <div style={{ display:"flex",gap:8 }}>
             <div style={{ flex:1,background:"#1a1a2e",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <code style={{ fontSize:14,color:"#a4c4e4",fontFamily:"monospace",letterSpacing:1 }}>{pass}</code>
             </div>
             <button onClick={copy} style={{ padding:"0 16px",background:copied?"rgba(46,125,50,.1)":"rgba(8,99,186,.08)",color:copied?"#2e7d32":"#0863ba",border:`1.5px solid ${copied?"rgba(46,125,50,.2)":"rgba(8,99,186,.2)"}`,borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600 }}>
-              {copied?"✓":"📋"}
+              {copied ? "✓" : "📋"}
             </button>
           </div>
         </div>
-        <button onClick={()=>setPass(genPass())} style={{ width:"100%",marginBottom:12,padding:"10px",background:"#f7f9fc",color:"#666",border:"1.5px dashed #ddd",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>
+        <button onClick={() => setPass(genPass())} style={{ width:"100%",marginBottom:12,padding:"10px",background:"#f7f9fc",color:"#666",border:"1.5px dashed #ddd",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>
           🔄 {tr.passModal.generate}
         </button>
         <div style={{ display:"flex",gap:10 }}>
-          <button onClick={handleSave} style={{ flex:1,padding:"12px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>
-            {tr.passModal.save}
+          <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"12px",background:saving?"#a4c4e4":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer" }}>
+            {saving ? tr.passModal.saving : tr.passModal.save}
           </button>
           <button onClick={onClose} style={{ flex:1,padding:"12px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
             {tr.passModal.cancel}
@@ -410,48 +575,48 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function AdminPage() {
   const [lang, setLang] = useState<Lang>("ar");
-  const isAr = lang==="ar";
-  const tr = T[lang];
+  const isAr = lang === "ar";
+  const tr   = T[lang];
 
-  const [activeTab, setActiveTab] = useState("clinics");
-  const [clinics, setClinics] = useState<ClinicData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [addModal, setAddModal] = useState(false);
-  const [editClinic, setEditClinic] = useState<ClinicData | null>(null);
+  const [activeTab,    setActiveTab]    = useState("clinics");
+  const [clinics,      setClinics]      = useState<ClinicData[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [search,       setSearch]       = useState("");
+  const [filter,       setFilter]       = useState("all");
+  const [addModal,     setAddModal]     = useState(false);
+  const [editClinic,   setEditClinic]   = useState<ClinicData | null>(null);
   const [deleteClinic, setDeleteClinic] = useState<ClinicData | null>(null);
-  const [resetClinic, setResetClinic] = useState<ClinicData | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [resetClinic,  setResetClinic]  = useState<ClinicData | null>(null);
+  const [openMenuId,   setOpenMenuId]   = useState<number | null>(null);
 
-  // جلب العيادات من Supabase
-  useEffect(() => {
-    loadClinics();
-  }, []);
+  useEffect(() => { loadClinics(); }, []);
 
   const loadClinics = async () => {
     setLoading(true);
     try {
-      // جلب المستخدمين من Auth
-      const { data: { users }, error } = await supabase.auth.admin.listUsers();
-      
+      // نجلب من جدول clinics بدلاً من auth.admin (يحتاج service_role)
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
 
-      const clinicsData: ClinicData[] = users.map((user, index) => ({
-        id: index + 1,
-        user_id: user.id,
-        name: user.user_metadata.clinic_name || `عيادة ${index + 1}`,
-        owner: user.user_metadata.owner_name || "—",
-        email: user.email || "",
-        phone: user.user_metadata.phone || "",
-        plan: user.user_metadata.plan || "basic",
-        expiry: user.user_metadata.expiry || new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
-        status: user.user_metadata.status || "active",
+      const clinicsData: ClinicData[] = (data || []).map((row: Record<string, unknown>, index: number) => ({
+        id:      (row.id as number) || index + 1,
+        user_id: row.user_id as string,
+        name:    (row.name as string)   || `عيادة ${index + 1}`,
+        owner:   (row.owner as string)  || "—",
+        email:   (row.email as string)  || "",
+        phone:   (row.phone as string)  || "",
+        plan:    (row.plan as "basic"|"pro"|"enterprise") || "basic",
+        expiry:  (row.expiry as string) || "",
+        status:  (row.status as "active"|"inactive"|"expired") || "active",
       }));
 
       setClinics(clinicsData);
-    } catch (error) {
-      console.error("Error loading clinics:", error);
+    } catch (err) {
+      console.error("Error loading clinics:", err);
     } finally {
       setLoading(false);
     }
@@ -463,72 +628,60 @@ export default function AdminPage() {
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
-  const filtered = clinics.filter(c => {
+  const filtered = useMemo(() => clinics.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.owner.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filter === "active" && c.status !== "active") return false;
+    if (filter === "active"   && c.status !== "active")   return false;
     if (filter === "inactive" && c.status !== "inactive") return false;
     return true;
-  });
+  }), [clinics, search, filter]);
 
-  const stats = {
-    total: clinics.length,
-    active: clinics.filter(c => c.status === "active").length,
-    users: clinics.length,
+  const stats = useMemo(() => ({
+    total:    clinics.length,
+    active:   clinics.filter(c => c.status === "active").length,
+    users:    clinics.length,
     expiring: clinics.filter(c => {
       const d = new Date(c.expiry);
       const n = new Date();
       return (d.getTime() - n.getTime()) < 30 * 24 * 60 * 60 * 1000 && d > n;
     }).length,
-  };
-
-  const handleSave = async (data: ClinicData) => {
-    if (data.id && data.user_id) {
-      // تحديث
-      await supabase.auth.admin.updateUserById(data.user_id, {
-        user_metadata: {
-          clinic_name: data.name,
-          owner_name: data.owner,
-          phone: data.phone,
-          plan: data.plan,
-          expiry: data.expiry,
-          status: data.status,
-        }
-      });
-    }
-    
-    setAddModal(false);
-    setEditClinic(null);
-    loadClinics();
-  };
+  }), [clinics]);
 
   const toggleStatus = async (clinic: ClinicData) => {
     if (!clinic.user_id) return;
-    
     const newStatus = clinic.status === "active" ? "inactive" : "active";
-    await supabase.auth.admin.updateUserById(clinic.user_id, {
-      user_metadata: {
-        ...clinic,
-        status: newStatus,
-      }
+    await fetch("/api/update-clinic", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ userId: clinic.user_id, ...clinic, status: newStatus }),
     });
-    
     loadClinics();
   };
 
   const handleDelete = async () => {
     if (!deleteClinic?.user_id) return;
-    
-    await supabase.auth.admin.deleteUser(deleteClinic.user_id);
+    // حذف من جدول clinics
+    await supabase.from("clinics").delete().eq("user_id", deleteClinic.user_id);
+    // حذف من clinic_profiles
+    await supabase.from("clinic_profiles").delete().eq("id", deleteClinic.user_id);
+    // حذف المستخدم عبر API
+    await fetch("/api/update-clinic", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ userId: deleteClinic.user_id, delete: true }),
+    });
     setDeleteClinic(null);
     loadClinics();
   };
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", { year: "numeric", month: "short", day: "numeric" });
+  const fmtDate = (d: string) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", { year:"numeric", month:"short", day:"numeric" });
+  };
   const isExpiringSoon = (d: string) => {
     const diff = new Date(d).getTime() - new Date().getTime();
     return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
   };
-  const isExpired = (d: string) => new Date(d) < new Date();
+  const isExpired = (d: string) => d && new Date(d) < new Date();
 
   return (
     <>
@@ -541,6 +694,7 @@ export default function AdminPage() {
         @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        @keyframes spin{to{transform:rotate(360deg)}}
         .page-anim{animation:fadeUp .4s ease both}
         .admin-row{border-bottom:1px solid #21262d;transition:background .15s}
         .admin-row:last-child{border-bottom:none}
@@ -563,7 +717,7 @@ export default function AdminPage() {
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#0d1117",display:"flex" }}>
 
-        {/* ── DARK ADMIN SIDEBAR ── */}
+        {/* ── SIDEBAR ── */}
         <aside style={{ width:220,minHeight:"100vh",background:"#161b22",borderRight:isAr?"none":"1px solid #21262d",borderLeft:isAr?"1px solid #21262d":"none",display:"flex",flexDirection:"column",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50 }}>
           <div style={{ padding:"24px 20px",borderBottom:"1px solid #21262d" }}>
             <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
@@ -574,7 +728,7 @@ export default function AdminPage() {
               </div>
             </div>
             <div style={{ background:"rgba(8,99,186,.15)",border:"1px solid rgba(8,99,186,.3)",borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:6 }}>
-              <div style={{ width:6,height:6,borderRadius:"50%",background:"#0863ba",animation:"pulse 2s infinite" }}/>
+              <div style={{ width:6,height:6,borderRadius:"50%",background:"#0863ba",animation:"pulse 2s infinite" }} />
               <span style={{ fontSize:11,color:"#a4c4e4",fontWeight:600 }}>Admin Access</span>
             </div>
           </div>
@@ -584,28 +738,8 @@ export default function AdminPage() {
               const icons = { clinics:"🏥", users:"👥", subscriptions:"💳", settings:"⚙️" };
               const isActive = activeTab === k;
               return (
-                <button
-                  key={k}
-                  onClick={() => setActiveTab(k)}
-                  style={{
-                    width:"100%",
-                    display:"flex",
-                    alignItems:"center",
-                    gap:12,
-                    padding:"11px 14px",
-                    borderRadius:10,
-                    marginBottom:4,
-                    border:"none",
-                    cursor:"pointer",
-                    background:isActive?"rgba(8,99,186,.15)":"transparent",
-                    color:isActive?"#a4c4e4":"#555",
-                    fontWeight:isActive?600:400,
-                    fontSize:13,
-                    fontFamily:"Rubik,sans-serif",
-                    transition:"all .18s",
-                    textAlign:isAr?"right":"left"
-                  }}
-                >
+                <button key={k} onClick={() => setActiveTab(k)}
+                  style={{ width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:10,marginBottom:4,border:"none",cursor:"pointer",background:isActive?"rgba(8,99,186,.15)":"transparent",color:isActive?"#a4c4e4":"#555",fontWeight:isActive?600:400,fontSize:13,fontFamily:"Rubik,sans-serif",transition:"all .18s",textAlign:isAr?"right":"left" }}>
                   <span style={{ fontSize:16 }}>{icons[k as keyof typeof icons]}</span>
                   <span style={{ flex:1 }}>{v}</span>
                   {k === "clinics" && <span style={{ fontSize:11,background:"rgba(8,99,186,.2)",color:"#a4c4e4",padding:"2px 8px",borderRadius:20 }}>{clinics.length}</span>}
@@ -617,9 +751,9 @@ export default function AdminPage() {
           <div style={{ padding:"16px",borderTop:"1px solid #21262d" }}>
             <div style={{ fontSize:11,color:"#444",fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:12 }}>{tr.systemInfo}</div>
             {[
-              { l: tr.version, v: "1.0.0" },
+              { l: tr.version,    v: "1.0.0" },
               { l: tr.lastBackup, v: isAr ? "منذ ساعة" : "1h ago" },
-              { l: tr.uptime, v: "99.9%" },
+              { l: tr.uptime,     v: "99.9%" },
             ].map(s => (
               <div key={s.l} style={{ display:"flex",justifyContent:"space-between",marginBottom:6 }}>
                 <span style={{ fontSize:11,color:"#444" }}>{s.l}</span>
@@ -627,10 +761,12 @@ export default function AdminPage() {
               </div>
             ))}
             <div style={{ marginTop:14 }}>
-              <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} style={{ width:"100%",padding:"7px",background:"rgba(255,255,255,.04)",border:"1px solid #30363d",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#666",transition:"all .2s",marginBottom:8 }}>
+              <button onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+                style={{ width:"100%",padding:"7px",background:"rgba(255,255,255,.04)",border:"1px solid #30363d",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#666",transition:"all .2s",marginBottom:8 }}>
                 🌐 {lang === "ar" ? "English" : "العربية"}
               </button>
-              <button style={{ width:"100%",padding:"7px",background:"rgba(192,57,43,.1)",border:"1px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#ff7b7b" }}>
+              <button onClick={() => { supabase.auth.signOut(); window.location.href = "/login"; }}
+                style={{ width:"100%",padding:"7px",background:"rgba(192,57,43,.1)",border:"1px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#ff7b7b" }}>
                 → {tr.signOut}
               </button>
             </div>
@@ -646,35 +782,17 @@ export default function AdminPage() {
               <div>
                 <h1 style={{ fontSize:20,fontWeight:800,color:"#fff" }}>
                   {activeTab === "clinics" && tr.clinics.title}
-                  {activeTab === "users" && tr.nav.users}
-                  {activeTab === "subscriptions" && tr.nav.subscriptions}
-                  {activeTab === "settings" && tr.nav.settings}
+                  {activeTab !== "clinics" && tr.nav[activeTab as keyof typeof tr.nav]}
                 </h1>
                 <p style={{ fontSize:12,color:"#555",marginTop:2 }}>
-                  {activeTab === "clinics" && `${stats.active} ${isAr ? "عيادة نشطة من" : "active of"} ${stats.total} ${isAr ? "" : "total"}`}
-                  {activeTab !== "clinics" && tr.comingSoon}
+                  {activeTab === "clinics"
+                    ? `${stats.active} ${isAr?"عيادة نشطة من":"active of"} ${stats.total} ${isAr?"":"total"}`
+                    : tr.comingSoon}
                 </p>
               </div>
               {activeTab === "clinics" && (
-                <button
-                  onClick={() => setAddModal(true)}
-                  style={{
-                    display:"flex",
-                    alignItems:"center",
-                    gap:8,
-                    padding:"10px 20px",
-                    background:"#0863ba",
-                    color:"#fff",
-                    border:"none",
-                    borderRadius:12,
-                    fontFamily:"Rubik,sans-serif",
-                    fontSize:13,
-                    fontWeight:700,
-                    cursor:"pointer",
-                    boxShadow:"0 4px 16px rgba(8,99,186,.35)",
-                    transition:"all .2s"
-                  }}
-                >
+                <button onClick={() => setAddModal(true)}
+                  style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 20px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.35)",transition:"all .2s" }}>
                   <span>＋</span> {tr.clinics.addClinic}
                 </button>
               )}
@@ -686,12 +804,12 @@ export default function AdminPage() {
             {/* STATS */}
             <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24 }}>
               {[
-                { label: tr.stats.totalClinics, value: stats.total, icon: "🏥", color: "#a4c4e4", accent: "#0863ba" },
-                { label: tr.stats.activeClinics, value: stats.active, icon: "✅", color: "#66bb6a", accent: "#2e7d32" },
-                { label: tr.stats.totalUsers, value: stats.users, icon: "👥", color: "#c792ea", accent: "#7b2d8b" },
-                { label: tr.stats.expiringSoon, value: stats.expiring, icon: "⏰", color: "#f0a500", accent: "#e67e22" },
+                { label:tr.stats.totalClinics,  value:stats.total,    icon:"🏥", color:"#a4c4e4", accent:"#0863ba" },
+                { label:tr.stats.activeClinics, value:stats.active,   icon:"✅", color:"#66bb6a", accent:"#2e7d32" },
+                { label:tr.stats.totalUsers,    value:stats.users,    icon:"👥", color:"#c792ea", accent:"#7b2d8b" },
+                { label:tr.stats.expiringSoon,  value:stats.expiring, icon:"⏰", color:"#f0a500", accent:"#e67e22" },
               ].map((s, i) => (
-                <div key={i} className="stat-dark" style={{ animation: `fadeUp .4s ${i * 60}ms ease both` }}>
+                <div key={i} className="stat-dark" style={{ animation:`fadeUp .4s ${i*60}ms ease both` }}>
                   <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:s.accent,borderRadius:"16px 16px 0 0" }} />
                   <div style={{ width:38,height:38,background:`${s.accent}18`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:12 }}>{s.icon}</div>
                   <div style={{ fontSize:28,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
@@ -700,7 +818,7 @@ export default function AdminPage() {
               ))}
             </div>
 
-            {/* CONTENT BASED ON TAB */}
+            {/* CLINICS TAB */}
             {activeTab === "clinics" && (
               <>
                 {/* SEARCH + FILTER */}
@@ -711,28 +829,13 @@ export default function AdminPage() {
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       placeholder={tr.clinics.search}
-                      style={{
-                        border:"none",
-                        outline:"none",
-                        background:"none",
-                        fontFamily:"Rubik,sans-serif",
-                        fontSize:13,
-                        color:"#ccc",
-                        width:"100%",
-                        direction:isAr?"rtl":"ltr"
-                      }}
+                      style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#ccc",width:"100%",direction:isAr?"rtl":"ltr" }}
                     />
                     {search && <button onClick={() => setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#555" }}>✕</button>}
                   </div>
                   <div style={{ display:"flex",gap:8 }}>
-                    {[["all", tr.filterAll], ["active", tr.filterActive], ["inactive", tr.filterInactive]].map(([k, v]) => (
-                      <button
-                        key={k}
-                        className={`filter-chip-dark${filter === k ? " active" : ""}`}
-                        onClick={() => setFilter(k)}
-                      >
-                        {v}
-                      </button>
+                    {[["all",tr.filterAll],["active",tr.filterActive],["inactive",tr.filterInactive]].map(([k,v]) => (
+                      <button key={k} className={`filter-chip-dark${filter===k?" active":""}`} onClick={() => setFilter(k)}>{v}</button>
                     ))}
                   </div>
                 </div>
@@ -740,15 +843,14 @@ export default function AdminPage() {
                 {/* TABLE */}
                 {loading ? (
                   <div style={{ textAlign:"center",padding:"50px",color:"#555" }}>
-                    <div style={{ fontSize:36,marginBottom:10,animation:"spin 1s linear infinite" }}>⚙️</div>
+                    <div style={{ fontSize:36,marginBottom:10,display:"inline-block",animation:"spin 1s linear infinite" }}>⚙️</div>
                     <div style={{ fontSize:14 }}>{tr.loading}</div>
                   </div>
                 ) : (
                   <div style={{ background:"#161b22",borderRadius:16,border:"1px solid #21262d",overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,.3)" }}>
-                    {/* Header */}
                     <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 50px",padding:"11px 20px",background:"#0d1117",borderBottom:"1px solid #21262d",gap:0 }}>
-                      {[tr.clinics.table.name, tr.clinics.table.owner, tr.clinics.table.email, tr.clinics.table.status, tr.clinics.table.plan, tr.clinics.table.expiry, tr.clinics.table.actions].map((h, i) => (
-                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.6,paddingLeft:i > 0 && i < 6 ? 8 : 0,textAlign:i === 6 ? "center" : "start" }}>{h}</div>
+                      {[tr.clinics.table.name,tr.clinics.table.owner,tr.clinics.table.email,tr.clinics.table.status,tr.clinics.table.plan,tr.clinics.table.expiry,tr.clinics.table.actions].map((h,i) => (
+                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.6,paddingLeft:i>0&&i<6?8:0,textAlign:i===6?"center":"start" }}>{h}</div>
                       ))}
                     </div>
 
@@ -759,10 +861,10 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       filtered.map(c => {
-                        const ss = STATUS_COLORS[c.status] || STATUS_COLORS.active;
-                        const pc = PLAN_COLORS[c.plan];
+                        const ss      = STATUS_COLORS[c.status] || STATUS_COLORS.active;
+                        const pc      = PLAN_COLORS[c.plan];
                         const expSoon = isExpiringSoon(c.expiry);
-                        const exp = isExpired(c.expiry);
+                        const exp     = isExpired(c.expiry);
                         return (
                           <div key={c.id} className="admin-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 50px",padding:"14px 20px",alignItems:"center",gap:0 }}>
                             <div>
@@ -782,28 +884,18 @@ export default function AdminPage() {
                               </span>
                             </div>
                             <div style={{ paddingLeft:8 }}>
-                              <div style={{ fontSize:11,color:exp?"#ff7b7b":expSoon?"#f0a500":"#555",fontWeight:exp||expSoon?700:400 }}>
-                                {fmtDate(c.expiry)}
-                              </div>
+                              <div style={{ fontSize:11,color:exp?"#ff7b7b":expSoon?"#f0a500":"#555",fontWeight:exp||expSoon?700:400 }}>{fmtDate(c.expiry)}</div>
                               {expSoon && !exp && <div style={{ fontSize:9,color:"#f0a500",fontWeight:600,marginTop:2,animation:"pulse 2s infinite" }}>⚠ {isAr?"تنتهي قريباً":"Expiring soon"}</div>}
-                              {exp && <div style={{ fontSize:9,color:"#ff7b7b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
+                              {exp      && <div style={{ fontSize:9,color:"#ff7b7b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
                             </div>
                             <div style={{ display:"flex",justifyContent:"center",position:"relative" }} onClick={e => e.stopPropagation()}>
-                              <button
-                                className="icon-btn-dark"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setOpenMenuId(openMenuId === c.id ? null : (c.id || null));
-                                }}
-                              >
-                                ⋯
-                              </button>
+                              <button className="icon-btn-dark" onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }}>⋯</button>
                               {openMenuId === c.id && (
                                 <div className="dropdown-dark">
                                   <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
                                   <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}>🔑 {tr.clinics.actions.resetPass}</div>
                                   <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
-                                    {c.status === "active" ? "⏸ " + tr.clinics.actions.suspend : "▶ " + tr.clinics.actions.activate}
+                                    {c.status==="active"?"⏸ "+tr.clinics.actions.suspend:"▶ "+tr.clinics.actions.activate}
                                   </div>
                                   <div style={{ height:1,background:"#21262d",margin:"4px 0" }} />
                                   <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}>🗑️ {tr.clinics.actions.delete}</div>
@@ -819,14 +911,11 @@ export default function AdminPage() {
               </>
             )}
 
-            {/* COMING SOON للتابات الأخرى */}
             {activeTab !== "clinics" && (
               <div style={{ textAlign:"center",padding:"80px 20px",color:"#555" }}>
                 <div style={{ fontSize:64,marginBottom:20 }}>🚧</div>
                 <h2 style={{ fontSize:24,fontWeight:800,color:"#fff",marginBottom:10 }}>{tr.comingSoon}</h2>
-                <p style={{ fontSize:14,color:"#666" }}>
-                  {isAr ? "هذا القسم قيد التطوير" : "This section is under development"}
-                </p>
+                <p style={{ fontSize:14,color:"#666" }}>{isAr?"هذا القسم قيد التطوير":"This section is under development"}</p>
               </div>
             )}
 
@@ -838,11 +927,11 @@ export default function AdminPage() {
           <ClinicModal
             lang={lang}
             clinic={editClinic}
-            onSave={handleSave}
+            onSave={loadClinics}
             onClose={() => { setAddModal(false); setEditClinic(null); }}
           />
         )}
-        {resetClinic && <ResetPassModal lang={lang} clinic={resetClinic} onClose={() => setResetClinic(null)} />}
+        {resetClinic && <ResetPassModal lang={lang} clinic={resetClinic} onClose={() => { setResetClinic(null); loadClinics(); }} />}
 
         {deleteClinic && (
           <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center" }}>
@@ -851,7 +940,7 @@ export default function AdminPage() {
               <div style={{ fontSize:40,marginBottom:16 }}>🗑️</div>
               <h3 style={{ fontSize:17,fontWeight:800,color:"#fff",marginBottom:8 }}>{tr.deleteModal.title}</h3>
               <p style={{ fontSize:13,color:"#888",lineHeight:1.6 }}>
-                {tr.deleteModal.msg} <strong style={{ color:"#e0e0e0" }}>{deleteClinic.name}</strong>؟<br />
+                {tr.deleteModal.msg} <strong style={{ color:"#e0e0e0" }}>{deleteClinic.name}</strong>؟<br/>
                 <span style={{ color:"#ff7b7b",fontSize:12 }}>{tr.deleteModal.warning}</span>
               </p>
               <div style={{ display:"flex",gap:12,marginTop:24 }}>
