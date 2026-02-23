@@ -1,18 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-// ============================================================
-// /book/[clinicId] — صفحة الحجز العامة للمرضى
-// لا تتطلب تسجيل دخول — خاصة بكل عيادة
-// ============================================================
-
-// client عام بدون auth (للزوار)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { useState, useEffect, use } from "react";
+import { supabase } from "@/lib/supabase";
 
 type Lang = "ar" | "en";
 
@@ -87,7 +76,6 @@ const T = {
   },
 } as const;
 
-// توليد أوقات متاحة بناءً على ساعات العمل ومدة الموعد
 function generateTimeSlots(start: string, end: string, duration: number): string[] {
   const slots: string[] = [];
   const [sh, sm] = start.split(":").map(Number);
@@ -103,21 +91,22 @@ function generateTimeSlots(start: string, end: string, duration: number): string
   return slots;
 }
 
-// التحقق أن اليوم ضمن أيام العمل
 function isDayWorking(dateStr: string, workingDays: string[]): boolean {
   const day = new Date(dateStr + "T00:00:00").getDay();
   return workingDays.some(d => WORKING_DAYS_MAP[d] === day);
 }
 
-export default function BookingPage({ params }: { params: { clinicId: string } }) {
-  const { clinicId } = params;
+// ✅ الإصلاح الرئيسي: params أصبح Promise في Next.js 13+
+export default function BookingPage({ params }: { params: Promise<{ clinicId: string }> }) {
+  // use() يفك الـ Promise بشكل صحيح
+  const { clinicId } = use(params);
 
-  const [lang,    setLang]    = useState<Lang>("ar");
-  const [clinic,  setClinic]  = useState<ClinicProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [success, setSuccess] = useState(false);
+  const [lang,       setLang]       = useState<Lang>("ar");
+  const [clinic,     setClinic]     = useState<ClinicProfile | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [success,    setSuccess]    = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error,   setError]   = useState("");
+  const [error,      setError]      = useState("");
 
   const [form, setForm] = useState({
     name:  "",
@@ -130,30 +119,29 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
   const isAr = lang === "ar";
   const tr   = T[lang];
 
-  // جلب بيانات العيادة
   useEffect(() => {
+    if (!clinicId) return;
+
     supabase
       .from("clinic_profiles")
       .select("*")
       .eq("id", clinicId)
       .single()
       .then(({ data, error }) => {
-        if (error || !data) setClinic(null);
-        else setClinic(data as ClinicProfile);
+        if (error || !data) {
+          console.error("clinic_profiles error:", error, "clinicId:", clinicId);
+          setClinic(null);
+        } else {
+          setClinic(data as ClinicProfile);
+        }
         setLoading(false);
       });
   }, [clinicId]);
 
-  // أوقات متاحة
   const timeSlots = clinic
-    ? generateTimeSlots(
-        clinic.working_hours_start,
-        clinic.working_hours_end,
-        clinic.appointment_duration
-      )
+    ? generateTimeSlots(clinic.working_hours_start, clinic.working_hours_end, clinic.appointment_duration)
     : [];
 
-  // تاريخ اليوم كـ minimum
   const todayStr = new Date().toISOString().split("T")[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,9 +154,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
     setSubmitting(true);
 
     try {
-      // نحفظ الحجز في جدول appointments
-      // patient_id = null لأن المريض ليس مسجلاً بعد
-      // user_id = clinicId حتى تظهر للعيادة الصحيحة
       const { error: insertError } = await supabase
         .from("appointments")
         .insert({
@@ -201,7 +186,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
     direction: isAr ? "rtl" : "ltr",
   };
 
-  // ── شاشة التحميل ────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f9fc",fontFamily:"Rubik,sans-serif" }}>
       <div style={{ textAlign:"center" }}>
@@ -212,7 +196,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
     </div>
   );
 
-  // ── عيادة غير موجودة ────────────────────────────────────
   if (!clinic) return (
     <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f9fc",fontFamily:"Rubik,sans-serif",direction:"rtl" }}>
       <div style={{ textAlign:"center",padding:40 }}>
@@ -283,7 +266,7 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
             )}
             <div style={{ display:"flex",alignItems:"center",gap:8,fontSize:13,color:"#555" }}>
               <span>🕐</span>
-              {clinic.working_hours_start.slice(0,5)} – {clinic.working_hours_end.slice(0,5)}
+              {clinic.working_hours_start?.slice(0,5)} – {clinic.working_hours_end?.slice(0,5)}
             </div>
           </div>
 
@@ -297,13 +280,14 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
                 <div style={{ fontSize:13,color:"#555",marginBottom:6 }}>📅 {form.date} — {form.time}</div>
                 <div style={{ fontSize:13,color:"#555" }}>👤 {form.name} | 📞 {form.phone}</div>
               </div>
-              <button onClick={()=>{ setSuccess(false); setForm({ name:"",phone:"",date:"",time:"",notes:"" }); }}
-                style={{ padding:"12px 28px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>
+              <button
+                onClick={()=>{ setSuccess(false); setForm({ name:"",phone:"",date:"",time:"",notes:"" }); }}
+                style={{ padding:"12px 28px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}
+              >
                 {tr.newBooking}
               </button>
             </div>
           ) : (
-            /* فورم الحجز */
             <div style={{ background:"#fff",borderRadius:20,border:"1.5px solid #eef0f3",boxShadow:"0 4px 24px rgba(8,99,186,.08)",overflow:"hidden",animation:"fadeUp .4s ease" }}>
               <div style={{ padding:"22px 24px 18px",borderBottom:"1.5px solid #f5f7fa" }}>
                 <h2 style={{ fontSize:17,fontWeight:800,color:"#353535",marginBottom:4 }}>{tr.title}</h2>
@@ -317,7 +301,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
                   </div>
                 )}
 
-                {/* الاسم */}
                 <div style={{ marginBottom:16 }}>
                   <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{tr.name}</label>
                   <input
@@ -326,7 +309,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
                   />
                 </div>
 
-                {/* الهاتف */}
                 <div style={{ marginBottom:16 }}>
                   <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{tr.phone}</label>
                   <input
@@ -336,7 +318,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
                   />
                 </div>
 
-                {/* التاريخ */}
                 <div style={{ marginBottom:16 }}>
                   <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{tr.date}</label>
                   <input
@@ -351,7 +332,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
                   )}
                 </div>
 
-                {/* الوقت — grid من الأوقات */}
                 {form.date && isDayWorking(form.date, clinic.working_days) && (
                   <div style={{ marginBottom:16 }}>
                     <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:10 }}>{tr.time}</label>
@@ -369,7 +349,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
                   </div>
                 )}
 
-                {/* ملاحظات */}
                 <div style={{ marginBottom:20 }}>
                   <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{tr.notes}</label>
                   <textarea
@@ -388,7 +367,6 @@ export default function BookingPage({ params }: { params: { clinicId: string } }
             </div>
           )}
 
-          {/* Powered by */}
           <div style={{ textAlign:"center",marginTop:24,fontSize:12,color:"#bbb" }}>
             💗 {tr.poweredBy}
           </div>
