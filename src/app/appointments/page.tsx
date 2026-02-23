@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Appointment } from "@/lib/supabase";
 
@@ -131,6 +131,14 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
   );
 }
 
+// ─── Field component (خارج أي modal لمنع إعادة الإنشاء) ──
+const Field = ({ label, children, half }: { label: string; children: React.ReactNode; half?: boolean }) => (
+  <div style={{ marginBottom:16, flex:half?"1":undefined }}>
+    <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{label}</label>
+    {children}
+  </div>
+);
+
 // ─── نوع الفورم ───────────────────────────────────────────
 type ApptForm = {
   patient_id: number | "";
@@ -173,18 +181,11 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
     onSave(form, appt?.id);
   };
 
-  const inputSt: React.CSSProperties = {
+  const inputSt = useMemo((): React.CSSProperties => ({
     width:"100%", padding:"11px 14px", border:"1.5px solid #e8eaed", borderRadius:10,
     fontFamily:"Rubik,sans-serif", fontSize:14, color:"#353535", background:"#fafbfc",
     outline:"none", transition:"border .2s", direction:isAr?"rtl":"ltr",
-  };
-
-  const Field = ({ label, children, half }: { label: string; children: React.ReactNode; half?: boolean }) => (
-    <div style={{ marginBottom:16, flex:half?"1":undefined }}>
-      <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>{label}</label>
-      {children}
-    </div>
-  );
+  }), [isAr]);
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
@@ -220,16 +221,14 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
               <input type="date" value={form.date}
                 onChange={e=>setForm({...form,date:e.target.value})}
                 style={inputSt}
-                onFocus={e=>e.target.style.borderColor="#0863ba"}
-                onBlur={e=>e.target.style.borderColor="#e8eaed"}
+                className="appt-input"
               />
             </Field>
             <Field label={tr.modal.time} half>
               <input type="time" value={form.time}
                 onChange={e=>setForm({...form,time:e.target.value})}
                 style={inputSt}
-                onFocus={e=>e.target.style.borderColor="#0863ba"}
-                onBlur={e=>e.target.style.borderColor="#e8eaed"}
+                className="appt-input"
               />
             </Field>
           </div>
@@ -249,8 +248,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
               <input value={form.type}
                 onChange={e=>setForm({...form,type:e.target.value})}
                 placeholder={tr.modal.typePh} style={inputSt}
-                onFocus={e=>e.target.style.borderColor="#0863ba"}
-                onBlur={e=>e.target.style.borderColor="#e8eaed"}
+                className="appt-input"
               />
             </Field>
           </div>
@@ -259,9 +257,8 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
             <textarea value={form.notes}
               onChange={e=>setForm({...form,notes:e.target.value})}
               placeholder={tr.modal.notesPh} rows={3}
+              className="appt-input"
               style={{ ...inputSt,resize:"vertical",lineHeight:1.6 } as React.CSSProperties}
-              onFocus={e=>e.target.style.borderColor="#0863ba"}
-              onBlur={e=>e.target.style.borderColor="#e8eaed"}
             />
           </Field>
 
@@ -524,6 +521,7 @@ export default function AppointmentsPage() {
         .appt-block{border-radius:10px;padding:12px 14px;margin-bottom:10px;border-style:solid;border-width:0;transition:all .2s;cursor:pointer}
         .appt-block:hover{transform:translateX(${isAr?"2px":"-2px"});box-shadow:0 4px 16px rgba(0,0,0,.08)}
         .stat-card{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;box-shadow:0 2px 10px rgba(8,99,186,.05)}
+        .appt-input:focus{border-color:#0863ba !important;box-shadow:0 0 0 3px rgba(8,99,186,.08)}
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
