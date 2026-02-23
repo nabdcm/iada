@@ -313,8 +313,8 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               </div>
 
               {/* بيانات الدخول */}
-              <div style={{ background:"#1a1a2e",borderRadius:12,padding:"16px",marginBottom:16 }}>
-                <div style={{ fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
+              <div style={{ background:"#f7f9fc",borderRadius:12,padding:"16px",marginBottom:16,border:"1.5px solid #eef0f3" }}>
+                <div style={{ fontSize:11,color:"#aaa",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
                   ⚠️ {tr.modal.credNote}
                 </div>
                 {[
@@ -322,12 +322,12 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   { label: tr.modal.password_label, value: creds?.password || "", key: "p" as const },
                 ].map(c => (
                   <div key={c.key} style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-                    <span style={{ fontSize:11,color:"rgba(255,255,255,.4)",width:90,flexShrink:0 }}>{c.label}:</span>
-                    <code style={{ flex:1,background:"rgba(255,255,255,.08)",padding:"6px 10px",borderRadius:8,fontSize:13,color:"#a4c4e4",fontFamily:"monospace",letterSpacing:.5,wordBreak:"break-all" }}>
+                    <span style={{ fontSize:11,color:"#aaa",width:90,flexShrink:0 }}>{c.label}:</span>
+                    <code style={{ flex:1,background:"#fff",padding:"6px 10px",borderRadius:8,fontSize:13,color:"#0863ba",fontFamily:"monospace",letterSpacing:.5,wordBreak:"break-all",border:"1.5px solid #eef0f3" }}>
                       {c.value}
                     </code>
                     <button onClick={() => copy(c.value, c.key)}
-                      style={{ padding:"5px 12px",background:copied[c.key]?"rgba(46,125,50,.3)":"rgba(255,255,255,.1)",color:copied[c.key]?"#66bb6a":"rgba(255,255,255,.7)",border:"none",borderRadius:8,fontSize:11,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",whiteSpace:"nowrap" }}>
+                      style={{ padding:"5px 12px",background:copied[c.key]?"rgba(46,125,50,.08)":"rgba(8,99,186,.06)",color:copied[c.key]?"#2e7d32":"#0863ba",border:`1.5px solid ${copied[c.key]?"rgba(46,125,50,.2)":"rgba(8,99,186,.15)"}`,borderRadius:8,fontSize:11,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",whiteSpace:"nowrap" }}>
                       {copied[c.key] ? tr.modal.copiedBtn : tr.modal.copyBtn}
                     </button>
                   </div>
@@ -340,7 +340,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   🔗 {tr.modal.bookLink}
                 </div>
                 <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-                  <span style={{ flex:1,fontSize:12,color:"#555",direction:"ltr",wordBreak:"break-all" }}>{bookingUrl}</span>
+                  <span style={{ flex:1,fontSize:12,color:"#888",direction:"ltr",wordBreak:"break-all" }}>{bookingUrl}</span>
                   <button onClick={() => { navigator.clipboard.writeText(bookingUrl); }}
                     style={{ flexShrink:0,padding:"7px 14px",background:"#0863ba",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif" }}>
                     {isAr ? "نسخ" : "Copy"}
@@ -423,8 +423,8 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   </button>
 
                   {creds && (
-                    <div style={{ marginTop:14,background:"#1a1a2e",borderRadius:12,padding:"16px",animation:"modalIn .2s ease" }}>
-                      <div style={{ fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
+                    <div style={{ marginTop:14,background:"#f7f9fc",borderRadius:12,padding:"16px",border:"1.5px solid #eef0f3",animation:"modalIn .2s ease" }}>
+                      <div style={{ fontSize:11,color:"#aaa",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
                         ⚠️ {tr.modal.credNote}
                       </div>
                       {[
@@ -432,14 +432,14 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                         { label: tr.modal.password_label, value: creds.password, key: "p" as const },
                       ].map(c => (
                         <div key={c.key} style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-                          <span style={{ fontSize:11,color:"rgba(255,255,255,.4)",width:90,flexShrink:0 }}>{c.label}:</span>
-                          <code style={{ flex:1,background:"rgba(255,255,255,.08)",padding:"6px 10px",borderRadius:8,fontSize:12,color:"#a4c4e4",fontFamily:"monospace",letterSpacing:.5,wordBreak:"break-all" }}>
+                          <span style={{ fontSize:11,color:"#aaa",width:90,flexShrink:0 }}>{c.label}:</span>
+                          <code style={{ flex:1,background:"#fff",padding:"6px 10px",borderRadius:8,fontSize:12,color:"#0863ba",fontFamily:"monospace",letterSpacing:.5,wordBreak:"break-all",border:"1.5px solid #eef0f3" }}>
                             {c.value}
                           </code>
                           <button
                             type="button"
                             onClick={() => copy(c.value, c.key)}
-                            style={{ padding:"5px 12px",background:copied[c.key]?"rgba(46,125,50,.3)":"rgba(255,255,255,.1)",color:copied[c.key]?"#66bb6a":"rgba(255,255,255,.7)",border:"none",borderRadius:8,fontSize:11,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",whiteSpace:"nowrap" }}
+                            style={{ padding:"5px 12px",background:copied[c.key]?"rgba(46,125,50,.08)":"rgba(8,99,186,.06)",color:copied[c.key]?"#2e7d32":"#0863ba",border:`1.5px solid ${copied[c.key]?"rgba(46,125,50,.2)":"rgba(8,99,186,.15)"}`,borderRadius:8,fontSize:11,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",whiteSpace:"nowrap" }}
                           >
                             {copied[c.key] ? tr.modal.copiedBtn : tr.modal.copyBtn}
                           </button>
@@ -466,7 +466,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                style={{ flex:1,padding:"12px",background:saving?"#a4c4e4":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}
+                style={{ flex:1,padding:"12px",background:saving?"#93b8dc":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}
               >
                 {saving ? tr.modal.creating : (isEdit ? tr.modal.update : tr.modal.save)}
               </button>
@@ -548,8 +548,8 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
             {tr.passModal.newPass}
           </label>
           <div style={{ display:"flex",gap:8 }}>
-            <div style={{ flex:1,background:"#1a1a2e",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-              <code style={{ fontSize:14,color:"#a4c4e4",fontFamily:"monospace",letterSpacing:1 }}>{pass}</code>
+            <div style={{ flex:1,background:"#f7f9fc",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",border:"1.5px solid #eef0f3" }}>
+              <code style={{ fontSize:14,color:"#0863ba",fontFamily:"monospace",letterSpacing:1 }}>{pass}</code>
             </div>
             <button onClick={copy} style={{ padding:"0 16px",background:copied?"rgba(46,125,50,.1)":"rgba(8,99,186,.08)",color:copied?"#2e7d32":"#0863ba",border:`1.5px solid ${copied?"rgba(46,125,50,.2)":"rgba(8,99,186,.2)"}`,borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600 }}>
               {copied ? "✓" : "📋"}
@@ -560,7 +560,7 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
           🔄 {tr.passModal.generate}
         </button>
         <div style={{ display:"flex",gap:10 }}>
-          <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"12px",background:saving?"#a4c4e4":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer" }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"12px",background:saving?"#93b8dc":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer" }}>
             {saving ? tr.passModal.saving : tr.passModal.save}
           </button>
           <button onClick={onClose} style={{ flex:1,padding:"12px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
@@ -688,48 +688,48 @@ export default function AdminPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Rubik',sans-serif;background:#0d1117;color:#c9d1d9}
+        body{font-family:'Rubik',sans-serif;background:#f7f9fc;color:#353535}
         ::-webkit-scrollbar{width:5px}
-        ::-webkit-scrollbar-thumb{background:#30363d;border-radius:10px}
+        ::-webkit-scrollbar-thumb{background:#d0d5dd;border-radius:10px}
         @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
         @keyframes spin{to{transform:rotate(360deg)}}
         .page-anim{animation:fadeUp .4s ease both}
-        .admin-row{border-bottom:1px solid #21262d;transition:background .15s}
+        .admin-row{border-bottom:1px solid #eef0f3;transition:background .15s}
         .admin-row:last-child{border-bottom:none}
-        .admin-row:hover{background:rgba(255,255,255,.02)}
+        .admin-row:hover{background:#f7f9fc}
         .tab-btn{padding:10px 20px;border-radius:10px;border:none;cursor:pointer;font-family:'Rubik',sans-serif;font-size:13px;font-weight:500;transition:all .2s}
-        .tab-btn.active{background:rgba(8,99,186,.2);color:#a4c4e4;font-weight:700}
-        .tab-btn:not(.active){background:transparent;color:#666}
-        .tab-btn:not(.active):hover{background:rgba(255,255,255,.05);color:#aaa}
-        .icon-btn-dark{width:30px;height:30px;border-radius:8px;border:1px solid #30363d;background:transparent;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#888}
-        .icon-btn-dark:hover{border-color:#a4c4e4;background:rgba(164,196,228,.08);color:#a4c4e4}
-        .filter-chip-dark{padding:6px 14px;border-radius:20px;border:1px solid #30363d;background:transparent;cursor:pointer;font-size:12px;font-family:'Rubik',sans-serif;color:#666;transition:all .2s}
-        .filter-chip-dark.active{background:rgba(8,99,186,.2);color:#a4c4e4;border-color:rgba(8,99,186,.4)}
-        .filter-chip-dark:hover:not(.active){border-color:#555;color:#aaa}
-        .stat-dark{background:#161b22;border-radius:16px;padding:20px;border:1px solid #21262d;position:relative;overflow:hidden}
-        .dropdown-dark{position:absolute;top:calc(100% + 4px);right:0;background:#161b22;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.4);border:1px solid #30363d;min-width:170px;z-index:100;overflow:hidden;animation:modalIn .18s ease}
-        .dropdown-dark-item{padding:10px 16px;font-size:13px;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s;font-family:'Rubik',sans-serif}
-        .dropdown-dark-item:hover{background:rgba(255,255,255,.05);color:#fff}
-        .dropdown-dark-item.danger:hover{background:rgba(192,57,43,.15);color:#ff7b7b}
+        .tab-btn.active{background:rgba(8,99,186,.08);color:#0863ba;font-weight:700}
+        .tab-btn:not(.active){background:transparent;color:#888}
+        .tab-btn:not(.active):hover{background:rgba(8,99,186,.04);color:#666}
+        .icon-btn-dark{width:30px;height:30px;border-radius:8px;border:1.5px solid #eef0f3;background:transparent;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#aaa}
+        .icon-btn-dark:hover{border-color:#0863ba;background:rgba(8,99,186,.06);color:#0863ba}
+        .filter-chip-dark{padding:6px 14px;border-radius:20px;border:1.5px solid #eef0f3;background:transparent;cursor:pointer;font-size:12px;font-family:'Rubik',sans-serif;color:#888;transition:all .2s}
+        .filter-chip-dark.active{background:rgba(8,99,186,.08);color:#0863ba;border-color:rgba(8,99,186,.2)}
+        .filter-chip-dark:hover:not(.active){border-color:#ccc;color:#666}
+        .stat-dark{background:#fff;border-radius:16px;padding:20px;border:1.5px solid #eef0f3;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(8,99,186,.05)}
+        .dropdown-dark{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(8,99,186,.12);border:1.5px solid #eef0f3;min-width:170px;z-index:100;overflow:hidden;animation:modalIn .18s ease}
+        .dropdown-dark-item{padding:10px 16px;font-size:13px;color:#666;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s;font-family:'Rubik',sans-serif}
+        .dropdown-dark-item:hover{background:#f7f9fc;color:#353535}
+        .dropdown-dark-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
       `}</style>
 
-      <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#0d1117",display:"flex" }}>
+      <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc",display:"flex" }}>
 
         {/* ── SIDEBAR ── */}
-        <aside style={{ width:220,minHeight:"100vh",background:"#161b22",borderRight:isAr?"none":"1px solid #21262d",borderLeft:isAr?"1px solid #21262d":"none",display:"flex",flexDirection:"column",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50 }}>
-          <div style={{ padding:"24px 20px",borderBottom:"1px solid #21262d" }}>
+        <aside style={{ width:220,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50,boxShadow:"4px 0 24px rgba(8,99,186,.06)" }}>
+          <div style={{ padding:"24px 20px",borderBottom:"1.5px solid #eef0f3" }}>
             <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-              <div style={{ width:36,height:36,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,boxShadow:"0 4px 12px rgba(8,99,186,.4)" }}>💗</div>
+              <div style={{ width:36,height:36,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }}>💗</div>
               <div>
-                <div style={{ fontSize:16,fontWeight:800,color:"#fff",lineHeight:1.1 }}>{tr.appName}</div>
-                <div style={{ fontSize:9,color:"#444",fontWeight:400,letterSpacing:.5,textTransform:"uppercase" }}>{tr.adminBadge}</div>
+                <div style={{ fontSize:16,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div>
+                <div style={{ fontSize:9,color:"#aaa",fontWeight:400,letterSpacing:.5,textTransform:"uppercase" }}>{tr.adminBadge}</div>
               </div>
             </div>
-            <div style={{ background:"rgba(8,99,186,.15)",border:"1px solid rgba(8,99,186,.3)",borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:6 }}>
+            <div style={{ background:"rgba(8,99,186,.06)",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:8,padding:"6px 10px",display:"flex",alignItems:"center",gap:6 }}>
               <div style={{ width:6,height:6,borderRadius:"50%",background:"#0863ba",animation:"pulse 2s infinite" }} />
-              <span style={{ fontSize:11,color:"#a4c4e4",fontWeight:600 }}>Admin Access</span>
+              <span style={{ fontSize:11,color:"#0863ba",fontWeight:600 }}>Admin Access</span>
             </div>
           </div>
 
@@ -739,34 +739,34 @@ export default function AdminPage() {
               const isActive = activeTab === k;
               return (
                 <button key={k} onClick={() => setActiveTab(k)}
-                  style={{ width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:10,marginBottom:4,border:"none",cursor:"pointer",background:isActive?"rgba(8,99,186,.15)":"transparent",color:isActive?"#a4c4e4":"#555",fontWeight:isActive?600:400,fontSize:13,fontFamily:"Rubik,sans-serif",transition:"all .18s",textAlign:isAr?"right":"left" }}>
+                  style={{ width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:10,marginBottom:4,border:"none",cursor:"pointer",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:13,fontFamily:"Rubik,sans-serif",transition:"all .18s",textAlign:isAr?"right":"left" }}>
                   <span style={{ fontSize:16 }}>{icons[k as keyof typeof icons]}</span>
                   <span style={{ flex:1 }}>{v}</span>
-                  {k === "clinics" && <span style={{ fontSize:11,background:"rgba(8,99,186,.2)",color:"#a4c4e4",padding:"2px 8px",borderRadius:20 }}>{clinics.length}</span>}
+                  {k === "clinics" && <span style={{ fontSize:11,background:"rgba(8,99,186,.08)",color:"#0863ba",padding:"2px 8px",borderRadius:20 }}>{clinics.length}</span>}
                 </button>
               );
             })}
           </nav>
 
-          <div style={{ padding:"16px",borderTop:"1px solid #21262d" }}>
-            <div style={{ fontSize:11,color:"#444",fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:12 }}>{tr.systemInfo}</div>
+          <div style={{ padding:"16px",borderTop:"1.5px solid #eef0f3" }}>
+            <div style={{ fontSize:11,color:"#aaa",fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:12 }}>{tr.systemInfo}</div>
             {[
               { l: tr.version,    v: "1.0.0" },
               { l: tr.lastBackup, v: isAr ? "منذ ساعة" : "1h ago" },
               { l: tr.uptime,     v: "99.9%" },
             ].map(s => (
               <div key={s.l} style={{ display:"flex",justifyContent:"space-between",marginBottom:6 }}>
-                <span style={{ fontSize:11,color:"#444" }}>{s.l}</span>
-                <span style={{ fontSize:11,color:"#a4c4e4",fontWeight:600 }}>{s.v}</span>
+                <span style={{ fontSize:11,color:"#aaa" }}>{s.l}</span>
+                <span style={{ fontSize:11,color:"#0863ba",fontWeight:600 }}>{s.v}</span>
               </div>
             ))}
             <div style={{ marginTop:14 }}>
               <button onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-                style={{ width:"100%",padding:"7px",background:"rgba(255,255,255,.04)",border:"1px solid #30363d",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#666",transition:"all .2s",marginBottom:8 }}>
+                style={{ width:"100%",padding:"7px",background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#666",transition:"all .2s",marginBottom:8 }}>
                 🌐 {lang === "ar" ? "English" : "العربية"}
               </button>
               <button onClick={() => { supabase.auth.signOut(); window.location.href = "/login"; }}
-                style={{ width:"100%",padding:"7px",background:"rgba(192,57,43,.1)",border:"1px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#ff7b7b" }}>
+                style={{ width:"100%",padding:"7px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#c0392b" }}>
                 → {tr.signOut}
               </button>
             </div>
@@ -777,14 +777,14 @@ export default function AdminPage() {
         <main className="page-anim" style={{ [isAr?"marginRight":"marginLeft"]:220,flex:1,padding:"0 32px 48px",minHeight:"100vh" }}>
 
           {/* TOP BAR */}
-          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(13,17,23,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1px solid #21262d" }}>
+          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
-                <h1 style={{ fontSize:20,fontWeight:800,color:"#fff" }}>
+                <h1 style={{ fontSize:20,fontWeight:800,color:"#353535" }}>
                   {activeTab === "clinics" && tr.clinics.title}
                   {activeTab !== "clinics" && tr.nav[activeTab as keyof typeof tr.nav]}
                 </h1>
-                <p style={{ fontSize:12,color:"#555",marginTop:2 }}>
+                <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>
                   {activeTab === "clinics"
                     ? `${stats.active} ${isAr?"عيادة نشطة من":"active of"} ${stats.total} ${isAr?"":"total"}`
                     : tr.comingSoon}
@@ -804,16 +804,16 @@ export default function AdminPage() {
             {/* STATS */}
             <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24 }}>
               {[
-                { label:tr.stats.totalClinics,  value:stats.total,    icon:"🏥", color:"#a4c4e4", accent:"#0863ba" },
-                { label:tr.stats.activeClinics, value:stats.active,   icon:"✅", color:"#66bb6a", accent:"#2e7d32" },
-                { label:tr.stats.totalUsers,    value:stats.users,    icon:"👥", color:"#c792ea", accent:"#7b2d8b" },
-                { label:tr.stats.expiringSoon,  value:stats.expiring, icon:"⏰", color:"#f0a500", accent:"#e67e22" },
+                { label:tr.stats.totalClinics,  value:stats.total,    icon:"🏥", color:"#0863ba", accent:"#0863ba" },
+                { label:tr.stats.activeClinics, value:stats.active,   icon:"✅", color:"#2e7d32", accent:"#2e7d32" },
+                { label:tr.stats.totalUsers,    value:stats.users,    icon:"👥", color:"#7b2d8b", accent:"#7b2d8b" },
+                { label:tr.stats.expiringSoon,  value:stats.expiring, icon:"⏰", color:"#e67e22", accent:"#e67e22" },
               ].map((s, i) => (
                 <div key={i} className="stat-dark" style={{ animation:`fadeUp .4s ${i*60}ms ease both` }}>
                   <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:s.accent,borderRadius:"16px 16px 0 0" }} />
                   <div style={{ width:38,height:38,background:`${s.accent}18`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:12 }}>{s.icon}</div>
                   <div style={{ fontSize:28,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
-                  <div style={{ fontSize:11,color:"#555",marginTop:6,fontWeight:500 }}>{s.label}</div>
+                  <div style={{ fontSize:11,color:"#aaa",marginTop:6,fontWeight:500 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -822,16 +822,16 @@ export default function AdminPage() {
             {activeTab === "clinics" && (
               <>
                 {/* SEARCH + FILTER */}
-                <div style={{ background:"#161b22",borderRadius:12,padding:"14px 16px",border:"1px solid #21262d",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
-                  <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,.04)",border:"1px solid #30363d",borderRadius:10,padding:"9px 14px" }}>
-                    <span style={{ color:"#444",fontSize:14 }}>🔍</span>
+                <div style={{ background:"#fff",borderRadius:12,padding:"14px 16px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
+                  <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
+                    <span style={{ color:"#ccc",fontSize:14 }}>🔍</span>
                     <input
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       placeholder={tr.clinics.search}
-                      style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#ccc",width:"100%",direction:isAr?"rtl":"ltr" }}
+                      style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:"100%",direction:isAr?"rtl":"ltr" }}
                     />
-                    {search && <button onClick={() => setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#555" }}>✕</button>}
+                    {search && <button onClick={() => setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#aaa" }}>✕</button>}
                   </div>
                   <div style={{ display:"flex",gap:8 }}>
                     {[["all",tr.filterAll],["active",tr.filterActive],["inactive",tr.filterInactive]].map(([k,v]) => (
@@ -842,20 +842,20 @@ export default function AdminPage() {
 
                 {/* TABLE */}
                 {loading ? (
-                  <div style={{ textAlign:"center",padding:"50px",color:"#555" }}>
+                  <div style={{ textAlign:"center",padding:"50px",color:"#ccc" }}>
                     <div style={{ fontSize:36,marginBottom:10,display:"inline-block",animation:"spin 1s linear infinite" }}>⚙️</div>
                     <div style={{ fontSize:14 }}>{tr.loading}</div>
                   </div>
                 ) : (
-                  <div style={{ background:"#161b22",borderRadius:16,border:"1px solid #21262d",overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,.3)" }}>
-                    <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 50px",padding:"11px 20px",background:"#0d1117",borderBottom:"1px solid #21262d",gap:0 }}>
+                  <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
+                    <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 50px",padding:"11px 20px",background:"#f7f9fc",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
                       {[tr.clinics.table.name,tr.clinics.table.owner,tr.clinics.table.email,tr.clinics.table.status,tr.clinics.table.plan,tr.clinics.table.expiry,tr.clinics.table.actions].map((h,i) => (
-                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#444",textTransform:"uppercase",letterSpacing:.6,paddingLeft:i>0&&i<6?8:0,textAlign:i===6?"center":"start" }}>{h}</div>
+                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.6,paddingLeft:i>0&&i<6?8:0,textAlign:i===6?"center":"start" }}>{h}</div>
                       ))}
                     </div>
 
                     {filtered.length === 0 ? (
-                      <div style={{ textAlign:"center",padding:"50px",color:"#333" }}>
+                      <div style={{ textAlign:"center",padding:"50px",color:"#ccc" }}>
                         <div style={{ fontSize:36,marginBottom:10 }}>🔍</div>
                         <div style={{ fontSize:14 }}>{tr.noResults}</div>
                       </div>
@@ -868,11 +868,11 @@ export default function AdminPage() {
                         return (
                           <div key={c.id} className="admin-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 50px",padding:"14px 20px",alignItems:"center",gap:0 }}>
                             <div>
-                              <div style={{ fontSize:13,fontWeight:600,color:"#e0e0e0" }}>{c.name}</div>
-                              <div style={{ fontSize:11,color:"#444",marginTop:2 }}>ID: #{c.id}</div>
+                              <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{c.name}</div>
+                              <div style={{ fontSize:11,color:"#ccc",marginTop:2 }}>ID: #{c.id}</div>
                             </div>
-                            <div style={{ fontSize:12,color:"#888",paddingLeft:8 }}>{c.owner}</div>
-                            <div style={{ fontSize:11,color:"#555",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{c.email}</div>
+                            <div style={{ fontSize:12,color:"#666",paddingLeft:8 }}>{c.owner}</div>
+                            <div style={{ fontSize:11,color:"#aaa",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{c.email}</div>
                             <div style={{ paddingLeft:8 }}>
                               <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>
                                 {tr.clinics.statuses[c.status]}
@@ -884,9 +884,9 @@ export default function AdminPage() {
                               </span>
                             </div>
                             <div style={{ paddingLeft:8 }}>
-                              <div style={{ fontSize:11,color:exp?"#ff7b7b":expSoon?"#f0a500":"#555",fontWeight:exp||expSoon?700:400 }}>{fmtDate(c.expiry)}</div>
-                              {expSoon && !exp && <div style={{ fontSize:9,color:"#f0a500",fontWeight:600,marginTop:2,animation:"pulse 2s infinite" }}>⚠ {isAr?"تنتهي قريباً":"Expiring soon"}</div>}
-                              {exp      && <div style={{ fontSize:9,color:"#ff7b7b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
+                              <div style={{ fontSize:11,color:exp?"#c0392b":expSoon?"#e67e22":"#aaa",fontWeight:exp||expSoon?700:400 }}>{fmtDate(c.expiry)}</div>
+                              {expSoon && !exp && <div style={{ fontSize:9,color:"#e67e22",fontWeight:600,marginTop:2,animation:"pulse 2s infinite" }}>⚠ {isAr?"تنتهي قريباً":"Expiring soon"}</div>}
+                              {exp      && <div style={{ fontSize:9,color:"#c0392b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
                             </div>
                             <div style={{ display:"flex",justifyContent:"center",position:"relative" }} onClick={e => e.stopPropagation()}>
                               <button className="icon-btn-dark" onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }}>⋯</button>
@@ -897,7 +897,7 @@ export default function AdminPage() {
                                   <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
                                     {c.status==="active"?"⏸ "+tr.clinics.actions.suspend:"▶ "+tr.clinics.actions.activate}
                                   </div>
-                                  <div style={{ height:1,background:"#21262d",margin:"4px 0" }} />
+                                  <div style={{ height:1,background:"#eef0f3",margin:"4px 0" }} />
                                   <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}>🗑️ {tr.clinics.actions.delete}</div>
                                 </div>
                               )}
@@ -912,10 +912,10 @@ export default function AdminPage() {
             )}
 
             {activeTab !== "clinics" && (
-              <div style={{ textAlign:"center",padding:"80px 20px",color:"#555" }}>
+              <div style={{ textAlign:"center",padding:"80px 20px",color:"#ccc" }}>
                 <div style={{ fontSize:64,marginBottom:20 }}>🚧</div>
-                <h2 style={{ fontSize:24,fontWeight:800,color:"#fff",marginBottom:10 }}>{tr.comingSoon}</h2>
-                <p style={{ fontSize:14,color:"#666" }}>{isAr?"هذا القسم قيد التطوير":"This section is under development"}</p>
+                <h2 style={{ fontSize:24,fontWeight:800,color:"#353535",marginBottom:10 }}>{tr.comingSoon}</h2>
+                <p style={{ fontSize:14,color:"#aaa" }}>{isAr?"هذا القسم قيد التطوير":"This section is under development"}</p>
               </div>
             )}
 
@@ -936,16 +936,16 @@ export default function AdminPage() {
         {deleteClinic && (
           <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center" }}>
             <div onClick={() => setDeleteClinic(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)" }} />
-            <div style={{ position:"relative",zIndex:1,background:"#161b22",borderRadius:20,maxWidth:380,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.5)",border:"1px solid #21262d",animation:"modalIn .25s ease" }}>
+            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(8,99,186,.15)",border:"1.5px solid #eef0f3",animation:"modalIn .25s ease" }}>
               <div style={{ fontSize:40,marginBottom:16 }}>🗑️</div>
-              <h3 style={{ fontSize:17,fontWeight:800,color:"#fff",marginBottom:8 }}>{tr.deleteModal.title}</h3>
+              <h3 style={{ fontSize:17,fontWeight:800,color:"#353535",marginBottom:8 }}>{tr.deleteModal.title}</h3>
               <p style={{ fontSize:13,color:"#888",lineHeight:1.6 }}>
-                {tr.deleteModal.msg} <strong style={{ color:"#e0e0e0" }}>{deleteClinic.name}</strong>؟<br/>
-                <span style={{ color:"#ff7b7b",fontSize:12 }}>{tr.deleteModal.warning}</span>
+                {tr.deleteModal.msg} <strong style={{ color:"#353535" }}>{deleteClinic.name}</strong>؟<br/>
+                <span style={{ color:"#c0392b",fontSize:12 }}>{tr.deleteModal.warning}</span>
               </p>
               <div style={{ display:"flex",gap:12,marginTop:24 }}>
                 <button onClick={handleDelete} style={{ flex:1,padding:"12px",background:"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>{tr.deleteModal.confirm}</button>
-                <button onClick={() => setDeleteClinic(null)} style={{ flex:1,padding:"12px",background:"rgba(255,255,255,.06)",color:"#aaa",border:"1px solid #30363d",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.deleteModal.cancel}</button>
+                <button onClick={() => setDeleteClinic(null)} style={{ flex:1,padding:"12px",background:"#f7f9fc",color:"#666",border:"1.5px solid #eef0f3",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.deleteModal.cancel}</button>
               </div>
             </div>
           </div>
