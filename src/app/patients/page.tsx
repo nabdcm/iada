@@ -617,7 +617,7 @@ export default function PatientsPage() {
         .filter-chip{padding:7px 16px;border-radius:20px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;font-family:'Rubik',sans-serif;font-weight:500;color:#888;transition:all .2s;white-space:nowrap}
         .filter-chip.active{background:#0863ba;color:#fff;border-color:#0863ba}
         .filter-chip:hover:not(.active){border-color:#a4c4e4;color:#0863ba}
-        .dropdown-menu{position:absolute;top:calc(100% + 6px);${isAr ? "left:0" : "right:0"};background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);border:1.5px solid #eef0f3;min-width:160px;z-index:100;overflow:hidden;animation:modalIn .18s ease}
+        .dropdown-menu{position:absolute;top:calc(100% + 6px);${isAr ? "left:0" : "right:0"};background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);border:1.5px solid #eef0f3;min-width:160px;z-index:9999;overflow:hidden;animation:modalIn .18s ease}
         .dropdown-item{padding:10px 16px;font-size:13px;color:#555;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s;font-family:'Rubik',sans-serif}
         .dropdown-item:hover{background:#f7f9fc}
         .dropdown-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
@@ -702,7 +702,7 @@ export default function PatientsPage() {
             </div>
 
             {/* TABLE */}
-            <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"hidden" }}>
+            <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"visible" }}>
 
               {/* Header */}
               <div style={{ display:"grid",gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 110px",gap:0,padding:"12px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3" }}>
