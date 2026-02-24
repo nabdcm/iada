@@ -516,6 +516,15 @@ export default function PatientsPage() {
   const isAr              = lang === "ar";
   const tr                = T[lang];
 
+const [isMobile, setIsMobile] = useState(false);
+
+useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth <= 768);
+  check();
+  window.addEventListener("resize", check);
+  return () => window.removeEventListener("resize", check);
+}, []);
+
   const [patients,      setPatients]      = useState<Patient[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [search,        setSearch]        = useState("");
