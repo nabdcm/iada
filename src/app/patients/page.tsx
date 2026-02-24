@@ -491,11 +491,12 @@ function DeleteModal({ lang, patient, onConfirm, onClose }: {
 }
 
 // ─── Patient Card (Mobile) ────────────────────────────────
-function PatientCard({ p, lang, tr, isAr, calcAge, onEdit, onDelete, onToggleHide, onWhatsApp }: {
-  p: Patient; lang: Lang; tr: typeof T["ar"]; isAr: boolean;
+function PatientCard({ p, lang, isAr, calcAge, onEdit, onDelete, onToggleHide, onWhatsApp }: {
+  p: Patient; lang: Lang; isAr: boolean;
   calcAge: (d?: string|null) => string|number;
   onEdit: () => void; onDelete: () => void; onToggleHide: () => void; onWhatsApp: () => void;
 }) {
+  const tr = T[lang];
   const [expanded, setExpanded] = useState(false);
   const age = calcAge(p.date_of_birth);
 
@@ -925,7 +926,7 @@ export default function PatientsPage() {
                 ) : filtered.map(p => (
                   <PatientCard
                     key={p.id}
-                    p={p} lang={lang} tr={tr} isAr={isAr} calcAge={calcAge}
+                    p={p} lang={lang} isAr={isAr} calcAge={calcAge}
                     onEdit={()=>setEditPatient(p)}
                     onDelete={()=>setDeletePatient(p)}
                     onToggleHide={()=>toggleHide(p.id)}
