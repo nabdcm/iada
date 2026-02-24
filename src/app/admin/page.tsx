@@ -649,58 +649,70 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     setTimeout(() => { setSuccessMsg(""); onClose(); }, 800);
   };
 
-  // ── تجميد / رفع تجميد ──────────────────────────────────
+  // ── تجميد / رفع تجميد — عبر service_role ─────────────────
   const handleFreeze = async () => {
     setActionLoading("freeze"); setError("");
     const newStatus = form.status === "inactive" ? "active" : "inactive";
-    const result = await callAPI(buildBody({ status: newStatus }));
-    setActionLoading("");
-    if (!result.ok) { setError(result.error!); return; }
-    setForm(p => ({ ...p, status: newStatus }));
-    onSave();
+    try {
+      const res  = await fetch("/api/freeze-clinic", {
+        method:  "POST",
+        headers: {"Content-Type":"application/json"},
+        body:    JSON.stringify({ userId: clinic.user_id, status: newStatus }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(json.error || (isAr?"حدث خطأ":"An error occurred")); return; }
+      setForm(p => ({ ...p, status: newStatus }));
+      onSave();
+    } catch {
+      setError(isAr?"خطأ في الاتصال":"Connection error");
+    } finally {
+      setActionLoading("");
+    }
   };
 
-  // ── إلغاء الاشتراك (تعيين الحالة expired + تاريخ اليوم) ─
+  // ── إلغاء الاشتراك — عبر service_role ──────────────────────
   const handleCancelSub = async () => {
     setActionLoading("cancel"); setError("");
-    const today = new Date().toISOString().split("T")[0];
-    const result = await callAPI(buildBody({ status: "expired", expiry: today }));
-    setActionLoading("");
-    if (!result.ok) { setError(result.error!); return; }
-    setForm(p => ({ ...p, status: "expired", expiry: today }));
-    onSave();
+    try {
+      const res  = await fetch("/api/cancel-clinic", {
+        method:  "POST",
+        headers: {"Content-Type":"application/json"},
+        body:    JSON.stringify({ userId: clinic.user_id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(json.error || (isAr?"حدث خطأ":"An error occurred")); return; }
+      const today = new Date().toISOString().split("T")[0];
+      setForm(p => ({ ...p, status: "expired", expiry: today }));
+      onSave();
+    } catch {
+      setError(isAr?"خطأ في الاتصال":"Connection error");
+    } finally {
+      setActionLoading("");
+    }
   };
 
-  // ── حذف نهائي: clinics + clinic_profiles + auth user ─────
+  // ── حذف نهائي — عبر service_role ───────────────────────────
   const handleDelete = async () => {
     setActionLoading("delete"); setError("");
     try {
-      // 1. حذف من جدول clinics
-      const { error: e1 } = await supabase
-        .from("clinics")
-        .delete()
-        .eq("user_id", clinic.user_id!);
-      if (e1) throw new Error(e1.message);
-
-      // 2. حذف من جدول clinic_profiles
-      await supabase
-        .from("clinic_profiles")
-        .delete()
-        .eq("id", clinic.user_id!);
-
-      // 3. حذف مستخدم Auth عبر API
-      await fetch("/api/update-clinic", {
+      const res  = await fetch("/api/delete-clinic", {
         method:  "POST",
         headers: {"Content-Type":"application/json"},
-        body:    JSON.stringify({ userId: clinic.user_id, delete: true }),
+        body:    JSON.stringify({ userId: clinic.user_id }),
       });
-
-      onSave();   // إعادة تحميل القائمة
-      onClose();  // إغلاق المودال — الصف اختفى نهائياً
-    } catch (err: unknown) {
-      setActionLoading("");
-      setError(err instanceof Error ? err.message : (isAr?"حدث خطأ أثناء الحذف":"Error during deletion"));
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error || (isAr?"حدث خطأ أثناء الحذف":"Error during deletion"));
+        setConfirmDelete(false);
+        return;
+      }
+      onSave();
+      onClose();
+    } catch {
+      setError(isAr?"خطأ في الاتصال":"Connection error");
       setConfirmDelete(false);
+    } finally {
+      setActionLoading("");
     }
   };
 
@@ -1300,16 +1312,21 @@ export default function AdminPage() {
 
   const handleDelete = async () => {
     if (!deleteClinic?.user_id) return;
-    // حذف من جدول clinics
-    await supabase.from("clinics").delete().eq("user_id", deleteClinic.user_id);
-    // حذف من clinic_profiles
-    await supabase.from("clinic_profiles").delete().eq("id", deleteClinic.user_id);
-    // حذف المستخدم عبر API
-    await fetch("/api/update-clinic", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ userId: deleteClinic.user_id, delete: true }),
-    });
+    try {
+      const res = await fetch("/api/delete-clinic", {
+        method:  "POST",
+        headers: {"Content-Type":"application/json"},
+        body:    JSON.stringify({ userId: deleteClinic.user_id }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        console.error("delete failed:", json.error);
+        return;
+      }
+    } catch (err) {
+      console.error("delete-clinic error:", err);
+      return;
+    }
     setDeleteClinic(null);
     loadClinics();
   };
