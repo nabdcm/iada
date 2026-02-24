@@ -327,6 +327,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
         }
 
         setSavedUserId(json.userId);
+        onSave(); // ← تحديث القائمة فوراً بعد الإنشاء
         // لا نغلق — نعرض الرابط والبيانات النهائية
       } else {
         // ─── تحديث عيادة موجودة ──────────────────────────────
@@ -1095,12 +1096,19 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         }}>
           {/* Logo */}
           <div style={{ textAlign:"center", marginBottom:32 }}>
-            <div style={{
-              width:64, height:64, background:"linear-gradient(135deg,#0863ba,#1a7ad4)",
-              borderRadius:18, display:"inline-flex", alignItems:"center",
-              justifyContent:"center", fontSize:28, marginBottom:14,
-              boxShadow:"0 8px 24px rgba(8,99,186,.3)",
-            }}>💗</div>
+            <div style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",width:72,height:72,background:"rgba(8,99,186,.06)",borderRadius:20,marginBottom:14,border:"1.5px solid rgba(8,99,186,.1)" }}>
+              <svg viewBox="0 0 337.74 393.31" style={{ width:48,height:48 }} xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="lg-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse"><stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/></linearGradient>
+                  <linearGradient id="lg-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/></linearGradient>
+                </defs>
+                <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+                <path fill="url(#lg-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+                <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+                <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+                <path fill="url(#lg-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+              </svg>
+            </div>
             <h1 style={{ fontSize:22, fontWeight:800, color:"#353535", marginBottom:4 }}>نبض</h1>
             <div style={{
               display:"inline-flex", alignItems:"center", gap:6,
@@ -1229,13 +1237,11 @@ export default function AdminPage() {
   const loadClinics = async () => {
     setLoading(true);
     try {
-      // نجلب من جدول clinics بدلاً من auth.admin (يحتاج service_role)
-      const { data, error } = await supabase
-        .from("clinics")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
+      // نستخدم API route بدلاً من Supabase مباشرة
+      // لأن الأدمن ليس مسجلاً عبر Supabase Auth وRLS تمنع القراءة المباشرة
+      const res = await fetch("/api/get-clinics");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
 
       const clinicsData: ClinicData[] = (data || []).map((row: Record<string, unknown>, index: number) => ({
         id:      (row.id as number) || index + 1,
@@ -1370,7 +1376,19 @@ export default function AdminPage() {
         <aside style={{ width:220,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50,boxShadow:"4px 0 24px rgba(8,99,186,.06)" }}>
           <div style={{ padding:"24px 20px",borderBottom:"1.5px solid #eef0f3" }}>
             <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-              <div style={{ width:36,height:36,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }}>💗</div>
+              <div style={{ width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                <svg viewBox="0 0 337.74 393.31" style={{ width:36,height:36 }} xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="adm-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse"><stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/></linearGradient>
+                    <linearGradient id="adm-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/></linearGradient>
+                  </defs>
+                  <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+                  <path fill="url(#adm-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+                  <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+                  <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+                  <path fill="url(#adm-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+                </svg>
+              </div>
               <div>
                 <div style={{ fontSize:16,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div>
                 <div style={{ fontSize:9,color:"#aaa",fontWeight:400,letterSpacing:.5,textTransform:"uppercase" }}>{tr.adminBadge}</div>
