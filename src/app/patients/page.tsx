@@ -833,11 +833,13 @@ export default function PatientsPage() {
           <div style={{
             position:"sticky", top:0, zIndex:40,
             background:"rgba(247,249,252,.97)", backdropFilter:"blur(12px)",
-            padding: isMobile ? "14px 16px 14px 60px" : "16px 0",
+            padding: isMobile ? "14px 16px" : "16px 0",
             borderBottom:"1.5px solid #eef0f3",
           }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div>
+              {/* Spacer to balance hamburger on the other side */}
+              {isMobile && <div style={{ width:40 }} />}
+              <div style={{ textAlign: isMobile ? "center" : isAr ? "right" : "left", flex: isMobile ? 1 : undefined }}>
                 <h1 style={{ fontSize:isMobile?17:22, fontWeight:800, color:"#353535" }}>{tr.page.title}</h1>
                 {!isMobile && <p style={{ fontSize:13, color:"#aaa", marginTop:2 }}>{tr.page.sub}</p>}
               </div>
