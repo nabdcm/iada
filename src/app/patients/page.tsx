@@ -21,7 +21,7 @@ const T = {
     table: { name:"الاسم", phone:"الهاتف", gender:"الجنس", dob:"تاريخ الميلاد", conditions:"الحالات", actions:"الإجراءات" },
     gender: { male:"ذكر", female:"أنثى" },
     conditions: { diabetes:"سكري", hypertension:"ضغط" },
-    actions: { edit:"تعديل", delete:"حذف", hide:"إخفاء", show:"إظهار", viewAppointments:"المواعيد" },
+    actions: { edit:"تعديل", delete:"حذف", hide:"إخفاء", show:"إظهار", viewAppointments:"المواعيد", whatsapp:"واتساب" },
     noPatients: "لا يوجد مرضى مسجلون",
     noResults: "لا توجد نتائج مطابقة",
     hiddenBadge: "مخفي",
@@ -56,7 +56,7 @@ const T = {
     table: { name:"Name", phone:"Phone", gender:"Gender", dob:"Date of Birth", conditions:"Conditions", actions:"Actions" },
     gender: { male:"Male", female:"Female" },
     conditions: { diabetes:"Diabetes", hypertension:"Hypertension" },
-    actions: { edit:"Edit", delete:"Delete", hide:"Hide", show:"Show", viewAppointments:"Appointments" },
+    actions: { edit:"Edit", delete:"Delete", hide:"Hide", show:"Show", viewAppointments:"Appointments", whatsapp:"WhatsApp" },
     noPatients: "No patients registered",
     noResults: "No matching results",
     hiddenBadge: "Hidden",
@@ -97,6 +97,37 @@ type PatientForm = {
 const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2980b9","#8e44ad"];
 const getColor    = (id: number) => AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length];
 const getInitials = (name: string) => name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
+
+// ─── WhatsApp helper ─────────────────────────────────────
+function sendWhatsApp(phone: string, patientName: string, lang: Lang) {
+  // تنظيف رقم الهاتف وإضافة كود الدولة إذا لم يكن موجوداً
+  let cleaned = phone.replace(/[^0-9+]/g, "");
+  if (cleaned.startsWith("0")) cleaned = "963" + cleaned.slice(1);
+  if (!cleaned.startsWith("+") && !cleaned.startsWith("963")) cleaned = "963" + cleaned;
+  cleaned = cleaned.replace(/^\+/, "");
+
+  // وقت الموعد = الآن + 15 دقيقة
+  const apptTime = new Date(Date.now() + 15 * 60 * 1000);
+  const timeStr  = apptTime.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-US", {
+    hour:   "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const msg = lang === "ar"
+    ? `مرحباً ${patientName} 👋
+يسعدنا تذكيرك بأن موعدك في عيادتنا سيحين الساعة ${timeStr} ⏰
+نتطلع لاستقبالك، نرجو الحضور قبل الموعد بدقائق.
+شكراً 💙`
+    : `Hello ${patientName} 👋
+This is a friendly reminder that your appointment at our clinic is at ${timeStr} ⏰
+We look forward to seeing you. Please arrive a few minutes early.
+Thank you 💙`;
+
+  const encoded = encodeURIComponent(msg);
+  // wa.me يفتح واتساب سطح المكتب تلقائياً إن كان مثبتاً، وإلا واتساب ويب
+  window.open(`https://wa.me/${cleaned}?text=${encoded}`, "_blank");
+}
 
 // ─── Sidebar ──────────────────────────────────────────────
 function Sidebar({ lang, setLang, activePage = "patients" }: {
@@ -705,7 +736,7 @@ export default function PatientsPage() {
             <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"visible" }}>
 
               {/* Header */}
-              <div style={{ display:"grid",gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 110px",gap:0,padding:"12px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3" }}>
+              <div style={{ display:"grid",gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 140px",gap:0,padding:"12px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3" }}>
                 {[tr.id, tr.table.name, tr.table.phone, tr.table.gender, tr.table.dob, tr.table.conditions, tr.table.actions].map((h,i)=>(
                   <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,textAlign:i===0||i===6?"center":"start",paddingLeft:i>0&&i<6?8:0 }}>{h}</div>
                 ))}
@@ -724,7 +755,7 @@ export default function PatientsPage() {
                 </div>
               ) : filtered.map(p => (
                 <div key={p.id} className="patient-row" style={{
-                  display:"grid", gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 110px",
+                  display:"grid", gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 140px",
                   gap:0, padding:"14px 20px", alignItems:"center",
                   opacity: p.is_hidden ? 0.5 : 1,
                   animation: animIds.includes(p.id) ? "rowIn .4s ease" : undefined,
@@ -780,6 +811,25 @@ export default function PatientsPage() {
 
                   {/* Actions */}
                   <div style={{ display:"flex",alignItems:"center",gap:6,justifyContent:"center",position:"relative" }} onClick={e=>e.stopPropagation()}>
+                    {p.phone ? (
+                      <button
+                        className="action-icon-btn"
+                        title={tr.actions.whatsapp}
+                        onClick={()=>sendWhatsApp(p.phone!, p.name, lang)}
+                        style={{ background:"rgba(37,211,102,.1)", borderColor:"rgba(37,211,102,.3)", fontSize:15 }}
+                      >
+                        📱
+                      </button>
+                    ) : (
+                      <button
+                        className="action-icon-btn"
+                        title={tr.actions.whatsapp}
+                        disabled
+                        style={{ opacity:.3, cursor:"not-allowed", fontSize:15 }}
+                      >
+                        📱
+                      </button>
+                    )}
                     <button className="action-icon-btn" title={tr.actions.edit} onClick={()=>setEditPatient(p)}>✏️</button>
                     <button className="action-icon-btn" title={p.is_hidden?tr.actions.show:tr.actions.hide} onClick={()=>toggleHide(p.id)}>
                       {p.is_hidden?"👁":"🙈"}
