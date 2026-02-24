@@ -137,8 +137,21 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
 }) {
   const tr    = T[lang];
   const isAr  = lang === "ar";
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed,  setCollapsed]  = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile,   setIsMobile]   = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // إغلاق السايدبار عند تغيير الصفحة على الموبايل
+  useEffect(() => {
+    if (isMobile) setMobileOpen(false);
+  }, [isMobile]);
 
   const navItems: { key: keyof typeof tr.nav; icon: string; href: string }[] = [
     { key: "dashboard",    icon: "⊞", href: "/dashboard"    },
@@ -147,50 +160,59 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
     { key: "payments",     icon: "💳", href: "/payments"     },
   ];
 
+  // على الموبايل: السايدبار مخفي بـ transform إلا إذا mobileOpen
+  const sidebarTransform = isMobile
+    ? mobileOpen ? "translateX(0)" : isAr ? "translateX(100%)" : "translateX(-100%)"
+    : "translateX(0)";
+
   return (
     <>
-      {/* Mobile overlay */}
-      {mobileOpen && (
+      {/* Mobile overlay — يغطي الشاشة خلف السايدبار */}
+      {isMobile && mobileOpen && (
         <div
           onClick={()=>setMobileOpen(false)}
-          style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:49,display:"none" }}
-          className="mobile-overlay"
+          style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }}
         />
       )}
-      {/* Mobile menu button */}
-      <button
-        className="mobile-menu-btn"
-        onClick={()=>setMobileOpen(!mobileOpen)}
-        style={{ display:"none",position:"fixed",top:16,zIndex:60,
-          right:isAr?16:undefined, left:isAr?undefined:16,
-          width:40,height:40,borderRadius:10,background:"#0863ba",
-          border:"none",cursor:"pointer",alignItems:"center",justifyContent:"center",
-          boxShadow:"0 4px 12px rgba(8,99,186,.3)",
-        }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-          {mobileOpen
-            ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
-            : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>
-          }
-        </svg>
-      </button>
+
+      {/* Mobile hamburger button */}
+      {isMobile && (
+        <button
+          onClick={()=>setMobileOpen(!mobileOpen)}
+          style={{
+            position:"fixed", top:14, zIndex:60,
+            right: isAr ? 16 : undefined,
+            left:  isAr ? undefined : 16,
+            width:40, height:40, borderRadius:10, background:"#0863ba",
+            border:"none", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 4px 12px rgba(8,99,186,.3)",
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+            {mobileOpen
+              ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+              : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>
+            }
+          </svg>
+        </button>
+      )}
+
     <aside style={{
-      width:      collapsed ? 70 : 240,
+      width:      isMobile ? 260 : collapsed ? 70 : 240,
       minHeight:  "100vh",
       background: "#fff",
-      borderRight: isAr ? "none"               : "1.5px solid #eef0f3",
+      borderRight: isAr ? "none"                : "1.5px solid #eef0f3",
       borderLeft:  isAr ? "1.5px solid #eef0f3" : "none",
       display: "flex", flexDirection: "column",
-      transition: "width .3s cubic-bezier(.4,0,.2,1), transform .3s cubic-bezier(.4,0,.2,1)",
+      transition: "transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",
       position: "fixed", top: 0,
       right: isAr ? 0         : undefined,
       left:  isAr ? undefined : 0,
       zIndex: 50,
-      boxShadow: "4px 0 24px rgba(8,99,186,.06)",
-    }}
-    className={`main-sidebar${mobileOpen ? " mobile-open" : ""}`}
-    >
+      transform: sidebarTransform,
+      boxShadow: isMobile && mobileOpen ? "8px 0 32px rgba(0,0,0,.15)" : "4px 0 24px rgba(8,99,186,.06)",
+    }}>
       {/* Logo */}
       <div style={{
         padding: collapsed ? "24px 0" : "24px 20px",
@@ -680,30 +702,24 @@ export default function PatientsPage() {
         .dropdown-item:hover{background:#f7f9fc}
         .dropdown-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
         .stat-mini{background:#fff;border-radius:14px;padding:18px 20px;border:1.5px solid #eef0f3;box-shadow:0 2px 10px rgba(8,99,186,.05)}
-        @media(max-width:768px){
-          .mobile-menu-btn{display:flex !important}
-          .mobile-overlay{display:block !important}
-          .main-sidebar{transform:${isAr ? "translateX(100%)" : "translateX(-100%)"};}
-          .main-sidebar.mobile-open{transform:translateX(0) !important}
-          main{margin-right:0 !important;margin-left:0 !important;padding:0 16px 48px !important}
-          .main-anim{padding-top:72px}
-        }
+
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif", direction:isAr?"rtl":"ltr", minHeight:"100vh", background:"#f7f9fc" }}>
         <Sidebar lang={lang} setLang={setLang} activePage="patients" />
 
         <main className="main-anim" style={{
-          marginRight: isAr ? 240    : undefined,
-          marginLeft:  isAr ? undefined : 240,
-          padding: "0 32px 48px", transition: "margin .3s",
+          marginRight: isAr && !isMobile ? 240    : undefined,
+          marginLeft:  !isAr && !isMobile ? 240 : undefined,
+          padding: isMobile ? "0 16px 48px" : "0 32px 48px",
+          transition: "margin .3s",
         }}>
 
           {/* TOP BAR */}
-          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
+          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:isMobile?"12px 0 12px 52px":"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
-                <h1 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
+                <h1 style={{ fontSize:isMobile?18:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
                 <p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>
               </div>
               <button
@@ -720,7 +736,7 @@ export default function PatientsPage() {
           <div style={{ paddingTop:28 }}>
 
             {/* STATS */}
-            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:28 }}>
+            <div style={{ display:"grid",gridTemplateColumns:isMobile?"repeat(3,1fr)":"repeat(3,1fr)",gap:isMobile?10:16,marginBottom:isMobile?16:28 }}>
               {[
                 { label:tr.stats.total,  value:stats.total,  icon:"👥", color:"#0863ba", bg:"rgba(8,99,186,.08)"   },
                 { label:tr.stats.male,   value:stats.male,   icon:"👨", color:"#2980b9", bg:"rgba(41,128,185,.08)" },
