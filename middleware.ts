@@ -8,7 +8,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const supabaseUrl     = "https://ldqaohjnlxiwvaijcsbm.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkcWFvaGpubHhpd3ZhaWpjc2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1Nzk3MDUsImV4cCI6MjA4NzE1NTcwNX0.2vo-DqFGbJqa8MEgotfujz23QjU2bfMEDIDDnbDQ1Jo";
 
-const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/admin"];
+// ─── حُذف "/admin" من هنا — يملك نظام مصادقة خاصاً به ───────
+const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
