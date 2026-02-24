@@ -1010,8 +1010,204 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
   );
 };
 
+// ============================================================
+// ─── بيانات دخول المدير — مستقلة تماماً عن Supabase ────────
+// ============================================================
+const ADMIN_USERNAME = "nabd";
+const ADMIN_PASSWORD = "nabd.111";
+const SESSION_KEY    = "__nabd_admin_auth__";
+
+// ─── شاشة تسجيل دخول المدير ──────────────────────────────
+function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    // تأخير بسيط لمنع brute-force وإعطاء تجربة أفضل
+    setTimeout(() => {
+      if (
+        username.trim().toLowerCase() === ADMIN_USERNAME &&
+        password === ADMIN_PASSWORD
+      ) {
+        // حفظ الجلسة في sessionStorage (تنتهي عند إغلاق التبويب)
+        sessionStorage.setItem(SESSION_KEY, "1");
+        onSuccess();
+      } else {
+        setError("اسم المستخدم أو كلمة المرور غير صحيحة");
+        setLoading(false);
+        setPassword("");
+      }
+    }, 600);
+  };
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Rubik',sans-serif;background:#f0f4ff}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+        .login-card{animation:fadeUp .5s cubic-bezier(.4,0,.2,1) both}
+        .login-input{
+          width:100%;padding:12px 16px;
+          border:1.5px solid #e8eaed;border-radius:12px;
+          font-family:'Rubik',sans-serif;font-size:14px;
+          color:#353535;background:#fff;outline:none;
+          transition:border .2s,box-shadow .2s;
+        }
+        .login-input:focus{border-color:#0863ba;box-shadow:0 0 0 3px rgba(8,99,186,.08)}
+        .login-btn{
+          width:100%;padding:13px;background:#0863ba;color:#fff;
+          border:none;border-radius:12px;font-family:'Rubik',sans-serif;
+          font-size:15px;font-weight:700;cursor:pointer;
+          transition:all .2s;box-shadow:0 4px 16px rgba(8,99,186,.3);
+        }
+        .login-btn:hover:not(:disabled){background:#0752a0;box-shadow:0 6px 20px rgba(8,99,186,.4);transform:translateY(-1px)}
+        .login-btn:active:not(:disabled){transform:translateY(0)}
+        .login-btn:disabled{background:#93b8dc;cursor:not-allowed;box-shadow:none}
+        .error-box{animation:shake .4s ease}
+      `}</style>
+
+      <div style={{
+        minHeight:"100vh", background:"linear-gradient(135deg,#f0f4ff 0%,#e8f0fe 50%,#f5f0ff 100%)",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        fontFamily:"'Rubik',sans-serif", padding:"20px",
+      }}>
+        {/* خلفية زخرفية */}
+        <div style={{ position:"fixed",inset:0,pointerEvents:"none",overflow:"hidden" }}>
+          <div style={{ position:"absolute",top:"-10%",right:"-5%",width:400,height:400,borderRadius:"50%",background:"rgba(8,99,186,.06)",filter:"blur(60px)" }}/>
+          <div style={{ position:"absolute",bottom:"-10%",left:"-5%",width:500,height:500,borderRadius:"50%",background:"rgba(123,45,139,.04)",filter:"blur(80px)" }}/>
+        </div>
+
+        <div className="login-card" style={{
+          background:"#fff", borderRadius:24, width:"100%", maxWidth:400,
+          padding:"40px 36px", boxShadow:"0 24px 80px rgba(8,99,186,.12)",
+          border:"1.5px solid rgba(8,99,186,.08)", position:"relative",
+        }}>
+          {/* Logo */}
+          <div style={{ textAlign:"center", marginBottom:32 }}>
+            <div style={{
+              width:64, height:64, background:"linear-gradient(135deg,#0863ba,#1a7ad4)",
+              borderRadius:18, display:"inline-flex", alignItems:"center",
+              justifyContent:"center", fontSize:28, marginBottom:14,
+              boxShadow:"0 8px 24px rgba(8,99,186,.3)",
+            }}>💗</div>
+            <h1 style={{ fontSize:22, fontWeight:800, color:"#353535", marginBottom:4 }}>نبض</h1>
+            <div style={{
+              display:"inline-flex", alignItems:"center", gap:6,
+              background:"rgba(8,99,186,.06)", border:"1.5px solid rgba(8,99,186,.12)",
+              borderRadius:20, padding:"4px 12px",
+            }}>
+              <div style={{ width:6,height:6,borderRadius:"50%",background:"#0863ba",animation:"pulse 2s infinite" }}/>
+              <span style={{ fontSize:11, fontWeight:700, color:"#0863ba", letterSpacing:.5 }}>ADMIN ACCESS</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleLogin} style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            {/* خطأ */}
+            {error && (
+              <div className="error-box" style={{
+                background:"rgba(192,57,43,.06)", border:"1.5px solid rgba(192,57,43,.2)",
+                borderRadius:10, padding:"10px 14px", fontSize:13, color:"#c0392b",
+                textAlign:"center", fontWeight:500,
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
+
+            {/* اسم المستخدم */}
+            <div>
+              <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#666", marginBottom:7, textTransform:"uppercase", letterSpacing:.5 }}>
+                اسم المستخدم
+              </label>
+              <input
+                className="login-input"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="أدخل اسم المستخدم"
+                autoComplete="username"
+                autoFocus
+                required
+                style={{ direction:"ltr" }}
+              />
+            </div>
+
+            {/* كلمة المرور */}
+            <div>
+              <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#666", marginBottom:7, textTransform:"uppercase", letterSpacing:.5 }}>
+                كلمة المرور
+              </label>
+              <div style={{ position:"relative" }}>
+                <input
+                  className="login-input"
+                  type={showPass ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="أدخل كلمة المرور"
+                  autoComplete="current-password"
+                  required
+                  style={{ direction:"ltr", paddingRight:44 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(p => !p)}
+                  style={{
+                    position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                    background:"none", border:"none", cursor:"pointer", fontSize:16,
+                    color:"#aaa", display:"flex", alignItems:"center",
+                  }}
+                >
+                  {showPass ? "🙈" : "👁️"}
+                </button>
+              </div>
+            </div>
+
+            {/* زر الدخول */}
+            <button className="login-btn" type="submit" disabled={loading} style={{ marginTop:6 }}>
+              {loading ? (
+                <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                  <span style={{ width:16,height:16,border:"2px solid rgba(255,255,255,.4)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin 1s linear infinite" }}/>
+                  جاري التحقق...
+                </span>
+              ) : "دخول لوحة المدير →"}
+            </button>
+          </form>
+
+          <p style={{ textAlign:"center", fontSize:11, color:"#ccc", marginTop:24 }}>
+            هذه الصفحة مخصصة للمدير فقط
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function AdminPage() {
+  // ── التحقق من جلسة المدير — يجب أن يكون أول شيء ──────────
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const ok = sessionStorage.getItem(SESSION_KEY) === "1";
+    setIsAuthenticated(ok);
+  }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setIsAuthenticated(false);
+  };
+
+  // ── كل الـ state الخاص بصفحة الأدمن (دائماً في نفس الترتيب) ─
   const [lang, setLang] = useState<Lang>("ar");
   const isAr = lang === "ar";
   const tr   = T[lang];
@@ -1122,6 +1318,20 @@ export default function AdminPage() {
   };
   const isExpired = (d: string) => d && new Date(d) < new Date();
 
+  // ── بوابة المصادقة — بعد كل الـ hooks ─────────────────────
+  if (isAuthenticated === null) {
+    return (
+      <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f9fc" }}>
+        <div style={{ width:36,height:36,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite" }}/>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AdminLogin onSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <>
       <style>{`
@@ -1204,7 +1414,7 @@ export default function AdminPage() {
                 style={{ width:"100%",padding:"7px",background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#666",transition:"all .2s",marginBottom:8 }}>
                 🌐 {lang === "ar" ? "English" : "العربية"}
               </button>
-              <button onClick={() => { supabase.auth.signOut(); window.location.href = "/login"; }}
+              <button onClick={handleLogout}
                 style={{ width:"100%",padding:"7px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#c0392b" }}>
                 → {tr.signOut}
               </button>
