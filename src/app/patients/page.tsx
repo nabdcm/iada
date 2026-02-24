@@ -138,6 +138,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
   const tr    = T[lang];
   const isAr  = lang === "ar";
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems: { key: keyof typeof tr.nav; icon: string; href: string }[] = [
     { key: "dashboard",    icon: "⊞", href: "/dashboard"    },
@@ -147,6 +148,33 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
   ];
 
   return (
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          onClick={()=>setMobileOpen(false)}
+          style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:49,display:"none" }}
+          className="mobile-overlay"
+        />
+      )}
+      {/* Mobile menu button */}
+      <button
+        className="mobile-menu-btn"
+        onClick={()=>setMobileOpen(!mobileOpen)}
+        style={{ display:"none",position:"fixed",top:16,zIndex:60,
+          right:isAr?16:undefined, left:isAr?undefined:16,
+          width:40,height:40,borderRadius:10,background:"#0863ba",
+          border:"none",cursor:"pointer",alignItems:"center",justifyContent:"center",
+          boxShadow:"0 4px 12px rgba(8,99,186,.3)",
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+          {mobileOpen
+            ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+            : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>
+          }
+        </svg>
+      </button>
     <aside style={{
       width:      collapsed ? 70 : 240,
       minHeight:  "100vh",
@@ -154,13 +182,15 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
       borderRight: isAr ? "none"               : "1.5px solid #eef0f3",
       borderLeft:  isAr ? "1.5px solid #eef0f3" : "none",
       display: "flex", flexDirection: "column",
-      transition: "width .3s cubic-bezier(.4,0,.2,1)",
+      transition: "width .3s cubic-bezier(.4,0,.2,1), transform .3s cubic-bezier(.4,0,.2,1)",
       position: "fixed", top: 0,
       right: isAr ? 0         : undefined,
       left:  isAr ? undefined : 0,
       zIndex: 50,
       boxShadow: "4px 0 24px rgba(8,99,186,.06)",
-    }}>
+    }}
+    className={`main-sidebar${mobileOpen ? " mobile-open" : ""}`}
+    >
       {/* Logo */}
       <div style={{
         padding: collapsed ? "24px 0" : "24px 20px",
@@ -216,11 +246,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
             </a>
           );
         })}
-        <div style={{ height:1, background:"#eef0f3", margin:"12px 0" }} />
-        <a href="/admin" style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"12px 0":"11px 14px",borderRadius:10,textDecoration:"none",color:"#888",fontSize:14 }}>
-          <span style={{ fontSize:18 }}>⚙️</span>
-          {!collapsed && <span>{tr.nav.admin}</span>}
-        </a>
+
       </nav>
 
       {/* Bottom */}
@@ -244,6 +270,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
         </div>
       </div>
     </aside>
+    </>
   );
 }
 
@@ -653,6 +680,14 @@ export default function PatientsPage() {
         .dropdown-item:hover{background:#f7f9fc}
         .dropdown-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
         .stat-mini{background:#fff;border-radius:14px;padding:18px 20px;border:1.5px solid #eef0f3;box-shadow:0 2px 10px rgba(8,99,186,.05)}
+        @media(max-width:768px){
+          .mobile-menu-btn{display:flex !important}
+          .mobile-overlay{display:block !important}
+          .main-sidebar{transform:${isAr ? "translateX(100%)" : "translateX(-100%)"};}
+          .main-sidebar.mobile-open{transform:translateX(0) !important}
+          main{margin-right:0 !important;margin-left:0 !important;padding:0 16px 48px !important}
+          .main-anim{padding-top:72px}
+        }
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif", direction:isAr?"rtl":"ltr", minHeight:"100vh", background:"#f7f9fc" }}>
@@ -685,12 +720,11 @@ export default function PatientsPage() {
           <div style={{ paddingTop:28 }}>
 
             {/* STATS */}
-            <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:28 }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:28 }}>
               {[
-                { label:tr.stats.total,    value:stats.total,    icon:"👥", color:"#0863ba", bg:"rgba(8,99,186,.08)"   },
-                { label:tr.stats.male,     value:stats.male,     icon:"👨", color:"#2980b9", bg:"rgba(41,128,185,.08)" },
-                { label:tr.stats.female,   value:stats.female,   icon:"👩", color:"#8e44ad", bg:"rgba(142,68,173,.08)" },
-                { label:tr.stats.diabetic, value:stats.diabetic, icon:"🩸", color:"#c0392b", bg:"rgba(192,57,43,.08)"  },
+                { label:tr.stats.total,  value:stats.total,  icon:"👥", color:"#0863ba", bg:"rgba(8,99,186,.08)"   },
+                { label:tr.stats.male,   value:stats.male,   icon:"👨", color:"#2980b9", bg:"rgba(41,128,185,.08)" },
+                { label:tr.stats.female, value:stats.female, icon:"👩", color:"#8e44ad", bg:"rgba(142,68,173,.08)" },
               ].map((s,i)=>(
                 <div key={i} className="stat-mini" style={{ animationDelay:`${i*60}ms`,animation:"fadeUp .4s ease both" }}>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
