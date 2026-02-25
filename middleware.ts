@@ -14,7 +14,17 @@ const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname.includes(".")) {
+  // ── استثناء الملفات الثابتة والـ API ───────────────────────
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api")   ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
+
+  // ── /blocked مسموح دائماً (حتى لا يحدث redirect loop) ──────
+  if (pathname.startsWith("/blocked")) {
     return NextResponse.next();
   }
 
@@ -40,12 +50,50 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // ── 1. هل المستخدم مسجّل دخول؟ ────────────────────────────
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // ── 2. جلب بيانات الاشتراك من جدول clinics ─────────────────
+  const { data: clinic } = await supabase
+    .from("clinics")
+    .select("status, expiry")
+    .eq("user_id", user.id)
+    .single();
+
+  if (clinic) {
+    const status = clinic.status as string;
+    const expiry = clinic.expiry as string | null;
+
+    // تحقق من الحالة: موقوف (تجميد)
+    if (status === "inactive") {
+      const blockedUrl = new URL("/blocked", request.url);
+      blockedUrl.searchParams.set("reason", "frozen");
+      return NextResponse.redirect(blockedUrl);
+    }
+
+    // تحقق من الحالة: ملغى
+    if (status === "expired") {
+      const blockedUrl = new URL("/blocked", request.url);
+      blockedUrl.searchParams.set("reason", "cancelled");
+      return NextResponse.redirect(blockedUrl);
+    }
+
+    // تحقق من تاريخ الانتهاء
+    if (expiry) {
+      const expiryDate = new Date(expiry);
+      expiryDate.setHours(23, 59, 59, 999); // نهاية يوم الانتهاء
+      if (expiryDate < new Date()) {
+        const blockedUrl = new URL("/blocked", request.url);
+        blockedUrl.searchParams.set("reason", "expired");
+        return NextResponse.redirect(blockedUrl);
+      }
+    }
   }
 
   return response;
