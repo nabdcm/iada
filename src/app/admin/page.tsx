@@ -1281,6 +1281,14 @@ export default function AdminPage() {
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
+  // ── مزامنة subClinic مع أحدث بيانات من القائمة ─────────────
+  // عند تغيير status (تجميد/رفع تجميد) يُحدَّث subClinic تلقائياً
+  useEffect(() => {
+    if (!subClinic) return;
+    const updated = clinics.find(c => c.user_id === subClinic.user_id);
+    if (updated) setSubClinic(updated);
+  }, [clinics]);
+
   const filtered = useMemo(() => clinics.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.owner.toLowerCase().includes(search.toLowerCase())) return false;
     if (filter === "active"   && c.status !== "active")   return false;
