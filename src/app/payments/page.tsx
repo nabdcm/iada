@@ -365,6 +365,7 @@ export default function PaymentsPage() {
   const [payments,  setPayments]  = useState<Payment[]>([]);
   const [patients,  setPatients]  = useState<Patient[]>([]);
   const [loading,   setLoading]   = useState(true);
+  const [clinicName, setClinicName] = useState<string>("");
   const [saving,    setSaving]    = useState(false);
   const [search,    setSearch]    = useState("");
   const [filter,    setFilter]    = useState("all");
@@ -383,6 +384,29 @@ export default function PaymentsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // جلب اسم العيادة من user_metadata أو clinic_profiles
+      const clinicMeta = user.user_metadata?.clinic_name as string | undefined;
+      if (clinicMeta) {
+        setClinicName(clinicMeta);
+      } else {
+        // fallback: جلب من clinic_profiles
+        const { data: profile } = await supabase
+          .from("clinic_profiles")
+          .select("clinic_name")
+          .eq("id", user.id)
+          .single();
+        if (profile?.clinic_name) setClinicName(profile.clinic_name);
+        else {
+          // fallback ثاني: جدول clinics
+          const { data: clinicRow } = await supabase
+            .from("clinics")
+            .select("name")
+            .eq("user_id", user.id)
+            .single();
+          if (clinicRow?.name) setClinicName(clinicRow.name);
+        }
+      }
+
       const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
         supabase
           .from("payments")
@@ -399,7 +423,7 @@ export default function PaymentsPage() {
       ]);
 
       setPayments(paymentsData || []);
-      setPatients((patientsData ?? []) as unknown as Patient[]);
+      setPatients(patientsData || []);
     } catch (err) {
       console.error("loadData error:", err);
     } finally {
@@ -439,6 +463,24 @@ export default function PaymentsPage() {
       pendingAmt:   pending.reduce((s, p) => s + p.amount, 0),
       pendingCount: pending.length,
     };
+  }, [payments]);
+
+  // ── إحصائيات طرق الدفع الحقيقية ────────────────────────────
+  const methodStats = useMemo(() => {
+    const total = payments.filter(p => p.status === "paid").length;
+    if (total === 0) return [
+      { k:"cash",     pct:0, color:"#0863ba" },
+      { k:"card",     pct:0, color:"#2e7d32" },
+      { k:"transfer", pct:0, color:"#e67e22" },
+    ];
+    const cash     = payments.filter(p => p.status === "paid" && p.method === "cash").length;
+    const card     = payments.filter(p => p.status === "paid" && p.method === "card").length;
+    const transfer = payments.filter(p => p.status === "paid" && p.method === "transfer").length;
+    return [
+      { k:"cash",     pct: Math.round((cash     / total) * 100), color:"#0863ba" },
+      { k:"card",     pct: Math.round((card     / total) * 100), color:"#2e7d32" },
+      { k:"transfer", pct: Math.round((transfer / total) * 100), color:"#e67e22" },
+    ];
   }, [payments]);
 
   // ── بيانات مخطط الإيرادات (آخر 6 أشهر) ─────────────────────
@@ -595,11 +637,12 @@ export default function PaymentsPage() {
       </svg>
       <div>
         <div class="logo-text">نبض</div>
-        <div class="logo-sub">نظام إدارة العيادة</div>
+        <div class="logo-sub">${clinicName || "نظام إدارة العيادة"}</div>
       </div>
     </div>
     <div class="report-title">
       <h1>تقرير المدفوعات الشهري</h1>
+      ${clinicName ? `<p style="font-size:14px;font-weight:700;color:#353535;margin-bottom:2px">${clinicName}</p>` : ""}
       <p>${monthName}</p>
     </div>
   </div>
@@ -640,7 +683,7 @@ export default function PaymentsPage() {
   </table>
 
   <div class="footer">
-    <span>نبض — نظام إدارة العيادة</span>
+    <span>نبض${clinicName ? " — " + clinicName : " — نظام إدارة العيادة"}</span>
     <span>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA", { year:"numeric", month:"long", day:"numeric" })}</span>
   </div>
 </body>
@@ -751,9 +794,7 @@ export default function PaymentsPage() {
                   {isAr?"طرق الدفع":"Payment Methods"}
                 </div>
                 {[
-                  { k:"cash",     pct:55, color:"#0863ba" },
-                  { k:"card",     pct:35, color:"#2e7d32" },
-                  { k:"transfer", pct:10, color:"#e67e22" },
+                  ...methodStats,
                 ].map(m=>(
                   <div key={m.k} style={{ marginBottom:10 }}>
                     <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
@@ -910,8 +951,12 @@ export default function PaymentsPage() {
                           <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6 }}>
                             <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>{p.amount.toLocaleString()} ل.س</span>
                             <button onClick={()=>markPaid(p.id)}
-                              style={{ padding:"4px 10px",background:"rgba(46,125,50,.1)",color:"#2e7d32",border:"1px solid rgba(46,125,50,.2)",borderRadius:8,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"Rubik,sans-serif",whiteSpace:"nowrap" }}>
-                              ✓ {tr.pendingSection.markPaid}
+                              style={{ padding:"7px 14px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px rgba(46,125,50,.25)",transition:"all .15s" }}
+                              onMouseEnter={e=>{e.currentTarget.style.background="#1b5e20";e.currentTarget.style.transform="translateY(-1px)"}}
+                              onMouseLeave={e=>{e.currentTarget.style.background="#2e7d32";e.currentTarget.style.transform="translateY(0)"}}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              {tr.pendingSection.markPaid}
                             </button>
                           </div>
                         </div>

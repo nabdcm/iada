@@ -405,15 +405,17 @@ export default function DashboardPage() {
 
       // ── Payments ──
       const { data: paymentsData } = await supabase
-        .from("payments").select("id, amount, status, payment_date")
+        .from("payments").select("id, amount, status, date")
         .eq("user_id", userId);
       const payments = paymentsData ?? [];
 
+      // إيرادات الشهر الحالي (paid فقط)
       setMonthRevenue(
         payments
-          .filter(p => p.status === "paid" && (p.payment_date ?? "") >= monthStart)
+          .filter(p => p.status === "paid" && (p.date ?? "") >= monthStart)
           .reduce((s, p) => s + (Number(p.amount) || 0), 0)
       );
+      // المستحقات المعلّقة (كل التاريخ)
       const pending = payments.filter(p => p.status === "pending");
       setPendingCount(pending.length);
       setPendingAmount(pending.reduce((s, p) => s + (Number(p.amount) || 0), 0));
