@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type JSX } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -11,7 +11,7 @@ const t = {
   ar: {
     appName: "نبض", appSub: "إدارة العيادة",
     nav: {
-      dashboard: "الرئيسية", patients: "المرضى",
+      dashboard: "لوحة المعلومات", patients: "المرضى",
       appointments: "المواعيد", payments: "المدفوعات",
       settings: "الإعدادات", admin: "لوحة المدير",
     },
@@ -43,7 +43,7 @@ const t = {
       days: ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
     },
     signOut: "تسجيل الخروج", clinic: "العيادة",
-    loading: "جاري التحميل...", currency: "ر.س",
+    loading: "جاري التحميل...", currency: "ل.س",
     monthlyVisits: "إجمالي الزيارات", dailyAvg: "متوسط يومي",
     monthlySummary: "ملخص الشهر",
     patientStats: "إحصائيات المرضى",
@@ -57,7 +57,7 @@ const t = {
   en: {
     appName: "NABD", appSub: "Clinic Manager",
     nav: {
-      dashboard: "Dashboard", patients: "Patients",
+      dashboard: "Dashboard Info", patients: "Patients",
       appointments: "Appointments", payments: "Payments",
       settings: "Settings", admin: "Admin Panel",
     },
@@ -89,7 +89,7 @@ const t = {
       days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     },
     signOut: "Sign Out", clinic: "Clinic",
-    loading: "Loading...", currency: "$",
+    loading: "Loading...", currency: "SYP",
     monthlyVisits: "Total Visits", dailyAvg: "Daily Average",
     monthlySummary: "Monthly Summary",
     patientStats: "Patient Stats",
@@ -132,8 +132,8 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const navItems: { key: string; icon: string; label: string; href: string }[] = [
-    { key:"dashboard",    icon:"⊞", label:tr.nav.dashboard,    href:"/dashboard"    },
+  const navItems: { key: string; icon: JSX.Element | string; label: string; href: string }[] = [
+    { key:"dashboard",    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>, label:tr.nav.dashboard, href:"/dashboard"    },
     { key:"patients",     icon:"👥", label:tr.nav.patients,     href:"/patients"     },
     { key:"appointments", icon:"📅", label:tr.nav.appointments, href:"/appointments" },
     { key:"payments",     icon:"💳", label:tr.nav.payments,     href:"/payments"     },
@@ -179,14 +179,14 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
         <div style={{ padding:collapsed?"24px 0":"24px 20px", borderBottom:"1.5px solid #eef0f3", display:"flex", alignItems:"center", justifyContent:collapsed?"center":"space-between", minHeight:72 }}>
           {!collapsed && (
             <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-              <div style={{ width:38,height:38,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }}>💗</div>
+              <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }} />
               <div>
                 <div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div>
                 <div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div>
               </div>
             </div>
           )}
-          {collapsed && <div style={{ width:38,height:38,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💗</div>}
+          {collapsed && <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10 }} />}
           {!collapsed && (
             <button onClick={()=>setCollapsed(!collapsed)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>
               {isAr?"›":"‹"}
@@ -208,16 +208,11 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
                 transition:"all .18s", position:"relative",
               }}>
                 {isActive && <div style={{ position:"absolute",[isAr?"right":"left"]:-12,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }} />}
-                <span style={{ fontSize:18,flexShrink:0 }}>{item.icon}</span>
+                <span style={{ fontSize:18,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>{item.icon}</span>
                 {!collapsed && <span>{item.label}</span>}
               </a>
             );
           })}
-          <div style={{ height:1,background:"#eef0f3",margin:"12px 0" }} />
-          <a href="/admin" style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"12px 0":"11px 14px",borderRadius:10,textDecoration:"none",color:"#888",fontSize:14 }}>
-            <span style={{ fontSize:18 }}>⚙️</span>
-            {!collapsed && <span>{tr.nav.admin}</span>}
-          </a>
         </nav>
         <div style={{ padding:"16px 12px",borderTop:"1.5px solid #eef0f3" }}>
           {!collapsed && (
@@ -225,15 +220,10 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
               🌐 {lang==="ar"?"English":"العربية"}
             </button>
           )}
-          <div style={{ display:"flex",alignItems:"center",gap:collapsed?0:10,justifyContent:collapsed?"center":"flex-start",padding:collapsed?8:"10px 12px",borderRadius:10,background:"#f7f9fc" }}>
-            <div style={{ width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#0863ba,#a4c4e4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:700,flexShrink:0 }}>د</div>
-            {!collapsed && (
-              <div style={{ flex:1,overflow:"hidden" }}>
-                <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{lang==="ar"?"الدكتور / العيادة":"Dr. / Clinic"}</div>
-                <button style={{ background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#c0392b",fontFamily:"Rubik,sans-serif",padding:0,fontWeight:500 }}>{tr.signOut} →</button>
-              </div>
-            )}
-          </div>
+          <button style={{ width:"100%",display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:8,padding:collapsed?8:"10px 12px",borderRadius:10,background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.12)",cursor:"pointer",fontFamily:"Rubik,sans-serif" }}>
+            <span style={{ fontSize:16,flexShrink:0 }}>🚪</span>
+            {!collapsed && <span style={{ fontSize:13,fontWeight:600,color:"#c0392b" }}>{tr.signOut}</span>}
+          </button>
         </div>
       </aside>
     </>
@@ -265,7 +255,7 @@ function StatCard({ icon, label, value, sub, subColor, accent, delay = 0, loadin
       {loading ? (
         <div style={{ width:70,height:30,borderRadius:8,background:"#f0f2f5",animation:"pulse 1.5s ease infinite",marginBottom:6 }} />
       ) : (
-        <div style={{ fontSize:28,fontWeight:800,color:"#353535",lineHeight:1,marginBottom:6 }}>{value}</div>
+        <div style={{ fontSize:28,fontWeight:800,color:accent,lineHeight:1,marginBottom:6 }}>{value}</div>
       )}
       <div style={{ fontSize:13,color:"#888",marginBottom:6,fontWeight:500 }}>{label}</div>
       {sub && !loading && <div style={{ fontSize:12,color:subColor||"#2e7d32",fontWeight:600 }}>{sub}</div>}
@@ -359,8 +349,13 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
 
-      const todayISO   = now.toISOString().slice(0, 10);
-      const monthStart = todayISO.slice(0, 7) + "-01";
+      // Use local date to avoid timezone issues
+      const localNow   = new Date();
+      const yyyy       = localNow.getFullYear();
+      const mm         = String(localNow.getMonth() + 1).padStart(2, "0");
+      const dd         = String(localNow.getDate()).padStart(2, "0");
+      const todayISO   = `${yyyy}-${mm}-${dd}`;
+      const monthStart = `${yyyy}-${mm}-01`;
 
       // ── Patients ──
       const { data: patientsData } = await supabase
@@ -373,39 +368,46 @@ export default function DashboardPage() {
       const patientMap: Record<number, string> = {};
       patients.forEach(p => { patientMap[p.id] = p.name; });
 
-      // ── Appointments ──
+      // ── Appointments — fetch all then filter client-side ──
       const { data: apptsData } = await supabase
         .from("appointments")
         .select("id, patient_id, appointment_date, appointment_time, duration, type, status")
         .eq("user_id", userId);
       const appts = apptsData ?? [];
 
-      // Today
+      // Today — compare as string YYYY-MM-DD
       const todayAppts = appts
-        .filter(a => a.appointment_date === todayISO)
+        .filter(a => {
+          if (!a.appointment_date) return false;
+          // Handle both "YYYY-MM-DD" and "YYYY-MM-DDT..." formats
+          const dateStr = String(a.appointment_date).slice(0, 10);
+          return dateStr === todayISO;
+        })
         .sort((a, b) => (a.appointment_time ?? "").localeCompare(b.appointment_time ?? ""));
+
       setTodayTotal(todayAppts.length);
       setTodayCompleted(todayAppts.filter(a => a.status === "completed").length);
       setTodayAppointments(todayAppts.map(a => ({
         ...a,
-        patientName: patientMap[a.patient_id] ?? (isAr ? "مريض" : "Patient"),
+        patientName: patientMap[a.patient_id] ?? (lang === "ar" ? "مريض" : "Patient"),
       })));
 
       // Week counts
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
+      const weekStart = new Date(localNow);
+      weekStart.setDate(localNow.getDate() - localNow.getDay());
       weekStart.setHours(0,0,0,0);
       const wc = [0,0,0,0,0,0,0];
       appts.forEach(a => {
         if (!a.appointment_date) return;
-        const d   = new Date(a.appointment_date + "T00:00:00");
+        const dateOnly = String(a.appointment_date).slice(0, 10);
+        const d = new Date(dateOnly + "T00:00:00");
         const diff = Math.round((d.getTime() - weekStart.getTime()) / 86400000);
         if (diff >= 0 && diff <= 6) wc[diff]++;
       });
       setWeekData(wc);
 
       // Month total
-      setMonthTotalVisits(appts.filter(a => (a.appointment_date ?? "") >= monthStart).length);
+      setMonthTotalVisits(appts.filter(a => String(a.appointment_date ?? "").slice(0,10) >= monthStart).length);
 
       // ── Payments ──
       const { data: paymentsData } = await supabase
@@ -415,7 +417,7 @@ export default function DashboardPage() {
 
       setMonthRevenue(
         payments
-          .filter(p => p.status === "paid" && (p.payment_date ?? "") >= monthStart)
+          .filter(p => p.status === "paid" && String(p.payment_date ?? "").slice(0,10) >= monthStart)
           .reduce((s, p) => s + (Number(p.amount) || 0), 0)
       );
       const pending = payments.filter(p => p.status === "pending" || p.status === "unpaid");
@@ -433,7 +435,7 @@ export default function DashboardPage() {
         .slice(0, 4)
         .map(([pid, count]) => ({
           id:     Number(pid),
-          name:   patientMap[Number(pid)] ?? (isAr ? "مريض" : "Patient"),
+          name:   patientMap[Number(pid)] ?? (lang === "ar" ? "مريض" : "Patient"),
           visits: count as number,
         }));
       setTopPatients(sorted);
@@ -446,7 +448,7 @@ export default function DashboardPage() {
   }
 
   const fmtCurrency = (n: number) =>
-    lang === "ar" ? `${n.toLocaleString("ar")} ${tr.currency}` : `${tr.currency}${n.toLocaleString()}`;
+    lang === "ar" ? `${n.toLocaleString("ar-SY")} ${tr.currency}` : `${n.toLocaleString()} ${tr.currency}`;
 
   const daysElapsed = now.getDate();
   const dailyAvg    = daysElapsed > 0 ? (monthTotalVisits / daysElapsed).toFixed(1) : "0";
@@ -551,12 +553,11 @@ export default function DashboardPage() {
             {/* QUICK ACTIONS */}
             <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
               <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",marginBottom:16 }}>{tr.quickActions.title}</h3>
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12 }}>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
                 {[
                   { icon:"📅", label:tr.quickActions.newAppointment, color:"#0863ba", bg:"rgba(8,99,186,.08)",   href:"/appointments" },
                   { icon:"👤", label:tr.quickActions.addPatient,      color:"#2e7d32", bg:"rgba(46,125,50,.08)",  href:"/patients"     },
                   { icon:"💳", label:tr.quickActions.recordPayment,   color:"#e67e22", bg:"rgba(230,126,34,.08)", href:"/payments"     },
-                  { icon:"📊", label:tr.quickActions.viewReports,     color:"#7b2d8b", bg:"rgba(123,45,139,.08)", href:"/reports"      },
                 ].map(a => (
                   <a key={a.label} href={a.href} className="action-btn">
                     <div className="action-btn-icon" style={{ background:a.bg,color:a.color }}>{a.icon}</div>
