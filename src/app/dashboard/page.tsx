@@ -647,7 +647,8 @@ export default function DashboardPage() {
                         acc[a.status] = (acc[a.status]||0) + 1;
                         return acc;
                       }, {})
-                    ).map(([status, count]) => {
+                    ).map(([status, countVal]) => {
+                      const count = countVal as number;
                       const sc  = statusColors[status] ?? statusColors.scheduled;
                       const pct = Math.round((count / todayTotal) * 100);
                       return (
