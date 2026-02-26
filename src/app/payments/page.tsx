@@ -399,7 +399,7 @@ export default function PaymentsPage() {
       ]);
 
       setPayments(paymentsData || []);
-      setPatients(patientsData || []);
+      setPatients((patientsData ?? []) as unknown as Patient[]);
     } catch (err) {
       console.error("loadData error:", err);
     } finally {
