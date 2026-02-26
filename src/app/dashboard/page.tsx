@@ -368,22 +368,17 @@ export default function DashboardPage() {
       const patientMap: Record<number, string> = {};
       patients.forEach(p => { patientMap[p.id] = p.name; });
 
-      // ── Appointments — fetch all then filter client-side ──
+      // ── Appointments ──
       const { data: apptsData } = await supabase
         .from("appointments")
-        .select("id, patient_id, appointment_date, appointment_time, duration, type, status")
+        .select("id, patient_id, date, time, duration, type, status")
         .eq("user_id", userId);
       const appts = apptsData ?? [];
 
-      // Today — compare as string YYYY-MM-DD
+      // Today
       const todayAppts = appts
-        .filter(a => {
-          if (!a.appointment_date) return false;
-          // Handle both "YYYY-MM-DD" and "YYYY-MM-DDT..." formats
-          const dateStr = String(a.appointment_date).slice(0, 10);
-          return dateStr === todayISO;
-        })
-        .sort((a, b) => (a.appointment_time ?? "").localeCompare(b.appointment_time ?? ""));
+        .filter(a => a.date === todayISO)
+        .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
 
       setTodayTotal(todayAppts.length);
       setTodayCompleted(todayAppts.filter(a => a.status === "completed").length);
@@ -398,16 +393,15 @@ export default function DashboardPage() {
       weekStart.setHours(0,0,0,0);
       const wc = [0,0,0,0,0,0,0];
       appts.forEach(a => {
-        if (!a.appointment_date) return;
-        const dateOnly = String(a.appointment_date).slice(0, 10);
-        const d = new Date(dateOnly + "T00:00:00");
+        if (!a.date) return;
+        const d = new Date(a.date + "T00:00:00");
         const diff = Math.round((d.getTime() - weekStart.getTime()) / 86400000);
         if (diff >= 0 && diff <= 6) wc[diff]++;
       });
       setWeekData(wc);
 
       // Month total
-      setMonthTotalVisits(appts.filter(a => String(a.appointment_date ?? "").slice(0,10) >= monthStart).length);
+      setMonthTotalVisits(appts.filter(a => (a.date ?? "") >= monthStart).length);
 
       // ── Payments ──
       const { data: paymentsData } = await supabase
@@ -417,10 +411,10 @@ export default function DashboardPage() {
 
       setMonthRevenue(
         payments
-          .filter(p => p.status === "paid" && String(p.payment_date ?? "").slice(0,10) >= monthStart)
+          .filter(p => p.status === "paid" && (p.date ?? "") >= monthStart)
           .reduce((s, p) => s + (Number(p.amount) || 0), 0)
       );
-      const pending = payments.filter(p => p.status === "pending" || p.status === "unpaid");
+      const pending = payments.filter(p => p.status === "pending");
       setPendingCount(pending.length);
       setPendingAmount(pending.reduce((s, p) => s + (Number(p.amount) || 0), 0));
 
@@ -592,7 +586,7 @@ export default function DashboardPage() {
                   return (
                     <div key={appt.id ?? idx} className="appt-row">
                       <div style={{ width:52,textAlign:"center",flexShrink:0 }}>
-                        <div style={{ fontSize:14,fontWeight:700,color:"#0863ba" }}>{appt.appointment_time?.slice(0,5) ?? "—"}</div>
+                        <div style={{ fontSize:14,fontWeight:700,color:"#0863ba" }}>{appt.time?.slice(0,5) ?? "—"}</div>
                         {appt.duration && <div style={{ fontSize:10,color:"#bbb" }}>{appt.duration}m</div>}
                       </div>
                       <div style={{ width:2,height:40,background:sc.color,borderRadius:4,flexShrink:0,opacity:.4 }} />
