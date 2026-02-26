@@ -114,7 +114,7 @@ function openWhatsApp(phone: string) {
   // إزالة + إن وجدت
   cleaned = cleaned.replace(/^\+/, "");
   // فتح المحادثة مباشرة بدون رسالة
-  window.open(\`https://wa.me/\${cleaned}\`, "nabd_whatsapp");
+  window.open("https://wa.me/" + cleaned, "nabd_whatsapp");
 }
 
 // ─── Sidebar ──────────────────────────────────────────────
