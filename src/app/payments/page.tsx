@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
+import type { Patient, Payment } from "@/lib/supabase";
 
 // ============================================================
 // NABD - نبض | Payments Page
@@ -92,34 +94,10 @@ const T = {
   },
 };
 
-const PATIENTS_LIST = [
-  { id:1, name:"Ahmed Ali / أحمد علي" },
-  { id:2, name:"Fatima Hassan / فاطمة حسن" },
-  { id:3, name:"Khalid Othman / خالد عثمان" },
-  { id:4, name:"Mariam Salem / مريم سالم" },
-  { id:5, name:"Yousef Nasser / يوسف ناصر" },
-];
-
 const AVT_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22"];
-const getColor = (id) => AVT_COLORS[(id-1) % AVT_COLORS.length];
-const getInitials = (name) => name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-
-const nowD = new Date();
-const fmt = (d) => d.toISOString().split("T")[0];
-
-const INIT_PAYMENTS = [
-  { id:1, patientId:1, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth(),15)), description:"Consultation Fee",  method:"cash",     status:"paid",      amount:150,  notes:"" },
-  { id:2, patientId:3, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth(),1)),  description:"Lab Tests",         method:"card",     status:"paid",      amount:200,  notes:"تحاليل سكر" },
-  { id:3, patientId:2, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth(),10)), description:"Follow-up Visit",   method:"cash",     status:"paid",      amount:80,   notes:"" },
-  { id:4, patientId:4, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth(),12)), description:"X-Ray",             method:"transfer", status:"pending",   amount:120,  notes:"" },
-  { id:5, patientId:5, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth(),8)),  description:"Consultation Fee",  method:"card",     status:"paid",      amount:150,  notes:"" },
-  { id:6, patientId:1, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth()-1,20)),"description":"Lab Tests",      method:"cash",     status:"paid",      amount:90,   notes:"" },
-  { id:7, patientId:3, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth()-1,5)), description:"MRI Scan",         method:"card",     status:"paid",      amount:350,  notes:"" },
-  { id:8, patientId:2, date:fmt(new Date(nowD.getFullYear(),nowD.getMonth(),14)), description:"Medication",        method:"cash",     status:"pending",   amount:60,   notes:"" },
-];
-
-// مخطط الإيرادات الشهرية (تجريبي)
-const REVENUE_DATA = [1200, 1850, 1400, 2100, 1750, 3200];
+const getColor = (id: number) => AVT_COLORS[(id - 1) % AVT_COLORS.length];
+const getInitials = (name: string) => name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+const fmt = (d: Date) => d.toISOString().split("T")[0];
 
 // ─── Sidebar ──────────────────────────────────────────────
 function Sidebar({ lang, setLang }) {
@@ -162,7 +140,7 @@ function Sidebar({ lang, setLang }) {
 }
 
 // ─── Modal إضافة دفعة ─────────────────────────────────────
-function PaymentModal({ lang, onSave, onClose }) {
+function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patients: Patient[]; onSave: (data: Omit<Payment,'id'|'user_id'|'created_at'>) => Promise<void>; onClose: () => void }) {
   const tr = T[lang]; const isAr = lang==="ar";
   const [form, setForm] = useState({
     patientId:"", amount:"", description:"", method:"cash",
@@ -172,7 +150,7 @@ function PaymentModal({ lang, onSave, onClose }) {
 
   const handleSave = (asPending=false) => {
     if (!form.patientId||!form.amount||!form.description.trim()) { setError(tr.modal.required); return; }
-    onSave({ ...form, patientId:Number(form.patientId), amount:parseFloat(form.amount), status: asPending?"pending":"paid" });
+    onSave({ ...form, patient_id:Number(form.patientId)||undefined, amount:parseFloat(form.amount), status: asPending?"pending":"paid" } as any);
   };
 
   const inputSt: React.CSSProperties = {
@@ -231,7 +209,7 @@ function PaymentModal({ lang, onSave, onClose }) {
           <F label={tr.modal.patient}>
             <select value={form.patientId} onChange={e=>setForm({...form,patientId:e.target.value})} style={{ ...inputSt,cursor:"pointer" }}>
               <option value="">{tr.modal.selectPatient}</option>
-              {PATIENTS_LIST.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+              {patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </F>
           <div style={{ display:"flex",gap:12 }}>
@@ -302,9 +280,9 @@ function PaymentModal({ lang, onSave, onClose }) {
 }
 
 // ─── مخطط الإيرادات ───────────────────────────────────────
-function RevenueChart({ lang, months }) {
+function RevenueChart({ lang, months, revenueData }: { lang: string; months: string[]; revenueData: number[] }) {
   const tr = T[lang];
-  const max = Math.max(...REVENUE_DATA);
+  const max = Math.max(...revenueData, 1);
   const now = new Date();
   const lastSixMonths = Array.from({length:6},(_,i)=>{
     const d = new Date(now.getFullYear(), now.getMonth()-5+i, 1);
@@ -321,7 +299,7 @@ function RevenueChart({ lang, months }) {
       </div>
       {/* Bars */}
       <div style={{ display:"flex",alignItems:"flex-end",gap:10,height:120,marginBottom:12 }}>
-        {REVENUE_DATA.map((v,i)=>{
+        {revenueData.map((v,i)=>{
           const isLast = i===5;
           const h = Math.round((v/max)*100);
           return (
@@ -358,57 +336,146 @@ export default function PaymentsPage() {
   const isAr = lang==="ar";
   const tr = T[lang];
 
-  const [payments, setPayments] = useState(INIT_PAYMENTS);
-  const [nextId, setNextId]     = useState(INIT_PAYMENTS.length+1);
-  const [search, setSearch]     = useState("");
-  const [filter, setFilter]     = useState("all");
+  // ── State ──────────────────────────────────────────────────
+  const [payments,  setPayments]  = useState<Payment[]>([]);
+  const [patients,  setPatients]  = useState<Patient[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [saving,    setSaving]    = useState(false);
+  const [search,    setSearch]    = useState("");
+  const [filter,    setFilter]    = useState("all");
   const [showModal, setShowModal] = useState(false);
-  const [deleteId, setDeleteId]  = useState(null);
-  const [animIds, setAnimIds]    = useState([]);
+  const [deleteId,  setDeleteId]  = useState<number|null>(null);
+  const [animIds,   setAnimIds]   = useState<number[]>([]);
 
-  // فلترة
-  const filtered = payments.filter(p=>{
-    const patient = PATIENTS_LIST.find(x=>x.id===p.patientId);
-    const q = search.toLowerCase();
-    if (q && !patient?.name.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q)) return false;
-    if (filter==="paid"    && p.status!=="paid")    return false;
-    if (filter==="pending" && p.status!=="pending") return false;
-    if (filter==="cash"    && p.method!=="cash")    return false;
-    if (filter==="card"    && p.method!=="card")    return false;
-    return true;
-  }).sort((a, b) =>
-  new Date(b.date).getTime() - new Date(a.date).getTime()
-);
+  // ── جلب البيانات من Supabase ────────────────────────────────
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const pendingPayments = payments.filter(p=>p.status==="pending");
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  // إحصائيات
-  const thisMonth = new Date().toISOString().slice(0,7);
-  const monthPayments = payments.filter(p=>p.date.startsWith(thisMonth));
-  const stats = {
-    totalMonth: monthPayments.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount, 0),
-    totalYear:  payments.filter(p=>p.status==="paid" && p.date.startsWith(new Date().getFullYear())).reduce((s,p)=>s+p.amount, 0),
-    paidCount:  payments.filter(p=>p.status==="paid").length,
-    pendingAmt: pendingPayments.reduce((s,p)=>s+p.amount, 0),
-    pendingCount: pendingPayments.length,
+      const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
+        supabase
+          .from("payments")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("patients")
+          .select("id, name")
+          .eq("user_id", user.id)
+          .eq("is_hidden", false)
+          .order("name"),
+      ]);
+
+      setPayments(paymentsData || []);
+      setPatients(patientsData || []);
+    } catch (err) {
+      console.error("loadData error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSave = (data) => {
-    const id = nextId;
-    const newP = { ...data, id };
-    setPayments(prev=>[newP,...prev]);
-    setNextId(id+1);
-    setAnimIds(prev=>[...prev,id]);
-    setTimeout(()=>setAnimIds(prev=>prev.filter(x=>x!==id)),600);
-    setShowModal(false);
+  // ── فلترة وترتيب ────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    return payments.filter(p => {
+      const patient = patients.find(x => x.id === p.patient_id);
+      const q = search.toLowerCase();
+      if (q && !patient?.name.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q)) return false;
+      if (filter === "paid"    && p.status !== "paid")    return false;
+      if (filter === "pending" && p.status !== "pending") return false;
+      if (filter === "cash"    && p.method !== "cash")    return false;
+      if (filter === "card"    && p.method !== "card")    return false;
+      return true;
+    }).sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [payments, patients, search, filter]);
+
+  const pendingPayments = useMemo(() => payments.filter(p => p.status === "pending"), [payments]);
+
+  // ── إحصائيات ────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const monthPayments = payments.filter(p => p.date.startsWith(thisMonth));
+    const pending = payments.filter(p => p.status === "pending");
+    return {
+      totalMonth:   monthPayments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0),
+      totalYear:    payments.filter(p => p.status === "paid" && p.date.startsWith(String(new Date().getFullYear()))).reduce((s, p) => s + p.amount, 0),
+      paidCount:    payments.filter(p => p.status === "paid").length,
+      pendingAmt:   pending.reduce((s, p) => s + p.amount, 0),
+      pendingCount: pending.length,
+    };
+  }, [payments]);
+
+  // ── بيانات مخطط الإيرادات (آخر 6 أشهر) ─────────────────────
+  const revenueData = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      return payments
+        .filter(p => p.status === "paid" && p.date.startsWith(key))
+        .reduce((s, p) => s + p.amount, 0);
+    });
+  }, [payments]);
+
+  // ── إضافة دفعة جديدة ────────────────────────────────────────
+  const handleSave = async (data: Omit<Payment,'id'|'user_id'|'created_at'>) => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: inserted, error } = await supabase
+        .from("payments")
+        .insert({ ...data, user_id: user.id })
+        .select()
+        .single();
+
+      if (error) { console.error("insert payment error:", error); return; }
+
+      setPayments(prev => [inserted, ...prev]);
+      setAnimIds(prev => [...prev, inserted.id]);
+      setTimeout(() => setAnimIds(prev => prev.filter(x => x !== inserted.id)), 600);
+      setShowModal(false);
+    } catch (err) {
+      console.error("handleSave error:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const markPaid = (id) => {
-    setPayments(prev=>prev.map(p=>p.id===id?{...p,status:"paid"}:p));
+  // ── تحديد كمدفوع ────────────────────────────────────────────
+  const markPaid = async (id: number) => {
+    const { error } = await supabase
+      .from("payments")
+      .update({ status: "paid" })
+      .eq("id", id);
+
+    if (!error) {
+      setPayments(prev => prev.map(p => p.id === id ? { ...p, status: "paid" } : p));
+    }
   };
 
-  const deletePayment = (id) => {
-    setPayments(prev=>prev.filter(p=>p.id!==id));
+  // ── حذف دفعة ────────────────────────────────────────────────
+  const deletePayment = async (id: number) => {
+    const { error } = await supabase
+      .from("payments")
+      .delete()
+      .eq("id", id);
+
+    if (!error) {
+      setPayments(prev => prev.filter(p => p.id !== id));
+    }
     setDeleteId(null);
   };
 
@@ -433,6 +500,7 @@ export default function PaymentsPage() {
         @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes rowPop{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
         .page-anim{animation:fadeUp .4s ease both}
         .tx-row{transition:background .15s;border-bottom:1px solid #f0f2f5}
         .tx-row:last-child{border-bottom:none}
@@ -576,9 +644,14 @@ export default function PaymentsPage() {
                       <div style={{ fontSize:36,marginBottom:10 }}>🔍</div>
                       <div style={{ fontSize:14,fontWeight:600 }}>{tr.noResults}</div>
                     </div>
+                  ):loading?(
+                    <div style={{ textAlign:"center",padding:"50px",color:"#ccc" }}>
+                      <div style={{ width:32,height:32,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px" }}/>
+                      <div style={{ fontSize:13 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
+                    </div>
                   ):(
                     filtered.map(p=>{
-                      const patient = PATIENTS_LIST.find(x=>x.id===p.patientId);
+                      const patient = patients.find(x=>x.id===p.patient_id);
                       const ss = statusStyle[p.status]||statusStyle.paid;
                       const isNew = animIds.includes(p.id);
                       return (
@@ -587,7 +660,7 @@ export default function PaymentsPage() {
                           <div style={{ fontSize:12,color:"#888" }}>{fmtDate(p.date)}</div>
                           {/* Patient */}
                           <div style={{ display:"flex",alignItems:"center",gap:10,paddingLeft:8 }}>
-                            <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.patientId),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
+                            <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
                               {patient?getInitials(patient.name):"?"}
                             </div>
                             <div style={{ fontSize:13,fontWeight:500,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120 }}>
@@ -636,7 +709,7 @@ export default function PaymentsPage() {
               <div>
                 {/* Chart */}
                 <div style={{ marginBottom:16 }}>
-                  <RevenueChart lang={lang} months={tr.months} />
+                  <RevenueChart lang={lang} months={tr.months} revenueData={revenueData} />
                 </div>
 
                 {/* Pending Dues */}
@@ -655,10 +728,10 @@ export default function PaymentsPage() {
                     <div style={{ textAlign:"center",padding:"24px 0",color:"#ccc",fontSize:13 }}>{tr.pendingSection.empty}</div>
                   ):(
                     pendingPayments.map(p=>{
-                      const patient = PATIENTS_LIST.find(x=>x.id===p.patientId);
+                      const patient = patients.find(x=>x.id===p.patient_id);
                       return (
                         <div key={p.id} className="pending-row">
-                          <div style={{ width:34,height:34,borderRadius:8,background:getColor(p.patientId),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
+                          <div style={{ width:34,height:34,borderRadius:8,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
                             {patient?getInitials(patient.name):"?"}
                           </div>
                           <div style={{ flex:1,minWidth:0 }}>
@@ -684,7 +757,7 @@ export default function PaymentsPage() {
         </main>
 
         {/* Add Modal */}
-        {showModal&&<PaymentModal lang={lang} onSave={handleSave} onClose={()=>setShowModal(false)}/>}
+        {showModal&&<PaymentModal lang={lang} patients={patients} onSave={handleSave} onClose={()=>setShowModal(false)}/>}
 
         {/* Delete Confirm */}
         {deleteId&&(
