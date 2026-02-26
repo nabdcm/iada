@@ -39,6 +39,7 @@ const T = {
     notification:{ title:"تذكير بموعد", msg:"سيحين موعد المريض", in:"خلال ١٥ دقيقة", dismiss:"تجاهل" },
     errorSave:"حدث خطأ أثناء الحفظ", errorLoad:"حدث خطأ أثناء التحميل",
     errorDelete:"حدث خطأ أثناء الحذف",
+    conflictError:"يوجد موعد آخر في نفس الوقت، يرجى اختيار وقت مختلف",
     whatsappMsg:(name:string, date:string, time:string) =>
       `مرحباً ${name}، نذكّركم بموعدكم في عيادتنا بتاريخ ${date} الساعة ${time}. نتطلع لرؤيتكم 💙`,
     nowCard:{ title:"الوقت الآن", dateLabel:"التاريخ" },
@@ -74,6 +75,7 @@ const T = {
     notification:{ title:"Appointment Reminder", msg:"Upcoming appointment for", in:"in 15 minutes", dismiss:"Dismiss" },
     errorSave:"Error saving appointment", errorLoad:"Error loading data",
     errorDelete:"Error deleting appointment",
+    conflictError:"Another appointment exists at the same time, please choose a different time",
     whatsappMsg:(name:string, date:string, time:string) =>
       `Hello ${name}, this is a reminder for your appointment on ${date} at ${time}. We look forward to seeing you 💙`,
     nowCard:{ title:"Current Time", dateLabel:"Date" },
@@ -212,8 +214,9 @@ type ApptForm = {
 };
 
 // ─── Modal موعد ───────────────────────────────────────────
-function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, onStatusChange, onDelete, saving }: {
+function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onSave, onClose, onStatusChange, onDelete, saving }: {
   lang: Lang; appt: Appointment | null; defaultDate: string; patients: Patient[];
+  appointments: Appointment[];
   onSave: (form: ApptForm, id?: number) => void; onClose: () => void;
   onStatusChange: (id: number, status: Status) => void;
   onDelete: (id: number) => void; saving: boolean;
@@ -230,6 +233,20 @@ function AppointmentModal({ lang, appt, defaultDate, patients, onSave, onClose, 
 
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
+
+    // فحص تعارض الوقت — استثنِ الموعد الحالي عند التعديل
+    const timeSlot = form.time.slice(0,5);
+    const conflict = appointments.find(a =>
+      a.date === form.date &&
+      a.time.slice(0,5) === timeSlot &&
+      (isEdit ? a.id !== appt!.id : true) &&
+      a.status !== "cancelled"
+    );
+    if (conflict) {
+      setError(tr.conflictError);
+      return;
+    }
+
     onSave(form, appt?.id);
   };
 
@@ -510,14 +527,45 @@ export default function AppointmentsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => { if (user) setClinicId(user.id); });
   }, []);
 
-  // Notification trigger
+  // ── نظام التنبيه الصحيح: كل دقيقة، قبل 15 دقيقة بالضبط، مرة واحدة لكل موعد ──
+  const notifiedRef = useRef<Set<number>>(new Set());
+
   useEffect(() => {
     if (appointments.length === 0) return;
-    const timer = setTimeout(() => {
-      const next = appointments.find(a => a.date === todayKey && a.status === "scheduled");
-      if (next) setNotification(next);
-    }, 3000);
-    return () => clearTimeout(timer);
+
+    const checkNotifications = () => {
+      const n   = new Date();
+      const yy  = n.getFullYear();
+      const mm  = String(n.getMonth()+1).padStart(2,"0");
+      const dd  = String(n.getDate()).padStart(2,"0");
+      const key = `${yy}-${mm}-${dd}`;
+
+      // الوقت بعد 15 دقيقة
+      const target = new Date(n.getTime() + 15 * 60 * 1000);
+      const tH = String(target.getHours()).padStart(2,"0");
+      const tM = String(target.getMinutes()).padStart(2,"0");
+      const targetTime = `${tH}:${tM}`;
+
+      // ابحث عن موعد scheduled في نفس اليوم وقته == targetTime
+      const upcoming = appointments.find(a =>
+        a.date === key &&
+        a.status === "scheduled" &&
+        a.time.slice(0,5) === targetTime &&
+        !notifiedRef.current.has(a.id)
+      );
+
+      if (upcoming) {
+        notifiedRef.current.add(upcoming.id);
+        setNotification(upcoming);
+      }
+    };
+
+    // فحص فوري عند تحميل المواعيد
+    checkNotifications();
+
+    // ثم كل 60 ثانية
+    const interval = setInterval(checkNotifications, 60_000);
+    return () => clearInterval(interval);
   }, [appointments]);
 
   // Scroll timeline to current time when today selected
@@ -605,14 +653,32 @@ export default function AppointmentsPage() {
   const selDate  = selectedKey.split("-");
   const selLabel = selDate.length===3 ? `${parseInt(selDate[2])} ${tr.months[parseInt(selDate[1])-1]} ${selDate[0]}` : selectedKey;
 
-  // WhatsApp لمريض معين
+  // WhatsApp لمريض معين — يفتح تطبيق واتساب ويضع الرسالة جاهزة
   const sendWhatsApp = (appt: Appointment) => {
-    const phone   = getPatientPhone(appt.patient_id).replace(/\D/g,"");
-    const name    = getPatientName(appt.patient_id);
-    const dateStr = selLabel;
-    const msg     = encodeURIComponent(T[lang].whatsappMsg(name, dateStr, appt.time));
-    const url     = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
-    window.open(url, "_blank");
+    const rawPhone = getPatientPhone(appt.patient_id).replace(/\D/g,"");
+    const name     = getPatientName(appt.patient_id);
+
+    // بناء التاريخ بالعربية من appt.date مباشرة
+    const [y, mo, d] = appt.date.split("-");
+    const monthNames = T[lang].months;
+    const dateFormatted = `${parseInt(d)} ${monthNames[parseInt(mo)-1]} ${y}`;
+
+    const msg = encodeURIComponent(T[lang].whatsappMsg(name, dateFormatted, appt.time.slice(0,5)));
+
+    if (rawPhone) {
+      // محاولة فتح تطبيق واتساب المكتبي أولاً
+      const desktopUrl = `whatsapp://send?phone=${rawPhone}&text=${msg}`;
+      const webUrl     = `https://wa.me/${rawPhone}?text=${msg}`;
+      // نحاول البروتوكول المكتبي، ثم ننتقل للويب احتياطياً
+      const a = document.createElement("a");
+      a.href  = desktopUrl;
+      a.click();
+      // fallback للويب بعد 1.5 ثانية إذا لم يُفتح التطبيق
+      setTimeout(() => { window.open(webUrl, "_blank"); }, 1500);
+    } else {
+      // بدون رقم: فتح واتساب ويب لاختيار المحادثة
+      window.open(`https://wa.me/?text=${msg}`, "_blank");
+    }
   };
 
   // الوقت الحالي لخط التقاطع
@@ -636,8 +702,8 @@ export default function AppointmentsPage() {
         .appt-input:focus{border-color:#0863ba!important;box-shadow:0 0 0 3px rgba(8,99,186,.1)}
         .cal-day{border-radius:8px;cursor:pointer;transition:all .15s;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
         .cal-day:hover{background:rgba(8,99,186,.06)}
-        .wa-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.25);cursor:pointer;font-size:13px;transition:all .15s;flex-shrink:0}
-        .wa-btn:hover{background:rgba(37,211,102,.25);transform:scale(1.1)}
+        .wa-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.25);cursor:pointer;transition:all .15s;flex-shrink:0;padding:0}
+        .wa-btn:hover{background:rgba(37,211,102,.3);transform:scale(1.1);border-color:rgba(37,211,102,.5)}
         .slot-row{display:flex;align-items:flex-start;gap:0;min-height:40px;position:relative}
         .slot-row:last-child{border-bottom:none}
         .timeline-scroll{overflow-y:auto;max-height:calc(100vh - 300px)}
@@ -812,7 +878,9 @@ export default function AppointmentsPage() {
                                           title="WhatsApp"
                                           onClick={e=>{ e.stopPropagation(); sendWhatsApp(appt); }}
                                         >
-                                          📱
+                                          <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                          </svg>
                                         </button>
                                       </div>
                                       <div style={{ fontSize:11,color:"#888",marginTop:1 }}>
@@ -854,6 +922,7 @@ export default function AppointmentsPage() {
         {/* Modals */}
         {(addModal||editAppt)&&(
           <AppointmentModal lang={lang} appt={editAppt} defaultDate={selectedKey} patients={patients}
+            appointments={appointments}
             onSave={handleSave} onClose={()=>{ setAddModal(false); setEditAppt(null); }}
             onStatusChange={handleStatusChange} onDelete={handleDelete} saving={saving}/>
         )}
