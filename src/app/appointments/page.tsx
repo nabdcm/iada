@@ -234,16 +234,27 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
 
-    // فحص تعارض الوقت — استثنِ الموعد الحالي عند التعديل
-    const timeSlot = form.time.slice(0,5);
-    const conflict = appointments.find(a =>
-      a.date === form.date &&
-      a.time.slice(0,5) === timeSlot &&
-      (isEdit ? a.id !== appt!.id : true) &&
-      a.status !== "cancelled"
-    );
+    // فحص تعارض الوقت مع مراعاة مدة الموعد
+    const timeToMinutes = (t: string) => {
+      const [h, m] = t.slice(0,5).split(":").map(Number);
+      return h * 60 + m;
+    };
+    const newStart = timeToMinutes(form.time);
+    const newEnd   = newStart + (form.duration || 30);
+
+    const conflict = appointments.find(a => {
+      if (a.date !== form.date) return false;
+      if (a.status === "cancelled") return false;
+      if (isEdit && a.id === appt!.id) return false;
+      const aStart = timeToMinutes(a.time);
+      const aEnd   = aStart + (a.duration || 30);
+      // تعارض إذا تداخلت الفترتان
+      return newStart < aEnd && newEnd > aStart;
+    });
     if (conflict) {
-      setError(tr.conflictError);
+      const cTime = conflict.time.slice(0,5);
+      const cDur  = conflict.duration || 30;
+      setError(`${tr.conflictError} (${cTime} - ${cDur} ${tr.duration.min})`);
       return;
     }
 
@@ -655,28 +666,31 @@ export default function AppointmentsPage() {
 
   // WhatsApp لمريض معين — يفتح تطبيق واتساب ويضع الرسالة جاهزة
   const sendWhatsApp = (appt: Appointment) => {
-    const rawPhone = getPatientPhone(appt.patient_id).replace(/\D/g,"");
+    let rawPhone = getPatientPhone(appt.patient_id).replace(/\D/g,"");
+
+    // تحويل الأرقام السورية: 09XXXXXXXX → 9639XXXXXXXX
+    if (rawPhone.startsWith("09") && rawPhone.length === 10) {
+      rawPhone = "963" + rawPhone.slice(1); // 09... → 9639...
+    } else if (rawPhone.startsWith("9") && rawPhone.length === 9) {
+      rawPhone = "963" + rawPhone; // 9XXXXXXXX → 9639...
+    } else if (rawPhone.startsWith("00963")) {
+      rawPhone = rawPhone.slice(2); // 00963 → 963
+    }
+    // إذا بدأ بـ 963 فهو صحيح بالفعل
+
     const name     = getPatientName(appt.patient_id);
-
-    // بناء التاريخ بالعربية من appt.date مباشرة
     const [y, mo, d] = appt.date.split("-");
-    const monthNames = T[lang].months;
-    const dateFormatted = `${parseInt(d)} ${monthNames[parseInt(mo)-1]} ${y}`;
-
+    const dateFormatted = `${parseInt(d)} ${T[lang].months[parseInt(mo)-1]} ${y}`;
     const msg = encodeURIComponent(T[lang].whatsappMsg(name, dateFormatted, appt.time.slice(0,5)));
 
     if (rawPhone) {
-      // محاولة فتح تطبيق واتساب المكتبي أولاً
       const desktopUrl = `whatsapp://send?phone=${rawPhone}&text=${msg}`;
       const webUrl     = `https://wa.me/${rawPhone}?text=${msg}`;
-      // نحاول البروتوكول المكتبي، ثم ننتقل للويب احتياطياً
       const a = document.createElement("a");
       a.href  = desktopUrl;
       a.click();
-      // fallback للويب بعد 1.5 ثانية إذا لم يُفتح التطبيق
       setTimeout(() => { window.open(webUrl, "_blank"); }, 1500);
     } else {
-      // بدون رقم: فتح واتساب ويب لاختيار المحادثة
       window.open(`https://wa.me/?text=${msg}`, "_blank");
     }
   };
@@ -829,34 +843,53 @@ export default function AppointmentsPage() {
                 ) : (
                   <>
                     {SLOTS.map((slot, idx) => {
-                      const slotAppts = dayAppointments.filter(a => a.time.slice(0,5) === slot.value);
+                      // كل موعد يُعرض في الـ slot الذي يقع فيه وقته (round down إلى أقرب 15 دقيقة)
+                      const slotAppts = dayAppointments.filter(a => {
+                        const [ah, am] = a.time.slice(0,5).split(":").map(Number);
+                        const apptMinutes = ah * 60 + am;
+                        // الـ slot من slot.value إلى slot.value + 14 دقيقة
+                        const [sh, sm] = slot.value.split(":").map(Number);
+                        const slotStart = sh * 60 + sm;
+                        const slotEnd   = slotStart + 14; // حتى نهاية الـ 15 دقيقة
+                        return apptMinutes >= slotStart && apptMinutes <= slotEnd;
+                      });
                       const isNowSlot = idx === nowSlotIdx;
+                      const hasAppts  = slotAppts.length > 0;
                       return (
                         <div key={slot.value} className="slot-row"
-                          style={{ borderBottom: slot.isHour ? "1px solid #eef0f3" : "1px solid #f9fafb", background: isNowSlot ? "rgba(8,99,186,.03)" : "transparent" }}>
+                          style={{
+                            borderBottom: slot.isHour ? "1px solid #e8edf2" : "1px solid #f4f6f9",
+                            background: isNowSlot ? "rgba(8,99,186,.04)" : "transparent",
+                            minHeight: hasAppts ? "auto" : slot.isHour ? 44 : 32,
+                          }}>
 
                           {/* Time label */}
-                          <div style={{ width:56,flexShrink:0,padding:"10px 0 10px 14px",textAlign:"center",position:"relative" }}>
+                          <div style={{ width:62,flexShrink:0,padding:"8px 0 8px 14px",textAlign:"center",position:"relative",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:10 }}>
                             {slot.isHour ? (
-                              <span style={{ fontSize:12,fontWeight:700,color:slotAppts.length>0?"#0863ba":isNowSlot?"#0863ba":"#bbb",display:"block" }}>
+                              <span style={{ fontSize:12,fontWeight:700,color:hasAppts?"#0863ba":isNowSlot?"#0863ba":"#c0c8d4",display:"block",letterSpacing:.3 }}>
+                                {slot.label}
+                              </span>
+                            ) : hasAppts ? (
+                              // إظهار الوقت عند وجود موعد في ربع الساعة
+                              <span style={{ fontSize:10,fontWeight:600,color:"#0863ba",display:"block" }}>
                                 {slot.label}
                               </span>
                             ) : (
-                              <span style={{ fontSize:10,color:"#ddd" }}>·</span>
+                              <span style={{ fontSize:9,color:"#e0e4ea",lineHeight:"32px" }}>·</span>
                             )}
                             {/* Now indicator */}
                             {isNowSlot && (
-                              <div style={{ position:"absolute",top:"50%",insetInlineEnd:-6,transform:"translateY(-50%)",width:10,height:10,borderRadius:"50%",background:"#0863ba",animation:"nowPulse 1.5s ease infinite",boxShadow:"0 0 0 3px rgba(8,99,186,.2)" }}/>
+                              <div style={{ position:"absolute",top:"50%",insetInlineEnd:-5,transform:"translateY(-50%)",width:9,height:9,borderRadius:"50%",background:"#0863ba",animation:"nowPulse 1.5s ease infinite",boxShadow:"0 0 0 3px rgba(8,99,186,.2)" }}/>
                             )}
                           </div>
 
-                          {/* Divider */}
-                          <div style={{ width:1,background:slot.isHour?"#eef0f3":"#f5f7fa",alignSelf:"stretch",flexShrink:0 }}/>
+                          {/* Divider — أوضح للساعات الكاملة */}
+                          <div style={{ width: slot.isHour ? 1.5 : 1, background: slot.isHour ? "#d8e2ee" : "#eef0f3", alignSelf:"stretch", flexShrink:0 }}/>
 
                           {/* Appointments in this slot */}
-                          <div style={{ flex:1,padding:"6px 14px",display:"flex",flexDirection:"column",gap:6,minHeight:40 }}>
+                          <div style={{ flex:1,padding: hasAppts ? "6px 14px 6px" : "0 14px",display:"flex",flexDirection:"column",gap:6 }}>
                             {slotAppts.length === 0 && isNowSlot && (
-                              <div style={{ height:2,background:"#0863ba",borderRadius:2,opacity:.3,alignSelf:"stretch",margin:"16px 0 0" }}/>
+                              <div style={{ height:2,background:"#0863ba",borderRadius:2,opacity:.25,alignSelf:"stretch",margin:"12px 0" }}/>
                             )}
                             {slotAppts.map(appt => {
                               const name   = getPatientName(appt.patient_id);
