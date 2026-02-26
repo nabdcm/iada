@@ -25,7 +25,7 @@ const LOGO_SVG = (
   </svg>
 );
 
-const WA_LINK = "https://wa.me/963988285483";
+const WA_LINK = "https://wa.me/963998285483";
 const YT_LINK = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
 const translations = {
