@@ -13,7 +13,7 @@ type Lang = "ar" | "en";
 const T = {
   ar: {
     appName: "نبض", appSub: "إدارة العيادة",
-    nav: { dashboard:"الرئيسية", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات", admin:"لوحة المدير" },
+    nav: { dashboard:"لوحة المعلومات", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات", admin:"لوحة المدير" },
     page: { title:"إدارة المرضى", sub:"سجلات وملفات المرضى المسجلين" },
     addPatient: "إضافة مريض",
     search: "ابحث بالاسم أو رقم الهاتف...",
@@ -43,13 +43,13 @@ const T = {
       warning: "لا يمكن التراجع عن هذا الإجراء.",
       confirm: "نعم، احذف", cancel: "إلغاء",
     },
-    stats: { total:"إجمالي", male:"ذكور", female:"إناث", diabetic:"سكري" },
+    stats: { total:"إجمالي", male:"ذكور", female:"إناث", newMonth:"مرضى جدد هذا الشهر" },
     signOut: "تسجيل الخروج", id: "رقم",
     years: "سنة",
   },
   en: {
     appName: "NABD", appSub: "Clinic Manager",
-    nav: { dashboard:"Dashboard", patients:"Patients", appointments:"Appointments", payments:"Payments", admin:"Admin Panel" },
+    nav: { dashboard:"Dashboard Info", patients:"Patients", appointments:"Appointments", payments:"Payments", admin:"Admin Panel" },
     page: { title:"Patients", sub:"Records and files of registered patients" },
     addPatient: "Add Patient",
     search: "Search by name or phone...",
@@ -79,7 +79,7 @@ const T = {
       warning: "This action cannot be undone.",
       confirm: "Yes, Delete", cancel: "Cancel",
     },
-    stats: { total:"Total", male:"Male", female:"Female", diabetic:"Diabetic" },
+    stats: { total:"Total", male:"Male", female:"Female", newMonth:"New This Month" },
     signOut: "Sign Out", id: "ID",
     years: "yrs",
   },
@@ -99,22 +99,22 @@ const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a08
 const getColor    = (id: number) => AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length];
 const getInitials = (name: string) => name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
 
-function sendWhatsApp(phone: string, patientName: string, lang: Lang) {
+function openWhatsApp(phone: string) {
+  // تنظيف الرقم وتحويله إلى صيغة دولية سورية
   let cleaned = phone.replace(/[^0-9+]/g, "");
-  if (cleaned.startsWith("0")) cleaned = "963" + cleaned.slice(1);
-  if (!cleaned.startsWith("+") && !cleaned.startsWith("963")) cleaned = "963" + cleaned;
+  // 09XXXXXXXX → 9639XXXXXXXX
+  if (cleaned.startsWith("09")) cleaned = "963" + cleaned.slice(1);
+  // 9XXXXXXXX (بدون صفر وبدون 963) → 9639XXXXXXXX
+  else if (cleaned.startsWith("9") && cleaned.length <= 9 && !cleaned.startsWith("963"))
+    cleaned = "963" + cleaned;
+  // 0XXXXXXXXX (صفر بدون 9) → 963XXXXXXXXX
+  else if (cleaned.startsWith("0")) cleaned = "963" + cleaned.slice(1);
+  // بدون بادئة واضحة → نضيف 963
+  else if (!cleaned.startsWith("+") && !cleaned.startsWith("963")) cleaned = "963" + cleaned;
+  // إزالة + إن وجدت
   cleaned = cleaned.replace(/^\+/, "");
-
-  const apptTime = new Date(Date.now() + 15 * 60 * 1000);
-  const timeStr  = apptTime.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-US", {
-    hour: "2-digit", minute: "2-digit", hour12: true,
-  });
-
-  const msg = lang === "ar"
-    ? `مرحباً ${patientName} 👋\nيسعدنا تذكيرك بأن موعدك في عيادتنا سيحين الساعة ${timeStr} ⏰\nنتطلع لاستقبالك، نرجو الحضور قبل الموعد بدقائق.\nشكراً 💙`
-    : `Hello ${patientName} 👋\nThis is a friendly reminder that your appointment at our clinic is at ${timeStr} ⏰\nWe look forward to seeing you. Please arrive a few minutes early.\nThank you 💙`;
-
-  window.open(`https://wa.me/${cleaned}?text=${encodeURIComponent(msg)}`, "nabd_whatsapp");
+  // فتح المحادثة مباشرة بدون رسالة
+  window.open(\`https://wa.me/\${cleaned}\`, "nabd_whatsapp");
 }
 
 // ─── Sidebar ──────────────────────────────────────────────
@@ -140,11 +140,17 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
     if (isMobile) setMobileOpen(false);
   }, [isMobile]);
 
-  const navItems: { key: keyof typeof tr.nav; icon: string; href: string }[] = [
-    { key: "dashboard",    icon: "⊞", href: "/dashboard"    },
-    { key: "patients",     icon: "👥", href: "/patients"     },
-    { key: "appointments", icon: "📅", href: "/appointments" },
-    { key: "payments",     icon: "💳", href: "/payments"     },
+  const NAV_ICONS: Record<string, React.ReactNode> = {
+    dashboard: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+    patients: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    appointments: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    payments: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+  };
+  const navItems: { key: keyof typeof tr.nav; href: string }[] = [
+    { key: "dashboard",    href: "/dashboard"    },
+    { key: "patients",     href: "/patients"     },
+    { key: "appointments", href: "/appointments" },
+    { key: "payments",     href: "/payments"     },
   ];
 
   const sidebarTransform = isMobile
@@ -242,7 +248,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
                     width:3, height:24, background:"#0863ba", borderRadius:10,
                   }} />
                 )}
-                <span style={{ fontSize:18, flexShrink:0 }}>{item.icon}</span>
+                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
                 {!collapsed && <span>{tr.nav[item.key]}</span>}
               </a>
             );
@@ -258,15 +264,15 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
               🌐 {lang==="ar" ? "English" : "العربية"}
             </button>
           )}
-          <div style={{ display:"flex",alignItems:"center",gap:collapsed?0:10,justifyContent:collapsed?"center":"flex-start",padding:collapsed?8:"10px 12px",borderRadius:10,background:"#f7f9fc" }}>
-            <div style={{ width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#0863ba,#a4c4e4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:700,flexShrink:0 }}>د</div>
-            {!collapsed && (
-              <div style={{ flex:1, overflow:"hidden" }}>
-                <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{lang==="ar"?"الدكتور / العيادة":"Dr. / Clinic"}</div>
-                <button style={{ background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#c0392b",fontFamily:"Rubik,sans-serif",padding:0,fontWeight:500 }}>{tr.signOut} →</button>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={async () => { try { const { supabase: sb } = await import("@/lib/supabase"); await sb.auth.signOut(); window.location.href = "/login"; } catch(e) { window.location.href = "/login"; } }}
+            style={{ width:"100%",padding:collapsed?"10px 0":"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#c0392b",fontWeight:600,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:8,transition:"all .2s" }}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(192,57,43,.12)"}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(192,57,43,.06)"}}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            {!collapsed && <span>{tr.signOut}</span>}
+          </button>
         </div>
       </aside>
     </>
@@ -665,14 +671,36 @@ export default function PatientsPage() {
   const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
   const [animIds,       setAnimIds]       = useState<number[]>([]);
 
-  const loadPatients = async () => {
+  const loadPatients = async (retryCount = 0) => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
+      // محاولة جلب الجلسة أولاً (أسرع من getUser)
+      const { data: { session } } = await supabase.auth.getSession();
+      let userId = session?.user?.id;
+
+      // إذا لم توجد جلسة، نحاول getUser مع retry
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id;
+      }
+
+      // إذا لم يوجد userId بعد المحاولتين، نُعيد المحاولة تلقائياً
+      if (!userId) {
+        if (retryCount < 3) {
+          await new Promise(r => setTimeout(r, 800 * (retryCount + 1)));
+          return loadPatients(retryCount + 1);
+        }
+        console.warn("No user session found after retries");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
-        .from("patients").select("*").eq("user_id", userId)
+        .from("patients")
+        .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
+
       if (error) throw error;
       setPatients((data ?? []) as Patient[]);
     } catch (err) {
@@ -682,7 +710,16 @@ export default function PatientsPage() {
     }
   };
 
-  useEffect(() => { loadPatients(); }, []);
+  useEffect(() => {
+    loadPatients();
+    // استمع لتغييرات الجلسة — يحل مشكلة التحميل الأول
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        loadPatients();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handler = () => setOpenMenuId(null);
@@ -702,11 +739,14 @@ export default function PatientsPage() {
   });
 
   const visibleAll = patients.filter(p => !p.is_hidden);
+  const thisMonthStart = new Date();
+  thisMonthStart.setDate(1); thisMonthStart.setHours(0,0,0,0);
+  const thisMonthISO = thisMonthStart.toISOString().slice(0,7); // "YYYY-MM"
   const stats = {
     total:    visibleAll.length,
     male:     visibleAll.filter(p => p.gender === "male").length,
     female:   visibleAll.filter(p => p.gender === "female").length,
-    diabetic: visibleAll.filter(p => p.has_diabetes).length,
+    newMonth: patients.filter(p => (p.created_at ?? "").slice(0,7) === thisMonthISO).length,
   };
 
   const handleSave = async (form: PatientForm, id?: number) => {
@@ -715,10 +755,13 @@ export default function PatientsPage() {
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
       if (id) {
         const { error } = await supabase.from("patients").update({
-          name: form.name, phone: form.phone, gender: form.gender,
+          name: form.name,
+          phone: form.phone || null,
+          gender: form.gender,
           date_of_birth: form.date_of_birth || null,
-          has_diabetes: form.has_diabetes, has_hypertension: form.has_hypertension,
-          notes: form.notes, updated_at: new Date().toISOString(),
+          has_diabetes: form.has_diabetes,
+          has_hypertension: form.has_hypertension,
+          notes: form.notes || null,
         }).eq("id", id);
         if (error) throw error;
       } else {
@@ -843,7 +886,18 @@ export default function PatientsPage() {
                 <h1 style={{ fontSize:isMobile?17:22, fontWeight:800, color:"#353535" }}>{tr.page.title}</h1>
                 {!isMobile && <p style={{ fontSize:13, color:"#aaa", marginTop:2 }}>{tr.page.sub}</p>}
               </div>
-              {/* Desktop add button */}
+              {/* Desktop: Refresh + Add buttons */}
+              <div style={{ display:"flex",gap:10,alignItems:"center" }}>
+              <button
+                onClick={()=>loadPatients(0)}
+                title={isAr?"تحديث البيانات":"Refresh"}
+                style={{ display:"flex",alignItems:"center",gap:6,padding:"10px 16px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
+                onMouseEnter={e=>{e.currentTarget.style.background="#f0f7ff"}}
+                onMouseLeave={e=>{e.currentTarget.style.background="#fff"}}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                {!isMobile && <span>{isAr?"تحديث":"Refresh"}</span>}
+              </button>
               <button
                 className="desktop-add-btn"
                 onClick={()=>setAddModal(true)}
@@ -853,6 +907,7 @@ export default function PatientsPage() {
               >
                 <span style={{ fontSize:18, lineHeight:1 }}>＋</span> {tr.addPatient}
               </button>
+              </div>
             </div>
           </div>
 
@@ -864,7 +919,7 @@ export default function PatientsPage() {
                 { label:tr.stats.total,    value:stats.total,    icon:"👥", color:"#0863ba", bg:"rgba(8,99,186,.08)"    },
                 { label:tr.stats.male,     value:stats.male,     icon:"👨", color:"#2980b9", bg:"rgba(41,128,185,.08)"  },
                 { label:tr.stats.female,   value:stats.female,   icon:"👩", color:"#8e44ad", bg:"rgba(142,68,173,.08)"  },
-                { label:tr.stats.diabetic, value:stats.diabetic, icon:"🩸", color:"#c0392b", bg:"rgba(192,57,43,.08)"   },
+                { label:tr.stats.newMonth, value:stats.newMonth, icon:"✨", color:"#0863ba", bg:"rgba(8,99,186,.08)"    },
               ].map((s,i)=>(
                 <div key={i} className="stat-mini" style={{ animationDelay:`${i*60}ms`, animation:"fadeUp .4s ease both" }}>
                   {!isMobile && (
@@ -932,7 +987,7 @@ export default function PatientsPage() {
                     onEdit={()=>setEditPatient(p)}
                     onDelete={()=>setDeletePatient(p)}
                     onToggleHide={()=>toggleHide(p.id)}
-                    onWhatsApp={()=>p.phone && sendWhatsApp(p.phone, p.name, lang)}
+                    onWhatsApp={()=>p.phone && openWhatsApp(p.phone)}
                   />
                 ))}
               </div>
@@ -996,7 +1051,7 @@ export default function PatientsPage() {
                     </div>
                     <div style={{ display:"flex",alignItems:"center",gap:6,justifyContent:"center",position:"relative" }} onClick={e=>e.stopPropagation()}>
                       {p.phone ? (
-                        <button className="action-icon-btn" title={tr.actions.whatsapp} onClick={()=>sendWhatsApp(p.phone!, p.name, lang)} style={{ background:"rgba(37,211,102,.1)",borderColor:"rgba(37,211,102,.3)" }}>
+                        <button className="action-icon-btn" title={tr.actions.whatsapp} onClick={()=>openWhatsApp(p.phone!)} style={{ background:"rgba(37,211,102,.1)",borderColor:"rgba(37,211,102,.3)" }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                         </button>
                       ) : (
