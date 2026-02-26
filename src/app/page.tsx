@@ -5,8 +5,28 @@ import { useState, useEffect } from "react";
 // ============================================================
 // NABD - نبض | Landing Page
 // Bilingual (AR/EN) | Light Mode | Rubik Font
-// Colors: #0863ba #a4c4e4 #f2f2f2 #353535 #ffb5b5
 // ============================================================
+
+const LOGO_SVG = (
+  <svg viewBox="0 0 337.74 393.31" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
+    <defs>
+      <linearGradient id="lg-nl1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+        <stop offset=".3" stopColor="#0863ba" /><stop offset=".69" stopColor="#5694cf" />
+      </linearGradient>
+      <linearGradient id="lg-nl2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#5694cf" /><stop offset=".68" stopColor="#a4c4e4" />
+      </linearGradient>
+    </defs>
+    <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+    <path fill="url(#lg-nl1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+    <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+    <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+    <path fill="url(#lg-nl2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+  </svg>
+);
+
+const WA_LINK = "https://wa.me/963988285483";
+const YT_LINK = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
 const translations = {
   ar: {
@@ -20,19 +40,19 @@ const translations = {
       badge: "نظام إدارة العيادات",
       title1: "إدارة عيادتك",
       title2: "بكل سهولة واحترافية",
-      subtitle:
-        "نبض هو نظام متكامل لإدارة العيادات الطبية — مرضى، مواعيد، ومدفوعات في مكان واحد.",
+      subtitle: "نبض هو نظام متكامل لإدارة العيادات الطبية — مرضى، مواعيد، ومدفوعات في مكان واحد.",
       cta: "ابدأ الآن",
       demo: "مشاهدة العرض",
     },
     stats: [
-      { value: "٩٩٪", label: "رضا العملاء" },
-      { value: "+٥٠", label: "عيادة تثق بنا" },
-      { value: "٢٤/٧", label: "دعم مستمر" },
-      { value: "٣", label: "ثوانٍ للإعداد" },
+      { value: "99%", label: "رضا العملاء" },
+      { value: "+50", label: "عيادة تثق بنا" },
+      { value: "24/7", label: "دعم مستمر" },
+      { value: "3s", label: "ثوانٍ للإعداد" },
     ],
     features: {
-      title: "كل ما تحتاجه في مكان واحد",
+      title: "كل ما تحتاجه في مكان",
+      titleHighlight: "واحد",
       subtitle: "تم تصميم نبض خصيصاً لتبسيط العمل اليومي في العيادة",
       items: [
         {
@@ -61,41 +81,49 @@ const translations = {
           desc: "تنبيهات فورية للسكرتيرة بمواعيد المرضى القادمة حتى لا يفوت أي موعد.",
         },
         {
-          icon: "🌐",
-          title: "ثنائي اللغة",
-          desc: "واجهة كاملة بالعربية والإنجليزية مع دعم الكتابة من اليمين إلى اليسار.",
+          // Fix 7: Replace "ثنائي اللغة" with WhatsApp reminders card
+          icon: "💬",
+          title: "تذكير المرضى عبر واتساب",
+          desc: "أرسل تذكيراً تلقائياً للمريض على واتساب قبل موعده مباشرةً من التطبيق بضغطة واحدة.",
+          whatsapp: true,
         },
       ],
     },
     howItWorks: {
       title: "كيف يعمل نبض؟",
-      subtitle: "ثلاث خطوات بسيطة لبدء إدارة عيادتك",
+      subtitle: "أربع خطوات بسيطة لبدء إدارة عيادتك",
       steps: [
         {
-          num: "١",
+          num: "1",
           title: "تسجيل الدخول",
           desc: "احصل على بيانات دخولك من المزود وسجّل الدخول بأمان.",
         },
         {
-          num: "٢",
+          num: "2",
           title: "أضف مرضاك",
           desc: "أدخل بيانات المرضى بسهولة وابدأ في إدارة سجلاتهم.",
         },
         {
-          num: "٣",
+          num: "3",
           title: "نظّم مواعيدك",
           desc: "حدد المواعيد واستقبل التنبيهات واتبع المدفوعات.",
+        },
+        {
+          num: "4",
+          title: "ذكّر مرضاك عبر واتساب",
+          desc: "أرسل تذكيراً فورياً للمريض على واتساب قبل موعده مباشرةً من التطبيق.",
+          whatsapp: true,
         },
       ],
     },
     cta: {
       title: "هل أنت مستعد لتطوير عيادتك؟",
       subtitle: "انضم إلى العيادات التي تثق بنبض لإدارة عملها اليومي",
-      btn: "تسجيل الدخول",
+      btn: "تواصل معنا عبر واتساب",
     },
     footer: {
       tagline: "نبض عيادتك في يدك",
-      copy: "© ٢٠٢٦ نبض. جميع الحقوق محفوظة.",
+      copy: "© 2026 نبض. جميع الحقوق محفوظة.",
     },
   },
   en: {
@@ -109,8 +137,7 @@ const translations = {
       badge: "Clinic Management System",
       title1: "Manage Your Clinic",
       title2: "Effortlessly & Professionally",
-      subtitle:
-        "NABD is a complete clinic management system — patients, appointments, and payments all in one place.",
+      subtitle: "NABD is a complete clinic management system — patients, appointments, and payments all in one place.",
       cta: "Get Started",
       demo: "Watch Demo",
     },
@@ -121,9 +148,9 @@ const translations = {
       { value: "3s", label: "Setup Time" },
     ],
     features: {
-      title: "Everything You Need in One Place",
-      subtitle:
-        "NABD is designed specifically to simplify daily clinic operations",
+      title: "Everything You Need in One",
+      titleHighlight: "Place",
+      subtitle: "NABD is designed specifically to simplify daily clinic operations",
       items: [
         {
           icon: "👥",
@@ -151,15 +178,16 @@ const translations = {
           desc: "Instant notifications for the secretary about upcoming appointments so nothing gets missed.",
         },
         {
-          icon: "🌐",
-          title: "Bilingual",
-          desc: "Complete Arabic and English interface with right-to-left writing support.",
+          icon: "💬",
+          title: "WhatsApp Appointment Reminders",
+          desc: "Send automatic WhatsApp reminders to patients before their appointment — directly from the app in one click.",
+          whatsapp: true,
         },
       ],
     },
     howItWorks: {
       title: "How Does NABD Work?",
-      subtitle: "Three simple steps to start managing your clinic",
+      subtitle: "Four simple steps to start managing your clinic",
       steps: [
         {
           num: "1",
@@ -176,12 +204,18 @@ const translations = {
           title: "Organize Appointments",
           desc: "Schedule appointments, receive alerts, and track payments.",
         },
+        {
+          num: "4",
+          title: "Remind via WhatsApp",
+          desc: "Send an instant WhatsApp reminder to patients before their appointment — right from the app.",
+          whatsapp: true,
+        },
       ],
     },
     cta: {
       title: "Ready to Upgrade Your Clinic?",
       subtitle: "Join the clinics that trust NABD for daily management",
-      btn: "Login",
+      btn: "Contact Us on WhatsApp",
     },
     footer: {
       tagline: "Your Clinic's Pulse in Your Hands",
@@ -193,7 +227,6 @@ const translations = {
 export default function LandingPage() {
   const [lang, setLang] = useState("ar");
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const t = translations[lang];
   const isAr = lang === "ar";
 
@@ -217,6 +250,7 @@ export default function LandingPage() {
           --dark: #353535;
           --accent: #ffb5b5;
           --white: #ffffff;
+          --wa: #25D366;
           --shadow: 0 4px 24px rgba(8,99,186,0.10);
           --shadow-lg: 0 8px 48px rgba(8,99,186,0.16);
         }
@@ -247,11 +281,9 @@ export default function LandingPage() {
         }
         .nav-logo-icon {
           width: 40px; height: 40px;
-          background: var(--primary);
           border-radius: 12px;
           display: flex; align-items: center; justify-content: center;
-          font-size: 20px;
-          box-shadow: 0 4px 12px rgba(8,99,186,0.3);
+          overflow: hidden;
         }
         .nav-logo-text {
           font-size: 22px; font-weight: 700; color: var(--primary);
@@ -316,7 +348,6 @@ export default function LandingPage() {
           0%,100% { transform: translate(0,0) scale(1); }
           50% { transform: translate(20px, -20px) scale(1.05); }
         }
-
         .hero-content {
           position: relative; z-index: 1;
           text-align: center; max-width: 760px;
@@ -361,11 +392,19 @@ export default function LandingPage() {
           transition: all 0.25s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
         }
         .btn-primary:hover { background: #054a8c; transform: translateY(-2px); box-shadow: 0 10px 32px rgba(8,99,186,0.4); }
+        .btn-wa {
+          background: var(--wa); color: var(--white);
+          padding: 14px 36px; border-radius: 12px; font-family: 'Rubik',sans-serif;
+          font-size: 16px; font-weight: 600; border: none; cursor: pointer;
+          box-shadow: 0 6px 24px rgba(37,211,102,0.35);
+          transition: all 0.25s; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+        }
+        .btn-wa:hover { background: #1da851; transform: translateY(-2px); box-shadow: 0 10px 32px rgba(37,211,102,0.45); }
         .btn-secondary {
           background: var(--white); color: var(--dark);
           padding: 14px 32px; border-radius: 12px; font-family: 'Rubik',sans-serif;
           font-size: 16px; font-weight: 500; border: 1.5px solid #ddd; cursor: pointer;
-          transition: all 0.25s; text-decoration: none;
+          transition: all 0.25s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
         }
         .btn-secondary:hover { border-color: var(--primary-light); color: var(--primary); background: rgba(8,99,186,0.04); }
 
@@ -417,10 +456,7 @@ export default function LandingPage() {
         .mockup-stat-lbl { font-size: 11px; color: #999; margin-top: 2px; }
 
         /* ── STATS ── */
-        .stats-section {
-          padding: 0 40px 80px;
-          position: relative; z-index: 1;
-        }
+        .stats-section { padding: 0 40px 80px; position: relative; z-index: 1; }
         .stats-grid {
           display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
           max-width: 900px; margin: 0 auto;
@@ -432,13 +468,11 @@ export default function LandingPage() {
           border-radius: 14px; transition: all 0.2s;
         }
         .stat-item:hover { background: rgba(8,99,186,0.04); }
-        .stat-val { font-size: 36px; font-weight: 800; color: var(--primary); line-height: 1; }
+        .stat-val { font-size: 36px; font-weight: 800; color: var(--primary); line-height: 1; font-variant-numeric: tabular-nums; }
         .stat-lbl { font-size: 14px; color: #888; margin-top: 8px; font-weight: 500; }
 
         /* ── FEATURES ── */
-        .features-section {
-          padding: 80px 40px; max-width: 1100px; margin: 0 auto;
-        }
+        .features-section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
         .section-header { text-align: center; margin-bottom: 56px; }
         .section-title {
           font-size: clamp(28px, 4vw, 40px); font-weight: 800;
@@ -446,9 +480,7 @@ export default function LandingPage() {
         }
         .section-title span { color: var(--primary); }
         .section-sub { font-size: 16px; color: #888; max-width: 500px; margin: 0 auto; line-height: 1.6; }
-        .features-grid {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
-        }
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
         .feature-card {
           background: var(--white); border-radius: 20px; padding: 32px 28px;
           box-shadow: var(--shadow); border: 1.5px solid transparent;
@@ -461,28 +493,35 @@ export default function LandingPage() {
         }
         .feature-card:hover { border-color: var(--primary-light); transform: translateY(-4px); box-shadow: var(--shadow-lg); }
         .feature-card:hover::before { opacity: 1; }
+        .feature-card.wa-card { border-color: rgba(37,211,102,0.25); background: linear-gradient(135deg, #f0fff6, #fff); }
+        .feature-card.wa-card:hover { border-color: var(--wa); box-shadow: 0 8px 40px rgba(37,211,102,0.15); }
         .feature-icon {
           font-size: 36px; margin-bottom: 20px;
           width: 64px; height: 64px; border-radius: 16px;
           background: rgba(8,99,186,0.08); display: flex; align-items: center; justify-content: center;
         }
+        .feature-icon.wa-icon { background: rgba(37,211,102,0.12); }
         .feature-title { font-size: 18px; font-weight: 700; color: var(--dark); margin-bottom: 10px; }
         .feature-desc { font-size: 14px; color: #888; line-height: 1.7; }
+        .wa-badge {
+          display: inline-flex; align-items: center; gap: 5px;
+          background: rgba(37,211,102,0.12); color: #1a9e4a;
+          font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+          margin-top: 12px;
+        }
 
         /* ── HOW IT WORKS ── */
-        .hiw-section {
-          padding: 80px 40px; background: var(--white);
-        }
-        .hiw-inner { max-width: 900px; margin: 0 auto; }
+        .hiw-section { padding: 80px 40px; background: var(--white); }
+        .hiw-inner { max-width: 1000px; margin: 0 auto; }
         .hiw-steps {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;
+          display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
           margin-top: 56px;
         }
         .hiw-step { text-align: center; position: relative; }
         .hiw-step:not(:last-child)::after {
           content: '→';
           position: absolute; top: 30px;
-          ${isAr ? "left" : "right"}: -25px;
+          ${isAr ? "left" : "right"}: -20px;
           font-size: 20px; color: var(--primary-light);
         }
         .hiw-num {
@@ -492,8 +531,17 @@ export default function LandingPage() {
           display: flex; align-items: center; justify-content: center;
           margin: 0 auto 20px; box-shadow: 0 8px 24px rgba(8,99,186,0.25);
         }
-        .hiw-title { font-size: 18px; font-weight: 700; color: var(--dark); margin-bottom: 10px; }
-        .hiw-desc { font-size: 14px; color: #888; line-height: 1.7; }
+        .hiw-num.wa-num {
+          background: var(--wa); box-shadow: 0 8px 24px rgba(37,211,102,0.3);
+        }
+        .hiw-title { font-size: 16px; font-weight: 700; color: var(--dark); margin-bottom: 10px; }
+        .hiw-desc { font-size: 13px; color: #888; line-height: 1.7; }
+        .hiw-wa-tag {
+          display: inline-flex; align-items: center; gap: 4px;
+          background: rgba(37,211,102,0.1); color: #1a9e4a;
+          font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+          margin-top: 10px;
+        }
 
         /* ── CTA ── */
         .cta-section {
@@ -508,25 +556,22 @@ export default function LandingPage() {
         .cta-content { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; }
         .cta-title { font-size: clamp(28px, 4vw, 42px); font-weight: 800; color: var(--white); margin-bottom: 16px; }
         .cta-sub { font-size: 17px; color: rgba(255,255,255,0.8); margin-bottom: 40px; line-height: 1.6; }
-        .btn-white {
-          background: var(--white); color: var(--primary);
-          padding: 14px 40px; border-radius: 12px; font-family: 'Rubik',sans-serif;
-          font-size: 16px; font-weight: 700; border: none; cursor: pointer;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-          transition: all 0.25s; text-decoration: none; display: inline-block;
-        }
-        .btn-white:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
 
         /* ── FOOTER ── */
         .footer {
           background: var(--dark); color: rgba(255,255,255,0.7);
           padding: 40px; text-align: center;
         }
-        .footer-logo { font-size: 24px; font-weight: 800; color: var(--white); margin-bottom: 8px; }
+        .footer-logo { font-size: 24px; font-weight: 800; color: var(--white); margin-bottom: 8px; display:flex; align-items:center; justify-content:center; gap:10px; }
         .footer-tagline { font-size: 14px; margin-bottom: 20px; }
         .footer-copy { font-size: 13px; color: rgba(255,255,255,0.4); }
 
         /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+          .hiw-steps { grid-template-columns: repeat(2, 1fr); }
+          .hiw-step:nth-child(2)::after { display: none; }
+          .hiw-step:nth-child(4)::after { display: none; }
+        }
         @media (max-width: 768px) {
           .nav { padding: 14px 20px; }
           .nav.scrolled { padding: 10px 20px; }
@@ -535,7 +580,7 @@ export default function LandingPage() {
           .stats-grid { grid-template-columns: repeat(2,1fr); }
           .features-grid { grid-template-columns: 1fr; }
           .hiw-steps { grid-template-columns: 1fr; gap: 24px; }
-          .hiw-step::after { display: none; }
+          .hiw-step::after { display: none !important; }
           .stats-section { padding: 0 20px 60px; }
           .features-section { padding: 60px 20px; }
           .mockup-stats-row { flex-direction: column; }
@@ -546,8 +591,9 @@ export default function LandingPage() {
 
         {/* ── NAVBAR ── */}
         <nav className={`nav${scrolled ? " scrolled" : ""}`}>
+          {/* Fix 4: SVG Logo */}
           <a href="#" className="nav-logo">
-            <div className="nav-logo-icon">💗</div>
+            <div className="nav-logo-icon">{LOGO_SVG}</div>
             <div>
               <span className="nav-logo-text">{isAr ? "نبض" : "NABD"}</span>
               <span className="nav-logo-sub">Clinic Manager</span>
@@ -562,11 +608,11 @@ export default function LandingPage() {
             <button className="lang-toggle" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
               {lang === "ar" ? "EN" : "عر"}
             </button>
-            <a href="/login" className="nav-links" style={{ textDecoration: "none" }}>
+            <a href="/login" style={{ textDecoration: "none" }}>
               <span className="nav-cta" style={{
                 background: "var(--primary)", color: "#fff", borderRadius: "10px",
                 padding: "9px 22px", fontWeight: 600, fontSize: 15,
-                boxShadow: "0 4px 12px rgba(8,99,186,0.25)"
+                boxShadow: "0 4px 12px rgba(8,99,186,0.25)", display: "inline-block"
               }}>
                 {t.nav.login}
               </span>
@@ -591,10 +637,20 @@ export default function LandingPage() {
               </h1>
               <p className="hero-subtitle">{t.hero.subtitle}</p>
               <div className="hero-btns">
-                <a href="/login" className="btn-primary">
-                  {t.hero.cta} →
+                {/* Fix 5: WhatsApp link for "ابدأ الآن" */}
+                <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="btn-wa">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.093.542 4.063 1.497 5.774L0 24l6.414-1.493A11.928 11.928 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.896 0-3.67-.52-5.192-1.424l-.374-.22-3.808.887.906-3.719-.243-.388A9.944 9.944 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                  </svg>
+                  {t.hero.cta}
                 </a>
-                <a href="#features" className="btn-secondary">
+                {/* Fix 6: YouTube placeholder link */}
+                <a href={YT_LINK} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+                  </svg>
                   {t.hero.demo}
                 </a>
               </div>
@@ -620,14 +676,14 @@ export default function LandingPage() {
                       <div className="mockup-stat-lbl">{isAr ? "مريض مسجل" : "Patients"}</div>
                     </div>
                     <div className="mockup-stat">
-                      <div className="mockup-stat-val" style={{ color: "#2e7d32" }}>$3,200</div>
+                      <div className="mockup-stat-val" style={{ color: "#2e7d32" }}>3,200</div>
                       <div className="mockup-stat-lbl">{isAr ? "إيرادات الشهر" : "Monthly Revenue"}</div>
                     </div>
                   </div>
                   {[
-                    { initials: "KO", color: "#0863ba", name: isAr ? "خالد عثمان" : "Khalid Othman", detail: isAr ? "١٠:٠٠ صباحاً • متابعة" : "10:00 AM • Follow-up", badge: "scheduled" },
-                    { initials: "FH", color: "#2e7d32", name: isAr ? "فاطمة حسن" : "Fatima Hassan", detail: isAr ? "١١:٣٠ صباحاً • فحص عام" : "11:30 AM • General", badge: "paid" },
-                    { initials: "AA", color: "#c0392b", name: isAr ? "أحمد علي" : "Ahmed Ali", detail: isAr ? "٢:٠٠ مساءً • سكري" : "2:00 PM • Diabetes", badge: "scheduled" },
+                    { initials: "KO", color: "#0863ba", name: isAr ? "خالد عثمان" : "Khalid Othman",   detail: isAr ? "10:00 صباحاً • متابعة"   : "10:00 AM • Follow-up", badge: "scheduled" },
+                    { initials: "FH", color: "#2e7d32", name: isAr ? "فاطمة حسن" : "Fatima Hassan",    detail: isAr ? "11:30 صباحاً • فحص عام"  : "11:30 AM • General",   badge: "paid" },
+                    { initials: "AA", color: "#c0392b", name: isAr ? "أحمد علي"   : "Ahmed Ali",        detail: isAr ? "2:00 مساءً • سكري"       : "2:00 PM • Diabetes",   badge: "scheduled" },
                   ].map((p) => (
                     <div className="mockup-card" key={p.initials}>
                       <div className="mockup-avatar" style={{ background: p.color }}>{p.initials}</div>
@@ -646,7 +702,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── STATS ── */}
+        {/* ── STATS — Fix 2: English numbers ── */}
         <div className="stats-section">
           <div className="stats-grid">
             {t.stats.map((s, i) => (
@@ -658,24 +714,35 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* ── FEATURES ── */}
+        {/* ── FEATURES — Fix 1: span bug fixed | Fix 7: WhatsApp card ── */}
         <section className="features-section" id="features">
           <div className="section-header">
-            <h2 className="section-title">{t.features.title.replace("واحد", "<span>واحد</span>")}</h2>
+            {/* Fix 1: title split into plain text + highlighted word — no dangerouslySetInnerHTML */}
+            <h2 className="section-title">
+              {t.features.title} <span>{t.features.titleHighlight}</span>
+            </h2>
             <p className="section-sub">{t.features.subtitle}</p>
           </div>
           <div className="features-grid">
-            {t.features.items.map((f, i) => (
-              <div className="feature-card" key={i}>
-                <div className="feature-icon">{f.icon}</div>
+            {t.features.items.map((f: any, i) => (
+              <div className={`feature-card${f.whatsapp ? " wa-card" : ""}`} key={i}>
+                <div className={`feature-icon${f.whatsapp ? " wa-icon" : ""}`}>{f.icon}</div>
                 <h3 className="feature-title">{f.title}</h3>
                 <p className="feature-desc">{f.desc}</p>
+                {f.whatsapp && (
+                  <div className="wa-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.093.542 4.063 1.497 5.774L0 24l6.414-1.493A11.928 11.928 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.896 0-3.67-.52-5.192-1.424l-.374-.22-3.808.887.906-3.719-.243-.388A9.944 9.944 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                    </svg>
+                    WhatsApp
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── HOW IT WORKS ── */}
+        {/* ── HOW IT WORKS — Fix 3: 4th WhatsApp step ── */}
         <section className="hiw-section" id="how">
           <div className="hiw-inner">
             <div className="section-header">
@@ -683,11 +750,19 @@ export default function LandingPage() {
               <p className="section-sub">{t.howItWorks.subtitle}</p>
             </div>
             <div className="hiw-steps">
-              {t.howItWorks.steps.map((s, i) => (
+              {t.howItWorks.steps.map((s: any, i) => (
                 <div className="hiw-step" key={i}>
-                  <div className="hiw-num">{s.num}</div>
+                  <div className={`hiw-num${s.whatsapp ? " wa-num" : ""}`}>{s.num}</div>
                   <h3 className="hiw-title">{s.title}</h3>
                   <p className="hiw-desc">{s.desc}</p>
+                  {s.whatsapp && (
+                    <div className="hiw-wa-tag">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.093.542 4.063 1.497 5.774L0 24l6.414-1.493A11.928 11.928 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+                      </svg>
+                      WhatsApp
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -699,13 +774,22 @@ export default function LandingPage() {
           <div className="cta-content">
             <h2 className="cta-title">{t.cta.title}</h2>
             <p className="cta-sub">{t.cta.subtitle}</p>
-            <a href="/login" className="btn-white">{t.cta.btn}</a>
+            {/* Fix 5: WhatsApp CTA */}
+            <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="btn-wa">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.093.542 4.063 1.497 5.774L0 24l6.414-1.493A11.928 11.928 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.896 0-3.67-.52-5.192-1.424l-.374-.22-3.808.887.906-3.719-.243-.388A9.944 9.944 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+              </svg>
+              {t.cta.btn}
+            </a>
           </div>
         </section>
 
         {/* ── FOOTER ── */}
         <footer className="footer">
-          <div className="footer-logo">{isAr ? "💗 نبض" : "💗 NABD"}</div>
+          <div className="footer-logo">
+            <div style={{ width: 32, height: 32 }}>{LOGO_SVG}</div>
+            {isAr ? "نبض" : "NABD"}
+          </div>
           <p className="footer-tagline">{t.footer.tagline}</p>
           <p className="footer-copy">{t.footer.copy}</p>
         </footer>
