@@ -411,7 +411,7 @@ export default function DashboardPage() {
 
       setMonthRevenue(
         payments
-          .filter(p => p.status === "paid" && (p.date ?? "") >= monthStart)
+          .filter(p => p.status === "paid" && (p.payment_date ?? "") >= monthStart)
           .reduce((s, p) => s + (Number(p.amount) || 0), 0)
       );
       const pending = payments.filter(p => p.status === "pending");
