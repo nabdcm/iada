@@ -12,7 +12,7 @@ import type { Patient, Payment } from "@/lib/supabase";
 const T = {
   ar: {
     appName:"نبض", appSub:"إدارة العيادة",
-    nav:{ dashboard:"الرئيسية", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات", admin:"لوحة المدير" },
+    nav:{ dashboard:"لوحة المعلومات", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات", admin:"لوحة المدير" },
     page:{ title:"المدفوعات", sub:"سجل المعاملات المالية وإدارة الفواتير" },
     recordPayment:"تسجيل دفعة",
     stats:{
@@ -33,7 +33,7 @@ const T = {
     modal:{
       addTitle:"تسجيل دفعة جديدة",
       patient:"المريض *", selectPatient:"اختر المريض",
-      amount:"المبلغ ($) *", amountPh:"0.00",
+      amount:"المبلغ (ل.س) *", amountPh:"0.00",
       description:"الوصف *", descPh:"مثال: رسوم استشارة، تحاليل...",
       method:"طريقة الدفع *",
       date:"التاريخ *",
@@ -74,7 +74,7 @@ const T = {
     modal:{
       addTitle:"Record New Payment",
       patient:"Patient *", selectPatient:"Select patient",
-      amount:"Amount ($) *", amountPh:"0.00",
+      amount:"Amount (SYP) *", amountPh:"0.00",
       description:"Description *", descPh:"e.g. Consultation fee, Lab tests...",
       method:"Payment Method *",
       date:"Date *",
@@ -103,17 +103,46 @@ const fmt = (d: Date) => d.toISOString().split("T")[0];
 function Sidebar({ lang, setLang }) {
   const tr = T[lang]; const isAr = lang==="ar";
   const [col, setCol] = useState(false);
+  const GRID_ICON = <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
   const navItems = [
-    {key:"dashboard",icon:"⊞",href:"/dashboard"},
-    {key:"patients",icon:"👥",href:"/patients"},
-    {key:"appointments",icon:"📅",href:"/appointments"},
-    {key:"payments",icon:"💳",href:"/payments"},
+    {key:"dashboard",icon:GRID_ICON,href:"/dashboard"},
+    {key:"patients",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,href:"/patients"},
+    {key:"appointments",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,href:"/appointments"},
+    {key:"payments",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,href:"/payments"},
   ];
   return (
     <aside style={{ width:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50,boxShadow:"4px 0 24px rgba(8,99,186,.06)" }}>
       <div style={{ padding:col?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
-        {!col&&<div style={{ display:"flex",alignItems:"center",gap:10 }}><div style={{ width:38,height:38,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }}>💗</div><div><div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div><div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div></div></div>}
-        {col&&<div style={{ width:38,height:38,background:"#0863ba",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💗</div>}
+        {!col&&<div style={{ display:"flex",alignItems:"center",gap:10 }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="py-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+                  <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
+                </linearGradient>
+                <linearGradient id="py-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
+                </linearGradient>
+              </defs>
+              <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+              <path fill="url(#py-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+              <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+              <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+              <path fill="url(#py-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+            </svg><div><div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div><div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div></div></div>}
+        {col&&<div style={{ width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center" }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="py-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+                  <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
+                </linearGradient>
+                <linearGradient id="py-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
+                </linearGradient>
+              </defs>
+              <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+              <path fill="url(#py-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+              <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+              <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+              <path fill="url(#py-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+            </svg></div>}
         {!col&&<button onClick={()=>setCol(!col)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>{isAr?"›":"‹"}</button>}
       </div>
       <nav style={{ flex:1,padding:"16px 12px" }}>
@@ -121,21 +150,38 @@ function Sidebar({ lang, setLang }) {
           const isActive = item.key==="payments";
           return(<a key={item.key} href={item.href} style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"12px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
             {isActive&&<div style={{ position:"absolute",[isAr?"right":"left"]:-12,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }}/>}
-            <span style={{ fontSize:18,flexShrink:0 }}>{item.icon}</span>
+            <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{item.icon}</span>
             {!col&&<span>{tr.nav[item.key]}</span>}
           </a>);
         })}
-        <div style={{ height:1,background:"#eef0f3",margin:"12px 0" }}/>
-        <a href="/admin" style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"12px 0":"11px 14px",borderRadius:10,textDecoration:"none",color:"#888",fontSize:14 }}><span style={{ fontSize:18 }}>⚙️</span>{!col&&<span>{tr.nav.admin}</span>}</a>
+
       </nav>
       <div style={{ padding:"16px 12px",borderTop:"1.5px solid #eef0f3" }}>
         {!col&&<button onClick={()=>setLang(lang==="ar"?"en":"ar")} style={{ width:"100%",padding:"8px",marginBottom:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"#666",fontWeight:600 }}>🌐 {lang==="ar"?"English":"العربية"}</button>}
-        <div style={{ display:"flex",alignItems:"center",gap:col?0:10,justifyContent:col?"center":"flex-start",padding:col?8:"10px 12px",borderRadius:10,background:"#f7f9fc" }}>
-          <div style={{ width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#0863ba,#a4c4e4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:700,flexShrink:0 }}>د</div>
-          {!col&&<div style={{ flex:1,overflow:"hidden" }}><div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{lang==="ar"?"الدكتور / العيادة":"Dr. / Clinic"}</div><button style={{ background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#c0392b",fontFamily:"Rubik,sans-serif",padding:0,fontWeight:500 }}>{tr.signOut} →</button></div>}
-        </div>
+        <button
+          onClick={async () => { const { supabase: sb } = await import("@/lib/supabase"); await sb.auth.signOut(); window.location.href = "/login"; }}
+          style={{ width:"100%",padding:col?"10px 0":"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#c0392b",fontWeight:600,display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8,transition:"all .2s" }}
+          onMouseEnter={e=>{e.currentTarget.style.background="rgba(192,57,43,.12)"}}
+          onMouseLeave={e=>{e.currentTarget.style.background="rgba(192,57,43,.06)"}}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          {!col && <span>{tr.signOut}</span>}
+        </button>
       </div>
     </aside>
+  );
+}
+
+// ─── Field wrapper — خارج كل المكونات لتجنب مشكلة focus ────
+// المشكلة: تعريف F داخل Modal يُعيد إنشاءها عند كل render → فقدان الـ focus
+function F({ label, children, half }: { label: any; children: React.ReactNode; half?: boolean }) {
+  return (
+    <div style={{ marginBottom:16, flex: half ? "1" : undefined }}>
+      <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#555", marginBottom:7 }}>
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
 
@@ -148,48 +194,32 @@ function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patie
   });
   const [error, setError] = useState("");
 
-  const handleSave = (asPending=false) => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (asPending=false) => {
     if (!form.patientId||!form.amount||!form.description.trim()) { setError(tr.modal.required); return; }
-    onSave({ ...form, patient_id:Number(form.patientId)||undefined, amount:parseFloat(form.amount), status: asPending?"pending":"paid" } as any);
+    setSaving(true);
+    try {
+      await onSave({
+        patient_id: form.patientId ? Number(form.patientId) : undefined,
+        amount: parseFloat(form.amount),
+        description: form.description.trim(),
+        method: form.method as "cash"|"card"|"transfer",
+        date: form.date,
+        status: (asPending ? "pending" : "paid") as "paid"|"pending"|"cancelled",
+        notes: form.notes || undefined,
+      } as any);
+    } catch(e) {
+      setError(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving payment");
+      setSaving(false);
+    }
   };
 
   const inputSt: React.CSSProperties = {
-  width: "100%",
-  padding: "11px 14px",
-  border: "1.5px solid #e8eaed",
-  borderRadius: 10,
-  fontFamily: "Rubik,sans-serif",
-  fontSize: 14,
-  color: "#353535",
-  background: "#fafbfc",
-  outline: "none",
-  transition: "border .2s",
-  direction: isAr ? "rtl" : "ltr"
-};
-  const F = ({
-  label,
-  children,
-  half
-}: {
-  label: any;
-  children: React.ReactNode;
-  half?: boolean;
-}) => (
-  <div style={{ marginBottom: 16, flex: half ? "1" : undefined }}>
-    <label
-      style={{
-        display: "block",
-        fontSize: 12,
-        fontWeight: 700,
-        color: "#555",
-        marginBottom: 7
-      }}
-    >
-      {label}
-    </label>
-    {children}
-  </div>
-);
+    width:"100%", padding:"11px 14px", border:"1.5px solid #e8eaed", borderRadius:10,
+    fontFamily:"Rubik,sans-serif", fontSize:14, color:"#353535", background:"#fafbfc",
+    outline:"none", transition:"border .2s", direction: isAr ? "rtl" : "ltr",
+  };
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
@@ -246,30 +276,25 @@ function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patie
         <div style={{ padding:"14px 26px 22px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3" }}>
           <button
   onClick={() => handleSave(false)}
+  disabled={saving}
   style={{
     flex: 1,
     padding: "13px",
-    background: "#2e7d32",
+    background: saving ? "#81c784" : "#2e7d32",
     color: "#fff",
     border: "none",
     borderRadius: 12,
     fontFamily: "Rubik,sans-serif",
     fontSize: 15,
     fontWeight: 700,
-    cursor: "pointer",
+    cursor: saving ? "not-allowed" : "pointer",
     boxShadow: "0 4px 16px rgba(46,125,50,.25)",
     transition: "all .2s"
   }}
-  onMouseEnter={(e) => {
-    (e.currentTarget as HTMLButtonElement).style.background = "#1b5e20";
-  }}
-  onMouseLeave={(e) => {
-    (e.currentTarget as HTMLButtonElement).style.background = "#2e7d32";
-  }}
 >
-            {tr.modal.save}
+            {saving ? (isAr ? "جاري الحفظ..." : "Saving...") : tr.modal.save}
           </button>
-          <button onClick={()=>handleSave(true)} style={{ padding:"13px 16px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
+          <button onClick={()=>handleSave(true)} disabled={saving} style={{ padding:"13px 16px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:saving?"not-allowed":"pointer",whiteSpace:"nowrap",opacity:saving?.6:1 }}>
             {tr.modal.addPending}
           </button>
           <button onClick={onClose} style={{ padding:"13px 16px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.modal.cancel}</button>
@@ -304,7 +329,7 @@ function RevenueChart({ lang, months, revenueData }: { lang: string; months: str
           const h = Math.round((v/max)*100);
           return (
             <div key={i} style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
-              <div style={{ fontSize:10,color:isLast?"#2e7d32":"#ccc",fontWeight:isLast?700:400 }}>${v>=1000?(v/1000).toFixed(1)+"k":v}</div>
+              <div style={{ fontSize:10,color:isLast?"#2e7d32":"#ccc",fontWeight:isLast?700:400 }}>{v>=1000?(v/1000).toFixed(0)+"k":v} ل.س</div>
               <div style={{ width:"100%",position:"relative",height:100,display:"flex",alignItems:"flex-end" }}>
                 <div style={{
                   width:"100%",borderRadius:"6px 6px 0 0",
@@ -374,7 +399,7 @@ export default function PaymentsPage() {
       ]);
 
       setPayments(paymentsData || []);
-      setPatients((patientsData as Patient[]) || []);
+      setPatients(patientsData || []);
     } catch (err) {
       console.error("loadData error:", err);
     } finally {
@@ -489,6 +514,146 @@ export default function PaymentsPage() {
 
   const fmtDate = (d) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-SA":"en-US",{ year:"numeric",month:"short",day:"numeric" });
 
+  // ── تصدير تقرير PDF شهري ─────────────────────────────────
+  const exportPDF = () => {
+    const now = new Date();
+    const thisMonth = now.toISOString().slice(0,7);
+    const monthPayments = payments
+      .filter(p => p.date.startsWith(thisMonth))
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const monthName = now.toLocaleDateString("ar-SA", { year:"numeric", month:"long" });
+    const totalPaid = monthPayments.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0);
+    const totalPending = monthPayments.filter(p=>p.status==="pending").reduce((s,p)=>s+p.amount,0);
+
+    const rows = monthPayments.map(p => {
+      const patient = patients.find(x=>x.id===p.patient_id);
+      const statusMap: Record<string,string> = { paid:"مدفوع", pending:"معلّق", cancelled:"ملغي" };
+      const methodMap: Record<string,string> = { cash:"نقداً", card:"بطاقة", transfer:"تحويل" };
+      return `<tr>
+        <td>${fmtDate(p.date)}</td>
+        <td>${patient?.name || "—"}</td>
+        <td>${p.description}</td>
+        <td>${methodMap[p.method] || p.method}</td>
+        <td class="status-${p.status}">${statusMap[p.status] || p.status}</td>
+        <td class="amount">${p.amount.toLocaleString()} ل.س</td>
+      </tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<title>تقرير المدفوعات - ${monthName}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Rubik', 'Arial', sans-serif; direction: rtl; background: #fff; color: #222; padding: 32px; font-size: 13px; }
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #0863ba; padding-bottom: 18px; margin-bottom: 24px; }
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+  .logo-text { font-size: 26px; font-weight: 800; color: #0863ba; }
+  .logo-sub { font-size: 12px; color: #888; }
+  .report-title { text-align: left; }
+  .report-title h1 { font-size: 18px; font-weight: 800; color: #353535; }
+  .report-title p { font-size: 12px; color: #888; margin-top: 4px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .stat { background: #f7f9fc; border-radius: 10px; padding: 14px 18px; border: 1.5px solid #eef0f3; }
+  .stat-val { font-size: 20px; font-weight: 800; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+  .green { color: #2e7d32; } .orange { color: #e67e22; } .blue { color: #0863ba; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #0863ba; color: #fff; }
+  th { padding: 10px 12px; text-align: right; font-size: 12px; font-weight: 700; }
+  td { padding: 9px 12px; border-bottom: 1px solid #eef0f3; font-size: 12px; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .amount { font-weight: 700; color: #2e7d32; }
+  .status-paid { color: #2e7d32; font-weight: 600; }
+  .status-pending { color: #e67e22; font-weight: 600; }
+  .status-cancelled { color: #c0392b; font-weight: 600; }
+  .footer { margin-top: 24px; padding-top: 14px; border-top: 1.5px solid #eef0f3; display: flex; justify-content: space-between; font-size: 11px; color: #aaa; }
+  .total-row td { font-weight: 800; background: #f0f7ff !important; color: #0863ba; border-top: 2px solid #0863ba; }
+  @media print { body { padding: 16px; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-area">
+      <svg viewBox="0 0 337.74 393.31" style="width:44px;height:44px" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+            <stop offset=".3" stop-color="#0863ba"/><stop offset=".69" stop-color="#5694cf"/>
+          </linearGradient>
+          <linearGradient id="g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#5694cf"/><stop offset=".68" stop-color="#a4c4e4"/>
+          </linearGradient>
+        </defs>
+        <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+        <path fill="url(#g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+        <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+        <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+        <path fill="url(#g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+      </svg>
+      <div>
+        <div class="logo-text">نبض</div>
+        <div class="logo-sub">نظام إدارة العيادة</div>
+      </div>
+    </div>
+    <div class="report-title">
+      <h1>تقرير المدفوعات الشهري</h1>
+      <p>${monthName}</p>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val green">${totalPaid.toLocaleString()} ل.س</div>
+      <div class="stat-label">إجمالي المدفوع</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val orange">${totalPending.toLocaleString()} ل.س</div>
+      <div class="stat-label">إجمالي المعلّق</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val blue">${monthPayments.length}</div>
+      <div class="stat-label">إجمالي المعاملات</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>التاريخ</th>
+        <th>المريض</th>
+        <th>الوصف</th>
+        <th>طريقة الدفع</th>
+        <th>الحالة</th>
+        <th>المبلغ</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+      <tr class="total-row">
+        <td colspan="5">الإجمالي المدفوع</td>
+        <td>${totalPaid.toLocaleString()} ل.س</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span>نبض — نظام إدارة العيادة</span>
+    <span>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA", { year:"numeric", month:"long", day:"numeric" })}</span>
+  </div>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => { win.focus(); win.print(); }, 500);
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -528,8 +693,12 @@ export default function PaymentsPage() {
                 <p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>
               </div>
               <div style={{ display:"flex",gap:10 }}>
-                <button style={{ padding:"10px 18px",background:"#fff",color:"#666",border:"1.5px solid #eef0f3",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                  📤 {tr.exportBtn}
+                <button onClick={exportPDF} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
+                  onMouseEnter={e=>{e.currentTarget.style.background="#f0f7ff"}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="#fff"}}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {tr.exportBtn} PDF
                 </button>
                 <button onClick={()=>setShowModal(true)}
                   style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
@@ -549,7 +718,7 @@ export default function PaymentsPage() {
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#2e7d32,#66bb6a)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:14 }}>💰</div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#2e7d32",lineHeight:1 }}>
-                  ${stats.totalMonth.toLocaleString()}
+                  {stats.totalMonth.toLocaleString()} ل.س
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.totalMonth}</div>
                 <div style={{ fontSize:11,color:"#2e7d32",marginTop:4,fontWeight:600 }}>↑ 12% {tr.stats.vsLast}</div>
@@ -559,7 +728,7 @@ export default function PaymentsPage() {
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#0863ba,#a4c4e4)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ width:40,height:40,background:"rgba(8,99,186,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:14 }}>📊</div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#0863ba",lineHeight:1 }}>
-                  ${stats.totalYear.toLocaleString()}
+                  {stats.totalYear.toLocaleString()} ل.س
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.totalYear}</div>
                 <div style={{ fontSize:11,color:"#888",marginTop:4 }}>{stats.paidCount} {tr.stats.transactions}</div>
@@ -569,7 +738,7 @@ export default function PaymentsPage() {
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#e67e22,#f39c12)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ width:40,height:40,background:"rgba(230,126,34,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:14 }}>⏳</div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#e67e22",lineHeight:1 }}>
-                  ${stats.pendingAmt.toLocaleString()}
+                  {stats.pendingAmt.toLocaleString()} ل.س
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.pending}</div>
                 <div style={{ fontSize:11,color:"#e67e22",marginTop:4,fontWeight:600 }}>{stats.pendingCount} {tr.stats.unpaidCount}</div>
@@ -682,7 +851,7 @@ export default function PaymentsPage() {
                           </div>
                           {/* Amount */}
                           <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
-                            ${p.amount.toFixed(2)}
+                            {p.amount.toLocaleString()} ل.س
                           </div>
                           {/* Delete */}
                           <div style={{ display:"flex",justifyContent:"center" }}>
@@ -699,7 +868,7 @@ export default function PaymentsPage() {
                   <div style={{ display:"flex",justifyContent:"flex-end",alignItems:"center",gap:16,marginTop:14,padding:"12px 20px",background:"#fff",borderRadius:12,border:"1.5px solid #eef0f3" }}>
                     <span style={{ fontSize:13,color:"#888" }}>{isAr?"المجموع:":"Total:"}</span>
                     <span style={{ fontSize:18,fontWeight:900,color:"#2e7d32" }}>
-                      ${filtered.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0).toFixed(2)}
+                      {filtered.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0).toLocaleString()} ل.س
                     </span>
                   </div>
                 )}
@@ -739,7 +908,7 @@ export default function PaymentsPage() {
                             <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
                           </div>
                           <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6 }}>
-                            <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>${p.amount}</span>
+                            <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>{p.amount.toLocaleString()} ل.س</span>
                             <button onClick={()=>markPaid(p.id)}
                               style={{ padding:"4px 10px",background:"rgba(46,125,50,.1)",color:"#2e7d32",border:"1px solid rgba(46,125,50,.2)",borderRadius:8,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"Rubik,sans-serif",whiteSpace:"nowrap" }}>
                               ✓ {tr.pendingSection.markPaid}
