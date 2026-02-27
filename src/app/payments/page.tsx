@@ -100,7 +100,7 @@ const getInitials = (name: string) => name.split(" ").slice(0,2).map(w=>w[0]).jo
 const fmt = (d: Date) => d.toISOString().split("T")[0];
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang }) {
+function Sidebar({ lang, setLang }: { lang: string; setLang: (l: string) => void }) {
   const tr = T[lang]; const isAr = lang==="ar";
   const [col, setCol] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -113,32 +113,34 @@ function Sidebar({ lang, setLang }) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // حل computed key: نستخدم قيم ثابتة بدل [isAr?"right":"left"]
+  const sidebarRight = isAr ? 0 : undefined;
+  const sidebarLeft  = isAr ? undefined : 0;
   const sidebarTransform = isMobile
-    ? mobileOpen ? "translateX(0)" : isAr ? "translateX(100%)" : "translateX(-100%)"
+    ? (mobileOpen ? "translateX(0)" : (isAr ? "translateX(100%)" : "translateX(-100%)"))
     : "translateX(0)";
 
   const GRID_ICON = <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
   const navItems = [
-    {key:"dashboard",icon:GRID_ICON,href:"/dashboard"},
-    {key:"patients",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,href:"/patients"},
-    {key:"appointments",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,href:"/appointments"},
-    {key:"payments",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,href:"/payments"},
+    {key:"dashboard",  icon:GRID_ICON, href:"/dashboard"},
+    {key:"patients",   icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, href:"/patients"},
+    {key:"appointments",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, href:"/appointments"},
+    {key:"payments",   icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, href:"/payments"},
   ];
 
   return (
     <>
+      {/* Overlay for mobile */}
       {isMobile && mobileOpen && (
-        <div onClick={()=>setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
+        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
       )}
+
+      {/* Hamburger button */}
       {isMobile && (
-        <button onClick={()=>setMobileOpen(!mobileOpen)} style={{
-          position:"fixed", top:14, zIndex:60,
-          right: isAr ? 16 : undefined,
-          left:  isAr ? undefined : 16,
-          width:40, height:40, borderRadius:10, background:"#0863ba",
-          border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-          boxShadow:"0 4px 12px rgba(8,99,186,.3)",
-        }}>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:60,width:40,height:40,borderRadius:10,background:"#0863ba",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(8,99,186,.3)" }}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
             {mobileOpen
               ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
@@ -147,64 +149,68 @@ function Sidebar({ lang, setLang }) {
           </svg>
         </button>
       )}
-    <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?"8px 0 32px rgba(0,0,0,.15)":"4px 0 24px rgba(8,99,186,.06)" }}>
-      <div style={{ padding:col?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
-        {!col&&<div style={{ display:"flex",alignItems:"center",gap:10 }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="py-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
-                  <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
-                </linearGradient>
-                <linearGradient id="py-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
-                </linearGradient>
-              </defs>
-              <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
-              <path fill="url(#py-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
-              <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
-              <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
-              <path fill="url(#py-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
-            </svg><div><div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div><div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div></div></div>}
-        {col&&<div style={{ width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center" }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="py-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
-                  <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
-                </linearGradient>
-                <linearGradient id="py-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
-                </linearGradient>
-              </defs>
-              <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
-              <path fill="url(#py-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
-              <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
-              <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
-              <path fill="url(#py-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
-            </svg></div>}
-        {!col&&<button onClick={()=>setCol(!col)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>{isAr?"›":"‹"}</button>}
-      </div>
-      <nav style={{ flex:1,padding:"16px 12px" }}>
-        {navItems.map(item=>{
-          const isActive = item.key==="payments";
-          return(<a key={item.key} href={item.href} style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"12px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
-            {isActive&&<div style={{ position:"absolute",[isAr?"right":"left"]:-12,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }}/>}
-            <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{item.icon}</span>
-            {!col&&<span>{tr.nav[item.key]}</span>}
-          </a>);
-        })}
 
-      </nav>
-      <div style={{ padding:"16px 12px",borderTop:"1.5px solid #eef0f3" }}>
-        {!col&&<button onClick={()=>setLang(lang==="ar"?"en":"ar")} style={{ width:"100%",padding:"8px",marginBottom:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"#666",fontWeight:600 }}>🌐 {lang==="ar"?"English":"العربية"}</button>}
-        <button
-          onClick={async () => { const { supabase: sb } = await import("@/lib/supabase"); await sb.auth.signOut(); window.location.href = "/login"; }}
-          style={{ width:"100%",padding:col?"10px 0":"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#c0392b",fontWeight:600,display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8,transition:"all .2s" }}
-          onMouseEnter={e=>{e.currentTarget.style.background="rgba(192,57,43,.12)"}}
-          onMouseLeave={e=>{e.currentTarget.style.background="rgba(192,57,43,.06)"}}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          {!col && <span>{tr.signOut}</span>}
-        </button>
-      </div>
-    </aside>
+      <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:sidebarRight,left:sidebarLeft,zIndex:50,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?"8px 0 32px rgba(0,0,0,.15)":"4px 0 24px rgba(8,99,186,.06)" }}>
+        <div style={{ padding:col?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
+          {!col&&<div style={{ display:"flex",alignItems:"center",gap:10 }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="py-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+                    <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
+                  </linearGradient>
+                  <linearGradient id="py-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+                    <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
+                  </linearGradient>
+                </defs>
+                <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+                <path fill="url(#py-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+                <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+                <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+                <path fill="url(#py-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+              </svg><div><div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div><div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div></div></div>}
+          {col&&<div style={{ width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center" }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="py-g1c" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+                    <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
+                  </linearGradient>
+                  <linearGradient id="py-g2c" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+                    <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
+                  </linearGradient>
+                </defs>
+                <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+                <path fill="url(#py-g1c)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+                <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+                <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+                <path fill="url(#py-g2c)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+              </svg></div>}
+          {!col&&!isMobile&&<button onClick={()=>setCol(!col)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>{isAr?"›":"‹"}</button>}
+        </div>
+        <nav style={{ flex:1,padding:"16px 12px" }}>
+          {navItems.map(item=>{
+            const isActive = item.key==="payments";
+            const indicatorRight = isAr ? -12 : undefined;
+            const indicatorLeft  = isAr ? undefined : -12;
+            return(
+              <a key={item.key} href={item.href} style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"12px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+                {isActive&&<div style={{ position:"absolute",right:indicatorRight,left:indicatorLeft,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }}/>}
+                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{item.icon}</span>
+                {!col&&<span>{tr.nav[item.key]}</span>}
+              </a>
+            );
+          })}
+        </nav>
+        <div style={{ padding:"16px 12px",borderTop:"1.5px solid #eef0f3" }}>
+          {!col&&<button onClick={()=>setLang(lang==="ar"?"en":"ar")} style={{ width:"100%",padding:"8px",marginBottom:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"#666",fontWeight:600 }}>🌐 {lang==="ar"?"English":"العربية"}</button>}
+          <button
+            onClick={async () => { const { supabase: sb } = await import("@/lib/supabase"); await sb.auth.signOut(); window.location.href = "/login"; }}
+            style={{ width:"100%",padding:col?"10px 0":"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#c0392b",fontWeight:600,display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8,transition:"all .2s" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.12)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.06)"; }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            {!col && <span>{tr.signOut}</span>}
+          </button>
+        </div>
+      </aside>
     </>
   );
 }
@@ -764,53 +770,35 @@ export default function PaymentsPage() {
         .icon-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
         .icon-btn:hover{border-color:#a4c4e4;background:rgba(8,99,186,.06)}
         .stat-big{background:#fff;border-radius:18px;padding:22px 24px;border:1.5px solid #eef0f3;box-shadow:0 2px 16px rgba(8,99,186,.06);position:relative;overflow:hidden}
-        @media(max-width:768px){
-          .stat-big{padding:14px 16px!important;border-radius:14px!important}
-          .stat-big .stat-big-icon{width:32px!important;height:32px!important;font-size:14px!important;margin-bottom:10px!important}
-          .stat-big .stat-big-val{font-size:20px!important}
-        }
         .pending-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;background:#fff;border:1.5px solid #eef0f3;margin-bottom:10px;transition:all .2s}
         .pending-row:hover{border-color:rgba(230,126,34,.3);box-shadow:0 4px 12px rgba(230,126,34,.08)}
-        @media(max-width:768px){
-          .pay-stats-grid{grid-template-columns:1fr 1fr!important}
-          .pay-main-grid{grid-template-columns:1fr!important}
-          .pay-tx-row{grid-template-columns:1fr!important}
-          .pay-tx-header{display:none!important}
-          .filter-chip{padding:6px 12px!important;font-size:12px!important}
-        }
-      \`}</style>
+      `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
         <Sidebar lang={lang} setLang={setLang}/>
 
-        <main className="page-anim" style={{
-          [isAr?"marginRight":"marginLeft"]: isMobile ? 0 : 240,
-          padding: isMobile ? "0 14px 48px" : "0 32px 48px",
-          transition:"margin .3s",
-        }}>
+        <main className="page-anim" style={{ marginRight:isAr&&!isMobile?240:undefined, marginLeft:!isAr&&!isMobile?240:undefined, padding:isMobile?"0 14px 48px":"0 32px 48px", transition:"margin .3s" }}>
 
           {/* TOP BAR */}
           <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
-            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between", paddingLeft:isMobile?(isAr?0:52):0, paddingRight:isMobile?(isAr?52:0):0 }}>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between", paddingLeft:isMobile&&!isAr?52:0, paddingRight:isMobile&&isAr?52:0 }}>
               <div>
                 <h1 style={{ fontSize:isMobile?17:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
                 {!isMobile&&<p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>}
               </div>
               <div style={{ display:"flex",gap:isMobile?6:10 }}>
-                {!isMobile&&(
-                  <button onClick={exportPDF} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
-                    onMouseEnter={e=>{e.currentTarget.style.background="#f0f7ff"}}
-                    onMouseLeave={e=>{e.currentTarget.style.background="#fff"}}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    {tr.exportBtn} PDF
-                  </button>
-                )}
+                {!isMobile&&<button onClick={exportPDF} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0f7ff"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {tr.exportBtn} PDF
+                </button>}
                 <button onClick={()=>setShowModal(true)}
-                  style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
-                  onMouseEnter={e=>{e.currentTarget.style.background="#1b5e20";e.currentTarget.style.transform="translateY(-1px)"}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="#2e7d32";e.currentTarget.style.transform="translateY(0)"}}
-                ><span style={{ fontSize:18 }}>＋</span> {tr.recordPayment}</button>
+                  style={{ display:"flex",alignItems:"center",gap:8,padding:isMobile?"9px 14px":"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#1b5e20"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#2e7d32"; }}
+                ><span style={{ fontSize:18 }}>＋</span> {isMobile?(isAr?"دفعة":"Add"):tr.recordPayment}</button>
               </div>
             </div>
           </div>
@@ -818,7 +806,7 @@ export default function PaymentsPage() {
           <div style={{ paddingTop:24 }}>
 
             {/* ── STATS ── */}
-            <div className="pay-stats-grid" style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:isMobile?10:16,marginBottom:24 }}>
+            <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:isMobile?10:16,marginBottom:24 }}>
               {/* Monthly Revenue - big card */}
               <div className="stat-big" style={{ gridColumn:"span 1",animation:"fadeUp .4s 0ms ease both" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#2e7d32,#66bb6a)",borderRadius:"18px 18px 0 0" }}/>
@@ -865,7 +853,7 @@ export default function PaymentsPage() {
                       <span style={{ fontSize:12,fontWeight:700,color:m.color }}>{m.pct}%</span>
                     </div>
                     <div style={{ height:5,background:"#f0f0f0",borderRadius:10,overflow:"hidden" }}>
-                      <div style={{ height:"100%", width: m.pct + "%", background: m.color, borderRadius:10, transition:"width .8s" }} />
+                      <div style={{ height:"100%",width:`${m.pct}%`,background:m.color,borderRadius:10,transition:"width .8s" }}/>
                     </div>
                   </div>
                 ))}
@@ -873,7 +861,7 @@ export default function PaymentsPage() {
             </div>
 
             {/* ── MAIN GRID ── */}
-            <div className="pay-main-grid" style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 300px",gap:20 }}>
+            <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 300px",gap:20 }}>
 
               {/* LEFT: Table */}
               <div>
@@ -887,18 +875,12 @@ export default function PaymentsPage() {
                   </div>
                   <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
                     {Object.entries(tr.filter as Record<string, string>).map(([k, v]) => (
-  <button
-    key={k}
-    className={"filter-chip" + (filter === k ? " active" : "")}
-    onClick={() => setFilter(k)}
-  >
-    {v}
-  </button>
-))}
+                      <button key={k} className={`filter-chip${filter===k?" active":""}`} onClick={()=>setFilter(k)}>{v}</button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Table */}
+                {/* Table / Cards */}
                 <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"hidden" }}>
                   <div style={{ padding:"16px 20px",borderBottom:"1.5px solid #f5f7fa",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
                     <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>{tr.table.title}</h3>
@@ -906,7 +888,7 @@ export default function PaymentsPage() {
                   </div>
 
                   {/* Header row — desktop only */}
-                  {!isMobile && (
+                  {!isMobile&&(
                     <div style={{ display:"grid",gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
                       {[tr.table.date,tr.table.patient,tr.table.description,tr.table.method,tr.table.status,tr.table.amount,""].map((h,i)=>(
                         <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.4,textAlign:i===5||i===6?"center":"start",paddingLeft:i>0&&i<6?8:0 }}>{h}</div>
@@ -924,49 +906,47 @@ export default function PaymentsPage() {
                       <div style={{ width:32,height:32,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px" }}/>
                       <div style={{ fontSize:13 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
                     </div>
+                  ):isMobile?(
+                    filtered.map(p=>{
+                      const patient = patients.find(x=>x.id===p.patient_id);
+                      const ss = statusStyle[p.status]||statusStyle.paid;
+                      const isNew = animIds.includes(p.id);
+                      const amtColor = p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32";
+                      return (
+                        <div key={p.id} className="tx-row" style={{ padding:"14px 16px",animation:isNew?"rowPop .4s ease":undefined }}>
+                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                              <div style={{ width:36,height:36,borderRadius:10,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
+                                {patient?getInitials(patient.name):"?"}
+                              </div>
+                              <div>
+                                <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{patient?.name||"—"}</div>
+                                <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign:"end" }}>
+                              <div style={{ fontSize:15,fontWeight:800,color:amtColor }}>{p.amount.toLocaleString()} ل.س</div>
+                              <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:ss.bg,color:ss.color,marginTop:3,display:"inline-block" }}>{ss.label}</span>
+                            </div>
+                          </div>
+                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                              <span style={{ fontSize:11,color:"#aaa" }}>{fmtDate(p.date)}</span>
+                              <span style={{ fontSize:11,color:"#aaa" }}>{methodIcon[p.method]} {tr.methods[p.method]}</span>
+                            </div>
+                            <button className="icon-btn" onClick={()=>setDeleteId(p.id)}>🗑️</button>
+                          </div>
+                        </div>
+                      );
+                    })
                   ):(
                     filtered.map(p=>{
                       const patient = patients.find(x=>x.id===p.patient_id);
                       const ss = statusStyle[p.status]||statusStyle.paid;
                       const isNew = animIds.includes(p.id);
-                      if (isMobile) {
-                        // Mobile card view
-                        return (
-                          <div key={p.id} className="tx-row" style={{ padding:"14px 16px", animation:isNew?"rowPop .4s ease":undefined }}>
-                            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
-                              <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                                <div style={{ width:36,height:36,borderRadius:10,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
-                                  {patient?getInitials(patient.name):"?"}
-                                </div>
-                                <div>
-                                  <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{patient?.name||"—"}</div>
-                                  <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
-                                </div>
-                              </div>
-                              <div style={{ textAlign:"end" }}>
-                                <div style={{ fontSize:16,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
-                                  {p.amount.toLocaleString()} ل.س
-                                </div>
-                                <span <span style={{ fontSize:10,fontWeight:700,color:s.color,backgroundColor: s.color + "14",padding:"3px 9px",borderRadius:20 }}>{s.label}</span>
-                              </div>
-                            </div>
-                            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-                              <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                                <span style={{ fontSize:11,color:"#aaa" }}>{fmtDate(p.date)}</span>
-                                <span style={{ fontSize:11,color:"#aaa",display:"flex",alignItems:"center",gap:4 }}>
-                                  {methodIcon[p.method]} {tr.methods[p.method]}
-                                </span>
-                              </div>
-                              <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>🗑️</button>
-                            </div>
-                          </div>
-                        );
-                      }
                       return (
                         <div key={p.id} className="tx-row" style={{ display:"grid",gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"13px 20px",alignItems:"center",animation:isNew?"rowPop .4s ease":undefined }}>
-                          {/* Date */}
                           <div style={{ fontSize:12,color:"#888" }}>{fmtDate(p.date)}</div>
-                          {/* Patient */}
                           <div style={{ display:"flex",alignItems:"center",gap:10,paddingLeft:8 }}>
                             <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
                               {patient?getInitials(patient.name):"?"}
@@ -975,24 +955,17 @@ export default function PaymentsPage() {
                               {patient?.name||"—"}
                             </div>
                           </div>
-                          {/* Description */}
                           <div style={{ fontSize:12,color:"#666",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{p.description}</div>
-                          {/* Method */}
                           <div style={{ paddingLeft:8,fontSize:12,color:"#888",display:"flex",alignItems:"center",gap:6 }}>
                             <span>{methodIcon[p.method]}</span>
                             <span>{tr.methods[p.method]}</span>
                           </div>
-                          {/* Status */}
                           <div style={{ paddingLeft:8 }}>
-                            <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>
-                              {ss.label}
-                            </span>
+                            <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>{ss.label}</span>
                           </div>
-                          {/* Amount */}
                           <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
                             {p.amount.toLocaleString()} ل.س
                           </div>
-                          {/* Delete */}
                           <div style={{ display:"flex",justifyContent:"center" }}>
                             <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>🗑️</button>
                           </div>
@@ -1050,8 +1023,8 @@ export default function PaymentsPage() {
                             <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>{p.amount.toLocaleString()} ل.س</span>
                             <button onClick={()=>markPaid(p.id)}
                               style={{ padding:"7px 14px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px rgba(46,125,50,.25)",transition:"all .15s" }}
-                              onMouseEnter={e=>{e.currentTarget.style.background="#1b5e20";e.currentTarget.style.transform="translateY(-1px)"}}
-                              onMouseLeave={e=>{e.currentTarget.style.background="#2e7d32";e.currentTarget.style.transform="translateY(0)"}}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#1b5e20"; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#2e7d32"; }}
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                               {tr.pendingSection.markPaid}
@@ -1093,4 +1066,3 @@ export default function PaymentsPage() {
     </>
   );
 }
-  export default Page;
