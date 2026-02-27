@@ -267,8 +267,8 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
           <button
             onClick={async () => { try { const { supabase: sb } = await import("@/lib/supabase"); await sb.auth.signOut(); window.location.href = "/login"; } catch(e) { window.location.href = "/login"; } }}
             style={{ width:"100%",padding:collapsed?"10px 0":"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#c0392b",fontWeight:600,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:8,transition:"all .2s" }}
-            onMouseEnter={e=>{e.currentTarget.style.background="rgba(192,57,43,.12)"}}
-            onMouseLeave={e=>{e.currentTarget.style.background="rgba(192,57,43,.06)"}}
+            onMouseEnter={(e)=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.12)"}}
+            onMouseLeave={(e)=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.06)"}}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             {!collapsed && <span>{tr.signOut}</span>}
@@ -893,8 +893,8 @@ export default function PatientsPage() {
                 onClick={()=>loadPatients(0)}
                 title={isAr?"تحديث البيانات":"Refresh"}
                 style={{ display:"flex",alignItems:"center",gap:6,padding:"10px 16px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                onMouseEnter={e=>{e.currentTarget.style.background="#f0f7ff"}}
-                onMouseLeave={e=>{e.currentTarget.style.background="#fff"}}
+                onMouseEnter={(e)=>{(e.currentTarget as HTMLElement).style.background="#f0f7ff"}}
+                onMouseLeave={(e)=>{(e.currentTarget as HTMLElement).style.background="#fff"}}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 {!isMobile && <span>{isAr?"تحديث":"Refresh"}</span>}
@@ -903,8 +903,8 @@ export default function PatientsPage() {
                 className="desktop-add-btn"
                 onClick={()=>setAddModal(true)}
                 style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}
-                onMouseEnter={e=>{e.currentTarget.style.background="#054a8c"}}
-                onMouseLeave={e=>{e.currentTarget.style.background="#0863ba"}}
+                onMouseEnter={(e)=>{(e.currentTarget as HTMLElement).style.background="#054a8c"}}
+                onMouseLeave={(e)=>{(e.currentTarget as HTMLElement).style.background="#0863ba"}}
               >
                 <span style={{ fontSize:18, lineHeight:1 }}>＋</span> {tr.addPatient}
               </button>
@@ -915,7 +915,7 @@ export default function PatientsPage() {
           <div style={{ padding: isMobile ? "16px 14px 0" : "28px 0 0" }}>
 
             {/* STATS */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:isMobile?8:16, marginBottom:isMobile?14:28 }}>
+            <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:isMobile?8:16, marginBottom:isMobile?14:28 }}>
               {[
                 { label:tr.stats.total,    value:stats.total,    icon:"👥", color:"#0863ba", bg:"rgba(8,99,186,.08)"    },
                 { label:tr.stats.male,     value:stats.male,     icon:"👨", color:"#2980b9", bg:"rgba(41,128,185,.08)"  },

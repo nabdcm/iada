@@ -147,6 +147,12 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  const sidebarRight = isAr ? 0 : undefined;
+  const sidebarLeft  = isAr ? undefined : 0;
+  const sidebarTransform = isMobile
+    ? (mobileOpen ? "translateX(0)" : (isAr ? "translateX(100%)" : "translateX(-100%)"))
+    : "translateX(0)";
+
   const DashIcon = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -161,24 +167,16 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
     { key:"payments",     icon:"💳",        href:"/payments"     },
   ];
 
-  const sidebarTransform = isMobile
-    ? mobileOpen ? "translateX(0)" : isAr ? "translateX(100%)" : "translateX(-100%)"
-    : "translateX(0)";
-
   return (
     <>
       {isMobile && mobileOpen && (
-        <div onClick={()=>setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
+        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
       )}
       {isMobile && (
-        <button onClick={()=>setMobileOpen(!mobileOpen)} style={{
-          position:"fixed", top:14, zIndex:60,
-          right: isAr ? 16 : undefined,
-          left:  isAr ? undefined : 16,
-          width:40, height:40, borderRadius:10, background:"#0863ba",
-          border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-          boxShadow:"0 4px 12px rgba(8,99,186,.3)",
-        }}>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:60,width:40,height:40,borderRadius:10,background:"#0863ba",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(8,99,186,.3)" }}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
             {mobileOpen
               ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
@@ -187,19 +185,7 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
           </svg>
         </button>
       )}
-      <aside style={{
-        width: isMobile ? 260 : col ? 70 : 240,
-        minHeight:"100vh", background:"#fff",
-        borderRight: isAr ? "none" : "1.5px solid #eef0f3",
-        borderLeft:  isAr ? "1.5px solid #eef0f3" : "none",
-        display:"flex", flexDirection:"column",
-        transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",
-        position:"fixed", top:0,
-        right: isAr ? 0 : undefined,
-        left:  isAr ? undefined : 0,
-        zIndex:50, transform: sidebarTransform,
-        boxShadow: isMobile && mobileOpen ? "8px 0 32px rgba(0,0,0,.15)" : "4px 0 24px rgba(8,99,186,.06)",
-      }}>
+      <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:sidebarRight,left:sidebarLeft,zIndex:50,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?"8px 0 32px rgba(0,0,0,.15)":"4px 0 24px rgba(8,99,186,.06)" }}>
 
       {/* Logo */}
       <div style={{ padding:col?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
@@ -220,9 +206,11 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
       <nav style={{ flex:1,padding:"16px 12px" }}>
         {navItems.map(item=>{
           const isActive = item.key===activePage;
+          const indicatorRight = isAr ? -12 : undefined;
+          const indicatorLeft  = isAr ? undefined : -12;
           return (
             <a key={item.key} href={item.href} style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"12px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
-              {isActive&&<div style={{ position:"absolute",right:isAr?-12:undefined,left:isAr?undefined:-12,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }}/>}
+              {isActive&&<div style={{ position:"absolute",right:indicatorRight,left:indicatorLeft,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }}/>}
               <span style={{ fontSize:18,flexShrink:0,display:"flex",alignItems:"center" }}>{item.icon}</span>
               {!col&&<span>{tr.nav[item.key]}</span>}
             </a>
@@ -796,45 +784,33 @@ export default function AppointmentsPage() {
         .timeline-scroll{overflow-y:auto;max-height:calc(100vh - 300px)}
         .timeline-scroll::-webkit-scrollbar{width:4px}
         .timeline-scroll::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
-        @media(max-width:768px){
-          .appt-stats-grid{grid-template-columns:1fr 1fr!important}
-          .appt-cal-grid{grid-template-columns:1fr!important}
-        }
-      \`}</style>
+      `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc",display:"flex" }}>
         <Sidebar lang={lang} setLang={setLang} activePage="appointments"/>
 
-        <main style={{
-          [isAr?"marginRight":"marginLeft"]: isMobile ? 0 : 240,
-          flex:1,
-          padding: isMobile ? "0 14px 48px" : "0 28px 48px",
-          minHeight:"100vh",
-          maxWidth: isMobile ? "100vw" : "calc(100vw - 240px)",
-        }}>
+        <main style={{ marginRight:isAr&&!isMobile?240:undefined, marginLeft:!isAr&&!isMobile?240:undefined, flex:1, padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", maxWidth:isMobile?"100vw":"calc(100vw - 240px)" }}>
 
           {/* TOP BAR */}
           <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"18px 0 14px",borderBottom:"1.5px solid #eef0f3",marginBottom:20 }}>
-            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between", paddingLeft:isMobile?(isAr?0:52):0, paddingRight:isMobile?(isAr?52:0):0 }}>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between", paddingLeft:isMobile&&!isAr?52:0, paddingRight:isMobile&&isAr?52:0 }}>
               <div>
                 <h1 style={{ fontSize:isMobile?17:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
                 {!isMobile&&<p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>}
               </div>
               <div style={{ display:"flex",gap:isMobile?6:10 }}>
-                {!isMobile&&(
-                  <button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                    🔗 {isAr?"رابط الحجز":"Booking Link"}
-                  </button>
-                )}
+                {!isMobile&&<button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
+                  🔗 {isAr?"رابط الحجز":"Booking Link"}
+                </button>}
                 <button onClick={()=>setAddModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 12px":"9px 18px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
-                  ＋ {isMobile?(isAr?"موعد":"New"):tr.addAppointment}
+                  ＋ {isMobile?(isAr?"موعد":"Add"):tr.addAppointment}
                 </button>
               </div>
             </div>
           </div>
 
           {/* STATS — 5 cards */}
-          <div className="appt-stats-grid" style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:12,marginBottom:20,animation:"fadeUp .4s ease" }}>
+          <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:isMobile?8:12,marginBottom:20,animation:"fadeUp .4s ease" }}>
             {[
               { label:tr.stats.total,     value:stats.total,     icon:"📅", color:"#0863ba" },
               { label:tr.stats.today,     value:stats.today,     icon:"🕐", color:"#e67e22" },
@@ -866,7 +842,7 @@ export default function AppointmentsPage() {
           </div>
 
           {/* CALENDAR + TIMELINE */}
-          <div className="appt-cal-grid" style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:18 }}>
+          <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:18 }}>
 
             {/* ── التقويم ── */}
             <div style={{ display:"flex",flexDirection:"column",gap:0 }}>
@@ -919,7 +895,7 @@ export default function AppointmentsPage() {
                 </button>
               </div>
 
-              <div ref={timelineRef} className="timeline-scroll" style={{ padding:"0 0 16px", maxHeight: isMobile ? "60vh" : "calc(100vh - 300px)" }}>
+              <div ref={timelineRef} className="timeline-scroll" style={{ padding:"0 0 16px" }}>
                 {loading ? (
                   <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
                     <div style={{ width:36,height:36,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px" }}/>
