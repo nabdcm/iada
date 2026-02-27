@@ -248,7 +248,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
   if (loading) return (
     <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f9fc" }}>
       <div style={{ textAlign:"center" }}>
-        <div style={{ fontSize:40,marginBottom:16 }}>💗</div>
+        <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:56,height:56,marginBottom:16,borderRadius:12 }} />
         <div style={{ width:36,height:36,border:"3px solid #e0e0e0",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto" }}/>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -289,7 +289,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
           <div style={{ maxWidth:540,margin:"0 auto",position:"relative",zIndex:1 }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28 }}>
               <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                <div style={{ width:40,height:40,background:"rgba(255,255,255,.15)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:"1px solid rgba(255,255,255,.2)" }}>💗</div>
+                <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:40,height:40,borderRadius:10,border:"1px solid rgba(255,255,255,.2)" }} />
                 <span style={{ fontSize:16,fontWeight:800,color:"#fff" }}>نبض | NABD</span>
               </div>
               <button onClick={()=>setLang(lang==="ar"?"en":"ar")}
@@ -299,20 +299,18 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
             </div>
             <div style={{ color:"#fff" }}>
               <div style={{ fontSize:13,opacity:.75,marginBottom:4 }}>{isAr?"حجز موعد في":"Book at"}</div>
-              <h1 style={{ fontSize:26,fontWeight:800,marginBottom:4 }}>{clinic.clinic_name}</h1>
-              {clinic.doctor_name && <div style={{ fontSize:14,opacity:.85 }}>👨‍⚕️ {clinic.doctor_name}</div>}
+              <h1 style={{ fontSize:26,fontWeight:800,marginBottom:6 }}>{clinic.clinic_name}</h1>
+              {clinic.doctor_name && <div style={{ fontSize:14,opacity:.85,marginBottom:8 }}>👨‍⚕️ {clinic.doctor_name}</div>}
+              <div style={{ display:"flex",flexWrap:"wrap",gap:14,opacity:.8,fontSize:13,marginTop:4 }}>
+                {clinic.phone   && <span>📞 {clinic.phone}</span>}
+                {clinic.address && <span>📍 {clinic.address}</span>}
+                <span>🕐 {clinic.working_hours_start?.slice(0,5)} – {clinic.working_hours_end?.slice(0,5)}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div style={{ maxWidth:540,margin:"-48px auto 40px",padding:"0 16px",position:"relative",zIndex:1 }}>
-
-          {/* معلومات العيادة */}
-          <div style={{ background:"#fff",borderRadius:16,padding:"14px 20px",marginBottom:16,border:"1.5px solid #eef0f3",boxShadow:"0 4px 24px rgba(8,99,186,.08)",display:"flex",gap:20,flexWrap:"wrap" }}>
-            {clinic.phone   && <div style={{ fontSize:13,color:"#555" }}>📞 {clinic.phone}</div>}
-            {clinic.address && <div style={{ fontSize:13,color:"#555" }}>📍 {clinic.address}</div>}
-            <div style={{ fontSize:13,color:"#555" }}>🕐 {clinic.working_hours_start?.slice(0,5)} – {clinic.working_hours_end?.slice(0,5)}</div>
-          </div>
 
           {/* نجاح */}
           {success ? (
@@ -465,7 +463,10 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
             </div>
           )}
 
-          <div style={{ textAlign:"center",marginTop:24,fontSize:12,color:"#bbb" }}>💗 {tr.poweredBy}</div>
+          <div style={{ textAlign:"center",marginTop:24,display:"flex",alignItems:"center",justifyContent:"center",gap:7 }}>
+            <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:18,height:18,borderRadius:4 }} />
+            <span style={{ fontSize:12,color:"#bbb" }}>{tr.poweredBy}</span>
+          </div>
         </div>
       </div>
     </>

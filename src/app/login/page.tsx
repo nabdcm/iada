@@ -213,7 +213,9 @@ function LoginContent() {
           <div className="blob blob-1" />
           <div className="blob blob-2" />
           <div className="panel-content">
-            <div className="panel-logo">💗</div>
+            <div className="panel-logo">
+              <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:44,height:44,borderRadius:10 }} />
+            </div>
             <div className="panel-name">{isAr ? "نبض" : "NABD"}</div>
             <div className="panel-tag">{isAr ? "نبض عيادتك في يدك" : "Your Clinic's Pulse in Your Hands"}</div>
             <div className="features">
@@ -294,7 +296,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#f2f2f2" }}>
         <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:40, marginBottom:16 }}>💗</div>
+          <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:48,height:48,marginBottom:16,borderRadius:10 }} />
           <div style={{ width:32,height:32,border:"3px solid #e0e0e0",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto" }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
