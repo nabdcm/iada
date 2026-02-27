@@ -739,14 +739,15 @@ export default function PatientsPage() {
   });
 
   const visibleAll = patients.filter(p => !p.is_hidden);
-  const thisMonthStart = new Date();
-  thisMonthStart.setDate(1); thisMonthStart.setHours(0,0,0,0);
-  const thisMonthISO = thisMonthStart.toISOString().slice(0,7); // "YYYY-MM"
+  // حساب الشهر الحالي بالتوقيت المحلي وليس UTC لتجنب مشاكل timezone
+  const _now = new Date();
+  const localYYYYMM = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}`;
   const stats = {
     total:    visibleAll.length,
     male:     visibleAll.filter(p => p.gender === "male").length,
     female:   visibleAll.filter(p => p.gender === "female").length,
-    newMonth: patients.filter(p => (p.created_at ?? "").slice(0,7) === thisMonthISO).length,
+    // مقارنة أول 7 أحرف من created_at (YYYY-MM) بالشهر المحلي الحالي
+    newMonth: visibleAll.filter(p => (p.created_at ?? "").slice(0,7) === localYYYYMM).length,
   };
 
   const handleSave = async (form: PatientForm, id?: number) => {
