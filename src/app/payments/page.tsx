@@ -1093,3 +1093,4 @@ export default function PaymentsPage() {
     </>
   );
 }
+  export default Page;
