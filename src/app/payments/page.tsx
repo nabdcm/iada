@@ -865,7 +865,7 @@ export default function PaymentsPage() {
                       <span style={{ fontSize:12,fontWeight:700,color:m.color }}>{m.pct}%</span>
                     </div>
                     <div style={{ height:5,background:"#f0f0f0",borderRadius:10,overflow:"hidden" }}>
-                      <div style={{ height:"100%",width:`${m.pct}%`,background:m.color,borderRadius:10,transition:"width .8s" }}/>
+                      <div style={{ height:"100%", width: m.pct + "%", background: m.color, borderRadius:10, transition:"width .8s" }} />
                     </div>
                   </div>
                 ))}
