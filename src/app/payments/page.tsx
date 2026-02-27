@@ -889,7 +889,7 @@ export default function PaymentsPage() {
                     {Object.entries(tr.filter as Record<string, string>).map(([k, v]) => (
   <button
     key={k}
-    className={`filter-chip${filter===k ? " active" : ""}`}
+    className={"filter-chip" + (filter === k ? " active" : "")}
     onClick={() => setFilter(k)}
   >
     {v}
