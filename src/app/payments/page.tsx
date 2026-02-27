@@ -947,9 +947,7 @@ export default function PaymentsPage() {
                                 <div style={{ fontSize:16,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
                                   {p.amount.toLocaleString()} ل.س
                                 </div>
-                                <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:ss.bg,color:ss.color,marginTop:4,display:"inline-block" }}>
-                                  {ss.label}
-                                </span>
+                                <span style={{ fontSize:10,fontWeight:700,color:s.color,background: s.color + "14",padding:"3px 9px",borderRadius:20 }}>{s.label}</span>
                               </div>
                             </div>
                             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
