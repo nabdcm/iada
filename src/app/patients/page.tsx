@@ -136,9 +136,16 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // (removed: was incorrectly closing sidebar on every resize)
+
   useEffect(() => {
-    if (isMobile) setMobileOpen(false);
-  }, [isMobile]);
+    if (isMobile && mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobile, mobileOpen]);
 
   const NAV_ICONS: Record<string, React.ReactNode> = {
     dashboard: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
@@ -198,7 +205,9 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
         left:  isAr ? undefined : 0,
         zIndex: 50,
         transform: sidebarTransform,
-        boxShadow: isMobile && mobileOpen ? "8px 0 32px rgba(0,0,0,.15)" : "4px 0 24px rgba(8,99,186,.06)",
+        boxShadow: isMobile && mobileOpen
+          ? (isAr ? "-8px 0 32px rgba(0,0,0,.15)" : "8px 0 32px rgba(0,0,0,.15)")
+          : "4px 0 24px rgba(8,99,186,.06)",
       }}>
         <div style={{
           padding: collapsed ? "24px 0" : "24px 20px",
@@ -217,7 +226,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
             </div>
           )}
           {collapsed && <img src="/Logo_Nabd.svg" alt="NABD Logo" style={{ width:38,height:38,borderRadius:10 }} />}
-          {!collapsed && (
+          {!collapsed && !isMobile && (
             <button onClick={()=>setCollapsed(!collapsed)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>
               {isAr ? "›" : "‹"}
             </button>
@@ -860,6 +869,8 @@ export default function PatientsPage() {
           .desktop-add-btn{display:none}
           .filters-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
           .filters-scroll::-webkit-scrollbar{display:none}
+          .stat-mini{padding:12px!important;border-radius:12px!important}
+          .main-anim{padding-left:0!important;padding-right:0!important}
         }
       `}</style>
 
@@ -880,9 +891,11 @@ export default function PatientsPage() {
             padding: isMobile ? "14px 16px" : "16px 0",
             borderBottom:"1.5px solid #eef0f3",
           }}>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              {/* Spacer to balance hamburger on the other side */}
-              {isMobile && <div style={{ width:40 }} />}
+            <div style={{
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              paddingRight: isMobile && isAr  ? 56 : undefined,
+              paddingLeft:  isMobile && !isAr ? 56 : undefined,
+            }}>
               <div style={{ textAlign: isMobile ? "center" : isAr ? "right" : "left", flex: isMobile ? 1 : undefined }}>
                 <h1 style={{ fontSize:isMobile?17:22, fontWeight:800, color:"#353535" }}>{tr.page.title}</h1>
                 {!isMobile && <p style={{ fontSize:13, color:"#aaa", marginTop:2 }}>{tr.page.sub}</p>}
