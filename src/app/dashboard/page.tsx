@@ -242,7 +242,7 @@ function StatCard({ icon, label, value, sub, subColor, accent, delay = 0, loadin
   }, [delay]);
 
   return (
-    <div style={{
+    <div className="stat-card-inner" style={{
       background:"#fff", borderRadius:16, padding:24,
       boxShadow:"0 2px 16px rgba(8,99,186,.07)", border:"1.5px solid #eef0f3",
       opacity:visible?1:0, transform:visible?"translateY(0)":"translateY(16px)",
@@ -255,7 +255,7 @@ function StatCard({ icon, label, value, sub, subColor, accent, delay = 0, loadin
       {loading ? (
         <div style={{ width:70,height:30,borderRadius:8,background:"#f0f2f5",animation:"pulse 1.5s ease infinite",marginBottom:6 }} />
       ) : (
-        <div style={{ fontSize:28,fontWeight:800,color:accent,lineHeight:1,marginBottom:6 }}>{value}</div>
+        <div className="stat-card-value" style={{ fontSize:28,fontWeight:800,color:accent,lineHeight:1,marginBottom:6 }}>{value}</div>
       )}
       <div style={{ fontSize:13,color:"#888",marginBottom:6,fontWeight:500 }}>{label}</div>
       {sub && !loading && <div style={{ fontSize:12,color:subColor||"#2e7d32",fontWeight:600 }}>{sub}</div>}
@@ -270,12 +270,12 @@ function WeekChart({ lang, data }: { lang: Lang; data: number[] }) {
   const today = new Date().getDay();
 
   return (
-    <div style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
+    <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
       <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24 }}>
         <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>{tr.weekChart.title}</h3>
         <span style={{ fontSize:12,color:"#aaa" }}>{lang==="ar"?"هذا الأسبوع":"This week"}</span>
       </div>
-      <div style={{ display:"flex",alignItems:"flex-end",gap:8,height:100,justifyContent:"space-between" }}>
+      <div className="week-chart-bar-area" style={{ display:"flex",alignItems:"flex-end",gap:8,height:100,justifyContent:"space-between" }}>
         {data.map((val, i) => {
           const isToday = i === today;
           return (
@@ -289,7 +289,7 @@ function WeekChart({ lang, data }: { lang: Lang; data: number[] }) {
                   transition:"height .8s cubic-bezier(.4,0,.2,1)",
                 }} />
               </div>
-              <div style={{ fontSize:10,color:isToday?"#0863ba":"#bbb",fontWeight:isToday?700:400,whiteSpace:"nowrap" }}>
+              <div className="week-chart-day" style={{ fontSize:10,color:isToday?"#0863ba":"#bbb",fontWeight:isToday?700:400,whiteSpace:"nowrap" }}>
                 {tr.weekChart.days[i]}
               </div>
             </div>
@@ -472,11 +472,27 @@ export default function DashboardPage() {
         .top-patient-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f2f5}
         .top-patient-row:last-child{border-bottom:none}
         @media(max-width:768px){
-          .stats-grid{grid-template-columns:1fr 1fr!important}
-          .middle-grid{grid-template-columns:1fr!important}
-          .bottom-grid{grid-template-columns:1fr!important}
-          .main-content{margin-left:0!important;margin-right:0!important;padding:0 14px 40px!important}
-          .topbar-inner{padding-left:52px!important}
+          .stats-grid{grid-template-columns:1fr 1fr!important;gap:12px!important}
+          .middle-grid{grid-template-columns:1fr!important;gap:16px!important}
+          .bottom-grid{grid-template-columns:1fr!important;gap:16px!important}
+          .main-content{margin-left:0!important;margin-right:0!important;padding:0 12px 60px!important}
+          .topbar-inner{padding-left:56px!important;padding-right:8px!important}
+          .topbar-inner[dir="rtl"]{padding-right:56px!important;padding-left:8px!important;direction:rtl}
+          .stat-card-value{font-size:20px!important}
+          .stat-card-inner{padding:16px!important}
+          .quick-actions-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important}
+          .action-btn{padding:12px 6px!important;border-radius:12px!important}
+          .action-btn-icon{width:40px!important;height:40px!important;font-size:18px!important;border-radius:10px!important}
+          .action-btn-label{font-size:11px!important}
+          .week-chart-bar-area{height:70px!important}
+          .week-chart-day{font-size:9px!important}
+          .appt-row{gap:10px!important;padding:12px 0!important}
+          .search-input-wrap{display:none!important}
+          .topbar-notification{margin-left:auto!important}
+          .topbar-greeting h1{font-size:17px!important}
+          .topbar-greeting p{font-size:11px!important}
+          .section-card{padding:16px!important;border-radius:14px!important}
+          .patient-stats-grid{grid-template-columns:1fr 1fr!important;gap:10px!important}
         }
       `}</style>
 
@@ -491,19 +507,19 @@ export default function DashboardPage() {
 
           {/* TOP BAR */}
           <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
-            <div className="topbar-inner" style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-              <div>
+            <div className="topbar-inner" dir={isAr?"rtl":"ltr"} style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+              <div className="topbar-greeting">
                 <h1 style={{ fontSize:22,fontWeight:800,color:"#353535",marginBottom:2 }}>
                   {tr.header[greetingKey]} 👋
                 </h1>
                 <p style={{ fontSize:13,color:"#aaa",fontWeight:400 }}>{dateStr}</p>
               </div>
               <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:8,background:"#fff",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
+                <div className="search-input-wrap" style={{ display:"flex",alignItems:"center",gap:8,background:"#fff",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
                   <span style={{ color:"#aaa",fontSize:14 }}>🔍</span>
                   <input placeholder={tr.header.search} style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:160,direction:isAr?"rtl":"ltr" }} />
                 </div>
-                <button style={{ width:40,height:40,borderRadius:10,background:"#fff",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:16,position:"relative",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                <button className="topbar-notification" style={{ width:40,height:40,borderRadius:10,background:"#fff",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:16,position:"relative",display:"flex",alignItems:"center",justifyContent:"center" }}>
                   🔔
                   {todayTotal > 0 && (
                     <div style={{ position:"absolute",top:8,right:8,width:8,height:8,borderRadius:"50%",background:"#ffb5b5",border:"2px solid #fff" }} />
@@ -547,9 +563,9 @@ export default function DashboardPage() {
             </div>
 
             {/* QUICK ACTIONS */}
-            <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
+            <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:"20px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
               <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",marginBottom:16 }}>{tr.quickActions.title}</h3>
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
+              <div className="quick-actions-grid" style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
                 {[
                   { icon:"📅", label:tr.quickActions.newAppointment, color:"#0863ba", bg:"rgba(8,99,186,.08)",   href:"/appointments" },
                   { icon:"👤", label:tr.quickActions.addPatient,      color:"#2e7d32", bg:"rgba(46,125,50,.08)",  href:"/patients"     },
@@ -567,7 +583,7 @@ export default function DashboardPage() {
             <div className="middle-grid" style={{ display:"grid",gridTemplateColumns:"1fr 320px",gap:20,marginBottom:28 }}>
 
               {/* Today's Schedule */}
-              <div style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
+              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20 }}>
                   <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>{tr.todaySchedule.title}</h3>
                   <a href="/appointments" style={{ fontSize:12,color:"#0863ba",textDecoration:"none",fontWeight:600 }}>{tr.todaySchedule.viewAll} →</a>
@@ -615,10 +631,10 @@ export default function DashboardPage() {
             <div className="bottom-grid" style={{ display:"grid",gridTemplateColumns:"1fr 300px",gap:20 }}>
 
               {/* Patient Stats */}
-              <div style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
+              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
                 <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",marginBottom:20 }}>{tr.patientStats}</h3>
 
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20 }}>
+                <div className="patient-stats-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20 }}>
                   {[
                     { label:tr.apptThisMonth,      value:String(monthTotalVisits), color:"#0863ba", bg:"rgba(8,99,186,.06)",    icon:"📅" },
                     { label:tr.dailyAvgLabel,       value:dailyAvg,                 color:"#2e7d32", bg:"rgba(46,125,50,.06)",   icon:"📊" },
@@ -667,7 +683,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Top Patients */}
-              <div style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
+              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
                 <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",marginBottom:20 }}>{tr.topPatients.title}</h3>
 
                 {loadingStats ? (
