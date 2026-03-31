@@ -167,14 +167,22 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
   return (
     <>
       {isMobile && mobileOpen && (
-        <div onClick={()=>setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
+        <div
+          onClick={()=>setMobileOpen(false)}
+          style={{
+            position:"fixed", inset:0,
+            background:"rgba(0,0,0,.55)",
+            zIndex:55,
+            WebkitTapHighlightColor:"transparent",
+          }}
+        />
       )}
 
       {isMobile && (
         <button
           onClick={()=>setMobileOpen(!mobileOpen)}
           style={{
-            position:"fixed", top:14, zIndex:60,
+            position:"fixed", top:14, zIndex:70,
             right: isAr ? 16 : undefined,
             left:  isAr ? undefined : 16,
             width:40, height:40, borderRadius:10, background:"#0863ba",
@@ -203,10 +211,10 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
         position: "fixed", top: 0,
         right: isAr ? 0         : undefined,
         left:  isAr ? undefined : 0,
-        zIndex: 50,
+        zIndex: 60,
         transform: sidebarTransform,
         boxShadow: isMobile && mobileOpen
-          ? (isAr ? "-8px 0 32px rgba(0,0,0,.15)" : "8px 0 32px rgba(0,0,0,.15)")
+          ? (isAr ? "-8px 0 32px rgba(0,0,0,.18)" : "8px 0 32px rgba(0,0,0,.18)")
           : "4px 0 24px rgba(8,99,186,.06)",
       }}>
         <div style={{
@@ -886,7 +894,7 @@ export default function PatientsPage() {
 
           {/* TOP BAR */}
           <div style={{
-            position:"sticky", top:0, zIndex:40,
+            position:"sticky", top:0, zIndex:30,
             background:"rgba(247,249,252,.97)", backdropFilter:"blur(12px)",
             padding: isMobile ? "14px 16px" : "16px 0",
             borderBottom:"1.5px solid #eef0f3",
@@ -1119,7 +1127,7 @@ export default function PatientsPage() {
               background:"#0863ba", color:"#fff", border:"none", cursor:"pointer",
               fontSize:28, lineHeight:1,
               boxShadow:"0 6px 24px rgba(8,99,186,.4)",
-              zIndex:45,
+              zIndex:30,
               display:"flex", alignItems:"center", justifyContent:"center",
             }}
           >
