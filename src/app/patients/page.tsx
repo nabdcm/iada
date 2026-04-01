@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, type ReactNode, type CSSProperties } from "react";
-import type React from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient } from "@/lib/supabase";
 
@@ -119,17 +118,27 @@ function openWhatsApp(phone: string) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, activePage = "patients", isMobile, mobileOpen, setMobileOpen }: {
+function Sidebar({ lang, setLang, activePage = "patients" }: {
   lang: Lang;
   setLang: (l: Lang) => void;
   activePage?: string;
-  isMobile: boolean;
-  mobileOpen: boolean;
-  setMobileOpen: (v: boolean) => void;
 }) {
   const tr    = T[lang];
   const isAr  = lang === "ar";
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed,  setCollapsed]  = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile,   setIsMobile]   = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false
+  );
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // (removed: was incorrectly closing sidebar on every resize)
 
   useEffect(() => {
     if (isMobile && mobileOpen) {
@@ -654,16 +663,11 @@ export default function PatientsPage() {
   const isAr              = lang === "ar";
   const tr                = T[lang];
 
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false
+  );
   useEffect(() => {
-    const check = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-      // إغلاق السايدبار عند التوسع لشاشة desktop
-      if (!mobile) setMobileOpen(false);
-    };
+    const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -862,73 +866,80 @@ export default function PatientsPage() {
         .dropdown-item:hover{background:#f7f9fc}
         .dropdown-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
         .stat-mini{background:#fff;border-radius:14px;padding:16px;border:1.5px solid #eef0f3;box-shadow:0 2px 10px rgba(8,99,186,.05)}
-        /* Mobile FAB */
-        .fab-add{display:none}
         @media(max-width:768px){
-          .fab-add{display:flex}
-          .desktop-add-btn{display:none}
+          .fab-add{display:flex!important}
+          .desktop-add-btn{display:none!important}
+          .refresh-btn-text{display:none!important}
           .filters-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
           .filters-scroll::-webkit-scrollbar{display:none}
           .stat-mini{padding:12px!important;border-radius:12px!important}
-          .main-anim{padding-left:0!important;padding-right:0!important}
+          .stat-icon{display:none!important}
+          .stat-value{font-size:22px!important}
+          .stat-label{font-size:10px!important}
+          .stats-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-bottom:14px!important}
+          .page-sub{display:none!important}
+          .page-title{font-size:17px!important}
+          .topbar-inner{padding-right:${isAr?"56px":"8px"}!important;padding-left:${isAr?"8px":"56px"}!important}
+          .main-content{margin-right:0!important;margin-left:0!important;padding:0 0 100px!important}
+          .content-padding{padding:16px 14px 0!important}
+          .search-filter-box{padding:12px 14px!important}
+          .topbar-pad{padding:14px 16px!important}
+          .mobile-cards{display:block!important}
+          .desktop-table{display:none!important}
+        }
+        @media(min-width:769px){
+          .fab-add{display:none!important}
+          .mobile-cards{display:none!important}
+          .desktop-table{display:block!important}
+          .main-content{margin-${isAr?"right":"left"}:240px}
         }
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif", direction:isAr?"rtl":"ltr", minHeight:"100vh", background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="patients" isMobile={isMobile} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+        <Sidebar lang={lang} setLang={setLang} activePage="patients" />
 
-        <main className="main-anim" style={{
-          marginRight: isAr && !isMobile ? 240 : undefined,
-          marginLeft:  !isAr && !isMobile ? 240 : undefined,
-          padding: isMobile ? "0 0 100px" : "0 32px 48px",
-          transition: "margin .3s",
-        }}>
+        <main className="main-anim main-content" style={{ minHeight:"100vh", padding:"0 32px 48px", transition:"margin .3s" }}>
 
           {/* TOP BAR */}
-          <div style={{
+          <div className="topbar-pad" style={{
             position:"sticky", top:0, zIndex:30,
             background:"rgba(247,249,252,.97)", backdropFilter:"blur(12px)",
-            padding: isMobile ? "14px 16px" : "16px 0",
+            padding:"16px 0",
             borderBottom:"1.5px solid #eef0f3",
           }}>
-            <div style={{
-              display:"flex", alignItems:"center", justifyContent:"space-between",
-              paddingRight: isMobile && isAr  ? 56 : undefined,
-              paddingLeft:  isMobile && !isAr ? 56 : undefined,
-            }}>
-              <div style={{ textAlign: isMobile ? "center" : isAr ? "right" : "left", flex: isMobile ? 1 : undefined }}>
-                <h1 style={{ fontSize:isMobile?17:22, fontWeight:800, color:"#353535" }}>{tr.page.title}</h1>
-                {!isMobile && <p style={{ fontSize:13, color:"#aaa", marginTop:2 }}>{tr.page.sub}</p>}
+            <div className="topbar-inner" style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div style={{ flex:1 }}>
+                <h1 className="page-title" style={{ fontSize:22, fontWeight:800, color:"#353535" }}>{tr.page.title}</h1>
+                <p className="page-sub" style={{ fontSize:13, color:"#aaa", marginTop:2 }}>{tr.page.sub}</p>
               </div>
-              {/* Desktop: Refresh + Add buttons */}
-              <div style={{ display:"flex",gap:10,alignItems:"center" }}>
-              <button
-                onClick={()=>loadPatients(0)}
-                title={isAr?"تحديث البيانات":"Refresh"}
-                style={{ display:"flex",alignItems:"center",gap:6,padding:"10px 16px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                onMouseEnter={(e)=>{(e.currentTarget as HTMLElement).style.background="#f0f7ff"}}
-                onMouseLeave={(e)=>{(e.currentTarget as HTMLElement).style.background="#fff"}}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                {!isMobile && <span>{isAr?"تحديث":"Refresh"}</span>}
-              </button>
-              <button
-                className="desktop-add-btn"
-                onClick={()=>setAddModal(true)}
-                style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}
-                onMouseEnter={(e)=>{(e.currentTarget as HTMLElement).style.background="#054a8c"}}
-                onMouseLeave={(e)=>{(e.currentTarget as HTMLElement).style.background="#0863ba"}}
-              >
-                <span style={{ fontSize:18, lineHeight:1 }}>＋</span> {tr.addPatient}
-              </button>
+              <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                <button
+                  onClick={()=>loadPatients(0)}
+                  title={isAr?"تحديث البيانات":"Refresh"}
+                  style={{ display:"flex",alignItems:"center",gap:6,padding:"10px 16px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
+                  onMouseEnter={(e)=>{(e.currentTarget as HTMLElement).style.background="#f0f7ff"}}
+                  onMouseLeave={(e)=>{(e.currentTarget as HTMLElement).style.background="#fff"}}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  <span className="refresh-btn-text">{isAr?"تحديث":"Refresh"}</span>
+                </button>
+                <button
+                  className="desktop-add-btn"
+                  onClick={()=>setAddModal(true)}
+                  style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}
+                  onMouseEnter={(e)=>{(e.currentTarget as HTMLElement).style.background="#054a8c"}}
+                  onMouseLeave={(e)=>{(e.currentTarget as HTMLElement).style.background="#0863ba"}}
+                >
+                  <span style={{ fontSize:18, lineHeight:1 }}>＋</span> {tr.addPatient}
+                </button>
               </div>
             </div>
           </div>
 
-          <div style={{ padding: isMobile ? "16px 14px 0" : "28px 0 0" }}>
+          <div className="content-padding" style={{ padding:"28px 0 0" }}>
 
             {/* STATS */}
-            <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:isMobile?8:16, marginBottom:isMobile?14:28 }}>
+            <div className="stats-grid stat-mini" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:28 }}>
               {[
                 { label:tr.stats.total,    value:stats.total,    icon:"👥", color:"#0863ba", bg:"rgba(8,99,186,.08)"    },
                 { label:tr.stats.male,     value:stats.male,     icon:"👨", color:"#2980b9", bg:"rgba(41,128,185,.08)"  },
@@ -936,17 +947,15 @@ export default function PatientsPage() {
                 { label:tr.stats.newMonth, value:stats.newMonth, icon:"✨", color:"#0863ba", bg:"rgba(8,99,186,.08)"    },
               ].map((s,i)=>(
                 <div key={i} className="stat-mini" style={{ animationDelay:`${i*60}ms`, animation:"fadeUp .4s ease both" }}>
-                  {!isMobile && (
-                    <div style={{ width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}>{s.icon}</div>
-                  )}
-                  <div style={{ fontSize:isMobile?22:26, fontWeight:800, color:s.color, lineHeight:1 }}>{s.value}</div>
-                  <div style={{ fontSize:isMobile?10:12, color:"#aaa", marginTop:4, fontWeight:500 }}>{s.label}</div>
+                  <div className="stat-icon" style={{ width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}>{s.icon}</div>
+                  <div className="stat-value" style={{ fontSize:26, fontWeight:800, color:s.color, lineHeight:1 }}>{s.value}</div>
+                  <div className="stat-label" style={{ fontSize:12, color:"#aaa", marginTop:4, fontWeight:500 }}>{s.label}</div>
                 </div>
               ))}
             </div>
 
             {/* SEARCH + FILTERS */}
-            <div style={{ background:"#fff", borderRadius:14, padding:isMobile?"12px 14px":"18px 20px", border:"1.5px solid #eef0f3", boxShadow:"0 2px 10px rgba(8,99,186,.05)", marginBottom:16 }}>
+            <div className="search-filter-box" style={{ background:"#fff", borderRadius:14, padding:"18px 20px", border:"1.5px solid #eef0f3", boxShadow:"0 2px 10px rgba(8,99,186,.05)", marginBottom:16 }}>
               {/* Search */}
               <div style={{ display:"flex", alignItems:"center", gap:10, background:"#f7f9fc", border:"1.5px solid #eef0f3", borderRadius:10, padding:"10px 14px", marginBottom:10 }}>
                 <span style={{ color:"#bbb", fontSize:15 }}>🔍</span>
@@ -980,33 +989,31 @@ export default function PatientsPage() {
               </div>
             </div>
 
-            {/* CONTENT: Cards on mobile, Table on desktop */}
-            {isMobile ? (
-              /* ─── MOBILE CARDS ─── */
-              <div>
-                {loading ? (
-                  <div style={{ textAlign:"center", padding:"60px 20px", color:"#ccc" }}>
-                    <div style={{ fontSize:40, marginBottom:12, animation:"spin 1s linear infinite" }}>⚙️</div>
-                    <div style={{ fontSize:15, fontWeight:600 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
-                  </div>
-                ) : filtered.length === 0 ? (
-                  <div style={{ textAlign:"center", padding:"60px 20px", color:"#ccc" }}>
-                    <div style={{ fontSize:40, marginBottom:12 }}>🔍</div>
-                    <div style={{ fontSize:15, fontWeight:600 }}>{search ? tr.noResults : tr.noPatients}</div>
-                  </div>
-                ) : filtered.map(p => (
-                  <PatientCard
-                    key={p.id}
-                    p={p} lang={lang} isAr={isAr} calcAge={calcAge}
-                    onEdit={()=>setEditPatient(p)}
-                    onDelete={()=>setDeletePatient(p)}
-                    onToggleHide={()=>toggleHide(p.id)}
-                    onWhatsApp={()=>p.phone && openWhatsApp(p.phone)}
-                  />
-                ))}
-              </div>
-            ) : (
-              /* ─── DESKTOP TABLE ─── */
+            {/* MOBILE CARDS */}
+            <div className="mobile-cards" style={{ display:"none" }}>
+              {loading ? (
+                <div style={{ textAlign:"center", padding:"60px 20px", color:"#ccc" }}>
+                  <div style={{ fontSize:40, marginBottom:12, animation:"spin 1s linear infinite" }}>⚙️</div>
+                  <div style={{ fontSize:15, fontWeight:600 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"60px 20px", color:"#ccc" }}>
+                  <div style={{ fontSize:40, marginBottom:12 }}>🔍</div>
+                  <div style={{ fontSize:15, fontWeight:600 }}>{search ? tr.noResults : tr.noPatients}</div>
+                </div>
+              ) : filtered.map(p => (
+                <PatientCard
+                  key={p.id}
+                  p={p} lang={lang} isAr={isAr} calcAge={calcAge}
+                  onEdit={()=>setEditPatient(p)}
+                  onDelete={()=>setDeletePatient(p)}
+                  onToggleHide={()=>toggleHide(p.id)}
+                  onWhatsApp={()=>p.phone && openWhatsApp(p.phone)}
+                />
+              ))}
+            </div>
+            {/* DESKTOP TABLE */}
+            <div className="desktop-table">
               <div style={{ background:"#fff", borderRadius:16, border:"1.5px solid #eef0f3", boxShadow:"0 2px 16px rgba(8,99,186,.06)", overflow:"visible" }}>
                 {/* Header */}
                 <div style={{ display:"grid", gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 140px", gap:0, padding:"12px 20px", background:"#f9fafb", borderBottom:"1.5px solid #eef0f3" }}>
@@ -1094,7 +1101,7 @@ export default function PatientsPage() {
                   </div>
                 ))}
               </div>
-            )}
+            </div>
 
             {/* Count */}
             <div style={{ textAlign:"center", marginTop:14, fontSize:12, color:"#bbb" }}>
@@ -1105,27 +1112,26 @@ export default function PatientsPage() {
           </div>
         </main>
 
-        {/* FAB — Mobile only */}
-        {isMobile && (
-          <button
-            className="fab-add"
-            onClick={()=>setAddModal(true)}
-            style={{
-              position:"fixed",
-              bottom:24,
-              right: isAr ? 20 : undefined,
-              left:  isAr ? undefined : 20,
-              width:58, height:58, borderRadius:"50%",
-              background:"#0863ba", color:"#fff", border:"none", cursor:"pointer",
-              fontSize:28, lineHeight:1,
-              boxShadow:"0 6px 24px rgba(8,99,186,.4)",
-              zIndex:30,
-              display:"flex", alignItems:"center", justifyContent:"center",
-            }}
-          >
-            ＋
-          </button>
-        )}
+        {/* FAB — shown via CSS on mobile only */}
+        <button
+          className="fab-add"
+          onClick={()=>setAddModal(true)}
+          style={{
+            display:"none",
+            position:"fixed",
+            bottom:24,
+            right: isAr ? 20 : undefined,
+            left:  isAr ? undefined : 20,
+            width:58, height:58, borderRadius:"50%",
+            background:"#0863ba", color:"#fff", border:"none", cursor:"pointer",
+            fontSize:28, lineHeight:1,
+            boxShadow:"0 6px 24px rgba(8,99,186,.4)",
+            zIndex:30,
+            alignItems:"center", justifyContent:"center",
+          }}
+        >
+          ＋
+        </button>
 
         {(addModal || editPatient) && (
           <PatientModal
