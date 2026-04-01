@@ -100,18 +100,18 @@ const getInitials = (name: string) => name.split(" ").slice(0,2).map(w=>w[0]).jo
 const fmt = (d: Date) => d.toISOString().split("T")[0];
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang }: { lang: string; setLang: (l: string) => void }) {
+function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen }: {
+  lang: string; setLang: (l: string) => void;
+  isMobile: boolean; mobileOpen: boolean; setMobileOpen: (v: boolean) => void;
+}) {
   const tr = T[lang]; const isAr = lang==="ar";
   const [col, setCol] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+    if (isMobile && mobileOpen) { document.body.style.overflow = "hidden"; }
+    else { document.body.style.overflow = ""; }
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobile, mobileOpen]);
 
   // حل computed key: نستخدم قيم ثابتة بدل [isAr?"right":"left"]
   const sidebarRight = isAr ? 0 : undefined;
@@ -132,14 +132,13 @@ function Sidebar({ lang, setLang }: { lang: string; setLang: (l: string) => void
     <>
       {/* Overlay for mobile */}
       {isMobile && mobileOpen && (
-        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
+        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:55,WebkitTapHighlightColor:"transparent" }} />
       )}
 
-      {/* Hamburger button */}
       {isMobile && (
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:60,width:40,height:40,borderRadius:10,background:"#0863ba",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(8,99,186,.3)" }}
+          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:70,width:40,height:40,borderRadius:10,background:"#0863ba",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(8,99,186,.3)" }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
             {mobileOpen
@@ -150,7 +149,7 @@ function Sidebar({ lang, setLang }: { lang: string; setLang: (l: string) => void
         </button>
       )}
 
-      <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:sidebarRight,left:sidebarLeft,zIndex:50,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?"8px 0 32px rgba(0,0,0,.15)":"4px 0 24px rgba(8,99,186,.06)" }}>
+      <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:sidebarRight,left:sidebarLeft,zIndex:60,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?(isAr?"-8px 0 32px rgba(0,0,0,.15)":"8px 0 32px rgba(0,0,0,.15)"):"4px 0 24px rgba(8,99,186,.06)" }}>
         <div style={{ padding:col?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
           {!col&&<div style={{ display:"flex",alignItems:"center",gap:10 }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -405,8 +404,13 @@ export default function PaymentsPage() {
   const tr = T[lang];
 
   const [isMobile, setIsMobile] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
+    const check = () => {
+      const m = window.innerWidth <= 768;
+      setIsMobile(m);
+      if (!m) setMobileOpen(false);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -764,7 +768,7 @@ export default function PaymentsPage() {
         .tx-row{transition:background .15s;border-bottom:1px solid #f0f2f5}
         .tx-row:last-child{border-bottom:none}
         .tx-row:hover{background:#fafbff}
-        .filter-chip{padding:7px 16px;border-radius:20px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;font-family:'Rubik',sans-serif;font-weight:500;color:#888;transition:all .2s}
+        .filter-chip{padding:7px 16px;border-radius:20px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;font-family:'Rubik',sans-serif;font-weight:500;color:#888;transition:all .2s;white-space:nowrap;flex-shrink:0}
         .filter-chip.active{background:#0863ba;color:#fff;border-color:#0863ba}
         .filter-chip:hover:not(.active){border-color:#a4c4e4;color:#0863ba}
         .icon-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
@@ -772,33 +776,67 @@ export default function PaymentsPage() {
         .stat-big{background:#fff;border-radius:18px;padding:22px 24px;border:1.5px solid #eef0f3;box-shadow:0 2px 16px rgba(8,99,186,.06);position:relative;overflow:hidden}
         .pending-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;background:#fff;border:1.5px solid #eef0f3;margin-bottom:10px;transition:all .2s}
         .pending-row:hover{border-color:rgba(230,126,34,.3);box-shadow:0 4px 12px rgba(230,126,34,.08)}
+        /* desktop table header */
+        .desktop-table-header{display:grid}
+        /* mobile tx cards */
+        .mobile-tx{display:none}
+        .desktop-tx{display:grid}
+        @media(max-width:768px){
+          .main-content{margin-left:0!important;margin-right:0!important;padding:0 14px 80px!important}
+          .topbar-inner{padding-left:${isAr?"0":"52px"}!important;padding-right:${isAr?"52px":"0"}!important}
+          .page-title{font-size:17px!important}
+          .page-sub{display:none!important}
+          .export-btn{display:none!important}
+          .add-btn-text-full{display:none!important}
+          .add-btn-text-short{display:inline!important}
+          .add-btn{padding:9px 14px!important;font-size:12px!important}
+          .stats-grid{grid-template-columns:1fr 1fr!important;gap:10px!important}
+          .stat-big{padding:14px 16px!important;border-radius:14px!important}
+          .stat-big .stat-icon{display:none!important}
+          .stat-big .stat-val{font-size:20px!important}
+          .main-grid{grid-template-columns:1fr!important}
+          .filter-chips-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important}
+          .filter-chips-wrap::-webkit-scrollbar{display:none}
+          .desktop-table-header{display:none!important}
+          .mobile-tx{display:block!important}
+          .desktop-tx{display:none!important}
+          .topbar-pad{padding:14px 0!important}
+        }
+        @media(min-width:769px){
+          .main-content{margin-${isAr?"right":"left"}:240px}
+          .add-btn-text-short{display:none!important}
+        }
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang}/>
+        <Sidebar lang={lang} setLang={setLang} isMobile={isMobile} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}/>
 
-        <main className="page-anim" style={{ marginRight:isAr&&!isMobile?240:undefined, marginLeft:!isAr&&!isMobile?240:undefined, padding:isMobile?"0 14px 48px":"0 32px 48px", transition:"margin .3s" }}>
+        <main className="page-anim main-content" style={{ padding:"0 32px 48px", transition:"margin .3s" }}>
 
           {/* TOP BAR */}
-          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
-            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between", paddingLeft:isMobile&&!isAr?52:0, paddingRight:isMobile&&isAr?52:0 }}>
+          <div className="topbar-pad" style={{ position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
+            <div className="topbar-inner" style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
-                <h1 style={{ fontSize:isMobile?17:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
-                {!isMobile&&<p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>}
+                <h1 className="page-title" style={{ fontSize:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
+                <p className="page-sub" style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>
               </div>
-              <div style={{ display:"flex",gap:isMobile?6:10 }}>
-                {!isMobile&&<button onClick={exportPDF} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
+              <div style={{ display:"flex",gap:10 }}>
+                <button className="export-btn" onClick={exportPDF} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0f7ff"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   {tr.exportBtn} PDF
-                </button>}
-                <button onClick={()=>setShowModal(true)}
-                  style={{ display:"flex",alignItems:"center",gap:8,padding:isMobile?"9px 14px":"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
+                </button>
+                <button className="add-btn" onClick={()=>setShowModal(true)}
+                  style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#1b5e20"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#2e7d32"; }}
-                ><span style={{ fontSize:18 }}>＋</span> {isMobile?(isAr?"دفعة":"Add"):tr.recordPayment}</button>
+                >
+                  <span style={{ fontSize:18 }}>＋</span>
+                  <span className="add-btn-text-full">{tr.recordPayment}</span>
+                  <span className="add-btn-text-short">{isAr?"دفعة":"Add"}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -806,7 +844,7 @@ export default function PaymentsPage() {
           <div style={{ paddingTop:24 }}>
 
             {/* ── STATS ── */}
-            <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:isMobile?10:16,marginBottom:24 }}>
+            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               {/* Monthly Revenue - big card */}
               <div className="stat-big" style={{ gridColumn:"span 1",animation:"fadeUp .4s 0ms ease both" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#2e7d32,#66bb6a)",borderRadius:"18px 18px 0 0" }}/>
@@ -861,7 +899,7 @@ export default function PaymentsPage() {
             </div>
 
             {/* ── MAIN GRID ── */}
-            <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 300px",gap:20 }}>
+            <div className="main-grid" style={{ display:"grid",gridTemplateColumns:"1fr 300px",gap:20 }}>
 
               {/* LEFT: Table */}
               <div>
@@ -873,7 +911,7 @@ export default function PaymentsPage() {
                       style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:"100%",direction:isAr?"rtl":"ltr" }}/>
                     {search&&<button onClick={()=>setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#bbb" }}>✕</button>}
                   </div>
-                  <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                  <div className="filter-chips-wrap" style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
                     {Object.entries(tr.filter as Record<string, string>).map(([k, v]) => (
                       <button key={k} className={`filter-chip${filter===k?" active":""}`} onClick={()=>setFilter(k)}>{v}</button>
                     ))}
@@ -888,13 +926,11 @@ export default function PaymentsPage() {
                   </div>
 
                   {/* Header row — desktop only */}
-                  {!isMobile&&(
-                    <div style={{ display:"grid",gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
-                      {[tr.table.date,tr.table.patient,tr.table.description,tr.table.method,tr.table.status,tr.table.amount,""].map((h,i)=>(
-                        <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.4,textAlign:i===5||i===6?"center":"start",paddingLeft:i>0&&i<6?8:0 }}>{h}</div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="desktop-table-header" style={{ gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
+                    {[tr.table.date,tr.table.patient,tr.table.description,tr.table.method,tr.table.status,tr.table.amount,""].map((h,i)=>(
+                      <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.4,textAlign:i===5||i===6?"center":"start",paddingLeft:i>0&&i<6?8:0 }}>{h}</div>
+                    ))}
+                  </div>
 
                   {filtered.length===0?(
                     <div style={{ textAlign:"center",padding:"50px 20px",color:"#ccc" }}>
@@ -906,72 +942,81 @@ export default function PaymentsPage() {
                       <div style={{ width:32,height:32,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px" }}/>
                       <div style={{ fontSize:13 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
                     </div>
-                  ):isMobile?(
-                    filtered.map(p=>{
-                      const patient = patients.find(x=>x.id===p.patient_id);
-                      const ss = statusStyle[p.status]||statusStyle.paid;
-                      const isNew = animIds.includes(p.id);
-                      const amtColor = p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32";
-                      return (
-                        <div key={p.id} className="tx-row" style={{ padding:"14px 16px",animation:isNew?"rowPop .4s ease":undefined }}>
-                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
-                            <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                              <div style={{ width:36,height:36,borderRadius:10,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
-                                {patient?getInitials(patient.name):"?"}
-                              </div>
-                              <div>
-                                <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{patient?.name||"—"}</div>
-                                <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
-                              </div>
-                            </div>
-                            <div style={{ textAlign:"end" }}>
-                              <div style={{ fontSize:15,fontWeight:800,color:amtColor }}>{p.amount.toLocaleString()} ل.س</div>
-                              <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:ss.bg,color:ss.color,marginTop:3,display:"inline-block" }}>{ss.label}</span>
-                            </div>
-                          </div>
-                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-                            <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                              <span style={{ fontSize:11,color:"#aaa" }}>{fmtDate(p.date)}</span>
-                              <span style={{ fontSize:11,color:"#aaa" }}>{methodIcon[p.method]} {tr.methods[p.method]}</span>
-                            </div>
-                            <button className="icon-btn" onClick={()=>setDeleteId(p.id)}>🗑️</button>
-                          </div>
-                        </div>
-                      );
-                    })
                   ):(
-                    filtered.map(p=>{
-                      const patient = patients.find(x=>x.id===p.patient_id);
-                      const ss = statusStyle[p.status]||statusStyle.paid;
-                      const isNew = animIds.includes(p.id);
-                      return (
-                        <div key={p.id} className="tx-row" style={{ display:"grid",gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"13px 20px",alignItems:"center",animation:isNew?"rowPop .4s ease":undefined }}>
-                          <div style={{ fontSize:12,color:"#888" }}>{fmtDate(p.date)}</div>
-                          <div style={{ display:"flex",alignItems:"center",gap:10,paddingLeft:8 }}>
-                            <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
-                              {patient?getInitials(patient.name):"?"}
+                    <>
+                      {/* MOBILE CARDS */}
+                      <div className="mobile-tx">
+                        {filtered.map(p=>{
+                          const patient = patients.find(x=>x.id===p.patient_id);
+                          const ss = statusStyle[p.status]||statusStyle.paid;
+                          const isNew = animIds.includes(p.id);
+                          const amtColor = p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32";
+                          return (
+                            <div key={p.id} className="tx-row" style={{ padding:"14px 16px",animation:isNew?"rowPop .4s ease":undefined }}>
+                              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+                                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                                  <div style={{ width:36,height:36,borderRadius:10,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
+                                    {patient?getInitials(patient.name):"?"}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{patient?.name||"—"}</div>
+                                    <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
+                                  </div>
+                                </div>
+                                <div style={{ textAlign:"end" }}>
+                                  <div style={{ fontSize:15,fontWeight:800,color:amtColor }}>{p.amount.toLocaleString()} ل.س</div>
+                                  <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:ss.bg,color:ss.color,marginTop:3,display:"inline-block" }}>{ss.label}</span>
+                                </div>
+                              </div>
+                              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                                <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                                  <span style={{ fontSize:11,color:"#aaa" }}>{fmtDate(p.date)}</span>
+                                  <span style={{ fontSize:11,color:"#aaa" }}>{methodIcon[p.method]} {tr.methods[p.method]}</span>
+                                </div>
+                                <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                                  <button className="icon-btn" onClick={()=>setDeleteId(p.id)}>🗑️</button>
+                                </div>
+                              </div>
                             </div>
-                            <div style={{ fontSize:13,fontWeight:500,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120 }}>
-                              {patient?.name||"—"}
+                          );
+                        })}
+                      </div>
+                      {/* DESKTOP ROWS */}
+                      <div className="desktop-tx">
+                        {filtered.map(p=>{
+                          const patient = patients.find(x=>x.id===p.patient_id);
+                          const ss = statusStyle[p.status]||statusStyle.paid;
+                          const isNew = animIds.includes(p.id);
+                          return (
+                            <div key={p.id} className="tx-row" style={{ display:"grid",gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"13px 20px",alignItems:"center",animation:isNew?"rowPop .4s ease":undefined }}>
+                              <div style={{ fontSize:12,color:"#888" }}>{fmtDate(p.date)}</div>
+                              <div style={{ display:"flex",alignItems:"center",gap:10,paddingLeft:8 }}>
+                                <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
+                                  {patient?getInitials(patient.name):"?"}
+                                </div>
+                                <div style={{ fontSize:13,fontWeight:500,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120 }}>
+                                  {patient?.name||"—"}
+                                </div>
+                              </div>
+                              <div style={{ fontSize:12,color:"#666",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{p.description}</div>
+                              <div style={{ paddingLeft:8,fontSize:12,color:"#888",display:"flex",alignItems:"center",gap:6 }}>
+                                <span>{methodIcon[p.method]}</span>
+                                <span>{tr.methods[p.method]}</span>
+                              </div>
+                              <div style={{ paddingLeft:8 }}>
+                                <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>{ss.label}</span>
+                              </div>
+                              <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
+                                {p.amount.toLocaleString()} ل.س
+                              </div>
+                              <div style={{ display:"flex",justifyContent:"center" }}>
+                                <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>🗑️</button>
+                              </div>
                             </div>
-                          </div>
-                          <div style={{ fontSize:12,color:"#666",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{p.description}</div>
-                          <div style={{ paddingLeft:8,fontSize:12,color:"#888",display:"flex",alignItems:"center",gap:6 }}>
-                            <span>{methodIcon[p.method]}</span>
-                            <span>{tr.methods[p.method]}</span>
-                          </div>
-                          <div style={{ paddingLeft:8 }}>
-                            <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>{ss.label}</span>
-                          </div>
-                          <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
-                            {p.amount.toLocaleString()} ل.س
-                          </div>
-                          <div style={{ display:"flex",justifyContent:"center" }}>
-                            <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>🗑️</button>
-                          </div>
-                        </div>
-                      );
-                    })
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
 
