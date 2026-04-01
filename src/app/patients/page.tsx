@@ -127,7 +127,9 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
   const isAr  = lang === "ar";
   const [collapsed,  setCollapsed]  = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isMobile,   setIsMobile]   = useState(false);
+  const [isMobile,   setIsMobile]   = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false
+  );
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -167,15 +169,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
   return (
     <>
       {isMobile && mobileOpen && (
-        <div
-          onClick={()=>setMobileOpen(false)}
-          style={{
-            position:"fixed", inset:0,
-            background:"rgba(0,0,0,.55)",
-            zIndex:55,
-            WebkitTapHighlightColor:"transparent",
-          }}
-        />
+        <div onClick={()=>setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:55,WebkitTapHighlightColor:"transparent" }} />
       )}
 
       {isMobile && (
@@ -214,7 +208,7 @@ function Sidebar({ lang, setLang, activePage = "patients" }: {
         zIndex: 60,
         transform: sidebarTransform,
         boxShadow: isMobile && mobileOpen
-          ? (isAr ? "-8px 0 32px rgba(0,0,0,.18)" : "8px 0 32px rgba(0,0,0,.18)")
+          ? (isAr ? "-8px 0 32px rgba(0,0,0,.15)" : "8px 0 32px rgba(0,0,0,.15)")
           : "4px 0 24px rgba(8,99,186,.06)",
       }}>
         <div style={{
@@ -669,7 +663,9 @@ export default function PatientsPage() {
   const isAr              = lang === "ar";
   const tr                = T[lang];
 
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false
+  );
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
