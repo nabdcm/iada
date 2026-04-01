@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, type ReactNode, type CSSProperties } from "react";
+import type React from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient } from "@/lib/supabase";
 
@@ -118,27 +119,17 @@ function openWhatsApp(phone: string) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, activePage = "patients" }: {
+function Sidebar({ lang, setLang, activePage = "patients", isMobile, mobileOpen, setMobileOpen }: {
   lang: Lang;
   setLang: (l: Lang) => void;
   activePage?: string;
+  isMobile: boolean;
+  mobileOpen: boolean;
+  setMobileOpen: (v: boolean) => void;
 }) {
   const tr    = T[lang];
   const isAr  = lang === "ar";
-  const [collapsed,  setCollapsed]  = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [isMobile,   setIsMobile]   = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth <= 768 : false
-  );
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  // (removed: was incorrectly closing sidebar on every resize)
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (isMobile && mobileOpen) {
@@ -663,11 +654,16 @@ export default function PatientsPage() {
   const isAr              = lang === "ar";
   const tr                = T[lang];
 
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth <= 768 : false
-  );
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
+    const check = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      // إغلاق السايدبار عند التوسع لشاشة desktop
+      if (!mobile) setMobileOpen(false);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -879,7 +875,7 @@ export default function PatientsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif", direction:isAr?"rtl":"ltr", minHeight:"100vh", background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="patients" />
+        <Sidebar lang={lang} setLang={setLang} activePage="patients" isMobile={isMobile} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
         <main className="main-anim" style={{
           marginRight: isAr && !isMobile ? 240 : undefined,
