@@ -50,6 +50,41 @@ const T = {
     revenueChart:"إيرادات آخر 6 أشهر",
     exportBtn:"تصدير",
     deleteConfirm:"هل تريد حذف هذه المعاملة؟",
+    withdrawBtn:"سحب",
+    expenseBtn:"مصروف",
+    withdrawModal:{
+      title:"تسجيل سحب",
+      amount:"المبلغ المسحوب (ل.س) *",
+      reason:"سبب السحب *",
+      reasonPh:"مثال: مصروف شخصي، راتب، ...",
+      date:"التاريخ *",
+      notes:"ملاحظات",
+      notesPh:"أي تفاصيل إضافية...",
+      save:"تأكيد السحب",
+      cancel:"إلغاء",
+      required:"المبلغ وسبب السحب مطلوبان",
+    },
+    expenseModal:{
+      title:"تسجيل مصروف عيادة",
+      amount:"المبلغ (ل.س) *",
+      category:"التصنيف *",
+      categories:{ rent:"إيجار", supplies:"مستلزمات طبية", salary:"رواتب موظفين", utilities:"فواتير كهرباء/ماء", maintenance:"صيانة", other:"أخرى" },
+      description:"الوصف *",
+      descPh:"مثال: فاتورة الكهرباء لشهر يونيو...",
+      date:"التاريخ *",
+      notes:"ملاحظات",
+      notesPh:"أي تفاصيل إضافية...",
+      save:"حفظ المصروف",
+      cancel:"إلغاء",
+      required:"المبلغ والتصنيف والوصف مطلوبة",
+    },
+    netBalance:"الرصيد الصافي",
+    totalWithdrawals:"إجمالي السحوبات",
+    totalExpenses:"مصروفات العيادة",
+    withdrawalsSection:{ title:"السحوبات الأخيرة", empty:"لا توجد سحوبات مسجّلة" },
+    expensesSection:{ title:"مصروفات العيادة", empty:"لا توجد مصروفات مسجّلة" },
+    txType:{ income:"دخل", withdrawal:"سحب", expense:"مصروف" },
+    filterType:{ all:"الكل", income:"دخل", withdrawal:"سحوبات", expense:"مصروفات" },
   },
   en: {
     appName:"NABD", appSub:"Clinic Manager",
@@ -91,6 +126,41 @@ const T = {
     revenueChart:"Revenue — Last 6 Months",
     exportBtn:"Export",
     deleteConfirm:"Delete this transaction?",
+    withdrawBtn:"Withdraw",
+    expenseBtn:"Expense",
+    withdrawModal:{
+      title:"Record Withdrawal",
+      amount:"Withdrawn Amount (SYP) *",
+      reason:"Reason *",
+      reasonPh:"e.g. Personal expense, salary...",
+      date:"Date *",
+      notes:"Notes",
+      notesPh:"Any additional details...",
+      save:"Confirm Withdrawal",
+      cancel:"Cancel",
+      required:"Amount and reason are required",
+    },
+    expenseModal:{
+      title:"Record Clinic Expense",
+      amount:"Amount (SYP) *",
+      category:"Category *",
+      categories:{ rent:"Rent", supplies:"Medical Supplies", salary:"Staff Salary", utilities:"Utilities", maintenance:"Maintenance", other:"Other" },
+      description:"Description *",
+      descPh:"e.g. June electricity bill...",
+      date:"Date *",
+      notes:"Notes",
+      notesPh:"Any additional details...",
+      save:"Save Expense",
+      cancel:"Cancel",
+      required:"Amount, category and description are required",
+    },
+    netBalance:"Net Balance",
+    totalWithdrawals:"Total Withdrawals",
+    totalExpenses:"Clinic Expenses",
+    withdrawalsSection:{ title:"Recent Withdrawals", empty:"No withdrawals recorded" },
+    expensesSection:{ title:"Clinic Expenses", empty:"No expenses recorded" },
+    txType:{ income:"Income", withdrawal:"Withdrawal", expense:"Expense" },
+    filterType:{ all:"All", income:"Income", withdrawal:"Withdrawals", expense:"Expenses" },
   },
 };
 
@@ -397,6 +467,128 @@ function RevenueChart({ lang, months, revenueData }: { lang: string; months: str
   );
 }
 
+// ─── Modal السحب ──────────────────────────────────────────────
+function WithdrawModal({ lang, onSave, onClose }: { lang: string; onSave: (data: any) => Promise<void>; onClose: () => void }) {
+  const tr = T[lang]; const isAr = lang==="ar";
+  const [form, setForm] = useState({ amount:"", reason:"", date:fmt(new Date()), notes:"" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inputSt: React.CSSProperties = { width:"100%",padding:"11px 14px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:14,color:"#353535",background:"#fafbfc",outline:"none",transition:"border .2s",direction:isAr?"rtl":"ltr" };
+
+  const handleSave = async () => {
+    if (!form.amount || !form.reason.trim()) { setError(tr.withdrawModal.required); return; }
+    setSaving(true);
+    try {
+      await onSave({ amount: parseFloat(form.amount), reason: form.reason.trim(), date: form.date, notes: form.notes||undefined });
+    } catch { setError(isAr?"حدث خطأ":"Error saving"); setSaving(false); }
+  };
+
+  return (
+    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
+      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:420,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(192,57,43,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+        <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+            <div style={{ width:40,height:40,background:"rgba(192,57,43,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>💸</div>
+            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.withdrawModal.title}</h2>
+          </div>
+          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+        </div>
+        <div style={{ padding:"20px 26px" }}>
+          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
+          <div style={{ display:"flex",gap:12 }}>
+            <F label={tr.withdrawModal.amount} half>
+              <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={inputSt} onFocus={e=>e.target.style.borderColor="#c0392b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+            </F>
+            <F label={tr.withdrawModal.date} half>
+              <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} onFocus={e=>e.target.style.borderColor="#c0392b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+            </F>
+          </div>
+          <F label={tr.withdrawModal.reason}>
+            <input value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} placeholder={tr.withdrawModal.reasonPh} style={inputSt} onFocus={e=>e.target.style.borderColor="#c0392b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+          </F>
+          <F label={tr.withdrawModal.notes}>
+            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.withdrawModal.notesPh} rows={2} style={{ ...inputSt,resize:"vertical",lineHeight:1.6 }} onFocus={e=>e.target.style.borderColor="#c0392b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+          </F>
+        </div>
+        <div style={{ padding:"14px 26px 22px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3" }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"13px",background:saving?"#e57373":"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(192,57,43,.25)",transition:"all .2s" }}>
+            {saving?(isAr?"جاري الحفظ...":"Saving..."):tr.withdrawModal.save}
+          </button>
+          <button onClick={onClose} style={{ padding:"13px 18px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.withdrawModal.cancel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal مصروف العيادة ───────────────────────────────────────
+function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: any) => Promise<void>; onClose: () => void }) {
+  const tr = T[lang]; const isAr = lang==="ar";
+  const [form, setForm] = useState({ amount:"", category:"rent", description:"", date:fmt(new Date()), notes:"" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inputSt: React.CSSProperties = { width:"100%",padding:"11px 14px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:14,color:"#353535",background:"#fafbfc",outline:"none",transition:"border .2s",direction:isAr?"rtl":"ltr" };
+  const catIcons: Record<string,string> = { rent:"🏢", supplies:"💊", salary:"👥", utilities:"⚡", maintenance:"🔧", other:"📋" };
+
+  const handleSave = async () => {
+    if (!form.amount || !form.description.trim()) { setError(tr.expenseModal.required); return; }
+    setSaving(true);
+    try {
+      await onSave({ amount: parseFloat(form.amount), category: form.category, description: form.description.trim(), date: form.date, notes: form.notes||undefined });
+    } catch { setError(isAr?"حدث خطأ":"Error saving"); setSaving(false); }
+  };
+
+  return (
+    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
+      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(123,45,139,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+        <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+            <div style={{ width:40,height:40,background:"rgba(123,45,139,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>🏪</div>
+            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.expenseModal.title}</h2>
+          </div>
+          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+        </div>
+        <div style={{ padding:"20px 26px" }}>
+          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
+          {/* Category Selector */}
+          <F label={tr.expenseModal.category}>
+            <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
+              {Object.entries(tr.expenseModal.categories).map(([k,v])=>(
+                <button key={k} onClick={()=>setForm({...form,category:k})}
+                  style={{ padding:"8px 14px",borderRadius:10,cursor:"pointer",border:form.category===k?"1.5px solid #7b2d8b":"1.5px solid #eee",background:form.category===k?"rgba(123,45,139,.08)":"#fafbfc",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:form.category===k?700:400,color:form.category===k?"#7b2d8b":"#888",transition:"all .2s",display:"flex",alignItems:"center",gap:6 }}>
+                  {catIcons[k]} {v}
+                </button>
+              ))}
+            </div>
+          </F>
+          <div style={{ display:"flex",gap:12 }}>
+            <F label={tr.expenseModal.amount} half>
+              <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={inputSt} onFocus={e=>e.target.style.borderColor="#7b2d8b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+            </F>
+            <F label={tr.expenseModal.date} half>
+              <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} onFocus={e=>e.target.style.borderColor="#7b2d8b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+            </F>
+          </div>
+          <F label={tr.expenseModal.description}>
+            <input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder={tr.expenseModal.descPh} style={inputSt} onFocus={e=>e.target.style.borderColor="#7b2d8b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+          </F>
+          <F label={tr.expenseModal.notes}>
+            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.expenseModal.notesPh} rows={2} style={{ ...inputSt,resize:"vertical",lineHeight:1.6 }} onFocus={e=>e.target.style.borderColor="#7b2d8b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+          </F>
+        </div>
+        <div style={{ padding:"14px 26px 22px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3" }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"13px",background:saving?"#ba68c8":"#7b2d8b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(123,45,139,.25)",transition:"all .2s" }}>
+            {saving?(isAr?"جاري الحفظ...":"Saving..."):tr.expenseModal.save}
+          </button>
+          <button onClick={onClose} style={{ padding:"13px 18px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.expenseModal.cancel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function PaymentsPage() {
   const [lang, setLang] = useState("ar");
@@ -427,6 +619,11 @@ export default function PaymentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [deleteId,  setDeleteId]  = useState<number|null>(null);
   const [animIds,   setAnimIds]   = useState<number[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [expenses,    setExpenses]    = useState<any[]>([]);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showExpenseModal,  setShowExpenseModal]  = useState(false);
+  const [typeFilter, setTypeFilter] = useState("all");
 
   // ── جلب البيانات من Supabase ────────────────────────────────
   useEffect(() => {
@@ -479,6 +676,21 @@ export default function PaymentsPage() {
 
       setPayments(paymentsData || []);
       setPatients((patientsData ?? []) as unknown as Patient[]);
+
+      // جلب السحوبات والمصروفات
+      const { data: withdrawalsData } = await supabase
+        .from("clinic_withdrawals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
+      setWithdrawals(withdrawalsData || []);
+
+      const { data: expensesData } = await supabase
+        .from("clinic_expenses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
+      setExpenses(expensesData || []);
     } catch (err) {
       console.error("loadData error:", err);
     } finally {
@@ -511,14 +723,20 @@ export default function PaymentsPage() {
     const thisMonth = new Date().toISOString().slice(0, 7);
     const monthPayments = payments.filter(p => p.date.startsWith(thisMonth));
     const pending = payments.filter(p => p.status === "pending");
+    const totalRevYear = payments.filter(p => p.status === "paid" && p.date.startsWith(String(new Date().getFullYear()))).reduce((s, p) => s + p.amount, 0);
+    const totalWithdrawYear = withdrawals.filter(w => w.date.startsWith(String(new Date().getFullYear()))).reduce((s, w) => s + w.amount, 0);
+    const totalExpYear = expenses.filter(e => e.date.startsWith(String(new Date().getFullYear()))).reduce((s, e) => s + e.amount, 0);
     return {
       totalMonth:   monthPayments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0),
-      totalYear:    payments.filter(p => p.status === "paid" && p.date.startsWith(String(new Date().getFullYear()))).reduce((s, p) => s + p.amount, 0),
+      totalYear:    totalRevYear,
       paidCount:    payments.filter(p => p.status === "paid").length,
       pendingAmt:   pending.reduce((s, p) => s + p.amount, 0),
       pendingCount: pending.length,
+      totalWithdrawals: totalWithdrawYear,
+      totalExpenses:    totalExpYear,
+      netBalance:   totalRevYear - totalWithdrawYear - totalExpYear,
     };
-  }, [payments]);
+  }, [payments, withdrawals, expenses]);
 
   // ── إحصائيات طرق الدفع الحقيقية ────────────────────────────
   const methodStats = useMemo(() => {
@@ -599,6 +817,34 @@ export default function PaymentsPage() {
       setPayments(prev => prev.filter(p => p.id !== id));
     }
     setDeleteId(null);
+  };
+
+  // ── تسجيل سحب ───────────────────────────────────────────────
+  const handleWithdraw = async (data: { amount: number; reason: string; date: string; notes?: string }) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: inserted, error } = await supabase
+      .from("clinic_withdrawals")
+      .insert({ ...data, user_id: user.id })
+      .select().single();
+    if (!error && inserted) {
+      setWithdrawals(prev => [inserted, ...prev]);
+      setShowWithdrawModal(false);
+    }
+  };
+
+  // ── تسجيل مصروف عيادة ────────────────────────────────────────
+  const handleExpense = async (data: { amount: number; category: string; description: string; date: string; notes?: string }) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: inserted, error } = await supabase
+      .from("clinic_expenses")
+      .insert({ ...data, user_id: user.id })
+      .select().single();
+    if (!error && inserted) {
+      setExpenses(prev => [inserted, ...prev]);
+      setShowExpenseModal(false);
+    }
   };
 
   const statusStyle = {
@@ -828,6 +1074,24 @@ export default function PaymentsPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   {tr.exportBtn} PDF
                 </button>
+                {/* زر مصروف العيادة */}
+                <button onClick={()=>setShowExpenseModal(true)}
+                  style={{ display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:"rgba(123,45,139,.06)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
+                  onMouseEnter={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.12)";}}
+                  onMouseLeave={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.06)";}}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
+                  <span className="add-btn-text-full">{tr.expenseBtn}</span>
+                </button>
+                {/* زر السحب */}
+                <button onClick={()=>setShowWithdrawModal(true)}
+                  style={{ display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:"rgba(192,57,43,.06)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
+                  onMouseEnter={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.12)";}}
+                  onMouseLeave={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.06)";}}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <span className="add-btn-text-full">{tr.withdrawBtn}</span>
+                </button>
                 <button className="add-btn" onClick={()=>setShowModal(true)}
                   style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#1b5e20"; }}
@@ -895,6 +1159,35 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* ── FINANCIAL SUMMARY ROW ── */}
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:24 }}>
+              {/* الرصيد الصافي */}
+              <div style={{ background: stats.netBalance >= 0 ? "linear-gradient(135deg,#1b5e20,#2e7d32)" : "linear-gradient(135deg,#b71c1c,#c0392b)",borderRadius:16,padding:"20px 24px",color:"#fff",position:"relative",overflow:"hidden",boxShadow: stats.netBalance >= 0 ? "0 4px 24px rgba(46,125,50,.25)":"0 4px 24px rgba(192,57,43,.25)" }}>
+                <div style={{ position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)" }}/>
+                <div style={{ fontSize:12,fontWeight:600,opacity:.8,marginBottom:10 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
+                <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{stats.netBalance.toLocaleString()} ل.س</div>
+                <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
+              </div>
+              {/* إجمالي السحوبات */}
+              <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",border:"1.5px solid rgba(192,57,43,.15)",position:"relative",overflow:"hidden",boxShadow:"0 2px 12px rgba(192,57,43,.06)" }}>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
+                  <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalWithdrawals}</span>
+                  <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
+                </div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{stats.totalWithdrawals.toLocaleString()} ل.س</div>
+                <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{withdrawals.length} {isAr?"عملية سحب":"withdrawals"}</div>
+              </div>
+              {/* مصروفات العيادة */}
+              <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",border:"1.5px solid rgba(123,45,139,.15)",position:"relative",overflow:"hidden",boxShadow:"0 2px 12px rgba(123,45,139,.06)" }}>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
+                  <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalExpenses}</span>
+                  <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
+                </div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{stats.totalExpenses.toLocaleString()} ل.س</div>
+                <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{expenses.length} {isAr?"مصروف مسجّل":"recorded expenses"}</div>
               </div>
             </div>
 
@@ -1080,6 +1373,58 @@ export default function PaymentsPage() {
                     })
                   )}
                 </div>
+
+                {/* Recent Withdrawals */}
+                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.15)",padding:"18px 18px",boxShadow:"0 2px 16px rgba(192,57,43,.06)",marginTop:16 }}>
+                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
+                    <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
+                      <span style={{ fontSize:16 }}>💸</span> {tr.withdrawalsSection.title}
+                    </h3>
+                    <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
+                  </div>
+                  {withdrawals.length===0?(
+                    <div style={{ textAlign:"center",padding:"18px 0",color:"#ccc",fontSize:13 }}>{tr.withdrawalsSection.empty}</div>
+                  ):(
+                    withdrawals.slice(0,5).map((w,i)=>(
+                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa" }}>
+                        <div>
+                          <div style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{w.reason}</div>
+                          <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-SA":"en-US",{month:"short",day:"numeric"})}</div>
+                        </div>
+                        <span style={{ fontSize:14,fontWeight:800,color:"#c0392b" }}>-{w.amount.toLocaleString()} ل.س</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Clinic Expenses */}
+                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(123,45,139,.15)",padding:"18px 18px",boxShadow:"0 2px 16px rgba(123,45,139,.06)",marginTop:16 }}>
+                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
+                    <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
+                      <span style={{ fontSize:16 }}>🏪</span> {tr.expensesSection.title}
+                    </h3>
+                    <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
+                  </div>
+                  {expenses.length===0?(
+                    <div style={{ textAlign:"center",padding:"18px 0",color:"#ccc",fontSize:13 }}>{tr.expensesSection.empty}</div>
+                  ):(
+                    expenses.slice(0,5).map((e,i)=>{
+                      const catLabels = tr.expenseModal.categories;
+                      return (
+                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa" }}>
+                          <div>
+                            <div style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{e.description}</div>
+                            <div style={{ display:"flex",gap:8,marginTop:3 }}>
+                              <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
+                              <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-SA":"en-US",{month:"short",day:"numeric"})}</span>
+                            </div>
+                          </div>
+                          <span style={{ fontSize:14,fontWeight:800,color:"#7b2d8b" }}>-{e.amount.toLocaleString()} ل.س</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
             </div>
@@ -1088,6 +1433,12 @@ export default function PaymentsPage() {
 
         {/* Add Modal */}
         {showModal&&<PaymentModal lang={lang} patients={patients} onSave={handleSave} onClose={()=>setShowModal(false)}/>}
+
+        {/* Withdraw Modal */}
+        {showWithdrawModal&&<WithdrawModal lang={lang} onSave={handleWithdraw} onClose={()=>setShowWithdrawModal(false)}/>}
+
+        {/* Expense Modal */}
+        {showExpenseModal&&<ExpenseModal lang={lang} onSave={handleExpense} onClose={()=>setShowExpenseModal(false)}/>}
 
         {/* Delete Confirm */}
         {deleteId&&(
