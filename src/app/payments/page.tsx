@@ -555,10 +555,10 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
           {/* Category Selector */}
           <F label={tr.expenseModal.category}>
             <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
-              {Object.entries(tr.expenseModal.categories).map(([k,v])=>(
+              {(Object.entries(tr.expenseModal.categories) as [string, string][]).map(([k,v])=>(
                 <button key={k} onClick={()=>setForm({...form,category:k})}
                   style={{ padding:"8px 14px",borderRadius:10,cursor:"pointer",border:form.category===k?"1.5px solid #7b2d8b":"1.5px solid #eee",background:form.category===k?"rgba(123,45,139,.08)":"#fafbfc",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:form.category===k?700:400,color:form.category===k?"#7b2d8b":"#888",transition:"all .2s",display:"flex",alignItems:"center",gap:6 }}>
-                  {catIcons[k]} {v}
+                  <span>{catIcons[k] ?? "📋"}</span><span>{v}</span>
                 </button>
               ))}
             </div>
