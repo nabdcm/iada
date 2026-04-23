@@ -9,6 +9,8 @@ import { supabase } from "@/lib/supabase";
 
 type Lang = "ar" | "en";
 
+type ClinicType = "general" | "dental" | "dermatology" | "cosmetic" | "pediatrics" | "other";
+
 interface ClinicData {
   id?: number;
   name: string;
@@ -19,6 +21,7 @@ interface ClinicData {
   expiry: string;
   status: "active" | "inactive" | "expired";
   user_id?: string;
+  clinic_type?: ClinicType;
 }
 
 // ============================================================
@@ -39,7 +42,7 @@ const T = {
       search:"ابحث باسم العيادة...",
       table:{ name:"العيادة", owner:"المالك", email:"البريد الإلكتروني", status:"الحالة", plan:"الخطة", expiry:"انتهاء الاشتراك", actions:"الإجراءات" },
       statuses:{ active:"نشط", inactive:"موقوف", expired:"منتهي" },
-      plans:{ basic:"أساسي", pro:"احترافي", enterprise:"مؤسسي" },
+      plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة" },
       actions:{ edit:"تعديل", suspend:"تعليق", activate:"تفعيل", resetPass:"إعادة كلمة المرور", delete:"حذف", viewDetails:"التفاصيل" },
     },
     modal: {
@@ -51,6 +54,11 @@ const T = {
       phone:"رقم الهاتف", phonePh:"05xxxxxxxx",
       plan:"خطة الاشتراك *",
       expiry:"تاريخ انتهاء الاشتراك *",
+      clinicType:"نوع العيادة *",
+      clinicTypes:{
+        general:"عامة", dental:"أسنان", dermatology:"جلدية",
+        cosmetic:"تجميلية", pediatrics:"أطفال", other:"أخرى",
+      },
       generateCredentials:"توليد بيانات الدخول",
       username:"البريد الإلكتروني", password:"كلمة المرور",
       copyBtn:"نسخ", copiedBtn:"✓ تم النسخ",
@@ -111,8 +119,8 @@ const T = {
       saving:"جاري الحفظ...",
       cancel:"إلغاء",
       changePlan:"تغيير الخطة إلى",
-      plans:{ basic:"أساسي", pro:"احترافي", enterprise:"مؤسسي" },
-      planDesc:{ basic:"للعيادات الصغيرة", pro:"للعيادات المتوسطة", enterprise:"للمستشفيات والمجمعات" },
+      plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة" },
+      planDesc:{ basic:"إدارة المرضى والمواعيد", pro:"المرضى + المواعيد + المالية + رابط الحجز", enterprise:"جميع الميزات + متابعة المرضى" },
       deleteConfirmTitle:"تأكيد الحذف النهائي",
       deleteConfirmMsg:"هل أنت متأكد من حذف عيادة",
       deleteConfirmWarning:"سيتم حذف جميع البيانات نهائياً ولا يمكن التراجع.",
@@ -133,7 +141,7 @@ const T = {
       search:"Search by clinic name...",
       table:{ name:"Clinic", owner:"Owner", email:"Email", status:"Status", plan:"Plan", expiry:"Expiry", actions:"Actions" },
       statuses:{ active:"Active", inactive:"Suspended", expired:"Expired" },
-      plans:{ basic:"Basic", pro:"Pro", enterprise:"Enterprise" },
+      plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive" },
       actions:{ edit:"Edit", suspend:"Suspend", activate:"Activate", resetPass:"Reset Password", delete:"Delete", viewDetails:"Details" },
     },
     modal: {
@@ -145,6 +153,11 @@ const T = {
       phone:"Phone", phonePh:"05xxxxxxxx",
       plan:"Subscription Plan *",
       expiry:"Subscription Expiry *",
+      clinicType:"Clinic Type *",
+      clinicTypes:{
+        general:"General", dental:"Dental", dermatology:"Dermatology",
+        cosmetic:"Cosmetic", pediatrics:"Pediatrics", other:"Other",
+      },
       generateCredentials:"Generate Login Credentials",
       username:"Email", password:"Password",
       copyBtn:"Copy", copiedBtn:"✓ Copied",
@@ -205,8 +218,8 @@ const T = {
       saving:"Saving...",
       cancel:"Cancel",
       changePlan:"Change Plan To",
-      plans:{ basic:"Basic", pro:"Pro", enterprise:"Enterprise" },
-      planDesc:{ basic:"For small clinics", pro:"For medium clinics", enterprise:"For hospitals & complexes" },
+      plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive" },
+      planDesc:{ basic:"Patients & appointments management", pro:"Patients + appointments + finances + booking link", enterprise:"All features + patient follow-up" },
       deleteConfirmTitle:"Confirm Permanent Delete",
       deleteConfirmMsg:"Are you sure you want to delete clinic",
       deleteConfirmWarning:"All data will be permanently deleted and cannot be recovered.",
@@ -217,6 +230,18 @@ const T = {
 };
 
 const PLAN_COLORS = { basic:"#0863ba", pro:"#7b2d8b", enterprise:"#e67e22" };
+
+// Plan pricing config
+const PLAN_PRICING = {
+  basic:      { monthly:10,  halfYear:39,  yearly:54  },
+  pro:        { monthly:15,  halfYear:49,  yearly:79  },
+  enterprise: { monthly:29,  halfYear:89,  yearly:149 },
+};
+
+// Clinic type icons
+const CLINIC_TYPE_ICONS: Record<string, string> = {
+  general:"🏥", dental:"🦷", dermatology:"🧴", cosmetic:"💆", pediatrics:"👶", other:"🏨",
+};
 const STATUS_COLORS = {
   active:   { bg:"rgba(46,125,50,.1)",   color:"#2e7d32" },
   inactive: { bg:"rgba(230,126,34,.1)",  color:"#e67e22" },
@@ -261,13 +286,14 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
   const isEdit = !!clinic?.id;
 
   const [form, setForm] = useState({
-    name:   clinic?.name   || "",
-    owner:  clinic?.owner  || "",
-    email:  clinic?.email  || "",
-    phone:  clinic?.phone  || "",
-    plan:   (clinic?.plan  || "basic") as "basic" | "pro" | "enterprise",
-    expiry: clinic?.expiry || "",
-    status: (clinic?.status || "active") as "active" | "inactive" | "expired",
+    name:        clinic?.name        || "",
+    owner:       clinic?.owner       || "",
+    email:       clinic?.email       || "",
+    phone:       clinic?.phone       || "",
+    plan:        (clinic?.plan       || "basic") as "basic" | "pro" | "enterprise",
+    expiry:      clinic?.expiry      || "",
+    status:      (clinic?.status     || "active") as "active" | "inactive" | "expired",
+    clinic_type: (clinic?.clinic_type || "general") as ClinicType,
   });
 
   const [creds,    setCreds]    = useState<{ password: string } | null>(null);
@@ -470,27 +496,72 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                 />
               </Field>
 
-              <div style={{ display:"flex", gap:12 }}>
-                <Field label={tr.modal.plan} half>
-                  <select
-                    value={form.plan}
-                    onChange={e => setForm(prev => ({ ...prev, plan: e.target.value as "basic"|"pro"|"enterprise" }))}
-                    style={{ ...inputSt, cursor:"pointer" }}
-                  >
-                    <option value="basic">{tr.clinics.plans.basic}</option>
-                    <option value="pro">{tr.clinics.plans.pro}</option>
-                    <option value="enterprise">{tr.clinics.plans.enterprise}</option>
-                  </select>
-                </Field>
-                <Field label={tr.modal.expiry} half>
+              {/* نوع العيادة */}
+              <Field label={tr.modal.clinicType}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+                  {(["general","dental","dermatology","cosmetic","pediatrics","other"] as ClinicType[]).map(ct => {
+                    const isSelected = form.clinic_type === ct;
+                    return (
+                      <button key={ct} type="button"
+                        onClick={() => setForm(prev => ({ ...prev, clinic_type: ct }))}
+                        style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 6px",border:`1.5px solid ${isSelected?"#0863ba":"#eef0f3"}`,borderRadius:10,background:isSelected?"rgba(8,99,186,.06)":"#fafbfc",cursor:"pointer",transition:"all .15s",fontFamily:"Rubik,sans-serif" }}>
+                        <span style={{ fontSize:20 }}>{CLINIC_TYPE_ICONS[ct]}</span>
+                        <span style={{ fontSize:11,fontWeight:isSelected?700:400,color:isSelected?"#0863ba":"#666" }}>
+                          {tr.modal.clinicTypes[ct]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              {/* الخطة مع الأسعار */}
+              <Field label={tr.modal.plan}>
+                <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                  {([
+                    { key:"basic" as const,      color:"#0863ba", features: isAr ? ["إدارة المرضى","إدارة المواعيد","بدون رابط حجز"] : ["Patients management","Appointments management","No booking link"] },
+                    { key:"pro" as const,         color:"#7b2d8b", features: isAr ? ["إدارة المرضى","إدارة المواعيد","الإدارة المالية","رابط حجز المواعيد"] : ["Patients management","Appointments management","Financial management","Booking link"] },
+                    { key:"enterprise" as const,  color:"#e67e22", features: isAr ? ["جميع ميزات الاحترافية","متابعة المرضى المباشرة","جميع الميزات"] : ["All Professional features","Direct patient follow-up","All features included"] },
+                  ]).map(p => {
+                    const isSelected = form.plan === p.key;
+                    const pricing = PLAN_PRICING[p.key];
+                    return (
+                      <button key={p.key} type="button"
+                        onClick={() => setForm(prev => ({ ...prev, plan: p.key }))}
+                        style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:isAr?"right":"left",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
+                        <div style={{ width:12,height:12,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:3,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4 }}>
+                            <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>
+                              {tr.clinics.plans[p.key]}
+                            </span>
+                            <div style={{ display:"flex",gap:6,flexShrink:0 }}>
+                              <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:`${p.color}15`,color:p.color,fontWeight:700 }}>${pricing.monthly}{isAr?"/شهر":"/mo"}</span>
+                              <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:"rgba(46,125,50,.08)",color:"#2e7d32",fontWeight:600 }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
+                            </div>
+                          </div>
+                          <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
+                            {p.features.map((f,i) => (
+                              <span key={i} style={{ fontSize:10,color:"#888",display:"flex",alignItems:"center",gap:3 }}>
+                                <span style={{ color:p.color }}>✓</span> {f}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              <Field label={tr.modal.expiry} half>
                   <input
                     type="date"
                     value={form.expiry}
                     onChange={e => setForm(prev => ({ ...prev, expiry: e.target.value }))}
                     style={inputSt}
                   />
-                </Field>
-              </div>
+              </Field>
 
               {/* توليد بيانات الدخول — فقط عند الإضافة */}
               {!isEdit && (
@@ -797,6 +868,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                   {PLAN_INFO.map(p => {
                     const isSelected = form.plan === p.key;
                     const isCurrent  = clinic.plan === p.key;
+                    const pricing    = PLAN_PRICING[p.key];
                     return (
                       <button key={p.key} onClick={() => setForm(prev=>({...prev,plan:p.key}))}
                         style={{ display:"flex",alignItems:"center",gap:14,padding:"12px 16px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:"start",transition:"all .18s",fontFamily:"Rubik,sans-serif" }}>
@@ -805,7 +877,11 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                           <div style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{sm.plans[p.key]}</div>
                           <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{sm.planDesc[p.key]}</div>
                         </div>
-                        {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:20,background:`${p.color}15`,color:p.color }}>{isAr?"الحالية":"Current"}</span>}
+                        <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2,flexShrink:0 }}>
+                          <span style={{ fontSize:11,fontWeight:700,color:p.color }}>${pricing.monthly}<span style={{ fontSize:9,color:"#aaa",fontWeight:400 }}>{isAr?"/شهر":"/mo"}</span></span>
+                          <span style={{ fontSize:10,color:"#2e7d32" }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
+                        </div>
+                        {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:20,background:`${p.color}15`,color:p.color,flexShrink:0 }}>{isAr?"الحالية":"Current"}</span>}
                       </button>
                     );
                   })}
@@ -1256,15 +1332,16 @@ export default function AdminPage() {
       const data = await res.json();
 
       const clinicsData: ClinicData[] = (data || []).map((row: Record<string, unknown>, index: number) => ({
-        id:      (row.id as number) || index + 1,
-        user_id: row.user_id as string,
-        name:    (row.name as string)   || `عيادة ${index + 1}`,
-        owner:   (row.owner as string)  || "—",
-        email:   (row.email as string)  || "",
-        phone:   (row.phone as string)  || "",
-        plan:    (row.plan as "basic"|"pro"|"enterprise") || "basic",
-        expiry:  (row.expiry as string) || "",
-        status:  (row.status as "active"|"inactive"|"expired") || "active",
+        id:          (row.id as number) || index + 1,
+        user_id:     row.user_id as string,
+        name:        (row.name as string)   || `عيادة ${index + 1}`,
+        owner:       (row.owner as string)  || "—",
+        email:       (row.email as string)  || "",
+        phone:       (row.phone as string)  || "",
+        plan:        (row.plan as "basic"|"pro"|"enterprise") || "basic",
+        expiry:      (row.expiry as string) || "",
+        status:      (row.status as "active"|"inactive"|"expired") || "active",
+        clinic_type: (row.clinic_type as ClinicType) || "general",
       }));
 
       setClinics(clinicsData);
@@ -1560,7 +1637,10 @@ export default function AdminPage() {
                         return (
                           <div key={c.id} className="admin-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 160px",padding:"14px 20px",alignItems:"center",gap:0 }}>
                             <div>
-                              <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{c.name}</div>
+                              <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6 }}>
+                                <span style={{ fontSize:15 }}>{CLINIC_TYPE_ICONS[c.clinic_type||"general"]}</span>
+                                {c.name}
+                              </div>
                               <div style={{ fontSize:11,color:"#ccc",marginTop:2 }}>ID: #{c.id}</div>
                             </div>
                             <div style={{ fontSize:12,color:"#666",paddingLeft:8 }}>{c.owner}</div>
