@@ -1111,10 +1111,23 @@ export default function AppointmentsPage() {
                   </div>
                 )}
               </div>
-              <div style={{ display:"flex",gap:isMobile?6:10 }}>
+              <div style={{ display:"flex",gap:isMobile?6:10,alignItems:"center" }}>
                 {!isMobile&&<button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
                   🔗 {isAr?"رابط الحجز":"Booking Link"}
                 </button>}
+                {/* زر التحديث */}
+                <button
+                  onClick={() => loadAppointments()}
+                  title={isAr?"تحديث البيانات":"Refresh"}
+                  style={{ position:"relative",display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 10px":"9px 14px",background:"#fff",color:"#666",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
+                >
+                  🔄{!isMobile&&<span>{isAr?"تحديث":"Refresh"}</span>}
+                  {pendingAppointments.length > 0 && (
+                    <span style={{ position:"absolute",top:-6,right:isAr?undefined:-6,left:isAr?-6:undefined,background:"#e67e22",color:"#fff",borderRadius:20,padding:"1px 6px",fontSize:10,fontWeight:800,lineHeight:1.6,minWidth:18,textAlign:"center" }}>
+                      {pendingAppointments.length}
+                    </span>
+                  )}
+                </button>
                 <button onClick={()=>setAddModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 12px":"9px 18px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
                   ＋ {isMobile?(isAr?"موعد":"Add"):tr.addAppointment}
                 </button>
