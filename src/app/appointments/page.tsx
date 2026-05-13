@@ -872,7 +872,7 @@ export default function AppointmentsPage() {
         },
         (payload) => {
           const newAppt = payload.new as Appointment;
-          if (newAppt.status === "pending_approval") {
+          if ((newAppt.status as string) === "pending_approval") {
             // تشغيل صوت تنبيه عند وصول طلب جديد
             playNotificationSound();
             setPendingAppointments(prev => [...prev, newAppt]);
