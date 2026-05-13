@@ -12,7 +12,7 @@ import type { Patient, Payment } from "@/lib/supabase";
 const T = {
   ar: {
     appName:"نبض", appSub:"إدارة العيادة",
-    nav:{ dashboard:"لوحة المعلومات", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات", admin:"لوحة المدير" },
+    nav:{ dashboard:"لوحة المعلومات", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات", admin:"لوحة المدير", prescriptions:"الوصفات الطبية", tracking:"متابعة المرضى" },
     page:{ title:"المدفوعات", sub:"سجل المعاملات المالية وإدارة الفواتير" },
     recordPayment:"تسجيل دفعة",
     stats:{
@@ -88,7 +88,7 @@ const T = {
   },
   en: {
     appName:"NABD", appSub:"Clinic Manager",
-    nav:{ dashboard:"Dashboard", patients:"Patients", appointments:"Appointments", payments:"Payments", admin:"Admin Panel" },
+    nav:{ dashboard:"Dashboard", patients:"Patients", appointments:"Appointments", payments:"Payments", admin:"Admin Panel", prescriptions:"Prescriptions", tracking:"Patient Tracking" },
     page:{ title:"Payments", sub:"Financial transaction records and billing management" },
     recordPayment:"Record Payment",
     stats:{
@@ -170,9 +170,33 @@ const getInitials = (name: string) => name.split(" ").slice(0,2).map(w=>w[0]).jo
 const fmt = (d: Date) => d.toISOString().split("T")[0];
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen }: {
+// Design tokens
+const SB_BG          = "#0558a8";
+const SB_BG_HEADER   = "#044d96";
+const SB_BG_FOOTER   = "#044d96";
+const SB_ACTIVE_BG   = "rgba(255,255,255,0.15)";
+const SB_ACTIVE_TEXT = "#ffffff";
+const SB_IDLE_TEXT   = "rgba(255,255,255,0.62)";
+const SB_BORDER      = "rgba(255,255,255,0.1)";
+const SB_INDICATOR   = "#7dd3fc";
+
+const PillIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7z"/>
+    <line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>
+  </svg>
+);
+
+const TrackingIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);
+
+function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePage = "payments" }: {
   lang: string; setLang: (l: string) => void;
   isMobile: boolean; mobileOpen: boolean; setMobileOpen: (v: boolean) => void;
+  activePage?: string;
 }) {
   const tr = T[lang]; const isAr = lang==="ar";
   const [col, setCol] = useState(false);
@@ -183,19 +207,28 @@ function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen }: {
     return () => { document.body.style.overflow = ""; };
   }, [isMobile, mobileOpen]);
 
-  // حل computed key: نستخدم قيم ثابتة بدل [isAr?"right":"left"]
   const sidebarRight = isAr ? 0 : undefined;
   const sidebarLeft  = isAr ? undefined : 0;
   const sidebarTransform = isMobile
     ? (mobileOpen ? "translateX(0)" : (isAr ? "translateX(100%)" : "translateX(-100%)"))
     : "translateX(0)";
 
-  const GRID_ICON = <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
-  const navItems = [
-    {key:"dashboard",  icon:GRID_ICON, href:"/dashboard"},
-    {key:"patients",   icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, href:"/patients"},
-    {key:"appointments",icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, href:"/appointments"},
-    {key:"payments",   icon:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, href:"/payments"},
+  const NAV_ICONS: Record<string, React.ReactNode> = {
+    dashboard:    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+    patients:     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    appointments: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    payments:     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+    prescriptions: <PillIcon />,
+    tracking:      <TrackingIcon />,
+  };
+
+  const navItems: { key: string; href: string }[] = [
+    { key:"dashboard",     href:"/dashboard"        },
+    { key:"patients",      href:"/patients"         },
+    { key:"appointments",  href:"/appointments"     },
+    { key:"payments",      href:"/payments"         },
+    { key:"prescriptions", href:"/prescriptions"    },
+    { key:"tracking",      href:"/patient-tracking" },
   ];
 
   return (
@@ -208,7 +241,7 @@ function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen }: {
       {isMobile && (
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:70,width:40,height:40,borderRadius:10,background:"#0863ba",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(8,99,186,.3)" }}
+          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:70,width:40,height:40,borderRadius:10,background:SB_BG,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(5,88,168,.4)" }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
             {mobileOpen
@@ -219,61 +252,69 @@ function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen }: {
         </button>
       )}
 
-      <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:sidebarRight,left:sidebarLeft,zIndex:60,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?(isAr?"-8px 0 32px rgba(0,0,0,.15)":"8px 0 32px rgba(0,0,0,.15)"):"4px 0 24px rgba(8,99,186,.06)" }}>
-        <div style={{ padding:col?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
-          {!col&&<div style={{ display:"flex",alignItems:"center",gap:10 }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="py-g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
-                    <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
-                  </linearGradient>
-                  <linearGradient id="py-g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
-                    <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
-                  </linearGradient>
-                </defs>
-                <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
-                <path fill="url(#py-g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
-                <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
-                <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
-                <path fill="url(#py-g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
-              </svg><div><div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div><div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div></div></div>}
-          {col&&<div style={{ width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center" }}><svg viewBox="0 0 337.74 393.31" style={{width:28,height:28,flexShrink:0}} xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="py-g1c" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
-                    <stop offset=".3" stopColor="#0863ba"/><stop offset=".69" stopColor="#5694cf"/>
-                  </linearGradient>
-                  <linearGradient id="py-g2c" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
-                    <stop offset="0" stopColor="#5694cf"/><stop offset=".68" stopColor="#a4c4e4"/>
-                  </linearGradient>
-                </defs>
-                <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
-                <path fill="url(#py-g1c)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
-                <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
-                <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
-                <path fill="url(#py-g2c)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
-              </svg></div>}
-          {!col&&!isMobile&&<button onClick={()=>setCol(!col)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>{isAr?"›":"‹"}</button>}
+      <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:SB_BG,display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:sidebarRight,left:sidebarLeft,zIndex:60,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?(isAr?"-8px 0 32px rgba(0,0,0,.15)":"8px 0 32px rgba(0,0,0,.15)"):(isAr?"-4px 0 32px rgba(5,88,168,.45)":"4px 0 32px rgba(5,88,168,.45)") }}>
+
+        {/* Header */}
+        <div style={{ padding:col?"18px 0":"18px 20px",background:SB_BG_HEADER,borderBottom:`1px solid ${SB_BORDER}`,display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
+          {!col && (
+            <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+              <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(0,0,0,.25)" }} />
+              <div>
+                <div style={{ fontSize:18,fontWeight:800,color:"#ffffff",lineHeight:1.1 }}>{tr.appName}</div>
+                <div style={{ fontSize:10,color:"rgba(255,255,255,0.55)",fontWeight:400 }}>{tr.appSub}</div>
+              </div>
+            </div>
+          )}
+          {col && <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10 }} />}
+          {!isMobile && (
+            <button
+              onClick={() => setCol(!col)}
+              title={col ? (isAr ? "توسيع القائمة" : "Expand sidebar") : (isAr ? "طي القائمة" : "Collapse sidebar")}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.22)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"; }}
+              style={{ width:28,height:28,background:"rgba(255,255,255,0.12)",border:"1.5px solid rgba(255,255,255,0.22)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.9)",fontSize:14,lineHeight:1,transition:"background .15s",flexShrink:0,marginTop:col?8:0 }}
+            >
+              {col ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
+            </button>
+          )}
         </div>
-        <nav style={{ flex:1,padding:"16px 12px" }}>
-          {navItems.map(item=>{
-            const isActive = item.key==="payments";
-            const indicatorRight = isAr ? -12 : undefined;
-            const indicatorLeft  = isAr ? undefined : -12;
-            return(
-              <a key={item.key} href={item.href} style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"12px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
-                {isActive&&<div style={{ position:"absolute",right:indicatorRight,left:indicatorLeft,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }}/>}
-                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{item.icon}</span>
-                {!col&&<span>{tr.nav[item.key]}</span>}
+
+        {/* Nav */}
+        <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
+          {navItems.map(item => {
+            const isActive = item.key === activePage;
+            return (
+              <a key={item.key} href={item.href}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)"; }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background="transparent"; }}
+                style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT,fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+                {isActive && (
+                  <div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>
+                )}
+                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
+                {!col && <span>{(tr.nav as Record<string,string>)[item.key]}</span>}
               </a>
             );
           })}
         </nav>
-        <div style={{ padding:"16px 12px",borderTop:"1.5px solid #eef0f3" }}>
-          {!col&&<button onClick={()=>setLang(lang==="ar"?"en":"ar")} style={{ width:"100%",padding:"8px",marginBottom:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"#666",fontWeight:600 }}>🌐 {lang==="ar"?"English":"العربية"}</button>}
+
+        {/* Footer */}
+        <div style={{ padding:col?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
+          {!col && (
+            <button
+              onClick={() => setLang(lang==="ar"?"en":"ar")}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)"; }}
+              style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}
+            >
+              🌐 {lang==="ar" ? "English" : "العربية"}
+            </button>
+          )}
           <button
             onClick={async () => { const { supabase: sb } = await import("@/lib/supabase"); await sb.auth.signOut(); window.location.href = "/login"; }}
-            style={{ width:"100%",padding:col?"10px 0":"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#c0392b",fontWeight:600,display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8,transition:"all .2s" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.12)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.06)"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.3)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.15)"; }}
+            style={{ width:"100%",padding:col?"10px 0":"10px 14px",background:"rgba(192,57,43,.15)",border:"1.5px solid rgba(192,57,43,.3)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#ffb3a7",fontWeight:600,display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8,transition:"all .2s" }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             {!col && <span>{tr.signOut}</span>}
