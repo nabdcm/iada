@@ -46,11 +46,13 @@ const T = {
     time:            "وقت الموعد *",
     notes:           "ملاحظات للطبيب (اختياري)",
     notesPh:         "أي شكاوى أو ملاحظات...",
-    submit:          "تأكيد الحجز",
-    submitting:      "جاري الحجز...",
+    submit:          "إرسال طلب الحجز",
+    submitting:      "جاري الإرسال...",
     required:        "يرجى تعبئة الاسم والهاتف واختيار الموعد",
-    success:         "تم حجز موعدك بنجاح! ✓",
-    successSub:      "تم تسجيلك في العيادة وسنتواصل معك لتأكيد الموعد",
+    success:         "تم إرسال طلب حجزك! ✓",
+    // ── رسالة النجاح تُوضح أن الموعد بانتظار موافقة الطبيب ──
+    successSub:      "طلبك قيد المراجعة من قِبل الطبيب. سنتواصل معك عند تأكيد الموعد.",
+    pendingNote:     "⏳ بانتظار موافقة الطبيب",
     newBooking:      "حجز موعد آخر",
     errorBook:       "حدث خطأ، حاول مجدداً",
     poweredBy:       "مدعوم بواسطة نبض",
@@ -80,11 +82,12 @@ const T = {
     time:            "Appointment Time *",
     notes:           "Notes for the doctor (optional)",
     notesPh:         "Any complaints or notes...",
-    submit:          "Confirm Booking",
-    submitting:      "Booking...",
+    submit:          "Send Booking Request",
+    submitting:      "Sending...",
     required:        "Please fill name, phone and select a time",
-    success:         "Appointment Booked Successfully! ✓",
-    successSub:      "You've been registered. We'll contact you to confirm.",
+    success:         "Booking Request Sent! ✓",
+    successSub:      "Your request is pending doctor approval. We'll contact you once confirmed.",
+    pendingNote:     "⏳ Awaiting doctor approval",
     newBooking:      "Book Another Appointment",
     errorBook:       "An error occurred, please try again",
     poweredBy:       "Powered by NABD",
@@ -199,7 +202,8 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
         patientId = newPatient.id;
       }
 
-      // ── 3. إنشاء الموعد مرتبطاً بالمريض ─────────────────
+      // ── 3. إنشاء الموعد بحالة "pending_approval" بدلاً من "scheduled" ──
+      // الموعد لن يظهر في قائمة المواعيد الفعلية حتى يوافق عليه الطبيب
       const { error: apptError } = await supabase
         .from("appointments")
         .insert({
@@ -210,7 +214,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
           duration:   clinic?.appointment_duration ?? 30,
           type:       "حجز إلكتروني / Online Booking",
           notes:      form.notes.trim() || null,
-          status:     "scheduled",
+          status:     "pending_approval", // ◀ الجديد: بانتظار موافقة الطبيب
         });
 
       if (apptError) throw apptError;
@@ -315,9 +319,13 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
           {/* نجاح */}
           {success ? (
             <div style={{ background:"#fff",borderRadius:20,padding:"48px 32px",textAlign:"center",border:"1.5px solid #eef0f3",boxShadow:"0 4px 24px rgba(8,99,186,.08)",animation:"popIn .4s ease" }}>
-              <div style={{ width:80,height:80,background:"rgba(46,125,50,.1)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 20px" }}>✅</div>
-              <h2 style={{ fontSize:22,fontWeight:800,color:"#2e7d32",marginBottom:8 }}>{tr.success}</h2>
-              <p style={{ fontSize:14,color:"#888",marginBottom:28,lineHeight:1.7 }}>{tr.successSub}</p>
+              <div style={{ width:80,height:80,background:"rgba(8,99,186,.1)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 20px" }}>📋</div>
+              <h2 style={{ fontSize:22,fontWeight:800,color:"#0863ba",marginBottom:8 }}>{tr.success}</h2>
+              <p style={{ fontSize:14,color:"#888",marginBottom:20,lineHeight:1.7 }}>{tr.successSub}</p>
+              {/* بادج "بانتظار الموافقة" */}
+              <div style={{ display:"inline-flex",alignItems:"center",gap:6,background:"rgba(230,126,34,.1)",border:"1.5px solid rgba(230,126,34,.25)",borderRadius:20,padding:"8px 18px",marginBottom:24,fontSize:13,fontWeight:700,color:"#e67e22" }}>
+                {tr.pendingNote}
+              </div>
               <div style={{ background:"#f7f9fc",borderRadius:12,padding:"16px 20px",marginBottom:28,textAlign:isAr?"right":"left" }}>
                 <div style={{ fontSize:13,color:"#555",marginBottom:6 }}>📅 {form.date} — {form.time}</div>
                 <div style={{ fontSize:13,color:"#555" }}>👤 {form.name} | 📞 {form.phone}</div>
