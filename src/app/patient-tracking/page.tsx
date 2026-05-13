@@ -20,7 +20,19 @@ type ClinicType =
   | "general"
   | "nutrition"
   | "ophthalmology"
-  | "orthopedic";
+  | "orthopedic"
+  | "mental_health";
+
+interface CustomQuestion {
+  key: string;
+  label_ar: string;
+  label_en: string;
+  type: "scale" | "yesno" | "number" | "text";
+  min?: number;
+  max?: number;
+  unit?: string;
+  unit_ar?: string;
+}
 
 interface TrackingLink {
   id: string;
@@ -34,6 +46,7 @@ interface TrackingLink {
   active: boolean;
   created_at: string;
   expires_at: string | null;
+  custom_questions?: CustomQuestion[] | null;
 }
 
 interface DailyLog {
@@ -63,6 +76,7 @@ const CLINIC_LABELS: Record<ClinicType, { ar: string; en: string; icon: string; 
   nutrition:        { ar: "التغذية",           en: "Nutrition",          icon: "🥗", color: "#27ae60" },
   ophthalmology:    { ar: "طب العيون",         en: "Ophthalmology",      icon: "👁", color: "#2980b9" },
   orthopedic:       { ar: "العظام والمفاصل",   en: "Orthopedics",        icon: "🦴", color: "#c0392b" },
+  mental_health:    { ar: "الصحة النفسية",    en: "Mental Health",      icon: "🧠", color: "#6c3fc5" },
 };
 
 const FIELD_LABELS: Record<string, { ar: string; en: string }> = {
@@ -109,6 +123,15 @@ const FIELD_LABELS: Record<string, { ar: string; en: string }> = {
   eye_redness:              { ar: "احمرار العين",          en: "Eye redness" },
   pain_discomfort:          { ar: "ألم العين",             en: "Eye pain" },
   avoided_screen:           { ar: "قلّل الشاشات",         en: "Reduced screen time" },
+  mood_level:               { ar: "المزاج العام",            en: "Mood level" },
+  anxiety_level:            { ar: "مستوى القلق",            en: "Anxiety level" },
+  sleep_hours:              { ar: "ساعات النوم",             en: "Sleep hours" },
+  sleep_quality:            { ar: "جودة النوم",              en: "Sleep quality" },
+  negative_thoughts:        { ar: "أفكار سلبية",             en: "Negative thoughts" },
+  social_interaction:       { ar: "التفاعل الاجتماعي",       en: "Social interaction" },
+  did_activity:             { ar: "نشاط ممتع",               en: "Enjoyable activity" },
+  coping_strategy:          { ar: "استراتيجية تكيّف",        en: "Coping strategy" },
+  overall_wellbeing:        { ar: "الصحة النفسية العامة",    en: "Overall wellbeing" },/
 };
 
 const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2980b9","#8e44ad"];
@@ -264,6 +287,29 @@ function CreateLinkModal({
   const [notes, setNotes] = useState("");
   const [expiryDays, setExpiryDays] = useState("30");
   const [creating, setCreating] = useState(false);
+  const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+  const [showCustomQ, setShowCustomQ] = useState(false);
+  const [newQ, setNewQ] = useState<Partial<CustomQuestion>>({ type: "yesno" });
+
+  function addCustomQuestion() {
+    if (!newQ.label_ar) return;
+    const q: CustomQuestion = {
+      key: `custom_${Date.now()}`,
+      label_ar: newQ.label_ar ?? "",
+      label_en: newQ.label_en ?? newQ.label_ar ?? "",
+      type: newQ.type as CustomQuestion["type"] ?? "yesno",
+      min: newQ.min,
+      max: newQ.max,
+      unit: newQ.unit,
+      unit_ar: newQ.unit_ar,
+    };
+    setCustomQuestions(prev => [...prev, q]);
+    setNewQ({ type: "yesno" });
+  }
+
+  function removeCustomQuestion(key: string) {
+    setCustomQuestions(prev => prev.filter(q => q.key !== key));
+  }
 
   async function handleCreate() {
     if (!patientId) return;
@@ -286,6 +332,7 @@ function CreateLinkModal({
       active: true,
       expires_at: expiresAt,
       user_id: userId,
+      custom_questions: customQuestions.length > 0 ? customQuestions : null,
     };
 
     const { data, error } = await supabase
@@ -294,6 +341,7 @@ function CreateLinkModal({
       .select()
       .single();
 
+    if (error) console.error("Error creating link:", error);
     if (!error && data) onCreated(data);
     setCreating(false);
   }
@@ -386,6 +434,83 @@ function CreateLinkModal({
             placeholder={isAr?"مثال: يرجى تسجيل البيانات في الصباح...":"E.g.: Please submit your data in the morning..."}
             style={{ width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid #eef0f3",background:"#f7f9fc",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",outline:"none",resize:"vertical",minHeight:70,lineHeight:1.6 }}
           />
+        </div>
+
+        {/* Custom Questions */}
+        <div style={{ marginBottom:22 }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+            <label style={{ fontSize:12,fontWeight:600,color:"#888" }}>
+              {isAr?"أسئلة مخصصة (اختياري)":"Custom Questions (optional)"}
+            </label>
+            <button
+              onClick={() => setShowCustomQ(!showCustomQ)}
+              style={{ fontSize:11,padding:"4px 10px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.2)",background:"rgba(8,99,186,.06)",color:"#0863ba",fontFamily:"Rubik,sans-serif",fontWeight:600,cursor:"pointer" }}
+            >
+              {showCustomQ?(isAr?"إخفاء":"Hide"):(isAr?"+ إضافة سؤال":"+ Add")}
+            </button>
+          </div>
+
+          {/* Existing custom questions */}
+          {customQuestions.map((q, i) => (
+            <div key={q.key} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"rgba(8,99,186,.04)",borderRadius:8,border:"1px solid rgba(8,99,186,.1)",marginBottom:6 }}>
+              <span style={{ fontSize:12,color:"#353535",fontWeight:600 }}>
+                {i+1}. {q.label_ar}
+                <span style={{ fontSize:10,color:"#aaa",marginRight:6,marginLeft:6 }}>({q.type})</span>
+              </span>
+              <button onClick={() => removeCustomQuestion(q.key)} style={{ background:"none",border:"none",cursor:"pointer",color:"#c0392b",fontSize:16,lineHeight:1 }}>×</button>
+            </div>
+          ))}
+
+          {/* Add new question form */}
+          {showCustomQ && (
+            <div style={{ padding:14,background:"#f7f9fc",borderRadius:10,border:"1.5px solid #eef0f3",marginTop:6 }}>
+              <div style={{ marginBottom:10 }}>
+                <input
+                  placeholder={isAr?"نص السؤال بالعربية *":"Question text (Arabic) *"}
+                  value={newQ.label_ar ?? ""}
+                  onChange={e => setNewQ(prev => ({ ...prev, label_ar: e.target.value }))}
+                  style={{ width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",outline:"none",marginBottom:6 }}
+                />
+                <input
+                  placeholder={isAr?"نص السؤال بالإنجليزية (اختياري)":"Question text (English, optional)"}
+                  value={newQ.label_en ?? ""}
+                  onChange={e => setNewQ(prev => ({ ...prev, label_en: e.target.value }))}
+                  style={{ width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",outline:"none" }}
+                />
+              </div>
+              <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:10 }}>
+                {(["yesno","scale","number","text"] as const).map(t => (
+                  <button key={t} onClick={() => setNewQ(prev => ({ ...prev, type: t }))}
+                    style={{ padding:"5px 12px",borderRadius:8,border:`1.5px solid ${newQ.type===t?"#0863ba":"#eef0f3"}`,background:newQ.type===t?"rgba(8,99,186,.08)":"#fff",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:600,cursor:"pointer",color:newQ.type===t?"#0863ba":"#888" }}>
+                    {t === "yesno" ? (isAr?"نعم/لا":"Yes/No") : t === "scale" ? (isAr?"مقياس":"Scale") : t === "number" ? (isAr?"رقم":"Number") : (isAr?"نص":"Text")}
+                  </button>
+                ))}
+              </div>
+              {newQ.type === "scale" && (
+                <div style={{ display:"flex",gap:8,marginBottom:10 }}>
+                  <input type="number" placeholder={isAr?"من":"Min"} value={newQ.min ?? ""} onChange={e => setNewQ(prev => ({ ...prev, min: Number(e.target.value) }))}
+                    style={{ flex:1,padding:"7px 10px",borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",fontFamily:"Rubik,sans-serif",fontSize:13,outline:"none" }} />
+                  <input type="number" placeholder={isAr?"إلى":"Max"} value={newQ.max ?? ""} onChange={e => setNewQ(prev => ({ ...prev, max: Number(e.target.value) }))}
+                    style={{ flex:1,padding:"7px 10px",borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",fontFamily:"Rubik,sans-serif",fontSize:13,outline:"none" }} />
+                </div>
+              )}
+              {newQ.type === "number" && (
+                <div style={{ display:"flex",gap:8,marginBottom:10 }}>
+                  <input placeholder={isAr?"الوحدة (عربي، مثل: كغ)":"Unit (Arabic, e.g.: كغ)"} value={newQ.unit_ar ?? ""} onChange={e => setNewQ(prev => ({ ...prev, unit_ar: e.target.value }))}
+                    style={{ flex:1,padding:"7px 10px",borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",fontFamily:"Rubik,sans-serif",fontSize:13,outline:"none" }} />
+                  <input placeholder={isAr?"الوحدة (إنجليزي، مثل: kg)":"Unit (English, e.g.: kg)"} value={newQ.unit ?? ""} onChange={e => setNewQ(prev => ({ ...prev, unit: e.target.value }))}
+                    style={{ flex:1,padding:"7px 10px",borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",fontFamily:"Rubik,sans-serif",fontSize:13,outline:"none" }} />
+                </div>
+              )}
+              <button
+                onClick={addCustomQuestion}
+                disabled={!newQ.label_ar}
+                style={{ padding:"8px 16px",borderRadius:8,border:"none",background:newQ.label_ar?"#0863ba":"#ddd",color:"#fff",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:newQ.label_ar?"pointer":"not-allowed" }}
+              >
+                {isAr?"إضافة السؤال":"Add Question"}
+              </button>
+            </div>
+          )}
         </div>
 
         <button
@@ -555,7 +680,39 @@ export default function PatientTrackingPage() {
   const [copiedToken, setCopiedToken]         = useState<string | null>(null);
   const [activeTab, setActiveTab]             = useState<"logs" | "links">("logs");
 
-  useEffect(() => { loadData(); }, []);
+  // ── Realtime subscription for new daily logs ──────────────
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    // Subscribe to new daily_logs rows in realtime
+    const channel = supabase
+      .channel("daily_logs_realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "daily_logs" },
+        (payload) => {
+          const newLog = payload.new as DailyLog;
+          // Only add if the token belongs to this doctor
+          setTrackingLinks(links => {
+            const myTokens = links.map(l => l.token);
+            if (myTokens.includes(newLog.token)) {
+              setDailyLogs(prev => {
+                const exists = prev.some(l => l.id === newLog.id);
+                if (exists) return prev;
+                return [newLog, ...prev];
+              });
+            }
+            return links;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [userId]);
 
   async function loadData() {
     setLoading(true);
@@ -572,12 +729,24 @@ export default function PatientTrackingPage() {
     const { data: pats } = await supabase.from("patients").select("id, name").eq("user_id", user.id).eq("is_hidden", false);
     setPatients(pats ?? []);
 
-    const { data: links } = await supabase.from("tracking_links").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    const { data: links, error: linksError } = await supabase
+      .from("tracking_links")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (linksError) console.error("Error loading links:", linksError);
     setTrackingLinks(links ?? []);
 
     const tokens = (links ?? []).map(l => l.token);
     if (tokens.length > 0) {
-      const { data: logs } = await supabase.from("daily_logs").select("*").in("token", tokens).order("log_date", { ascending: false });
+      const { data: logs, error: logsError } = await supabase
+        .from("daily_logs")
+        .select("*")
+        .in("token", tokens)
+        .order("log_date", { ascending: false });
+
+      if (logsError) console.error("Error loading logs:", logsError);
       setDailyLogs(logs ?? []);
     }
 
