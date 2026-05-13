@@ -19,7 +19,8 @@ type ClinicType =
   | "general"
   | "nutrition"
   | "ophthalmology"
-  | "orthopedic";
+  | "orthopedic"
+  | "mental_health";
 
 interface TrackingLink {
   id: string;
@@ -33,6 +34,20 @@ interface TrackingLink {
   active: boolean;
   created_at: string;
   expires_at: string | null;
+  custom_questions?: CustomQuestion[] | null;
+}
+
+interface CustomQuestion {
+  key: string;
+  label_ar: string;
+  label_en: string;
+  type: "scale" | "yesno" | "number" | "select" | "text";
+  options_ar?: string[];
+  options_en?: string[];
+  min?: number;
+  max?: number;
+  unit?: string;
+  unit_ar?: string;
 }
 
 interface DailyLogEntry {
@@ -183,6 +198,24 @@ const CLINIC_CONFIG: Record<
       { key: "applied_ice_heat", label_ar: "هل طبّقت كمادات (ثلج/حرارة)؟", label_en: "Did you apply ice/heat?", type: "yesno" },
     ],
   },
+  mental_health: {
+    label_ar: "الصحة النفسية",
+    label_en: "Mental Health",
+    icon: "🧠",
+    color: "#6c3fc5",
+    fields: [
+      { key: "mood_level", label_ar: "كيف حالك المزاجي اليوم؟", label_en: "How is your mood today?", type: "scale", min: 1, max: 5 },
+      { key: "anxiety_level", label_ar: "مستوى القلق اليوم", label_en: "Anxiety level today", type: "scale", min: 0, max: 10 },
+      { key: "took_medication", label_ar: "هل تناولت الدواء في موعده؟", label_en: "Did you take your medication on time?", type: "yesno" },
+      { key: "sleep_hours", label_ar: "عدد ساعات النوم", label_en: "Hours of sleep", type: "number", unit: "hrs", unit_ar: "ساعة" },
+      { key: "sleep_quality", label_ar: "جودة النوم", label_en: "Sleep quality", type: "scale", min: 1, max: 5 },
+      { key: "negative_thoughts", label_ar: "هل راودتك أفكار سلبية مزعجة؟", label_en: "Did you experience distressing negative thoughts?", type: "yesno" },
+      { key: "social_interaction", label_ar: "هل تفاعلت مع أشخاص اليوم؟", label_en: "Did you interact with people today?", type: "yesno" },
+      { key: "did_activity", label_ar: "هل قمت بنشاط تستمتع به؟", label_en: "Did you do an enjoyable activity?", type: "yesno" },
+      { key: "coping_strategy", label_ar: "هل استخدمت استراتيجية تكيّف (تنفس، تأمل، إلخ)؟", label_en: "Did you use a coping strategy (breathing, meditation, etc.)?", type: "yesno" },
+      { key: "overall_wellbeing", label_ar: "تقييمك العام لصحتك النفسية اليوم", label_en: "Overall mental wellbeing today", type: "scale", min: 1, max: 5 },
+    ],
+  },
 };
 
 // ── Scale Labels ─────────────────────────────────────────────
@@ -290,6 +323,14 @@ export default function DailyLogPage() {
   }
 
   const config = trackingLink ? CLINIC_CONFIG[trackingLink.clinic_type] : null;
+
+  // Merge default fields with any custom questions added by the doctor
+  const activeFields = config
+    ? [
+        ...config.fields,
+        ...(trackingLink?.custom_questions ?? []),
+      ]
+    : [];
 
   // ── Render ────────────────────────────────────────────────
   return (
@@ -534,7 +575,7 @@ export default function DailyLogPage() {
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#aaa", marginBottom: 10, letterSpacing: 0.5 }}>
                   {isAr ? "📋 أجب على الأسئلة التالية:" : "📋 Please answer the following:"}
                 </div>
-                {config.fields.map((field, idx) => (
+                {activeFields.map((field, idx) => (
                   <div
                     key={field.key}
                     className="field-card fade-in"
