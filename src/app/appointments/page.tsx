@@ -10,7 +10,7 @@ type Status = "scheduled" | "completed" | "cancelled" | "no-show";
 const T = {
   ar: {
     appName:"نبض", appSub:"إدارة العيادة",
-    nav:{ dashboard:"لوحة المعلومات", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات", prescriptions:"الوصفات الطبية", tracking:"متابعة المرضى" },
+    nav:{ dashboard:"لوحة المعلومات", patients:"المرضى", appointments:"المواعيد", payments:"المدفوعات" },
     page:{ title:"المواعيد", sub:"إدارة وجدولة مواعيد المرضى" },
     addAppointment:"موعد جديد",
     weekDays:["أحد","إثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"],
@@ -43,10 +43,29 @@ const T = {
     whatsappMsg:(name:string, date:string, time:string) =>
       `مرحباً ${name}، نذكّركم بموعدكم في عيادتنا بتاريخ ${date} الساعة ${time}. نتطلع لرؤيتكم 💙`,
     nowCard:{ title:"الوقت الآن", dateLabel:"التاريخ" },
+    // ── نصوص قسم الطلبات المعلقة (جديد) ──
+    pending:{
+      sectionTitle:"طلبات الحجز المعلقة",
+      sectionSub:"مرضى طلبوا موعداً عبر رابط العيادة، بانتظار موافقتك",
+      badge:"طلب جديد",
+      approve:"✓ قبول",
+      reject:"✕ رفض",
+      approving:"جاري القبول...",
+      rejecting:"جاري الرفض...",
+      empty:"لا توجد طلبات حجز معلقة",
+      date:"التاريخ",
+      time:"الوقت",
+      phone:"الهاتف",
+      notes:"ملاحظات",
+      type:"نوع الزيارة",
+      confirmApprove:"هل تريد قبول موعد",
+      confirmReject:"هل تريد رفض طلب",
+      onlineBooking:"حجز إلكتروني",
+    },
   },
   en: {
     appName:"NABD", appSub:"Clinic Manager",
-    nav:{ dashboard:"Dashboard", patients:"Patients", appointments:"Appointments", payments:"Payments", prescriptions:"Prescriptions", tracking:"Patient Tracking" },
+    nav:{ dashboard:"Dashboard", patients:"Patients", appointments:"Appointments", payments:"Payments" },
     page:{ title:"Appointments", sub:"Manage and schedule patient appointments" },
     addAppointment:"New Appointment",
     weekDays:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
@@ -79,6 +98,25 @@ const T = {
     whatsappMsg:(name:string, date:string, time:string) =>
       `Hello ${name}, this is a reminder for your appointment on ${date} at ${time}. We look forward to seeing you 💙`,
     nowCard:{ title:"Current Time", dateLabel:"Date" },
+    // ── pending section texts (new) ──
+    pending:{
+      sectionTitle:"Pending Booking Requests",
+      sectionSub:"Patients who requested an appointment via your booking link",
+      badge:"New Request",
+      approve:"✓ Approve",
+      reject:"✕ Reject",
+      approving:"Approving...",
+      rejecting:"Rejecting...",
+      empty:"No pending booking requests",
+      date:"Date",
+      time:"Time",
+      phone:"Phone",
+      notes:"Notes",
+      type:"Visit Type",
+      confirmApprove:"Approve appointment for",
+      confirmReject:"Reject request for",
+      onlineBooking:"Online Booking",
+    },
   },
 } as const;
 
@@ -91,8 +129,6 @@ const toKey       = (y: number, m: number, d: number) =>
 const now      = new Date();
 const todayKey = toKey(now.getFullYear(), now.getMonth(), now.getDate());
 
-// كل 15 دقيقة من الساعة 8 صباحاً حتى 22:00 (10 مساءً)
-// 8:00 → 22:00 = 14 ساعة × 4 = 56 slot
 const SLOTS: { label: string; value: string; isHour: boolean }[] = [];
 for (let h = 8; h <= 22; h++) {
   for (let m = 0; m < 60; m += 15) {
@@ -107,11 +143,8 @@ for (let h = 8; h <= 22; h++) {
   }
 }
 
-// حساب الوقت المتاح: 8:00–22:00 = 56 slot × 15 دقيقة = 840 دقيقة
-// MAX_APPTS_PER_DAY بافتراض موعد كل 30 دقيقة = 28
-const CLINIC_MINUTES = 840; // 14 ساعة
+const CLINIC_MINUTES = 840;
 
-// ─── صوت الإشعار ──────────────────────────────────────────
 function playNotificationSound() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -132,29 +165,6 @@ function playNotificationSound() {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────
-// Design tokens
-const SB_BG          = "#0558a8";
-const SB_BG_HEADER   = "#044d96";
-const SB_BG_FOOTER   = "#044d96";
-const SB_ACTIVE_BG   = "rgba(255,255,255,0.15)";
-const SB_ACTIVE_TEXT = "#ffffff";
-const SB_IDLE_TEXT   = "rgba(255,255,255,0.62)";
-const SB_BORDER      = "rgba(255,255,255,0.1)";
-const SB_INDICATOR   = "#7dd3fc";
-
-const PillIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7z"/>
-    <line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>
-  </svg>
-);
-
-const TrackingIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-  </svg>
-);
-
 function Sidebar({ lang, setLang, activePage = "appointments" }: {
   lang: Lang; setLang: (l: Lang) => void; activePage?: string;
 }) {
@@ -170,45 +180,35 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  useEffect(() => {
-    if (isMobile && mobileOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
-    return () => { document.body.style.overflow = ""; };
-  }, [isMobile, mobileOpen]);
-
   const sidebarRight = isAr ? 0 : undefined;
   const sidebarLeft  = isAr ? undefined : 0;
   const sidebarTransform = isMobile
     ? (mobileOpen ? "translateX(0)" : (isAr ? "translateX(100%)" : "translateX(-100%)"))
     : "translateX(0)";
 
-  const NAV_ICONS: Record<string, React.ReactNode> = {
-    dashboard:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
-    patients:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-    appointments: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-    payments:     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-    prescriptions: <PillIcon />,
-    tracking:      <TrackingIcon />,
-  };
+  const DashIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  );
 
-  const navItems: { key: keyof typeof tr.nav; href: string }[] = [
-    { key:"dashboard",     href:"/dashboard"        },
-    { key:"patients",      href:"/patients"         },
-    { key:"appointments",  href:"/appointments"     },
-    { key:"payments",      href:"/payments"         },
-    { key:"prescriptions", href:"/prescriptions"    },
-    { key:"tracking",      href:"/patient-tracking" },
+  const navItems: { key: keyof typeof tr.nav; icon: React.ReactNode; href: string }[] = [
+    { key:"dashboard",    icon:<DashIcon/>, href:"/dashboard"    },
+    { key:"patients",     icon:"👥",        href:"/patients"     },
+    { key:"appointments", icon:"📅",        href:"/appointments" },
+    { key:"payments",     icon:"💳",        href:"/payments"     },
   ];
 
   return (
     <>
       {isMobile && mobileOpen && (
-        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:55,WebkitTapHighlightColor:"transparent" }} />
+        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
       )}
       {isMobile && (
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:70,width:40,height:40,borderRadius:10,background:SB_BG,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(5,88,168,.4)" }}
+          style={{ position:"fixed",top:14,right:isAr?16:undefined,left:isAr?undefined:16,zIndex:60,width:40,height:40,borderRadius:10,background:"#0863ba",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(8,99,186,.3)" }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
             {mobileOpen
@@ -218,88 +218,45 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
           </svg>
         </button>
       )}
-
-      <aside style={{
-        width: isMobile ? 260 : col ? 70 : 240,
-        minHeight:"100vh",
-        background: SB_BG,
-        display:"flex", flexDirection:"column",
-        transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",
-        position:"fixed", top:0,
-        right:sidebarRight, left:sidebarLeft,
-        zIndex:60, transform:sidebarTransform,
-        boxShadow: isMobile && mobileOpen
-          ? (isAr ? "-8px 0 32px rgba(0,0,0,.15)" : "8px 0 32px rgba(0,0,0,.15)")
-          : isAr ? "-4px 0 32px rgba(5,88,168,.45)" : "4px 0 32px rgba(5,88,168,.45)",
-      }}>
-
-        {/* Header */}
-        <div style={{ padding:col?"18px 0":"18px 20px", background:SB_BG_HEADER, borderBottom:`1px solid ${SB_BORDER}`, display:"flex", alignItems:"center", justifyContent:col?"center":"space-between", minHeight:72 }}>
-          {!col && (
-            <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-              <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(0,0,0,.25)" }} />
-              <div>
-                <div style={{ fontSize:18,fontWeight:800,color:"#ffffff",lineHeight:1.1 }}>{tr.appName}</div>
-                <div style={{ fontSize:10,color:"rgba(255,255,255,0.55)",fontWeight:400 }}>{tr.appSub}</div>
-              </div>
+      <aside style={{ width:isMobile?260:col?70:240,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:sidebarRight,left:sidebarLeft,zIndex:50,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?"8px 0 32px rgba(0,0,0,.15)":"4px 0 24px rgba(8,99,186,.06)" }}>
+      <div style={{ padding:col?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72 }}>
+        {!col && (
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }} />
+            <div>
+              <div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{tr.appName}</div>
+              <div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{tr.appSub}</div>
             </div>
-          )}
-          {col && <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10 }} />}
-          {!isMobile && (
-            <button
-              onClick={() => setCol(!col)}
-              title={col ? (isAr ? "توسيع القائمة" : "Expand sidebar") : (isAr ? "طي القائمة" : "Collapse sidebar")}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.22)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"; }}
-              style={{ width:28,height:28,background:"rgba(255,255,255,0.12)",border:"1.5px solid rgba(255,255,255,0.22)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.9)",fontSize:14,lineHeight:1,transition:"background .15s",flexShrink:0,marginTop:col?8:0 }}
-            >
-              {col ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
-            </button>
-          )}
-        </div>
-
-        {/* Nav */}
-        <nav style={{ flex:1, padding:"12px 10px", overflowY:"auto" }}>
-          {navItems.map(item => {
-            const isActive = item.key === activePage;
-            return (
-              <a key={item.key} href={item.href}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)"; }}
-                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background="transparent"; }}
-                style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT,fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
-                {isActive && (
-                  <div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>
-                )}
-                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
-                {!col && <span>{tr.nav[item.key as keyof typeof tr.nav]}</span>}
-              </a>
-            );
-          })}
-        </nav>
-
-        {/* Footer */}
-        <div style={{ padding:col?"14px 10px":"14px 12px", background:SB_BG_FOOTER, borderTop:`1px solid ${SB_BORDER}` }}>
-          {!col && (
-            <button
-              onClick={() => setLang(lang==="ar"?"en":"ar")}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)"; }}
-              style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}
-            >
-              🌐 {lang==="ar" ? "English" : "العربية"}
-            </button>
-          )}
-          <button
-            onClick={() => { supabase.auth.signOut(); window.location.href="/login"; }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.3)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.15)"; }}
-            style={{ width:"100%",display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8,padding:col?"10px 0":"10px 14px",borderRadius:10,background:"rgba(192,57,43,.15)",border:"1.5px solid rgba(192,57,43,.3)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#ffb3a7",fontWeight:600,transition:"all .2s" }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            {!col && <span>{tr.signOut}</span>}
-          </button>
-        </div>
-      </aside>
+          </div>
+        )}
+        {col && <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10 }} />}
+        {!col && !isMobile && <button onClick={()=>setCol(!col)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>{isAr?"›":"‹"}</button>}
+      </div>
+      <nav style={{ flex:1,padding:"16px 12px" }}>
+        {navItems.map(item=>{
+          const isActive = item.key===activePage;
+          const indicatorRight = isAr ? -12 : undefined;
+          const indicatorLeft  = isAr ? undefined : -12;
+          return (
+            <a key={item.key} href={item.href} style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"12px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+              {isActive&&<div style={{ position:"absolute",right:indicatorRight,left:indicatorLeft,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }}/>}
+              <span style={{ fontSize:18,flexShrink:0,display:"flex",alignItems:"center" }}>{item.icon}</span>
+              {!col&&<span>{tr.nav[item.key]}</span>}
+            </a>
+          );
+        })}
+      </nav>
+      <div style={{ padding:"16px 12px",borderTop:"1.5px solid #eef0f3" }}>
+        {!col&&<button onClick={()=>setLang(lang==="ar"?"en":"ar")} style={{ width:"100%",padding:"8px",marginBottom:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"#666",fontWeight:600 }}>🌐 {lang==="ar"?"English":"العربية"}</button>}
+        <button
+          onClick={()=>{ supabase.auth.signOut(); window.location.href="/login"; }}
+          style={{ width:"100%",display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8,padding:col?8:"10px 12px",borderRadius:10,background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.12)",cursor:"pointer",fontFamily:"Rubik,sans-serif" }}
+        >
+          <span style={{ fontSize:16 }}>🚪</span>
+          {!col&&<span style={{ fontSize:13,fontWeight:600,color:"#c0392b" }}>{tr.signOut}</span>}
+        </button>
+      </div>
+    </aside>
     </>
   );
 }
@@ -338,22 +295,18 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
 
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
-
-    // فحص تعارض الوقت مع مراعاة مدة الموعد
     const timeToMinutes = (t: string) => {
       const [h, m] = t.slice(0,5).split(":").map(Number);
       return h * 60 + m;
     };
     const newStart = timeToMinutes(form.time);
     const newEnd   = newStart + (form.duration || 30);
-
     const conflict = appointments.find(a => {
       if (a.date !== form.date) return false;
       if (a.status === "cancelled") return false;
       if (isEdit && a.id === appt!.id) return false;
       const aStart = timeToMinutes(a.time);
       const aEnd   = aStart + (a.duration || 30);
-      // تعارض إذا تداخلت الفترتان
       return newStart < aEnd && newEnd > aStart;
     });
     if (conflict) {
@@ -362,7 +315,6 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
       setError(`${tr.conflictError} (${cTime} - ${cDur} ${tr.duration.min})`);
       return;
     }
-
     onSave(form, appt?.id);
   };
 
@@ -463,11 +415,7 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
   lang: Lang; clinicId: string; copied: boolean; setCopied:(v:boolean)=>void; onClose:()=>void;
 }) {
   const isAr = lang==="ar";
-
-  // الرابط الكامل الذي يُنسخ ويُرسل — يعمل فعلاً
   const fullUrl = typeof window!=="undefined" ? `${window.location.origin}/book/${clinicId}` : `/book/${clinicId}`;
-
-  // ما يُعرض للقراءة فقط — مختصر وجميل
   const displayUrl = typeof window!=="undefined"
     ? `${window.location.hostname}/book/${clinicId.slice(0,8)}...`
     : "";
@@ -498,9 +446,7 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
         <div style={{ padding:"24px 28px" }}>
           <div style={{ marginBottom:20 }}>
             <div style={{ display:"flex",gap:8,alignItems:"center",background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:12,padding:"10px 14px" }}>
-              <span style={{ flex:1,fontSize:14,color:"#0863ba",fontWeight:600,direction:"ltr",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
-                {displayUrl}
-              </span>
+              <span style={{ flex:1,fontSize:14,color:"#0863ba",fontWeight:600,direction:"ltr",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{displayUrl}</span>
               <button onClick={handleCopy} style={{ flexShrink:0,padding:"7px 14px",background:copied?"#2e7d32":"#0863ba",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .3s" }}>
                 {copied?(isAr?"✓ تم النسخ":"✓ Copied!"):(isAr?"نسخ":"Copy")}
               </button>
@@ -568,34 +514,19 @@ function NowCard({ lang }: { lang: Lang }) {
     <div style={{
       background:"linear-gradient(135deg, #0863ba 0%, #054a8c 100%)",
       borderRadius:16, padding:"20px 18px",
-      boxShadow:"0 4px 20px rgba(8,99,186,.3)",
-      color:"#fff", marginTop:14,
+      marginTop:12, boxShadow:"0 4px 20px rgba(8,99,186,.2)",
+      color:"#fff", position:"relative", overflow:"hidden",
     }}>
-      {/* Clock display */}
-      <div style={{ textAlign:"center", marginBottom:12 }}>
-        <div style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:4 }}>
-          <span style={{ fontSize:40, fontWeight:800, letterSpacing:2, lineHeight:1, fontVariantNumeric:"tabular-nums" }}>
-            {hh}:{mm}
-          </span>
-          <span style={{ fontSize:18, fontWeight:600, opacity:.7 }}>{ampm}</span>
+      <div style={{ position:"absolute",inset:0,opacity:.07,backgroundImage:"radial-gradient(circle,#fff 1px,transparent 1px)",backgroundSize:"20px 20px" }}/>
+      <div style={{ position:"relative",zIndex:1 }}>
+        <div style={{ fontSize:10,fontWeight:700,opacity:.7,letterSpacing:1,textTransform:"uppercase",marginBottom:8 }}>{tr.nowCard.title}</div>
+        <div style={{ display:"flex",alignItems:"baseline",gap:4,marginBottom:4 }}>
+          <span style={{ fontSize:34,fontWeight:900,letterSpacing:-1,lineHeight:1 }}>{hh}:{mm}</span>
+          <span style={{ fontSize:16,fontWeight:700,opacity:.8 }}>{ss}</span>
+          <span style={{ fontSize:13,fontWeight:600,opacity:.75,marginInlineStart:4 }}>{ampm}</span>
         </div>
-        <div style={{ fontSize:13, opacity:.6, marginTop:2, letterSpacing:1 }}>:{ss}</div>
-      </div>
-
-      {/* Date */}
-      <div style={{ borderTop:"1px solid rgba(255,255,255,.15)", paddingTop:12, textAlign:"center" }}>
-        <div style={{ fontSize:13, fontWeight:700, opacity:.9 }}>{dayName}</div>
-        <div style={{ fontSize:12, opacity:.65, marginTop:3 }}>{dateStr}</div>
-      </div>
-
-      {/* Progress bar: day progress */}
-      <div style={{ marginTop:12 }}>
-        <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, opacity:.55, marginBottom:4 }}>
-          <span>00:00</span>
-          <span style={{ opacity:.8, fontSize:10 }}>{isAr ? "تقدم اليوم" : "Day Progress"}</span>
-          <span>24:00</span>
-        </div>
-        <div style={{ height:4, background:"rgba(255,255,255,.2)", borderRadius:10, overflow:"hidden" }}>
+        <div style={{ fontSize:12,opacity:.8,fontWeight:500 }}>{dayName} · {dateStr}</div>
+        <div style={{ marginTop:12,height:4,background:"rgba(255,255,255,.2)",borderRadius:10,overflow:"hidden" }}>
           <div style={{
             height:"100%",
             width:`${((tick.getHours()*60+tick.getMinutes())/(24*60))*100}%`,
@@ -603,6 +534,248 @@ function NowCard({ lang }: { lang: Lang }) {
             transition:"width 1s linear",
           }}/>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// ─── قسم طلبات الحجز المعلقة (جديد) ────────────────────────
+// ════════════════════════════════════════════════════════════
+function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove, onReject, isMobile }: {
+  lang: Lang;
+  pendingAppointments: Appointment[];
+  patients: Patient[];
+  onApprove: (appt: Appointment) => Promise<void>;
+  onReject:  (appt: Appointment) => Promise<void>;
+  isMobile: boolean;
+}) {
+  const tr = T[lang];
+  const isAr = lang === "ar";
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [actionType, setActionType] = useState<"approve"|"reject"|null>(null);
+
+  if (pendingAppointments.length === 0) return null;
+
+  const getPatientName = (pid: number) => patients.find(p => p.id === pid)?.name ?? "—";
+  const getPatientPhone = (pid: number) => patients.find(p => p.id === pid)?.phone ?? "";
+
+  const handleApprove = async (appt: Appointment) => {
+    setLoadingId(appt.id);
+    setActionType("approve");
+    await onApprove(appt);
+    setLoadingId(null);
+    setActionType(null);
+  };
+
+  const handleReject = async (appt: Appointment) => {
+    setLoadingId(appt.id);
+    setActionType("reject");
+    await onReject(appt);
+    setLoadingId(null);
+    setActionType(null);
+  };
+
+  return (
+    <div style={{
+      background:"#fff",
+      borderRadius:16,
+      border:"2px solid rgba(230,126,34,.25)",
+      boxShadow:"0 2px 20px rgba(230,126,34,.1)",
+      marginBottom:20,
+      overflow:"hidden",
+      animation:"fadeUp .4s ease",
+    }}>
+      {/* Header القسم */}
+      <div style={{
+        background:"linear-gradient(135deg, rgba(230,126,34,.08) 0%, rgba(243,156,18,.05) 100%)",
+        padding:"16px 22px",
+        borderBottom:"1.5px solid rgba(230,126,34,.15)",
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"space-between",
+      }}>
+        <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+          <div style={{
+            width:38, height:38, borderRadius:10,
+            background:"rgba(230,126,34,.12)",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            fontSize:20,
+          }}>🔔</div>
+          <div>
+            <h3 style={{ fontSize:15,fontWeight:800,color:"#e67e22",margin:0 }}>
+              {tr.pending.sectionTitle}
+            </h3>
+            <p style={{ fontSize:11,color:"#aaa",margin:0,marginTop:2 }}>
+              {tr.pending.sectionSub}
+            </p>
+          </div>
+        </div>
+        {/* عدد الطلبات */}
+        <div style={{
+          background:"#e67e22",
+          color:"#fff",
+          borderRadius:20,
+          padding:"4px 12px",
+          fontSize:13,
+          fontWeight:700,
+          minWidth:28,
+          textAlign:"center",
+        }}>
+          {pendingAppointments.length}
+        </div>
+      </div>
+
+      {/* قائمة الطلبات */}
+      <div style={{ padding:"12px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+        {pendingAppointments.map(appt => {
+          const name  = getPatientName(appt.patient_id);
+          const phone = getPatientPhone(appt.patient_id);
+          const isLoading = loadingId === appt.id;
+          const [y, mo, d] = appt.date.split("-");
+          const dateFormatted = `${parseInt(d)} ${tr.months[parseInt(mo)-1]} ${y}`;
+
+          return (
+            <div
+              key={appt.id}
+              style={{
+                background:"rgba(247,249,252,.8)",
+                border:"1.5px solid rgba(230,126,34,.15)",
+                borderRadius:14,
+                padding:"14px 16px",
+                display:"flex",
+                flexDirection:isMobile?"column":"row",
+                alignItems:isMobile?"flex-start":"center",
+                gap:12,
+                transition:"all .2s",
+              }}
+            >
+              {/* أيقونة المريض + معلوماته */}
+              <div style={{ display:"flex",alignItems:"center",gap:12,flex:1,minWidth:0 }}>
+                {/* Avatar */}
+                <div style={{
+                  width:44, height:44, borderRadius:12,
+                  background:getColor(appt.patient_id),
+                  color:"#fff",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:14,fontWeight:700,flexShrink:0,
+                }}>
+                  {name !== "—" ? getInitials(name) : "?"}
+                </div>
+
+                <div style={{ flex:1,minWidth:0 }}>
+                  {/* اسم المريض + بادج "طلب جديد" */}
+                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap" }}>
+                    <span style={{ fontSize:14,fontWeight:700,color:"#353535" }}>{name}</span>
+                    <span style={{
+                      fontSize:10,fontWeight:700,
+                      background:"rgba(230,126,34,.12)",
+                      color:"#e67e22",
+                      border:"1px solid rgba(230,126,34,.25)",
+                      borderRadius:20,
+                      padding:"2px 8px",
+                    }}>
+                      {tr.pending.badge}
+                    </span>
+                  </div>
+
+                  {/* تفاصيل الموعد */}
+                  <div style={{ display:"flex",flexWrap:"wrap",gap:10,fontSize:12,color:"#666" }}>
+                    <span>📅 {dateFormatted}</span>
+                    <span>🕐 {appt.time.slice(0,5)}</span>
+                    {phone && <span>📞 {phone}</span>}
+                    {appt.type && appt.type !== "حجز إلكتروني / Online Booking" && (
+                      <span>🏷️ {appt.type}</span>
+                    )}
+                  </div>
+
+                  {/* ملاحظات المريض (إن وجدت) */}
+                  {appt.notes && (
+                    <div style={{
+                      marginTop:6,
+                      fontSize:12,
+                      color:"#888",
+                      background:"rgba(8,99,186,.04)",
+                      border:"1px solid rgba(8,99,186,.1)",
+                      borderRadius:8,
+                      padding:"5px 10px",
+                      fontStyle:"italic",
+                    }}>
+                      💬 {appt.notes}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* أزرار القبول والرفض */}
+              <div style={{
+                display:"flex",
+                gap:8,
+                flexShrink:0,
+                width:isMobile?"100%":undefined,
+              }}>
+                {/* زر القبول */}
+                <button
+                  onClick={() => handleApprove(appt)}
+                  disabled={isLoading}
+                  style={{
+                    flex:isMobile?1:undefined,
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    gap:5,
+                    padding:"10px 18px",
+                    background: isLoading && actionType==="approve" ? "#aaa" : "#2e7d32",
+                    color:"#fff",
+                    border:"none",
+                    borderRadius:10,
+                    fontFamily:"Rubik,sans-serif",
+                    fontSize:13,
+                    fontWeight:700,
+                    cursor:isLoading?"not-allowed":"pointer",
+                    transition:"all .2s",
+                    boxShadow:"0 2px 10px rgba(46,125,50,.25)",
+                    opacity:isLoading?0.7:1,
+                    whiteSpace:"nowrap",
+                  }}
+                >
+                  {isLoading && actionType==="approve"
+                    ? tr.pending.approving
+                    : tr.pending.approve}
+                </button>
+
+                {/* زر الرفض */}
+                <button
+                  onClick={() => handleReject(appt)}
+                  disabled={isLoading}
+                  style={{
+                    flex:isMobile?1:undefined,
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    gap:5,
+                    padding:"10px 18px",
+                    background:"rgba(192,57,43,.06)",
+                    color:"#c0392b",
+                    border:"1.5px solid rgba(192,57,43,.25)",
+                    borderRadius:10,
+                    fontFamily:"Rubik,sans-serif",
+                    fontSize:13,
+                    fontWeight:700,
+                    cursor:isLoading?"not-allowed":"pointer",
+                    transition:"all .2s",
+                    opacity:isLoading?0.5:1,
+                    whiteSpace:"nowrap",
+                  }}
+                >
+                  {isLoading && actionType==="reject"
+                    ? tr.pending.rejecting
+                    : tr.pending.reject}
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -622,19 +795,20 @@ export default function AppointmentsPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [patients,     setPatients]     = useState<Patient[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [saving,       setSaving]       = useState(false);
-  const [clinicId,     setClinicId]     = useState("");
-  const [shareModal,   setShareModal]   = useState(false);
-  const [copied,       setCopied]       = useState(false);
-  const [viewMonth,    setViewMonth]    = useState(now.getMonth());
-  const [viewYear,     setViewYear]     = useState(now.getFullYear());
-  const [selectedKey,  setSelectedKey]  = useState(todayKey);
-  const [addModal,     setAddModal]     = useState(false);
-  const [editAppt,     setEditAppt]     = useState<Appointment | null>(null);
-  const [notification, setNotification] = useState<Appointment | null>(null);
+  const [appointments,        setAppointments]        = useState<Appointment[]>([]);
+  const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
+  const [patients,            setPatients]            = useState<Patient[]>([]);
+  const [loading,             setLoading]             = useState(true);
+  const [saving,              setSaving]              = useState(false);
+  const [clinicId,            setClinicId]            = useState("");
+  const [shareModal,          setShareModal]          = useState(false);
+  const [copied,              setCopied]              = useState(false);
+  const [viewMonth,           setViewMonth]           = useState(now.getMonth());
+  const [viewYear,            setViewYear]            = useState(now.getFullYear());
+  const [selectedKey,         setSelectedKey]         = useState(todayKey);
+  const [addModal,            setAddModal]            = useState(false);
+  const [editAppt,            setEditAppt]            = useState<Appointment | null>(null);
+  const [notification,        setNotification]        = useState<Appointment | null>(null);
 
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -652,13 +826,27 @@ export default function AppointmentsPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
+
+      // ── المواعيد الفعلية (كل الحالات ما عدا pending_approval) ──
       const { data, error } = await supabase
         .from("appointments").select("*")
         .eq("user_id", userId)
+        .neq("status", "pending_approval")   // ◀ استثناء المواعيد المعلقة
         .order("date", { ascending: true })
         .order("time", { ascending: true });
       if (error) throw error;
       setAppointments((data ?? []) as Appointment[]);
+
+      // ── الطلبات المعلقة فقط ──
+      const { data: pendingData, error: pendingError } = await supabase
+        .from("appointments").select("*")
+        .eq("user_id", userId)
+        .eq("status", "pending_approval")
+        .order("date", { ascending: true })
+        .order("time", { ascending: true });
+      if (pendingError) throw pendingError;
+      setPendingAppointments((pendingData ?? []) as Appointment[]);
+
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -669,48 +857,64 @@ export default function AppointmentsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => { if (user) setClinicId(user.id); });
   }, []);
 
-  // ── نظام التنبيه الصحيح: كل دقيقة، قبل 15 دقيقة بالضبط، مرة واحدة لكل موعد ──
+  // ── Realtime: مراقبة طلبات الحجز الجديدة ─────────────────
+  useEffect(() => {
+    if (!clinicId) return;
+    const channel = supabase
+      .channel("pending-bookings")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "appointments",
+          filter: `user_id=eq.${clinicId}`,
+        },
+        (payload) => {
+          const newAppt = payload.new as Appointment;
+          if (newAppt.status === "pending_approval") {
+            // تشغيل صوت تنبيه عند وصول طلب جديد
+            playNotificationSound();
+            setPendingAppointments(prev => [...prev, newAppt]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [clinicId]);
+
+  // ── نظام التنبيه ───────────────────────────────────────────
   const notifiedRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     if (appointments.length === 0) return;
-
     const checkNotifications = () => {
       const n   = new Date();
       const yy  = n.getFullYear();
       const mm  = String(n.getMonth()+1).padStart(2,"0");
       const dd  = String(n.getDate()).padStart(2,"0");
       const key = `${yy}-${mm}-${dd}`;
-
-      // الوقت بعد 15 دقيقة
       const target = new Date(n.getTime() + 15 * 60 * 1000);
       const tH = String(target.getHours()).padStart(2,"0");
       const tM = String(target.getMinutes()).padStart(2,"0");
       const targetTime = `${tH}:${tM}`;
-
-      // ابحث عن موعد scheduled في نفس اليوم وقته == targetTime
       const upcoming = appointments.find(a =>
         a.date === key &&
         a.status === "scheduled" &&
         a.time.slice(0,5) === targetTime &&
         !notifiedRef.current.has(a.id)
       );
-
       if (upcoming) {
         notifiedRef.current.add(upcoming.id);
         setNotification(upcoming);
       }
     };
-
-    // فحص فوري عند تحميل المواعيد
     checkNotifications();
-
-    // ثم كل 60 ثانية
     const interval = setInterval(checkNotifications, 60_000);
     return () => clearInterval(interval);
   }, [appointments]);
 
-  // Scroll timeline to current time when today selected
   useEffect(() => {
     if (selectedKey === todayKey && timelineRef.current) {
       const currentHour = new Date().getHours();
@@ -722,7 +926,7 @@ export default function AppointmentsPage() {
     }
   }, [selectedKey]);
 
-  // ── Handlers ─────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────
   const handleSave = async (form: ApptForm, id?: number) => {
     setSaving(true);
     try {
@@ -751,8 +955,37 @@ export default function AppointmentsPage() {
     try {
       await supabase.from("appointments").delete().eq("id", id);
       setAppointments(prev => prev.filter(a => a.id !== id));
+      setPendingAppointments(prev => prev.filter(a => a.id !== id));
     } catch (err) { console.error(err); }
     finally { setEditAppt(null); setAddModal(false); }
+  };
+
+  // ── قبول طلب الحجز: تحويل الحالة إلى scheduled ────────────
+  const handleApproveBooking = async (appt: Appointment) => {
+    try {
+      await supabase
+        .from("appointments")
+        .update({ status: "scheduled" })
+        .eq("id", appt.id);
+      // نقل الموعد من قائمة المعلقة إلى المواعيد الفعلية
+      setPendingAppointments(prev => prev.filter(a => a.id !== appt.id));
+      setAppointments(prev => [...prev, { ...appt, status: "scheduled" as Status }]
+        .sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+      );
+      // الانتقال للتاريخ في التقويم
+      setSelectedKey(appt.date);
+    } catch (err) { console.error(err); }
+  };
+
+  // ── رفض طلب الحجز: تحويل الحالة إلى cancelled ─────────────
+  const handleRejectBooking = async (appt: Appointment) => {
+    try {
+      await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", appt.id);
+      setPendingAppointments(prev => prev.filter(a => a.id !== appt.id));
+    } catch (err) { console.error(err); }
   };
 
   // ── Computed ──────────────────────────────────────────────
@@ -769,7 +1002,6 @@ export default function AppointmentsPage() {
   const monthKey   = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
   const monthAppts = appointments.filter(a=>a.date.startsWith(monthKey));
 
-  // إشغال اليوم: مجموع دقائق المواعيد / 840 دقيقة
   const todayAppts        = appointments.filter(a => a.date === todayKey);
   const todayMinutes      = todayAppts.reduce((s,a)=>s+(a.duration||30), 0);
   const occupancyPct      = Math.min(100, Math.round((todayMinutes / CLINIC_MINUTES) * 100));
@@ -782,7 +1014,7 @@ export default function AppointmentsPage() {
     pending:   appointments.filter(a=>a.status==="scheduled"&&a.date>=todayKey).length,
   };
 
-  const getPatientName = (pid: number) => patients.find(p=>p.id===pid)?.name ?? "—";
+  const getPatientName  = (pid: number) => patients.find(p=>p.id===pid)?.name ?? "—";
   const getPatientPhone = (pid: number) => patients.find(p=>p.id===pid)?.phone ?? "";
 
   const statusStyle = (s: string) => ({
@@ -795,25 +1027,19 @@ export default function AppointmentsPage() {
   const selDate  = selectedKey.split("-");
   const selLabel = selDate.length===3 ? `${parseInt(selDate[2])} ${tr.months[parseInt(selDate[1])-1]} ${selDate[0]}` : selectedKey;
 
-  // WhatsApp لمريض معين — يفتح تطبيق واتساب ويضع الرسالة جاهزة
   const sendWhatsApp = (appt: Appointment) => {
     let rawPhone = getPatientPhone(appt.patient_id).replace(/\D/g,"");
-
-    // تحويل الأرقام السورية: 09XXXXXXXX → 9639XXXXXXXX
     if (rawPhone.startsWith("09") && rawPhone.length === 10) {
-      rawPhone = "963" + rawPhone.slice(1); // 09... → 9639...
+      rawPhone = "963" + rawPhone.slice(1);
     } else if (rawPhone.startsWith("9") && rawPhone.length === 9) {
-      rawPhone = "963" + rawPhone; // 9XXXXXXXX → 9639...
+      rawPhone = "963" + rawPhone;
     } else if (rawPhone.startsWith("00963")) {
-      rawPhone = rawPhone.slice(2); // 00963 → 963
+      rawPhone = rawPhone.slice(2);
     }
-    // إذا بدأ بـ 963 فهو صحيح بالفعل
-
     const name     = getPatientName(appt.patient_id);
     const [y, mo, d] = appt.date.split("-");
     const dateFormatted = `${parseInt(d)} ${T[lang].months[parseInt(mo)-1]} ${y}`;
     const msg = encodeURIComponent(T[lang].whatsappMsg(name, dateFormatted, appt.time.slice(0,5)));
-
     if (rawPhone) {
       const desktopUrl = `whatsapp://send?phone=${rawPhone}&text=${msg}`;
       const webUrl     = `https://wa.me/${rawPhone}?text=${msg}`;
@@ -826,7 +1052,6 @@ export default function AppointmentsPage() {
     }
   };
 
-  // الوقت الحالي لخط التقاطع
   const nowH    = now.getHours();
   const nowM    = now.getMinutes();
   const nowLine = selectedKey === todayKey && nowH >= 8 && nowH < 22;
@@ -842,6 +1067,7 @@ export default function AppointmentsPage() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes nowPulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,126,34,.3)}50%{box-shadow:0 0 0 6px rgba(230,126,34,0)}}
         .appt-block{border:1.5px solid;border-radius:12px;padding:10px 12px;cursor:pointer;transition:all .18s}
         .appt-block:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(8,99,186,.12)}
         .appt-input:focus{border-color:#0863ba!important;box-shadow:0 0 0 3px rgba(8,99,186,.1)}
@@ -864,9 +1090,26 @@ export default function AppointmentsPage() {
           {/* TOP BAR */}
           <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"18px 0 14px",borderBottom:"1.5px solid #eef0f3",marginBottom:20 }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between", paddingLeft:isMobile&&!isAr?52:0, paddingRight:isMobile&&isAr?52:0 }}>
-              <div>
-                <h1 style={{ fontSize:isMobile?17:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
-                {!isMobile&&<p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>}
+              <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                <div>
+                  <h1 style={{ fontSize:isMobile?17:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
+                  {!isMobile&&<p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>}
+                </div>
+                {/* بادج عدد الطلبات المعلقة في التوب بار */}
+                {pendingAppointments.length > 0 && (
+                  <div style={{
+                    display:"flex",alignItems:"center",gap:5,
+                    background:"rgba(230,126,34,.1)",
+                    border:"1.5px solid rgba(230,126,34,.3)",
+                    borderRadius:20,padding:"4px 10px",
+                    animation:"pendingPulse 2s ease infinite",
+                  }}>
+                    <span style={{ fontSize:14 }}>🔔</span>
+                    <span style={{ fontSize:12,fontWeight:700,color:"#e67e22" }}>
+                      {pendingAppointments.length}
+                    </span>
+                  </div>
+                )}
               </div>
               <div style={{ display:"flex",gap:isMobile?6:10 }}>
                 {!isMobile&&<button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
@@ -879,7 +1122,7 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          {/* STATS — 5 cards */}
+          {/* STATS */}
           <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:isMobile?8:12,marginBottom:20,animation:"fadeUp .4s ease" }}>
             {[
               { label:tr.stats.total,     value:stats.total,     icon:"📅", color:"#0863ba" },
@@ -896,8 +1139,7 @@ export default function AppointmentsPage() {
                 <div style={{ fontSize:28,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
               </div>
             ))}
-
-            {/* Occupancy card */}
+            {/* Occupancy */}
             <div style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)",position:"relative",overflow:"hidden" }}>
               <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:occupancyColor,borderRadius:"14px 14px 0 0" }}/>
               <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
@@ -910,6 +1152,16 @@ export default function AppointmentsPage() {
               </div>
             </div>
           </div>
+
+          {/* ════ قسم طلبات الحجز المعلقة (يظهر فوق التقويم إذا وُجدت طلبات) ════ */}
+          <PendingBookingsSection
+            lang={lang}
+            pendingAppointments={pendingAppointments}
+            patients={patients}
+            onApprove={handleApproveBooking}
+            onReject={handleRejectBooking}
+            isMobile={isMobile}
+          />
 
           {/* CALENDAR + TIMELINE */}
           <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:18 }}>
@@ -945,8 +1197,6 @@ export default function AppointmentsPage() {
                   </button>
                 </div>
               </div>
-
-              {/* ── بطاقة الوقت الآني ── */}
               <NowCard lang={lang}/>
             </div>
 
@@ -974,14 +1224,12 @@ export default function AppointmentsPage() {
                 ) : (
                   <>
                     {SLOTS.map((slot, idx) => {
-                      // كل موعد يُعرض في الـ slot الذي يقع فيه وقته (round down إلى أقرب 15 دقيقة)
                       const slotAppts = dayAppointments.filter(a => {
                         const [ah, am] = a.time.slice(0,5).split(":").map(Number);
                         const apptMinutes = ah * 60 + am;
-                        // الـ slot من slot.value إلى slot.value + 14 دقيقة
                         const [sh, sm] = slot.value.split(":").map(Number);
                         const slotStart = sh * 60 + sm;
-                        const slotEnd   = slotStart + 14; // حتى نهاية الـ 15 دقيقة
+                        const slotEnd   = slotStart + 14;
                         return apptMinutes >= slotStart && apptMinutes <= slotEnd;
                       });
                       const isNowSlot = idx === nowSlotIdx;
@@ -993,31 +1241,23 @@ export default function AppointmentsPage() {
                             background: isNowSlot ? "rgba(8,99,186,.04)" : "transparent",
                             minHeight: hasAppts ? "auto" : slot.isHour ? 44 : 32,
                           }}>
-
-                          {/* Time label */}
                           <div style={{ width:62,flexShrink:0,padding:"8px 0 8px 14px",textAlign:"center",position:"relative",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:10 }}>
                             {slot.isHour ? (
                               <span style={{ fontSize:12,fontWeight:700,color:hasAppts?"#0863ba":isNowSlot?"#0863ba":"#c0c8d4",display:"block",letterSpacing:.3 }}>
                                 {slot.label}
                               </span>
                             ) : hasAppts ? (
-                              // إظهار الوقت عند وجود موعد في ربع الساعة
                               <span style={{ fontSize:10,fontWeight:600,color:"#0863ba",display:"block" }}>
                                 {slot.label}
                               </span>
                             ) : (
                               <span style={{ fontSize:9,color:"#e0e4ea",lineHeight:"32px" }}>·</span>
                             )}
-                            {/* Now indicator */}
                             {isNowSlot && (
                               <div style={{ position:"absolute",top:"50%",insetInlineEnd:-5,transform:"translateY(-50%)",width:9,height:9,borderRadius:"50%",background:"#0863ba",animation:"nowPulse 1.5s ease infinite",boxShadow:"0 0 0 3px rgba(8,99,186,.2)" }}/>
                             )}
                           </div>
-
-                          {/* Divider — أوضح للساعات الكاملة */}
                           <div style={{ width: slot.isHour ? 1.5 : 1, background: slot.isHour ? "#d8e2ee" : "#eef0f3", alignSelf:"stretch", flexShrink:0 }}/>
-
-                          {/* Appointments in this slot */}
                           <div style={{ flex:1,padding: hasAppts ? "6px 14px 6px" : "0 14px",display:"flex",flexDirection:"column",gap:6 }}>
                             {slotAppts.length === 0 && isNowSlot && (
                               <div style={{ height:2,background:"#0863ba",borderRadius:2,opacity:.25,alignSelf:"stretch",margin:"12px 0" }}/>
@@ -1036,7 +1276,6 @@ export default function AppointmentsPage() {
                                     <div style={{ flex:1,minWidth:0 }}>
                                       <div style={{ display:"flex",alignItems:"center",gap:6 }}>
                                         <span style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{name}</span>
-                                        {/* WhatsApp button */}
                                         <button
                                           className="wa-btn"
                                           title="WhatsApp"
