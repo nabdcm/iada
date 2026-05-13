@@ -870,12 +870,14 @@ export default function AppointmentsPage() {
           table: "appointments",
           filter: `user_id=eq.${clinicId}`,
         },
-        (payload) => {
+        async (payload) => {
           const newAppt = payload.new as Appointment;
           if ((newAppt.status as string) === "pending_approval") {
             // تشغيل صوت تنبيه عند وصول طلب جديد
             playNotificationSound();
             setPendingAppointments(prev => [...prev, newAppt]);
+            // إعادة تحميل المرضى لضمان ظهور اسم المريض الجديد
+            await loadPatients();
           }
         }
       )
@@ -1117,7 +1119,7 @@ export default function AppointmentsPage() {
                 </button>}
                 {/* زر التحديث */}
                 <button
-                  onClick={() => loadAppointments()}
+                  onClick={() => { loadPatients(); loadAppointments(); }}
                   title={isAr?"تحديث البيانات":"Refresh"}
                   style={{ position:"relative",display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 10px":"9px 14px",background:"#fff",color:"#666",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
                 >
