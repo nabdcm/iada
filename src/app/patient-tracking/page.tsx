@@ -131,7 +131,7 @@ const FIELD_LABELS: Record<string, { ar: string; en: string }> = {
   social_interaction:       { ar: "التفاعل الاجتماعي",       en: "Social interaction" },
   did_activity:             { ar: "نشاط ممتع",               en: "Enjoyable activity" },
   coping_strategy:          { ar: "استراتيجية تكيّف",        en: "Coping strategy" },
-  overall_wellbeing:        { ar: "الصحة النفسية العامة",    en: "Overall wellbeing" },/
+  overall_wellbeing:        { ar: "الصحة النفسية العامة",    en: "Overall wellbeing" },
 };
 
 const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2980b9","#8e44ad"];
