@@ -150,7 +150,29 @@ function formatValue(key: string, val: string | number | boolean, lang: Lang): s
   return String(val);
 }
 
-// ── Sidebar (reuse from app) ─────────────────────────────────
+// ── Sidebar ─────────────────────────────────────────────────
+const SB_BG          = "#0558a8";
+const SB_BG_HEADER   = "#044d96";
+const SB_BG_FOOTER   = "#044d96";
+const SB_ACTIVE_BG   = "rgba(255,255,255,0.15)";
+const SB_ACTIVE_TEXT = "#ffffff";
+const SB_IDLE_TEXT   = "rgba(255,255,255,0.62)";
+const SB_BORDER      = "rgba(255,255,255,0.1)";
+const SB_INDICATOR   = "#7dd3fc";
+
+const PillIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7z"/>
+    <line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>
+  </svg>
+);
+
+const TrackingIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+  </svg>
+);
+
 function Sidebar({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
   const isAr = lang === "ar";
   const [collapsed, setCollapsed] = useState(false);
@@ -164,12 +186,28 @@ function Sidebar({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) 
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const navItems: { key: string; icon: JSX.Element | string; label: string; href: string }[] = [
-    { key:"dashboard",         icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>, label: isAr?"لوحة المعلومات":"Dashboard",       href:"/dashboard"         },
-    { key:"patients",          icon:"👥", label: isAr?"المرضى":"Patients",             href:"/patients"          },
-    { key:"appointments",      icon:"📅", label: isAr?"المواعيد":"Appointments",       href:"/appointments"      },
-    { key:"patient-tracking",  icon:"📊", label: isAr?"متابعة المرضى":"Patient Tracking", href:"/patient-tracking" },
-    { key:"payments",          icon:"💳", label: isAr?"المدفوعات":"Payments",          href:"/payments"          },
+  useEffect(() => {
+    if (isMobile && mobileOpen) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobile, mobileOpen]);
+
+  const NAV_ICONS: Record<string, JSX.Element> = {
+    dashboard:        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+    patients:         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    appointments:     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    payments:         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+    prescriptions:    <PillIcon />,
+    "patient-tracking": <TrackingIcon />,
+  };
+
+  const navItems: { key: string; label: string; href: string }[] = [
+    { key:"dashboard",         label:isAr?"لوحة المعلومات":"Dashboard",       href:"/dashboard"         },
+    { key:"patients",          label:isAr?"المرضى":"Patients",               href:"/patients"          },
+    { key:"appointments",      label:isAr?"المواعيد":"Appointments",          href:"/appointments"      },
+    { key:"payments",          label:isAr?"المدفوعات":"Payments",             href:"/payments"          },
+    { key:"prescriptions",     label:isAr?"الوصفات الطبية":"Prescriptions",   href:"/prescriptions"     },
+    { key:"patient-tracking",  label:isAr?"متابعة المرضى":"Patient Tracking", href:"/patient-tracking"  },
   ];
 
   const sidebarTransform = isMobile
@@ -179,16 +217,10 @@ function Sidebar({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) 
   return (
     <>
       {isMobile && mobileOpen && (
-        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:49 }} />
+        <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:55,WebkitTapHighlightColor:"transparent" }} />
       )}
       {isMobile && (
-        <button onClick={() => setMobileOpen(!mobileOpen)} style={{
-          position:"fixed",top:14,zIndex:60,
-          right:isAr?16:undefined,left:isAr?undefined:16,
-          width:40,height:40,borderRadius:10,background:"#0863ba",
-          border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
-          boxShadow:"0 4px 12px rgba(8,99,186,.3)",
-        }}>
+        <button onClick={() => setMobileOpen(!mobileOpen)} style={{ position:"fixed",top:14,zIndex:70,right:isAr?16:undefined,left:isAr?undefined:16,width:40,height:40,borderRadius:10,background:SB_BG,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(5,88,168,.4)" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
             {mobileOpen
               ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
@@ -197,66 +229,68 @@ function Sidebar({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) 
           </svg>
         </button>
       )}
-      <aside style={{
-        width: isMobile ? 260 : collapsed ? 70 : 240,
-        minHeight:"100vh",background:"#fff",
-        borderRight:isAr?"none":"1.5px solid #eef0f3",
-        borderLeft:isAr?"1.5px solid #eef0f3":"none",
-        display:"flex",flexDirection:"column",
-        transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",
-        position:"fixed",top:0,
-        right:isAr?0:undefined,left:isAr?undefined:0,
-        zIndex:50,transform:sidebarTransform,
-        boxShadow:"4px 0 24px rgba(8,99,186,.06)",
-      }}>
-        <div style={{ padding:collapsed?"24px 0":"24px 20px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",minHeight:72 }}>
+      <aside style={{ width:isMobile?260:collapsed?70:240,minHeight:"100vh",background:SB_BG,display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:isAr?0:undefined,left:isAr?undefined:0,zIndex:60,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?(isAr?"-8px 0 32px rgba(0,0,0,.15)":"8px 0 32px rgba(0,0,0,.15)"):(isAr?"-4px 0 32px rgba(5,88,168,.45)":"4px 0 32px rgba(5,88,168,.45)") }}>
+
+        {/* Header */}
+        <div style={{ padding:collapsed?"18px 0":"18px 20px",background:SB_BG_HEADER,borderBottom:`1px solid ${SB_BORDER}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",minHeight:72 }}>
           {!collapsed && (
             <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-              <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(8,99,186,.25)" }} />
+              <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(0,0,0,.25)" }} />
               <div>
-                <div style={{ fontSize:18,fontWeight:800,color:"#0863ba",lineHeight:1.1 }}>{isAr?"نبض":"NABD"}</div>
-                <div style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{isAr?"إدارة العيادة":"Clinic Manager"}</div>
+                <div style={{ fontSize:18,fontWeight:800,color:"#ffffff",lineHeight:1.1 }}>{isAr?"نبض":"NABD"}</div>
+                <div style={{ fontSize:10,color:"rgba(255,255,255,0.55)",fontWeight:400 }}>{isAr?"إدارة العيادة":"Clinic Manager"}</div>
               </div>
             </div>
           )}
           {collapsed && <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:38,height:38,borderRadius:10 }} />}
-          {!collapsed && (
-            <button onClick={() => setCollapsed(!collapsed)} style={{ background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#aaa",padding:4 }}>
-              {isAr?"›":"‹"}
+          {!isMobile && (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed?(isAr?"توسيع القائمة":"Expand sidebar"):(isAr?"طي القائمة":"Collapse sidebar")}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.22)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}}
+              style={{ width:28,height:28,background:"rgba(255,255,255,0.12)",border:"1.5px solid rgba(255,255,255,0.22)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.9)",fontSize:14,lineHeight:1,transition:"background .15s",flexShrink:0,marginTop:collapsed?8:0 }}
+            >
+              {collapsed?(isAr?"‹":"›"):(isAr?"›":"‹")}
             </button>
           )}
         </div>
-        <nav style={{ flex:1,padding:"16px 12px" }}>
+
+        {/* Nav */}
+        <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
           {navItems.map(item => {
             const isActive = item.key === "patient-tracking";
             return (
-              <a key={item.key} href={item.href} style={{
-                display:"flex",alignItems:"center",gap:collapsed?0:12,
-                justifyContent:collapsed?"center":"flex-start",
-                padding:collapsed?"12px 0":"11px 14px",
-                borderRadius:10,marginBottom:4,textDecoration:"none",
-                background:isActive?"rgba(8,99,186,.08)":"transparent",
-                color:isActive?"#0863ba":"#666",
-                fontWeight:isActive?600:400,fontSize:14,
-                transition:"all .18s",position:"relative",
-              }}>
-                {isActive && <div style={{ position:"absolute",[isAr?"right":"left"]:-12,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:"#0863ba",borderRadius:10 }} />}
-                <span style={{ fontSize:18,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>{item.icon}</span>
+              <a key={item.key} href={item.href}
+                onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
+                onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
+                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT,fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+                {isActive && <div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>}
+                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
                 {!collapsed && <span>{item.label}</span>}
               </a>
             );
           })}
         </nav>
-        <div style={{ padding:"16px 12px",borderTop:"1.5px solid #eef0f3" }}>
+
+        {/* Footer */}
+        <div style={{ padding:collapsed?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
           {!collapsed && (
-            <button onClick={() => setLang(lang === "ar" ? "en" : "ar")} style={{ width:"100%",padding:"8px",marginBottom:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"#666",fontWeight:600 }}>
-              🌐 {lang === "ar" ? "English" : "العربية"}
+            <button onClick={() => setLang(lang==="ar"?"en":"ar")}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}}
+              style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>
+              🌐 {lang==="ar"?"English":"العربية"}
             </button>
           )}
-          <a href="/dashboard" style={{ width:"100%",display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:8,padding:collapsed?8:"10px 12px",borderRadius:10,background:"rgba(8,99,186,.06)",border:"1.5px solid rgba(8,99,186,.12)",textDecoration:"none" }}>
-            <span style={{ fontSize:16,flexShrink:0 }}>🏠</span>
-            {!collapsed && <span style={{ fontSize:13,fontWeight:600,color:"#0863ba",fontFamily:"Rubik,sans-serif" }}>{isAr?"الرئيسية":"Home"}</span>}
-          </a>
+          <button
+            onClick={async()=>{ await supabase.auth.signOut(); window.location.href="/login"; }}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.3)";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.15)";}}
+            style={{ width:"100%",padding:collapsed?"10px 0":"10px 14px",background:"rgba(192,57,43,.15)",border:"1.5px solid rgba(192,57,43,.3)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#ffb3a7",fontWeight:600,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:8,transition:"all .2s" }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            {!collapsed && <span style={{ fontFamily:"Rubik,sans-serif" }}>{isAr?"تسجيل الخروج":"Sign Out"}</span>}
+          </button>
         </div>
       </aside>
     </>
