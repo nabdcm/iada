@@ -9,7 +9,22 @@ import { supabase } from "@/lib/supabase";
 
 type Lang = "ar" | "en";
 
-type ClinicType = "general" | "dental" | "dermatology" | "cosmetic" | "pediatrics" | "other";
+type ClinicType =
+  | "general"
+  | "dental"
+  | "dermatology"
+  | "cosmetic"
+  | "pediatrics"
+  | "physical_therapy"
+  | "mental_health"
+  | "nutrition"
+  | "ophthalmology"
+  | "orthopedic"
+  | "cardiology"
+  | "gynecology"
+  | "ent"
+  | "urology"
+  | "other";
 
 interface ClinicData {
   id?: number;
@@ -56,8 +71,13 @@ const T = {
       expiry:"تاريخ انتهاء الاشتراك *",
       clinicType:"نوع العيادة *",
       clinicTypes:{
-        general:"عامة", dental:"أسنان", dermatology:"جلدية",
-        cosmetic:"تجميلية", pediatrics:"أطفال", other:"أخرى",
+        general:"طب عام", dental:"أسنان", dermatology:"جلدية",
+        cosmetic:"تجميلية", pediatrics:"أطفال",
+        physical_therapy:"علاج فيزيائي", mental_health:"صحة نفسية",
+        nutrition:"تغذية", ophthalmology:"عيون",
+        orthopedic:"عظام ومفاصل", cardiology:"قلب وشرايين",
+        gynecology:"نساء وتوليد", ent:"أنف وأذن وحنجرة",
+        urology:"مسالك بولية", other:"أخرى",
       },
       generateCredentials:"توليد بيانات الدخول",
       username:"البريد الإلكتروني", password:"كلمة المرور",
@@ -155,8 +175,13 @@ const T = {
       expiry:"Subscription Expiry *",
       clinicType:"Clinic Type *",
       clinicTypes:{
-        general:"General", dental:"Dental", dermatology:"Dermatology",
-        cosmetic:"Cosmetic", pediatrics:"Pediatrics", other:"Other",
+        general:"General Medicine", dental:"Dental", dermatology:"Dermatology",
+        cosmetic:"Cosmetic", pediatrics:"Pediatrics",
+        physical_therapy:"Physical Therapy", mental_health:"Mental Health",
+        nutrition:"Nutrition", ophthalmology:"Ophthalmology",
+        orthopedic:"Orthopedics", cardiology:"Cardiology",
+        gynecology:"Gynecology", ent:"ENT",
+        urology:"Urology", other:"Other",
       },
       generateCredentials:"Generate Login Credentials",
       username:"Email", password:"Password",
@@ -240,7 +265,21 @@ const PLAN_PRICING = {
 
 // Clinic type icons
 const CLINIC_TYPE_ICONS: Record<string, string> = {
-  general:"🏥", dental:"🦷", dermatology:"🧴", cosmetic:"💆", pediatrics:"👶", other:"🏨",
+  general:          "🏥",
+  dental:           "🦷",
+  dermatology:      "🧴",
+  cosmetic:         "💆",
+  pediatrics:       "👶",
+  physical_therapy: "🏃",
+  mental_health:    "🧠",
+  nutrition:        "🥗",
+  ophthalmology:    "👁️",
+  orthopedic:       "🦴",
+  cardiology:       "❤️",
+  gynecology:       "🌸",
+  ent:              "👂",
+  urology:          "💧",
+  other:            "🏨",
 };
 const STATUS_COLORS = {
   active:   { bg:"rgba(46,125,50,.1)",   color:"#2e7d32" },
@@ -499,15 +538,28 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               {/* نوع العيادة */}
               <Field label={tr.modal.clinicType}>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
-                  {(["general","dental","dermatology","cosmetic","pediatrics","other"] as ClinicType[]).map(ct => {
+                  {([
+                    "general","dental","dermatology","cosmetic","pediatrics",
+                    "physical_therapy","mental_health","nutrition","ophthalmology",
+                    "orthopedic","cardiology","gynecology","ent","urology","other"
+                  ] as ClinicType[]).map(ct => {
                     const isSelected = form.clinic_type === ct;
                     return (
                       <button key={ct} type="button"
                         onClick={() => setForm(prev => ({ ...prev, clinic_type: ct }))}
-                        style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"10px 6px",border:`1.5px solid ${isSelected?"#0863ba":"#eef0f3"}`,borderRadius:10,background:isSelected?"rgba(8,99,186,.06)":"#fafbfc",cursor:"pointer",transition:"all .15s",fontFamily:"Rubik,sans-serif" }}>
-                        <span style={{ fontSize:20 }}>{CLINIC_TYPE_ICONS[ct]}</span>
-                        <span style={{ fontSize:11,fontWeight:isSelected?700:400,color:isSelected?"#0863ba":"#666" }}>
-                          {tr.modal.clinicTypes[ct]}
+                        style={{
+                          display:"flex", flexDirection:"column", alignItems:"center", gap:4,
+                          padding:"10px 6px",
+                          border:`1.5px solid ${isSelected?"#0558a8":"#eef0f3"}`,
+                          borderRadius:10,
+                          background:isSelected?"rgba(5,88,168,.07)":"#fafbfc",
+                          cursor:"pointer", transition:"all .15s",
+                          fontFamily:"Rubik,sans-serif",
+                          boxShadow:isSelected?"0 2px 8px rgba(5,88,168,.12)":"none",
+                        }}>
+                        <span style={{ fontSize:22 }}>{CLINIC_TYPE_ICONS[ct]}</span>
+                        <span style={{ fontSize:10, fontWeight:isSelected?700:400, color:isSelected?"#0558a8":"#666", textAlign:"center", lineHeight:1.3 }}>
+                          {tr.modal.clinicTypes[ct as keyof typeof tr.modal.clinicTypes]}
                         </span>
                       </button>
                     );
@@ -657,6 +709,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     plan:   clinic.plan   as "basic"|"pro"|"enterprise",
     expiry: clinic.expiry || "",
     status: clinic.status as "active"|"inactive"|"expired",
+    clinic_type: (clinic.clinic_type || "general") as ClinicType,
   });
   const [newPass,       setNewPass]       = useState("");
   const [copied,        setCopied]        = useState(false);
@@ -688,6 +741,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     plan:   form.plan,
     expiry: form.expiry,
     status: form.status,
+    clinic_type: form.clinic_type,
     ...overrides,
   });
 
@@ -853,6 +907,32 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               <div>
                 <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.phone}</label>
                 <input value={form.phone} onChange={e => setForm(p=>({...p,phone:e.target.value}))} placeholder={sm.phonePh} style={inputSt} />
+              </div>
+
+              {/* نوع العيادة */}
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:8,textTransform:"uppercase",letterSpacing:.4 }}>
+                  {tr.modal.clinicType}
+                </label>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6 }}>
+                  {([
+                    "general","dental","dermatology","cosmetic","pediatrics",
+                    "physical_therapy","mental_health","nutrition","ophthalmology",
+                    "orthopedic","cardiology","gynecology","ent","urology","other"
+                  ] as ClinicType[]).map(ct => {
+                    const isSelected = form.clinic_type === ct;
+                    return (
+                      <button key={ct} type="button"
+                        onClick={() => setForm(p => ({ ...p, clinic_type: ct }))}
+                        style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",border:`1.5px solid ${isSelected?"#0558a8":"#eef0f3"}`,borderRadius:9,background:isSelected?"rgba(5,88,168,.07)":"#fafbfc",cursor:"pointer",transition:"all .15s",fontFamily:"Rubik,sans-serif",boxShadow:isSelected?"0 2px 8px rgba(5,88,168,.12)":"none" }}>
+                        <span style={{ fontSize:18 }}>{CLINIC_TYPE_ICONS[ct]}</span>
+                        <span style={{ fontSize:9,fontWeight:isSelected?700:400,color:isSelected?"#0558a8":"#888",textAlign:"center",lineHeight:1.3 }}>
+                          {tr.modal.clinicTypes[ct as keyof typeof tr.modal.clinicTypes]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
