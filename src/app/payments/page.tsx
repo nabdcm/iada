@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Payment } from "@/lib/supabase";
 
@@ -346,8 +346,25 @@ function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patie
     date:fmt(new Date()), status:"paid", notes:"",
   });
   const [error, setError] = useState("");
-
   const [saving, setSaving] = useState(false);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [patientDropOpen, setPatientDropOpen] = useState(false);
+  const patientDropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (patientDropRef.current && !patientDropRef.current.contains(e.target as Node)) {
+        setPatientDropOpen(false);
+        if (!form.patientId) setPatientSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [form.patientId]);
+
+  const filteredPatients = patients.filter(p =>
+    p.name.toLowerCase().includes(patientSearch.toLowerCase())
+  );
 
   const handleSave = async (asPending=false) => {
     if (!form.patientId||!form.amount||!form.description.trim()) { setError(tr.modal.required); return; }
@@ -390,10 +407,71 @@ function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patie
         <div style={{ padding:"20px 26px" }}>
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
           <F label={tr.modal.patient}>
-            <select value={form.patientId} onChange={e=>setForm({...form,patientId:e.target.value})} style={{ ...inputSt,cursor:"pointer" }}>
-              <option value="">{tr.modal.selectPatient}</option>
-              {patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <div ref={patientDropRef} style={{ position:"relative" }}>
+              <div style={{ position:"relative", display:"flex", alignItems:"center" }}>
+                <input
+                  type="text"
+                  value={patientSearch}
+                  onChange={e => {
+                    setPatientSearch(e.target.value);
+                    setPatientDropOpen(true);
+                    if (!e.target.value) setForm({ ...form, patientId: "" });
+                  }}
+                  onFocus={() => setPatientDropOpen(true)}
+                  placeholder={tr.modal.selectPatient}
+                  style={{ ...inputSt, paddingInlineEnd: 36, cursor:"text" }}
+                  autoComplete="off"
+                  onBlur={e => { e.currentTarget.style.borderColor="#e8eaed"; }}
+                />
+                <span style={{
+                  position:"absolute", insetInlineEnd:12, top:"50%", transform:"translateY(-50%)",
+                  pointerEvents:"none", color:"#aaa", fontSize:12,
+                }}>{"▾"}</span>
+              </div>
+              {patientDropOpen && (
+                <div style={{
+                  position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300,
+                  background:"#fff", border:"1.5px solid #e8eaed", borderRadius:12,
+                  boxShadow:"0 8px 32px rgba(46,125,50,.13)", maxHeight:220, overflowY:"auto",
+                }}>
+                  {filteredPatients.length === 0 ? (
+                    <div style={{ padding:"14px 16px", fontSize:13, color:"#aaa", textAlign:"center" }}>
+                      {isAr ? "لا توجد نتائج" : "No results found"}
+                    </div>
+                  ) : (
+                    filteredPatients.map(p => (
+                      <div
+                        key={p.id}
+                        onMouseDown={() => {
+                          setForm({ ...form, patientId: String(p.id) });
+                          setPatientSearch(p.name);
+                          setPatientDropOpen(false);
+                        }}
+                        style={{
+                          padding:"11px 16px", fontSize:14, color:"#353535", cursor:"pointer",
+                          background: form.patientId === String(p.id) ? "rgba(46,125,50,.07)" : "transparent",
+                          fontWeight: form.patientId === String(p.id) ? 600 : 400,
+                          borderBottom:"1px solid #f4f6f9",
+                          display:"flex", alignItems:"center", gap:10,
+                          transition:"background .12s",
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(46,125,50,.06)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = form.patientId === String(p.id) ? "rgba(46,125,50,.07)" : "transparent"; }}
+                      >
+                        <div style={{
+                          width:28, height:28, borderRadius:8, background:getColor(p.id),
+                          color:"#fff", display:"flex", alignItems:"center", justifyContent:"center",
+                          fontSize:10, fontWeight:700, flexShrink:0,
+                        }}>
+                          {getInitials(p.name)}
+                        </div>
+                        {p.name}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </F>
           <div style={{ display:"flex",gap:12 }}>
             <F label={tr.modal.amount} half>
