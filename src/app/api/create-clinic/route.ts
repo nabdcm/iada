@@ -1,4 +1,3 @@
-// src/app/api/create-clinic/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
@@ -10,15 +9,25 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { name, owner, email, phone, plan, expiry, status, password } = await req.json();
+    const {
+      name, owner, email, phone,
+      plan, expiry, status, password,
+      clinic_type = "general",   // ← الجديد
+    } = await req.json();
 
     // ─── 1. إنشاء المستخدم في Auth ───────────────────────
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { clinic_name: name, owner_name: owner, phone, plan, expiry, status, role: "clinic" },
-    });
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          clinic_name: name, owner_name: owner,
+          phone, plan, expiry, status,
+          clinic_type,               // ← الجديد
+          role: "clinic",
+        },
+      });
 
     if (authError) {
       console.error("Auth error:", authError);
@@ -27,15 +36,18 @@ export async function POST(req: Request) {
 
     const userId = authData.user.id;
 
-    // ─── 2. إضافة في جدول clinics (لصفحة الأدمن) ────────
+    // ─── 2. إضافة في جدول clinics ────────────────────────
     const { error: clinicError } = await supabaseAdmin
       .from("clinics")
-      .insert({ user_id: userId, name, owner, email, phone, plan, expiry, status });
+      .insert({
+        user_id: userId, name, owner, email, phone,
+        plan, expiry, status,
+        clinic_type,               // ← الجديد
+      });
 
     if (clinicError) console.error("❌ clinics error:", clinicError);
 
     // ─── 3. إضافة في clinic_profiles (لرابط الحجز) ───────
-    // id = userId هو نفسه clinicId في /book/[clinicId]
     const { error: profileError } = await supabaseAdmin
       .from("clinic_profiles")
       .upsert({
@@ -52,7 +64,11 @@ export async function POST(req: Request) {
 
     if (profileError) console.error("❌ clinic_profiles error:", profileError);
 
-    return NextResponse.json({ success: true, userId, bookingUrl: `/book/${userId}` });
+    return NextResponse.json({
+      success: true,
+      userId,
+      bookingUrl: `/book/${userId}`,
+    });
 
   } catch (err) {
     console.error("Server error:", err);
