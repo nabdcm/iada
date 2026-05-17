@@ -348,27 +348,6 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
   });
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [patientSearch, setPatientSearch] = useState(
-    appt ? (patients.find(p => p.id === appt.patient_id)?.name ?? "") : ""
-  );
-  const [patientDropOpen, setPatientDropOpen] = useState(false);
-  const patientDropRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (patientDropRef.current && !patientDropRef.current.contains(e.target as Node)) {
-        setPatientDropOpen(false);
-        // If no valid patient selected, clear search
-        if (!form.patient_id) setPatientSearch("");
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [form.patient_id]);
-
-  const filteredPatients = patients.filter(p =>
-    p.name.toLowerCase().includes(patientSearch.toLowerCase())
-  );
 
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
@@ -433,72 +412,10 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
         <div style={{ padding:"20px 26px" }}>
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
           <Field label={tr.modal.patient}>
-            <div ref={patientDropRef} style={{ position:"relative" }}>
-              <div style={{ position:"relative", display:"flex", alignItems:"center" }}>
-                <input
-                  type="text"
-                  value={patientSearch}
-                  onChange={e => {
-                    setPatientSearch(e.target.value);
-                    setPatientDropOpen(true);
-                    if (!e.target.value) setForm({ ...form, patient_id: "" });
-                  }}
-                  onFocus={() => setPatientDropOpen(true)}
-                  placeholder={tr.modal.selectPatient}
-                  className="appt-input"
-                  style={{ ...inputSt, paddingInlineEnd: 36, cursor:"text" }}
-                  autoComplete="off"
-                />
-                <span style={{
-                  position:"absolute", insetInlineEnd:12, top:"50%", transform:"translateY(-50%)",
-                  pointerEvents:"none", color:"#aaa", fontSize:12,
-                }}>{"▾"}</span>
-              </div>
-              {patientDropOpen && (
-                <div style={{
-                  position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:300,
-                  background:"#fff", border:"1.5px solid #e8eaed", borderRadius:12,
-                  boxShadow:"0 8px 32px rgba(8,99,186,.13)", maxHeight:220, overflowY:"auto",
-                  animation:"fadeUp .15s ease",
-                }}>
-                  {filteredPatients.length === 0 ? (
-                    <div style={{ padding:"14px 16px", fontSize:13, color:"#aaa", textAlign:"center" }}>
-                      {isAr ? "لا توجد نتائج" : "No results found"}
-                    </div>
-                  ) : (
-                    filteredPatients.map(p => (
-                      <div
-                        key={p.id}
-                        onMouseDown={() => {
-                          setForm({ ...form, patient_id: p.id });
-                          setPatientSearch(p.name);
-                          setPatientDropOpen(false);
-                        }}
-                        style={{
-                          padding:"11px 16px", fontSize:14, color:"#353535", cursor:"pointer",
-                          background: form.patient_id === p.id ? "rgba(8,99,186,.07)" : "transparent",
-                          fontWeight: form.patient_id === p.id ? 600 : 400,
-                          borderBottom:"1px solid #f4f6f9",
-                          display:"flex", alignItems:"center", gap:10,
-                          transition:"background .12s",
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(8,99,186,.06)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = form.patient_id === p.id ? "rgba(8,99,186,.07)" : "transparent"; }}
-                      >
-                        <div style={{
-                          width:28, height:28, borderRadius:8, background:getColor(p.id),
-                          color:"#fff", display:"flex", alignItems:"center", justifyContent:"center",
-                          fontSize:10, fontWeight:700, flexShrink:0,
-                        }}>
-                          {getInitials(p.name)}
-                        </div>
-                        {p.name}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+            <select value={form.patient_id} onChange={e=>setForm({...form,patient_id:Number(e.target.value)})} style={{ ...inputSt,cursor:"pointer" }}>
+              <option value="">{tr.modal.selectPatient}</option>
+              {patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
           </Field>
           <div style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.date} half><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} className="appt-input"/></Field>
