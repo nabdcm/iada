@@ -348,6 +348,29 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
   });
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [patientSearch, setPatientSearch] = useState(() => {
+    if (appt?.patient_id) {
+      return patients.find(p => p.id === appt.patient_id)?.name ?? "";
+    }
+    return "";
+  });
+  const [patientDropOpen, setPatientDropOpen] = useState(false);
+  const patientRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (patientRef.current && !patientRef.current.contains(e.target as Node)) {
+        setPatientDropOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filteredPatients = patients.filter(p =>
+    p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
+    (p.phone && p.phone.includes(patientSearch))
+  );
 
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
@@ -412,10 +435,57 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
         <div style={{ padding:"20px 26px" }}>
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
           <Field label={tr.modal.patient}>
-            <select value={form.patient_id} onChange={e=>setForm({...form,patient_id:Number(e.target.value)})} style={{ ...inputSt,cursor:"pointer" }}>
-              <option value="">{tr.modal.selectPatient}</option>
-              {patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <div ref={patientRef} style={{ position:"relative" }}>
+              <div style={{ position:"relative" }}>
+                <input
+                  type="text"
+                  value={patientSearch}
+                  onChange={e => {
+                    setPatientSearch(e.target.value);
+                    setPatientDropOpen(true);
+                    if (!e.target.value) setForm({...form, patient_id:""});
+                  }}
+                  onFocus={() => setPatientDropOpen(true)}
+                  placeholder={tr.modal.selectPatient}
+                  className="appt-input"
+                  style={{ ...inputSt, paddingInlineEnd:36 }}
+                  autoComplete="off"
+                />
+                <span style={{ position:"absolute",top:"50%",insetInlineEnd:12,transform:"translateY(-50%)",pointerEvents:"none",fontSize:14,color:"#aaa" }}>
+                  {form.patient_id ? "✓" : "🔍"}
+                </span>
+              </div>
+              {patientDropOpen && (
+                <div style={{ position:"absolute",top:"calc(100% + 4px)",insetInlineStart:0,insetInlineEnd:0,background:"#fff",border:"1.5px solid #e0e6ef",borderRadius:12,boxShadow:"0 8px 32px rgba(8,99,186,.13)",zIndex:999,maxHeight:220,overflowY:"auto" }}>
+                  {filteredPatients.length === 0 ? (
+                    <div style={{ padding:"14px 16px",fontSize:13,color:"#aaa",textAlign:"center" }}>
+                      {isAr ? "لا توجد نتائج" : "No results found"}
+                    </div>
+                  ) : filteredPatients.map(p => (
+                    <div key={p.id}
+                      onMouseDown={e => {
+                        e.preventDefault();
+                        setForm({...form, patient_id: p.id});
+                        setPatientSearch(p.name);
+                        setPatientDropOpen(false);
+                      }}
+                      style={{ padding:"11px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid #f4f6f9",transition:"background .12s" }}
+                      onMouseEnter={e=>(e.currentTarget.style.background="#f0f6ff")}
+                      onMouseLeave={e=>(e.currentTarget.style.background="transparent")}
+                    >
+                      <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
+                        {getInitials(p.name)}
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{p.name}</div>
+                        {p.phone && <div style={{ fontSize:11,color:"#aaa",direction:"ltr",textAlign:"start" }}>{p.phone}</div>}
+                      </div>
+                      {form.patient_id === p.id && <span style={{ marginInlineStart:"auto",color:"#0863ba",fontWeight:700 }}>✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </Field>
           <div style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.date} half><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} className="appt-input"/></Field>
@@ -1286,7 +1356,7 @@ export default function AppointmentsPage() {
                 </button>
               </div>
 
-              <div ref={timelineRef} className="timeline-scroll" style={{ padding:"0 0 16px" }}>
+              <div ref={timelineRef} className="timeline-scroll" style={{ padding:"12px 16px 16px" }}>
                 {loading ? (
                   <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
                     <div style={{ width:36,height:36,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px" }}/>
@@ -1294,96 +1364,82 @@ export default function AppointmentsPage() {
                   </div>
                 ) : (
                   <>
-                    {SLOTS.map((slot, idx) => {
-                      const slotAppts = dayAppointments.filter(a => {
-                        const [ah, am] = a.time.slice(0,5).split(":").map(Number);
-                        const apptMinutes = ah * 60 + am;
-                        const [sh, sm] = slot.value.split(":").map(Number);
-                        const slotStart = sh * 60 + sm;
-                        const slotEnd   = slotStart + 14;
-                        return apptMinutes >= slotStart && apptMinutes <= slotEnd;
-                      });
-                      const isNowSlot = idx === nowSlotIdx;
-                      const hasAppts  = slotAppts.length > 0;
-                      return (
-                        <div key={slot.value} className="slot-row"
-                          style={{
-                            borderBottom: slot.isHour ? "1px solid #e8edf2" : "1px solid #f4f6f9",
-                            background: isNowSlot ? "rgba(8,99,186,.04)" : "transparent",
-                            minHeight: hasAppts ? "auto" : slot.isHour ? 44 : 32,
-                          }}>
-                          <div style={{ width:62,flexShrink:0,padding:"8px 0 8px 14px",textAlign:"center",position:"relative",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:10 }}>
-                            {slot.isHour ? (
-                              <span style={{ fontSize:12,fontWeight:700,color:hasAppts?"#0863ba":isNowSlot?"#0863ba":"#c0c8d4",display:"block",letterSpacing:.3 }}>
-                                {slot.label}
-                              </span>
-                            ) : hasAppts ? (
-                              <span style={{ fontSize:10,fontWeight:600,color:"#0863ba",display:"block" }}>
-                                {slot.label}
-                              </span>
-                            ) : (
-                              <span style={{ fontSize:9,color:"#e0e4ea",lineHeight:"32px" }}>·</span>
-                            )}
-                            {isNowSlot && (
-                              <div style={{ position:"absolute",top:"50%",insetInlineEnd:-5,transform:"translateY(-50%)",width:9,height:9,borderRadius:"50%",background:"#0863ba",animation:"nowPulse 1.5s ease infinite",boxShadow:"0 0 0 3px rgba(8,99,186,.2)" }}/>
-                            )}
-                          </div>
-                          <div style={{ width: slot.isHour ? 1.5 : 1, background: slot.isHour ? "#d8e2ee" : "#eef0f3", alignSelf:"stretch", flexShrink:0 }}/>
-                          <div style={{ flex:1,padding: hasAppts ? "6px 14px 6px" : "0 14px",display:"flex",flexDirection:"column",gap:6 }}>
-                            {slotAppts.length === 0 && isNowSlot && (
-                              <div style={{ height:2,background:"#0863ba",borderRadius:2,opacity:.25,alignSelf:"stretch",margin:"12px 0" }}/>
-                            )}
-                            {slotAppts.map(appt => {
-                              const name   = getPatientName(appt.patient_id);
-                              const ss     = statusStyle(appt.status);
-                              const bColor = tr.statusColors[appt.status as Status];
-                              return (
-                                <div key={appt.id} className="appt-block"
-                                  style={{ background:ss.bg, borderColor:bColor, borderInlineStartWidth:4, borderInlineEndWidth:isAr?4:0 }}>
-                                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                                    <div style={{ width:30,height:30,borderRadius:8,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0 }}>
-                                      {name!=="—"?getInitials(name):"?"}
-                                    </div>
-                                    <div style={{ flex:1,minWidth:0 }}>
-                                      <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                                        <span style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{name}</span>
-                                        <button
-                                          className="wa-btn"
-                                          title="WhatsApp"
-                                          onClick={e=>{ e.stopPropagation(); sendWhatsApp(appt); }}
-                                        >
-                                          <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366">
-                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                                          </svg>
-                                        </button>
-                                      </div>
-                                      <div style={{ fontSize:11,color:"#888",marginTop:1 }}>
-                                        {appt.time} · {appt.duration} {tr.duration.min}
-                                        {appt.type&&` · ${appt.type}`}
-                                      </div>
-                                    </div>
-                                    <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3 }}>
-                                      <span style={{ fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30`,whiteSpace:"nowrap" }}>
-                                        {tr.statuses[appt.status as Status]}
-                                      </span>
-                                      <button onClick={()=>setEditAppt(appt)} style={{ fontSize:10,color:"#aaa",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"Rubik,sans-serif" }}>✏️</button>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {dayAppointments.length === 0 && (
+                    {dayAppointments.length === 0 ? (
                       <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
                         <div style={{ fontSize:44,marginBottom:14 }}>📅</div>
                         <div style={{ fontSize:15,fontWeight:600 }}>{tr.noAppointments}</div>
                         <button onClick={()=>setAddModal(true)} style={{ marginTop:20,padding:"10px 24px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer" }}>
                           ＋ {tr.addAppointment}
                         </button>
+                      </div>
+                    ) : (
+                      <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                        {[...dayAppointments].sort((a,b)=>a.time.localeCompare(b.time)).map(appt => {
+                          const name   = getPatientName(appt.patient_id);
+                          const ss     = statusStyle(appt.status);
+                          const bColor = tr.statusColors[appt.status as Status];
+                          return (
+                            <div key={appt.id}
+                              style={{
+                                background:ss.bg,
+                                border:`1.5px solid ${bColor}30`,
+                                borderInlineStartWidth:4,
+                                borderInlineStartColor:bColor,
+                                borderInlineEndWidth:isAr?4:1.5,
+                                borderInlineEndColor:isAr?bColor:`${bColor}30`,
+                                borderRadius:14,
+                                padding:"14px 16px",
+                                display:"flex",
+                                alignItems:"center",
+                                gap:12,
+                                boxShadow:"0 2px 8px rgba(0,0,0,.04)",
+                                transition:"box-shadow .2s",
+                              }}>
+                              {/* التوقيت */}
+                              <div style={{ flexShrink:0,textAlign:"center",minWidth:48,background:"rgba(255,255,255,.7)",borderRadius:10,padding:"6px 8px",border:`1px solid ${bColor}20` }}>
+                                <div style={{ fontSize:15,fontWeight:800,color:bColor,lineHeight:1 }}>{appt.time.slice(0,5)}</div>
+                                <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{appt.duration} {tr.duration.min}</div>
+                              </div>
+                              {/* أفاتار */}
+                              <div style={{ width:38,height:38,borderRadius:10,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
+                                {name!=="—"?getInitials(name):"?"}
+                              </div>
+                              {/* تفاصيل */}
+                              <div style={{ flex:1,minWidth:0 }}>
+                                <div style={{ fontSize:14,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</div>
+                                <div style={{ fontSize:11,color:"#999",marginTop:2 }}>
+                                  {appt.type && <span>{appt.type} · </span>}
+                                  <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
+                                    {tr.statuses[appt.status as Status]}
+                                  </span>
+                                </div>
+                              </div>
+                              {/* أزرار */}
+                              <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                                <button
+                                  title="WhatsApp"
+                                  onClick={e=>{ e.stopPropagation(); sendWhatsApp(appt); }}
+                                  style={{ width:34,height:34,borderRadius:9,background:"rgba(37,211,102,.1)",border:"1.5px solid rgba(37,211,102,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s" }}
+                                  onMouseEnter={e=>(e.currentTarget.style.background="rgba(37,211,102,.22)")}
+                                  onMouseLeave={e=>(e.currentTarget.style.background="rgba(37,211,102,.1)")}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                  </svg>
+                                </button>
+                                <button
+                                  title={lang==="ar"?"تعديل الموعد":"Edit Appointment"}
+                                  onClick={()=>setEditAppt(appt)}
+                                  style={{ width:34,height:34,borderRadius:9,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.18)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,transition:"background .15s" }}
+                                  onMouseEnter={e=>(e.currentTarget.style.background="rgba(8,99,186,.18)")}
+                                  onMouseLeave={e=>(e.currentTarget.style.background="rgba(8,99,186,.08)")}
+                                >
+                                  ✏️
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </>
