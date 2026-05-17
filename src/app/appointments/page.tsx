@@ -489,7 +489,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
           </Field>
           <div style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.date} half><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} className="appt-input"/></Field>
-            <Field label={tr.modal.time} half><input type="time" value={form.time} onChange={e=>setForm({...form,time:e.target.value})} style={inputSt} className="appt-input"/></Field>
+            <Field label={tr.modal.time} half><select value={form.time} onChange={e=>setForm({...form,time:e.target.value})} style={{ ...inputSt,cursor:"pointer" }} className="appt-input">{Array.from({length:15*4},(_,i)=>{const totalMin=8*60+i*15;const hh=String(Math.floor(totalMin/60)).padStart(2,"0");const mm=String(totalMin%60).padStart(2,"0");return `${hh}:${mm}`;}).map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
           </div>
           <div style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.duration} half>
