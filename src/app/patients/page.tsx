@@ -841,6 +841,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
                     );
                   })}
                 </div>
+                </div>
               )}
 
               {/* ── X-RAYS ── */}
