@@ -974,7 +974,11 @@ export default function PaymentsPage() {
 
   const methodIcon = { cash:"💵", card:"💳", transfer:"🏦" };
 
-  const fmtDate = (d) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-SA":"en-US",{ year:"numeric",month:"short",day:"numeric" });
+  const fmtDate = (d: string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{ year:"numeric",month:"short",day:"numeric",calendar:"gregory" });
+
+  // ── مساعد تنسيق التاريخ الميلادي للـ PDF ─────────────────────
+  const fmtDateGregorian = (d: string) =>
+    new Date(d+"T00:00:00").toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"short", day:"numeric" });
 
   // ── تصدير تقرير PDF شهري ─────────────────────────────────
   const exportPDF = () => {
@@ -984,23 +988,66 @@ export default function PaymentsPage() {
       .filter(p => p.date.startsWith(thisMonth))
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const monthName = now.toLocaleDateString("ar-SA", { year:"numeric", month:"long" });
+    const monthWithdrawals = withdrawals
+      .filter(w => w.date.startsWith(thisMonth))
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const monthExpenses = expenses
+      .filter(e => e.date.startsWith(thisMonth))
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const monthName = now.toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"long" });
     const totalPaid = monthPayments.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0);
     const totalPending = monthPayments.filter(p=>p.status==="pending").reduce((s,p)=>s+p.amount,0);
+    const totalWD = monthWithdrawals.reduce((s,w)=>s+w.amount,0);
+    const totalEX = monthExpenses.reduce((s,e)=>s+e.amount,0);
+    const netBalance = totalPaid - totalWD - totalEX;
 
-    const rows = monthPayments.map(p => {
+    const paymentRows = monthPayments.map(p => {
       const patient = patients.find(x=>x.id===p.patient_id);
       const statusMap: Record<string,string> = { paid:"مدفوع", pending:"معلّق", cancelled:"ملغي" };
       const methodMap: Record<string,string> = { cash:"نقداً", card:"بطاقة", transfer:"تحويل" };
       return `<tr>
-        <td>${fmtDate(p.date)}</td>
+        <td>${fmtDateGregorian(p.date)}</td>
         <td>${patient?.name || "—"}</td>
         <td>${p.description}</td>
         <td>${methodMap[p.method] || p.method}</td>
         <td class="status-${p.status}">${statusMap[p.status] || p.status}</td>
-        <td class="amount">${p.amount.toLocaleString()} ل.س</td>
+        <td class="amount-green">+${p.amount.toLocaleString()} ل.س</td>
       </tr>`;
     }).join("");
+
+    const withdrawalRows = monthWithdrawals.length > 0 ? monthWithdrawals.map(w => `<tr>
+        <td>${fmtDateGregorian(w.date)}</td>
+        <td colspan="3">${w.reason}</td>
+        <td><span style="background:rgba(192,57,43,.1);color:#c0392b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">سحب</span></td>
+        <td class="amount-red">-${w.amount.toLocaleString()} ل.س</td>
+      </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد سحوبات هذا الشهر</td></tr>`;
+
+    const catLabelsAr: Record<string,string> = { rent:"إيجار", supplies:"مستلزمات طبية", salary:"رواتب موظفين", utilities:"فواتير كهرباء/ماء", maintenance:"صيانة", other:"أخرى" };
+    const expenseRows = monthExpenses.length > 0 ? monthExpenses.map(e => `<tr>
+        <td>${fmtDateGregorian(e.date)}</td>
+        <td colspan="2">${e.description}</td>
+        <td>${catLabelsAr[e.category] || e.category}</td>
+        <td><span style="background:rgba(123,45,139,.1);color:#7b2d8b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">مصروف</span></td>
+        <td class="amount-purple">-${e.amount.toLocaleString()} ل.س</td>
+      </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد مصروفات هذا الشهر</td></tr>`;
+
+    const svgLogo = `<svg viewBox="0 0 337.74 393.31" style="width:44px;height:44px" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+            <stop offset=".3" stop-color="#0863ba"/><stop offset=".69" stop-color="#5694cf"/>
+          </linearGradient>
+          <linearGradient id="g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#5694cf"/><stop offset=".68" stop-color="#a4c4e4"/>
+          </linearGradient>
+        </defs>
+        <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+        <path fill="url(#g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+        <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+        <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+        <path fill="url(#g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+      </svg>`;
 
     const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -1018,50 +1065,48 @@ export default function PaymentsPage() {
   .report-title { text-align: left; }
   .report-title h1 { font-size: 18px; font-weight: 800; color: #353535; }
   .report-title p { font-size: 12px; color: #888; margin-top: 4px; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; }
-  .stat { background: #f7f9fc; border-radius: 10px; padding: 14px 18px; border: 1.5px solid #eef0f3; }
-  .stat-val { font-size: 20px; font-weight: 800; }
-  .stat-label { font-size: 11px; color: #888; margin-top: 4px; }
-  .green { color: #2e7d32; } .orange { color: #e67e22; } .blue { color: #0863ba; }
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #0863ba; color: #fff; }
-  th { padding: 10px 12px; text-align: right; font-size: 12px; font-weight: 700; }
-  td { padding: 9px 12px; border-bottom: 1px solid #eef0f3; font-size: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 24px; }
+  .stat { background: #f7f9fc; border-radius: 10px; padding: 12px 14px; border: 1.5px solid #eef0f3; }
+  .stat-val { font-size: 17px; font-weight: 800; }
+  .stat-label { font-size: 10px; color: #888; margin-top: 4px; }
+  .green { color: #2e7d32; } .orange { color: #e67e22; } .blue { color: #0863ba; } .red { color: #c0392b; } .purple { color: #7b2d8b; }
+  .section-title { font-size: 14px; font-weight: 800; color: #353535; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid; display: flex; align-items: center; gap: 8px; }
+  .section-income { border-color: #2e7d32; }
+  .section-withdraw { border-color: #c0392b; }
+  .section-expense { border-color: #7b2d8b; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  thead tr { color: #fff; }
+  thead.income-head tr { background: #0863ba; }
+  thead.withdraw-head tr { background: #c0392b; }
+  thead.expense-head tr { background: #7b2d8b; }
+  th { padding: 9px 12px; text-align: right; font-size: 11px; font-weight: 700; }
+  td { padding: 8px 12px; border-bottom: 1px solid #eef0f3; font-size: 11px; }
   tr:nth-child(even) td { background: #fafbfc; }
-  .amount { font-weight: 700; color: #2e7d32; }
+  .amount-green { font-weight: 700; color: #2e7d32; }
+  .amount-red { font-weight: 700; color: #c0392b; }
+  .amount-purple { font-weight: 700; color: #7b2d8b; }
   .status-paid { color: #2e7d32; font-weight: 600; }
   .status-pending { color: #e67e22; font-weight: 600; }
   .status-cancelled { color: #c0392b; font-weight: 600; }
-  .footer { margin-top: 24px; padding-top: 14px; border-top: 1.5px solid #eef0f3; display: flex; justify-content: space-between; font-size: 11px; color: #aaa; }
   .total-row td { font-weight: 800; background: #f0f7ff !important; color: #0863ba; border-top: 2px solid #0863ba; }
+  .net-box { margin-top: 20px; padding: 16px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .net-positive { background: linear-gradient(135deg,#e8f5e9,#f1f8e9); border: 2px solid #2e7d32; }
+  .net-negative { background: linear-gradient(135deg,#ffebee,#fce4ec); border: 2px solid #c0392b; }
+  .footer { margin-top: 24px; padding-top: 14px; border-top: 1.5px solid #eef0f3; display: flex; justify-content: space-between; font-size: 11px; color: #aaa; }
   @media print { body { padding: 16px; } }
 </style>
 </head>
 <body>
   <div class="header">
     <div class="logo-area">
-      <svg viewBox="0 0 337.74 393.31" style="width:44px;height:44px" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
-            <stop offset=".3" stop-color="#0863ba"/><stop offset=".69" stop-color="#5694cf"/>
-          </linearGradient>
-          <linearGradient id="g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#5694cf"/><stop offset=".68" stop-color="#a4c4e4"/>
-          </linearGradient>
-        </defs>
-        <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
-        <path fill="url(#g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
-        <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
-        <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
-        <path fill="url(#g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
-      </svg>
+      ${svgLogo}
       <div>
         <div class="logo-text">نبض</div>
         <div class="logo-sub">${clinicName || "نظام إدارة العيادة"}</div>
       </div>
     </div>
     <div class="report-title">
-      <h1>تقرير المدفوعات الشهري</h1>
+      <h1>التقرير المالي الشهري</h1>
       ${clinicName ? `<p style="font-size:14px;font-weight:700;color:#353535;margin-bottom:2px">${clinicName}</p>` : ""}
       <p>${monthName}</p>
     </div>
@@ -1069,42 +1114,86 @@ export default function PaymentsPage() {
 
   <div class="stats">
     <div class="stat">
-      <div class="stat-val green">${totalPaid.toLocaleString()} ل.س</div>
-      <div class="stat-label">إجمالي المدفوع</div>
+      <div class="stat-val green">+${totalPaid.toLocaleString()} ل.س</div>
+      <div class="stat-label">إجمالي الدخل المدفوع</div>
     </div>
     <div class="stat">
       <div class="stat-val orange">${totalPending.toLocaleString()} ل.س</div>
       <div class="stat-label">إجمالي المعلّق</div>
     </div>
     <div class="stat">
-      <div class="stat-val blue">${monthPayments.length}</div>
-      <div class="stat-label">إجمالي المعاملات</div>
+      <div class="stat-val red">-${totalWD.toLocaleString()} ل.س</div>
+      <div class="stat-label">إجمالي السحوبات</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val purple">-${totalEX.toLocaleString()} ل.س</div>
+      <div class="stat-label">مصروفات العيادة</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val blue">${monthPayments.length + monthWithdrawals.length + monthExpenses.length}</div>
+      <div class="stat-label">إجمالي الحركات</div>
     </div>
   </div>
 
+  <!-- قسم الدخل -->
+  <div class="section-title section-income">💰 حركة الدفع — المدفوعات والمستحقات</div>
   <table>
-    <thead>
+    <thead class="income-head">
       <tr>
-        <th>التاريخ</th>
-        <th>المريض</th>
-        <th>الوصف</th>
-        <th>طريقة الدفع</th>
-        <th>الحالة</th>
-        <th>المبلغ</th>
+        <th>التاريخ</th><th>المريض</th><th>الوصف</th><th>طريقة الدفع</th><th>الحالة</th><th>المبلغ</th>
       </tr>
     </thead>
     <tbody>
-      ${rows}
+      ${paymentRows || `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد مدفوعات هذا الشهر</td></tr>`}
       <tr class="total-row">
         <td colspan="5">الإجمالي المدفوع</td>
-        <td>${totalPaid.toLocaleString()} ل.س</td>
+        <td>+${totalPaid.toLocaleString()} ل.س</td>
       </tr>
     </tbody>
   </table>
 
+  <!-- قسم السحوبات -->
+  <div class="section-title section-withdraw">💸 حركة السحوبات</div>
+  <table>
+    <thead class="withdraw-head">
+      <tr>
+        <th>التاريخ</th><th colspan="3">سبب السحب</th><th>النوع</th><th>المبلغ</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${withdrawalRows}
+      ${monthWithdrawals.length > 0 ? `<tr class="total-row"><td colspan="5" style="color:#c0392b">إجمالي السحوبات</td><td style="color:#c0392b">-${totalWD.toLocaleString()} ل.س</td></tr>` : ""}
+    </tbody>
+  </table>
+
+  <!-- قسم المصروفات -->
+  <div class="section-title section-expense">🏪 حركة مصروفات العيادة</div>
+  <table>
+    <thead class="expense-head">
+      <tr>
+        <th>التاريخ</th><th colspan="2">الوصف</th><th>التصنيف</th><th>النوع</th><th>المبلغ</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${expenseRows}
+      ${monthExpenses.length > 0 ? `<tr class="total-row"><td colspan="5" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ل.س</td></tr>` : ""}
+    </tbody>
+  </table>
+
+  <!-- الرصيد الصافي -->
+  <div class="net-box ${netBalance >= 0 ? "net-positive" : "net-negative"}">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#555">الرصيد الصافي للشهر</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">الدخل المدفوع − السحوبات − المصروفات</div>
+    </div>
+    <div style="font-size:24px;font-weight:900;color:${netBalance >= 0 ? "#2e7d32" : "#c0392b"}">
+      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} ل.س
+    </div>
+  </div>
+
   <div class="footer">
     <span>نبض${clinicName ? " — " + clinicName : " — نظام إدارة العيادة"}</span>
-    <span>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA", { year:"numeric", month:"long", day:"numeric" })}</span>
+    <span>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"long", day:"numeric" })}</span>
   </div>
 </body>
 </html>`;
@@ -1508,7 +1597,7 @@ export default function PaymentsPage() {
                       <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa" }}>
                         <div>
                           <div style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{w.reason}</div>
-                          <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-SA":"en-US",{month:"short",day:"numeric"})}</div>
+                          <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</div>
                         </div>
                         <span style={{ fontSize:14,fontWeight:800,color:"#c0392b" }}>-{w.amount.toLocaleString()} ل.س</span>
                       </div>
@@ -1535,7 +1624,7 @@ export default function PaymentsPage() {
                             <div style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{e.description}</div>
                             <div style={{ display:"flex",gap:8,marginTop:3 }}>
                               <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
-                              <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-SA":"en-US",{month:"short",day:"numeric"})}</span>
+                              <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
                             </div>
                           </div>
                           <span style={{ fontSize:14,fontWeight:800,color:"#7b2d8b" }}>-{e.amount.toLocaleString()} ل.س</span>
