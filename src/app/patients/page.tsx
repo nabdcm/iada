@@ -636,7 +636,7 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
   );
 }
 
-// ─── Patient Profile Drawer ───────────────────────────────
+// ─── Patient Profile Modal ───────────────────────────────
 function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lang; patient:Patient; clinicType:ClinicType; onClose:()=>void }) {
   const t    = T[lang].profile;
   const isAr = lang==="ar";
@@ -649,6 +649,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving,         setSaving]         = useState(false);
   const [userId,         setUserId]         = useState<string>("");
+  const [editingField,   setEditingField]   = useState<string|null>(null);
 
   useEffect(()=>{
     (async()=>{
@@ -676,8 +677,9 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
 
   const inputSt: CSSProperties = {
     width:"100%",padding:"10px 14px",border:"1.5px solid #e8eaed",borderRadius:10,
-    fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fafbfc",
+    fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",
     outline:"none",resize:"vertical" as const,direction:isAr?"rtl":"ltr",lineHeight:1.6,
+    boxSizing:"border-box" as const,
   };
 
   const tabs = [
@@ -689,31 +691,31 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
 
   return (
     <>
-      <style>{`@keyframes drawerIn{from{opacity:0;transform:translateX(${isAr?"-100%":"100%"})}to{opacity:1;transform:translateX(0)}} .ptab:hover{background:rgba(8,99,186,.06)!important}`}</style>
-      <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"fixed",top:0,bottom:0,[isAr?"left":"right"]:0,width:"min(520px, 100vw)",zIndex:301,background:"#fff",display:"flex",flexDirection:"column",boxShadow:isAr?"6px 0 40px rgba(0,0,0,.15)":"-6px 0 40px rgba(0,0,0,.15)",animation:"drawerIn .3s cubic-bezier(.4,0,.2,1)",direction:isAr?"rtl":"ltr" }}>
+      <style>{`@keyframes profileModalIn{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}} .ptab:hover{background:rgba(8,99,186,.06)!important} .med-field-card:hover .med-edit-hint{opacity:1!important}`}</style>
+      <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:600,maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 24px 64px rgba(8,99,186,.22)",animation:"profileModalIn .3s cubic-bezier(.4,0,.2,1)",direction:isAr?"rtl":"ltr",overflow:"hidden" }}>
 
         {/* Header */}
-        <div style={{ padding:"20px 24px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",gap:14 }}>
-          <div style={{ width:46,height:46,borderRadius:12,background:getColor(patient.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0 }}>
+        <div style={{ padding:"20px 24px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",gap:14,flexShrink:0 }}>
+          <div style={{ width:48,height:48,borderRadius:14,background:getColor(patient.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0,boxShadow:`0 4px 12px ${getColor(patient.id)}60` }}>
             {getInitials(patient.name)}
           </div>
           <div style={{ flex:1,minWidth:0 }}>
-            <div style={{ fontSize:16,fontWeight:800,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{patient.name}</div>
-            <div style={{ fontSize:11,color:"#aaa",marginTop:2,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+            <div style={{ fontSize:17,fontWeight:800,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{patient.name}</div>
+            <div style={{ fontSize:11,color:"#aaa",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
               {patient.gender&&<span>{isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")}</span>}
               {calcAge(patient.date_of_birth)!=="—"&&<span>• {calcAge(patient.date_of_birth)} {t.years}</span>}
-              <span style={{ padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:700,background:`${meta.color}18`,color:meta.color }}>
+              <span style={{ padding:"2px 10px",borderRadius:10,fontSize:10,fontWeight:700,background:`${meta.color}18`,color:meta.color }}>
                 {meta.icon} {isAr?meta.ar:meta.en}
               </span>
-              {saving&&<span style={{ fontSize:10,color:"#aaa" }}>💾 {t.saving}</span>}
+              {saving&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600 }}>💾 {t.saving}</span>}
             </div>
           </div>
-          <button onClick={onClose} style={{ width:34,height:34,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
+          <button onClick={onClose} style={{ width:36,height:36,borderRadius:10,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s" }}>✕</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display:"flex",borderBottom:"1.5px solid #eef0f3",padding:"0 8px" }}>
+        <div style={{ display:"flex",borderBottom:"1.5px solid #eef0f3",padding:"0 12px",flexShrink:0,background:"#fafbfc" }}>
           {tabs.map(tab=>(
             <button key={tab.key} className="ptab" onClick={()=>setActiveTab(tab.key)} style={{ flex:1,padding:"12px 4px",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:600,background:"transparent",color:activeTab===tab.key?"#0863ba":"#aaa",borderBottom:activeTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,transition:"all .18s" }}>
               <span style={{ fontSize:16 }}>{tab.icon}</span>{tab.label}
@@ -734,7 +736,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
               {activeTab==="info"&&(
                 <div>
                   <div style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,marginBottom:14 }}>{t.personalInfo}</div>
-                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16 }}>
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16 }}>
                     {[
                       { label:t.name,   value:patient.name,    icon:"👤" },
                       { label:t.phone,  value:patient.phone||"—", icon:"📞" },
@@ -742,7 +744,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
                       { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
                       { label:t.age,    value:calcAge(patient.date_of_birth)!=="—"?`${calcAge(patient.date_of_birth)} ${t.years}`:"—", icon:"🎯" },
                     ].map(f=>(
-                      <div key={f.label} style={{ background:"#f7f9fc",borderRadius:10,padding:"12px 14px",border:"1.5px solid #eef0f3" }}>
+                      <div key={f.label} style={{ background:"#f7f9fc",borderRadius:12,padding:"12px 14px",border:"1.5px solid #eef0f3" }}>
                         <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>{f.icon} {f.label}</div>
                         <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{f.value}</div>
                       </div>
@@ -756,7 +758,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
                         { key:"has_diabetes",     label:isAr?"السكري":"Diabetes",     icon:"🩸",color:"#c0392b",active:patient.has_diabetes },
                         { key:"has_hypertension", label:isAr?"ضغط الدم":"Hypertension",icon:"💊",color:"#e67e22",active:patient.has_hypertension },
                       ].map(c=>(
-                        <span key={c.key} style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:c.active?`${c.color}18`:"#f5f5f5",color:c.active?c.color:"#bbb",border:`1.5px solid ${c.active?`${c.color}40`:"#eee"}` }}>
+                        <span key={c.key} style={{ padding:"7px 16px",borderRadius:20,fontSize:12,fontWeight:600,background:c.active?`${c.color}18`:"#f5f5f5",color:c.active?c.color:"#bbb",border:`1.5px solid ${c.active?`${c.color}40`:"#eee"}` }}>
                           {c.icon} {c.label}: {c.active?(isAr?"نعم":"Yes"):(isAr?"لا":"No")}
                         </span>
                       ))}
@@ -783,7 +785,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
                     </div>
                   )}
                   {patient.notes&&(
-                    <div style={{ background:"#fffbf0",borderRadius:10,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
+                    <div style={{ background:"#fffbf0",borderRadius:12,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
                       <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>📝 {isAr?"ملاحظات":"Notes"}</div>
                       <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{patient.notes}</div>
                     </div>
@@ -794,24 +796,50 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
               {/* ── MEDICAL (ديناميكي حسب نوع العيادة) ── */}
               {activeTab==="medical"&&(
                 <div>
-                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 14px",background:`${meta.color}08`,borderRadius:10,border:`1px solid ${meta.color}20` }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:18,padding:"10px 14px",background:`${meta.color}08`,borderRadius:12,border:`1px solid ${meta.color}20` }}>
                     <span style={{ fontSize:18 }}>{meta.icon}</span>
                     <span style={{ fontSize:13,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {t.medicalRecord}</span>
                   </div>
-                  {medFields.map(field=>(
-                    <div key={field.key} style={{ marginBottom:14 }}>
-                      <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"flex",alignItems:"center",gap:6,marginBottom:6 }}>
-                        <span>{field.icon}</span>{isAr?field.label_ar:field.label_en}
-                      </label>
-                      <textarea
-                        value={profile.medical_fields?.[field.key]??""}
-                        onChange={e=>setProfile(prev=>({ ...prev,medical_fields:{ ...prev.medical_fields,[field.key]:e.target.value } }))}
-                        onBlur={()=>saveProfile(profile)}
-                        rows={2}
-                        style={inputSt}
-                      />
-                    </div>
-                  ))}
+                  <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+                  {medFields.map(field=>{
+                    const val = profile.medical_fields?.[field.key]??"";
+                    const isEditing = editingField===field.key;
+                    return (
+                      <div key={field.key} className="med-field-card" style={{ borderRadius:14,border:`1.5px solid ${isEditing?"#0863ba":"#eef0f3"}`,background:isEditing?"#fff":"#f7f9fc",transition:"all .2s",overflow:"hidden" }}>
+                        <div style={{ padding:"12px 14px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer" }} onClick={()=>setEditingField(isEditing?null:field.key)}>
+                          <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                            <span style={{ fontSize:16 }}>{field.icon}</span>
+                            <span style={{ fontSize:12,fontWeight:700,color:isEditing?"#0863ba":"#666" }}>{isAr?field.label_ar:field.label_en}</span>
+                          </div>
+                          <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                            {!isEditing&&val&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600,background:"rgba(8,99,186,.08)",padding:"2px 8px",borderRadius:20 }}>{isAr?"مُعبَّأ":"Filled"}</span>}
+                            {!isEditing&&!val&&<span style={{ fontSize:10,color:"#bbb",fontStyle:"italic" }}>{isAr?"اضغط للتعديل":"tap to edit"}</span>}
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isEditing?"#0863ba":"#ccc"} strokeWidth="2.5" strokeLinecap="round"><polyline points={isEditing?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+                          </div>
+                        </div>
+                        {!isEditing&&val&&(
+                          <div style={{ padding:"0 14px 12px",fontSize:13,color:"#555",lineHeight:1.6,borderTop:"1px dashed #eef0f3",paddingTop:10,marginTop:0 }}>{val}</div>
+                        )}
+                        {isEditing&&(
+                          <div style={{ padding:"0 14px 14px" }}>
+                            <textarea
+                              autoFocus
+                              value={val}
+                              onChange={e=>setProfile(prev=>({ ...prev,medical_fields:{ ...prev.medical_fields,[field.key]:e.target.value } }))}
+                              onBlur={()=>{ saveProfile(profile); setEditingField(null); }}
+                              rows={3}
+                              placeholder={isAr?"اكتب هنا...":"Write here..."}
+                              style={inputSt}
+                            />
+                            <div style={{ display:"flex",gap:8,marginTop:8 }}>
+                              <button onMouseDown={e=>{e.preventDefault();saveProfile({...profile,medical_fields:{...profile.medical_fields,[field.key]:val}});setEditingField(null);}} style={{ flex:1,padding:"9px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer" }}>{isAr?"✓ حفظ":"✓ Save"}</button>
+                              <button onMouseDown={e=>{e.preventDefault();setEditingField(null);}} style={{ padding:"9px 16px",background:"#f5f5f5",color:"#888",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -827,6 +855,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
             </>
           )}
         </div>
+      </div>
       </div>
     </>
   );
