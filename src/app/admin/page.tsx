@@ -1407,7 +1407,7 @@ export default function AdminPage() {
     try {
       // نستخدم API route بدلاً من Supabase مباشرة
       // لأن الأدمن ليس مسجلاً عبر Supabase Auth وRLS تمنع القراءة المباشرة
-      const res = await fetch("/api/get-clinics");
+      const res = await fetch("/api/get-clinics", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
 
