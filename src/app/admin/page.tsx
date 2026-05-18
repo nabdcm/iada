@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -107,6 +107,32 @@ const T = {
     filterAll:"الكل", filterActive:"نشط", filterInactive:"موقوف",
     loading:"جاري التحميل...",
     comingSoon:"قريباً",
+    dataTools: {
+      title:"أدوات البيانات",
+      exportBtn:"تصدير بيانات عيادة",
+      importBtn:"استيراد بيانات",
+      selectClinic:"اختر العيادة",
+      exportJSON:"تصدير JSON",
+      exportCSV:"تصدير CSV",
+      importTitle:"استيراد البيانات",
+      importDesc:"ارفع ملف JSON تم تصديره مسبقاً من نبض",
+      importDropzone:"اسحب ملف JSON هنا أو انقر للاختيار",
+      importPreview:"معاينة البيانات",
+      importPatients:"مريض",
+      importAppointments:"موعد",
+      importPayments:"دفعة",
+      importStart:"بدء الاستيراد",
+      importing:"جاري الاستيراد...",
+      importSuccess:"✓ تم الاستيراد بنجاح",
+      importError:"حدث خطأ أثناء الاستيراد",
+      importSkipped:"تم تخطيه (موجود مسبقاً)",
+      importNew:"جديد",
+      importUpdated:"محدّث",
+      cancel:"إلغاء",
+      close:"إغلاق",
+      noClinicSelected:"اختر عيادة أولاً",
+      exportSuccess:"✓ تم التصدير",
+    },
     subModal: {
       title:"تعديل الاشتراك",
       tabInfo:"البيانات",
@@ -211,6 +237,32 @@ const T = {
     filterAll:"All", filterActive:"Active", filterInactive:"Suspended",
     loading:"Loading...",
     comingSoon:"Coming Soon",
+    dataTools: {
+      title:"Data Tools",
+      exportBtn:"Export Clinic Data",
+      importBtn:"Import Data",
+      selectClinic:"Select Clinic",
+      exportJSON:"Export JSON",
+      exportCSV:"Export CSV",
+      importTitle:"Import Data",
+      importDesc:"Upload a JSON file previously exported from NABD",
+      importDropzone:"Drag JSON file here or click to select",
+      importPreview:"Data Preview",
+      importPatients:"patient",
+      importAppointments:"appointment",
+      importPayments:"payment",
+      importStart:"Start Import",
+      importing:"Importing...",
+      importSuccess:"✓ Import successful",
+      importError:"Error during import",
+      importSkipped:"Skipped (already exists)",
+      importNew:"New",
+      importUpdated:"Updated",
+      cancel:"Cancel",
+      close:"Close",
+      noClinicSelected:"Select a clinic first",
+      exportSuccess:"✓ Exported",
+    },
     subModal: {
       title:"Edit Subscription",
       tabInfo:"Info",
@@ -1180,6 +1232,503 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
 };
 
 // ============================================================
+// ============================================================
+// ─── Data Tools: Export / Import ────────────────────────────
+// ============================================================
+
+// ── Export helpers ────────────────────────────────────────────
+async function exportClinicData(clinic: ClinicData): Promise<Record<string, unknown>> {
+  const userId = clinic.user_id!;
+
+  const [{ data: patients }, { data: appointments }, { data: payments }] = await Promise.all([
+    supabase.from("patients").select("*").eq("user_id", userId),
+    supabase.from("appointments").select("*").eq("user_id", userId),
+    supabase.from("payments").select("*").eq("user_id", userId),
+  ]);
+
+  return {
+    _meta: {
+      exported_at: new Date().toISOString(),
+      clinic_name: clinic.name,
+      clinic_id: userId,
+      version: "1.0",
+      source: "NABD",
+    },
+    clinic,
+    patients: patients ?? [],
+    appointments: appointments ?? [],
+    payments: payments ?? [],
+  };
+}
+
+function downloadJSON(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadCSV(patients: Record<string, unknown>[], filename: string) {
+  if (!patients.length) return;
+  const headers = ["mrn","name","phone","gender","date_of_birth","has_diabetes","has_hypertension","notes","created_at"];
+  const rows = patients.map(p =>
+    headers.map(h => {
+      const v = p[h];
+      if (v === null || v === undefined) return "";
+      const s = String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g,'""')}"` : s;
+    }).join(",")
+  );
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Import helpers ────────────────────────────────────────────
+interface ImportResult {
+  patients: { new: number; updated: number; skipped: number };
+  appointments: { new: number; skipped: number };
+  payments: { new: number; skipped: number };
+  errors: string[];
+}
+
+async function importClinicData(
+  targetUserId: string,
+  data: Record<string, unknown>
+): Promise<ImportResult> {
+  const result: ImportResult = {
+    patients:     { new: 0, updated: 0, skipped: 0 },
+    appointments: { new: 0, skipped: 0 },
+    payments:     { new: 0, skipped: 0 },
+    errors: [],
+  };
+
+  const patients     = (data.patients     as Record<string, unknown>[]) ?? [];
+  const appointments = (data.appointments as Record<string, unknown>[]) ?? [];
+  const payments     = (data.payments     as Record<string, unknown>[]) ?? [];
+
+  // خريطة: old patient_id → new patient_id
+  const patientIdMap: Record<number, number> = {};
+
+  // ── استيراد المرضى ──────────────────────────────────────────
+  for (const p of patients) {
+    try {
+      const phone = (p.phone as string | undefined)?.trim();
+      if (!phone) { result.patients.skipped++; continue; }
+
+      // جلب/إنشاء MRN مركزي
+      let mrn: string = (p.mrn as string) || "";
+      const { data: masterEx } = await supabase
+        .from("master_patients")
+        .select("mrn")
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (masterEx?.mrn) {
+        mrn = masterEx.mrn;
+      } else if (!mrn) {
+        const { data: masterIns } = await supabase
+          .from("master_patients")
+          .insert({ phone, name: p.name as string })
+          .select("mrn")
+          .single();
+        mrn = masterIns?.mrn ?? `MRN-T-${Date.now()}`;
+      }
+
+      // هل يوجد مريض بنفس الهاتف في العيادة المستهدفة؟
+      const { data: existingP } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("user_id", targetUserId)
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (existingP) {
+        patientIdMap[p.id as number] = existingP.id;
+        result.patients.updated++;
+      } else {
+        const { data: inserted, error } = await supabase
+          .from("patients")
+          .insert({
+            user_id:          targetUserId,
+            name:             p.name as string,
+            phone,
+            gender:           p.gender || null,
+            date_of_birth:    p.date_of_birth || null,
+            has_diabetes:     p.has_diabetes ?? false,
+            has_hypertension: p.has_hypertension ?? false,
+            notes:            p.notes || null,
+            is_hidden:        false,
+            mrn,
+          })
+          .select("id")
+          .single();
+
+        if (error) { result.errors.push(`Patient ${p.name}: ${error.message}`); continue; }
+        patientIdMap[p.id as number] = inserted.id;
+        result.patients.new++;
+      }
+    } catch (e: unknown) {
+      result.errors.push(`Patient error: ${e}`);
+    }
+  }
+
+  // ── استيراد المواعيد ────────────────────────────────────────
+  for (const a of appointments) {
+    try {
+      const newPatientId = patientIdMap[a.patient_id as number];
+      if (!newPatientId) { result.appointments.skipped++; continue; }
+
+      // تحقق من التكرار: نفس المريض + التاريخ + الوقت
+      const { data: existingA } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("user_id", targetUserId)
+        .eq("patient_id", newPatientId)
+        .eq("date", a.date as string)
+        .eq("time", a.time as string)
+        .maybeSingle();
+
+      if (existingA) { result.appointments.skipped++; continue; }
+
+      const { error } = await supabase.from("appointments").insert({
+        user_id:    targetUserId,
+        patient_id: newPatientId,
+        date:       a.date,
+        time:       a.time,
+        duration:   a.duration ?? 30,
+        type:       a.type || null,
+        notes:      a.notes || null,
+        status:     a.status ?? "scheduled",
+      });
+
+      if (error) { result.errors.push(`Appointment error: ${error.message}`); continue; }
+      result.appointments.new++;
+    } catch (e: unknown) {
+      result.errors.push(`Appointment error: ${e}`);
+    }
+  }
+
+  // ── استيراد المدفوعات ────────────────────────────────────────
+  for (const pay of payments) {
+    try {
+      const newPatientId = patientIdMap[pay.patient_id as number];
+      if (!newPatientId) { result.payments.skipped++; continue; }
+
+      const { error } = await supabase.from("payments").insert({
+        user_id:     targetUserId,
+        patient_id:  newPatientId,
+        amount:      pay.amount,
+        description: pay.description,
+        method:      pay.method ?? "cash",
+        date:        pay.date,
+        status:      pay.status ?? "paid",
+        notes:       pay.notes || null,
+      });
+
+      if (error) { result.errors.push(`Payment error: ${error.message}`); continue; }
+      result.payments.new++;
+    } catch (e: unknown) {
+      result.errors.push(`Payment error: ${e}`);
+    }
+  }
+
+  return result;
+}
+
+// ── DataToolsModal ─────────────────────────────────────────────
+interface DataToolsModalProps {
+  lang: Lang;
+  clinics: ClinicData[];
+  onClose: () => void;
+}
+
+const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
+  const tr = T[lang];
+  const dt = tr.dataTools;
+  const isAr = lang === "ar";
+
+  const [activeMode, setActiveMode]     = useState<"export" | "import">("export");
+  const [selectedId,  setSelectedId]    = useState<string>("");
+  const [exporting,   setExporting]     = useState(false);
+  const [exportDone,  setExportDone]    = useState<"json"|"csv"|null>(null);
+
+  // Import state
+  const [importData,    setImportData]    = useState<Record<string, unknown> | null>(null);
+  const [importing,     setImporting]     = useState(false);
+  const [importResult,  setImportResult]  = useState<ImportResult | null>(null);
+  const [importError,   setImportError]   = useState("");
+  const [dragOver,      setDragOver]      = useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const selectedClinic = clinics.find(c => c.user_id === selectedId);
+
+  const handleExport = async (format: "json" | "csv") => {
+    if (!selectedClinic?.user_id) return;
+    setExporting(true);
+    try {
+      const data = await exportClinicData(selectedClinic);
+      const safeName = selectedClinic.name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, "_");
+      const date = new Date().toISOString().slice(0, 10);
+      if (format === "json") {
+        downloadJSON(data, `NABD_${safeName}_${date}.json`);
+      } else {
+        downloadCSV(data.patients as Record<string, unknown>[], `NABD_${safeName}_patients_${date}.csv`);
+      }
+      setExportDone(format);
+      setTimeout(() => setExportDone(null), 3000);
+    } catch { /* ignore */ }
+    setExporting(false);
+  };
+
+  const handleFile = (file: File) => {
+    if (!file.name.endsWith(".json")) { setImportError(isAr ? "يجب أن يكون الملف بصيغة JSON" : "File must be JSON format"); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target?.result as string);
+        setImportData(parsed);
+        setImportError("");
+        setImportResult(null);
+      } catch {
+        setImportError(isAr ? "الملف غير صالح" : "Invalid file");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImport = async () => {
+    if (!selectedClinic?.user_id || !importData) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const result = await importClinicData(selectedClinic.user_id, importData);
+      setImportResult(result);
+    } catch (e: unknown) {
+      setImportError(String(e));
+    }
+    setImporting(false);
+  };
+
+  const inputSt: React.CSSProperties = {
+    width: "100%", padding: "10px 14px", border: "1.5px solid #e8eaed",
+    borderRadius: 10, fontFamily: "Rubik, sans-serif", fontSize: 13,
+    color: "#353535", background: "#fafbfc", outline: "none",
+    direction: isAr ? "rtl" : "ltr",
+  };
+
+  const meta = importData
+    ? {
+        patients:     ((importData.patients     as unknown[]) ?? []).length,
+        appointments: ((importData.appointments as unknown[]) ?? []).length,
+        payments:     ((importData.payments     as unknown[]) ?? []).length,
+        clinicName:   (importData._meta as Record<string, string> | undefined)?.clinic_name ?? "—",
+        exportedAt:   (importData._meta as Record<string, string> | undefined)?.exported_at?.slice(0, 10) ?? "—",
+      }
+    : null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.45)", backdropFilter: "blur(6px)" }} />
+      <div style={{
+        position: "relative", zIndex: 1, background: "#fff", borderRadius: 20,
+        width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto",
+        boxShadow: "0 32px 100px rgba(8,99,186,.2)",
+        animation: "modalIn .25s cubic-bezier(.4,0,.2,1)",
+      }}>
+        {/* Header */}
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1.5px solid #eef0f3", display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(135deg,rgba(8,99,186,.04),transparent)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 40, height: 40, background: "rgba(8,99,186,.1)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🗄️</div>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: "#353535" }}>{dt.title}</h2>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, background: "#f5f5f5", border: "none", cursor: "pointer", fontSize: 15 }}>✕</button>
+        </div>
+
+        {/* Mode Tabs */}
+        <div style={{ display: "flex", gap: 4, background: "#f7f9fc", margin: "16px 24px 0", borderRadius: 12, padding: 4 }}>
+          {(["export","import"] as const).map(mode => (
+            <button key={mode} onClick={() => setActiveMode(mode)} style={{
+              flex: 1, padding: "9px", border: "none", borderRadius: 9, cursor: "pointer",
+              fontFamily: "Rubik,sans-serif", fontSize: 13, fontWeight: activeMode === mode ? 700 : 400,
+              background: activeMode === mode ? "#fff" : "transparent",
+              color: activeMode === mode ? "#0863ba" : "#888",
+              boxShadow: activeMode === mode ? "0 2px 8px rgba(8,99,186,.1)" : "none",
+              transition: "all .18s",
+            }}>
+              {mode === "export" ? `📤 ${dt.exportBtn}` : `📥 ${dt.importBtn}`}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: "20px 24px" }}>
+
+          {/* Clinic Selector — مشترك */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#555", marginBottom: 6, textTransform: "uppercase", letterSpacing: .4 }}>{dt.selectClinic}</label>
+            <select value={selectedId} onChange={e => { setSelectedId(e.target.value); setImportData(null); setImportResult(null); setImportError(""); }} style={{ ...inputSt, cursor: "pointer" }}>
+              <option value="">{dt.selectClinic}...</option>
+              {clinics.filter(c => c.user_id).map(c => (
+                <option key={c.user_id} value={c.user_id!}>{c.name} — {c.email}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* ── EXPORT MODE ── */}
+          {activeMode === "export" && (
+            <div>
+              {!selectedId ? (
+                <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>🏥</div>
+                  <div style={{ fontSize: 13 }}>{dt.noClinicSelected}</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ background: "rgba(8,99,186,.04)", border: "1.5px solid rgba(8,99,186,.1)", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#353535", marginBottom: 4 }}>{selectedClinic?.name}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>{selectedClinic?.email}</div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                      {isAr ? "الخطة:" : "Plan:"} {selectedClinic?.plan} &nbsp;|&nbsp;
+                      {isAr ? "الحالة:" : "Status:"} {selectedClinic?.status}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <button
+                      onClick={() => handleExport("json")}
+                      disabled={exporting}
+                      style={{ padding: "14px", background: exportDone === "json" ? "rgba(46,125,50,.08)" : "rgba(8,99,186,.06)", color: exportDone === "json" ? "#2e7d32" : "#0863ba", border: `1.5px solid ${exportDone === "json" ? "rgba(46,125,50,.2)" : "rgba(8,99,186,.2)"}`, borderRadius: 12, fontFamily: "Rubik,sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .2s" }}>
+                      {exportDone === "json" ? "✓" : "📄"} {exportDone === "json" ? dt.exportSuccess : dt.exportJSON}
+                    </button>
+                    <button
+                      onClick={() => handleExport("csv")}
+                      disabled={exporting}
+                      style={{ padding: "14px", background: exportDone === "csv" ? "rgba(46,125,50,.08)" : "rgba(46,125,50,.06)", color: exportDone === "csv" ? "#2e7d32" : "#2e7d32", border: `1.5px solid ${exportDone === "csv" ? "rgba(46,125,50,.3)" : "rgba(46,125,50,.2)"}`, borderRadius: 12, fontFamily: "Rubik,sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .2s" }}>
+                      {exportDone === "csv" ? "✓" : "📊"} {exportDone === "csv" ? dt.exportSuccess : dt.exportCSV}
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: 12, padding: "10px 14px", background: "#f7f9fc", borderRadius: 10, border: "1.5px solid #eef0f3", fontSize: 11, color: "#888", lineHeight: 1.7 }}>
+                    <strong style={{ color: "#353535" }}>JSON:</strong> {isAr ? "يشمل المرضى + المواعيد + المدفوعات كاملاً (للاستيراد لاحقاً)" : "Includes patients + appointments + payments (for re-import)"}<br />
+                    <strong style={{ color: "#353535" }}>CSV:</strong> {isAr ? "قائمة المرضى فقط — مناسب لـ Excel" : "Patients list only — suitable for Excel"}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── IMPORT MODE ── */}
+          {activeMode === "import" && (
+            <div>
+              {!selectedId ? (
+                <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>🏥</div>
+                  <div style={{ fontSize: 13 }}>{dt.noClinicSelected}</div>
+                </div>
+              ) : importResult ? (
+                // نتيجة الاستيراد
+                <div>
+                  <div style={{ textAlign: "center", marginBottom: 20 }}>
+                    <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
+                    <h3 style={{ fontSize: 16, fontWeight: 800, color: "#2e7d32" }}>{dt.importSuccess}</h3>
+                  </div>
+                  {[
+                    { icon: "👥", label: isAr ? "المرضى" : "Patients",     r: importResult.patients,     hasUpdated: true },
+                    { icon: "📅", label: isAr ? "المواعيد" : "Appointments", r: importResult.appointments, hasUpdated: false },
+                    { icon: "💳", label: isAr ? "المدفوعات" : "Payments",    r: importResult.payments,     hasUpdated: false },
+                  ].map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#f7f9fc", borderRadius: 10, marginBottom: 8, border: "1.5px solid #eef0f3" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>{s.icon}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#353535" }}>{s.label}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 20, background: "rgba(46,125,50,.1)", color: "#2e7d32", fontWeight: 700 }}>+{s.r.new} {dt.importNew}</span>
+                        {s.hasUpdated && (s.r as typeof importResult.patients).updated > 0 && <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 20, background: "rgba(8,99,186,.1)", color: "#0863ba", fontWeight: 700 }}>{(s.r as typeof importResult.patients).updated} {dt.importUpdated}</span>}
+                        {(s.r.skipped) > 0 && <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 20, background: "rgba(136,136,136,.1)", color: "#888", fontWeight: 700 }}>{s.r.skipped} {dt.importSkipped}</span>}
+                      </div>
+                    </div>
+                  ))}
+                  {importResult.errors.length > 0 && (
+                    <div style={{ background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.15)", borderRadius: 10, padding: "10px 14px", marginTop: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>⚠️ {importResult.errors.length} {isAr ? "خطأ" : "error(s)"}</div>
+                      {importResult.errors.slice(0, 3).map((e, i) => <div key={i} style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>• {e}</div>)}
+                    </div>
+                  )}
+                  <button onClick={() => { setImportResult(null); setImportData(null); }} style={{ width: "100%", marginTop: 16, padding: "11px", background: "#f7f9fc", border: "1.5px solid #eef0f3", borderRadius: 12, fontFamily: "Rubik,sans-serif", fontSize: 13, color: "#666", cursor: "pointer" }}>
+                    {dt.close}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {/* Drop zone */}
+                  {!importData ? (
+                    <div
+                      onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+                      onClick={() => fileRef.current?.click()}
+                      style={{ border: `2px dashed ${dragOver ? "#0863ba" : "#c8d4e0"}`, borderRadius: 14, padding: "32px 20px", textAlign: "center", cursor: "pointer", background: dragOver ? "rgba(8,99,186,.04)" : "#fafbfc", transition: "all .2s", marginBottom: 16 }}>
+                      <div style={{ fontSize: 36, marginBottom: 8 }}>📂</div>
+                      <div style={{ fontSize: 13, color: "#888", fontWeight: 600 }}>{dt.importDropzone}</div>
+                      <div style={{ fontSize: 11, color: "#bbb", marginTop: 4 }}>NABD JSON</div>
+                    </div>
+                  ) : (
+                    // معاينة
+                    <div style={{ background: "#f7f9fc", borderRadius: 12, padding: "16px", border: "1.5px solid #eef0f3", marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#0863ba", marginBottom: 10, textTransform: "uppercase", letterSpacing: .4 }}>📋 {dt.importPreview}</div>
+                      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+                        {isAr ? "المصدر:" : "Source:"} <strong style={{ color: "#353535" }}>{meta?.clinicName}</strong>
+                        &nbsp;|&nbsp; {isAr ? "تاريخ:" : "Date:"} <strong style={{ color: "#353535" }}>{meta?.exportedAt}</strong>
+                      </div>
+                      {[
+                        { icon: "👥", count: meta?.patients, label: isAr ? `${dt.importPatients}` : dt.importPatients },
+                        { icon: "📅", count: meta?.appointments, label: isAr ? `${dt.importAppointments}` : dt.importAppointments },
+                        { icon: "💳", count: meta?.payments, label: isAr ? `${dt.importPayments}` : dt.importPayments },
+                      ].map((s, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span>{s.icon}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#0863ba" }}>{s.count}</span>
+                          <span style={{ fontSize: 12, color: "#888" }}>{s.label}</span>
+                        </div>
+                      ))}
+                      <button onClick={() => setImportData(null)} style={{ marginTop: 8, padding: "6px 12px", background: "#fff", border: "1.5px solid #eef0f3", borderRadius: 8, fontFamily: "Rubik,sans-serif", fontSize: 11, color: "#888", cursor: "pointer" }}>
+                        ✕ {isAr ? "تغيير الملف" : "Change file"}
+                      </button>
+                    </div>
+                  )}
+                  <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+
+                  {importError && <div style={{ background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.15)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#c0392b", marginBottom: 12 }}>⚠️ {importError}</div>}
+
+                  {importData && (
+                    <div style={{ background: "rgba(230,126,34,.06)", border: "1.5px solid rgba(230,126,34,.2)", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#666", marginBottom: 14, lineHeight: 1.7 }}>
+                      ⚠️ {isAr
+                        ? `سيتم استيراد البيانات إلى عيادة: ${selectedClinic?.name}. المرضى الموجودون بنفس الهاتف لن يُكرَّروا.`
+                        : `Data will be imported into: ${selectedClinic?.name}. Existing patients with same phone will not be duplicated.`}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleImport}
+                    disabled={!importData || importing}
+                    style={{ width: "100%", padding: "13px", background: importData && !importing ? "#0863ba" : "#ccc", color: "#fff", border: "none", borderRadius: 12, fontFamily: "Rubik,sans-serif", fontSize: 14, fontWeight: 700, cursor: importData && !importing ? "pointer" : "not-allowed", boxShadow: importData ? "0 4px 16px rgba(8,99,186,.25)" : "none", transition: "all .2s" }}>
+                    {importing ? `⏳ ${dt.importing}` : `📥 ${dt.importStart}`}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── بيانات دخول المدير — مستقلة تماماً عن Supabase ────────
 // ============================================================
 const ADMIN_USERNAME = "nabd";
@@ -1399,6 +1948,7 @@ export default function AdminPage() {
   const [resetClinic,  setResetClinic]  = useState<ClinicData | null>(null);
   const [subClinic,    setSubClinic]    = useState<ClinicData | null>(null);
   const [openMenuId,   setOpenMenuId]   = useState<number | null>(null);
+  const [dataToolsModal, setDataToolsModal] = useState(false);
 
   useEffect(() => { loadClinics(); }, []);
 
@@ -1640,10 +2190,16 @@ export default function AdminPage() {
                 </p>
               </div>
               {activeTab === "clinics" && (
-                <button onClick={() => setAddModal(true)}
-                  style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 20px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.35)",transition:"all .2s" }}>
-                  <span>＋</span> {tr.clinics.addClinic}
-                </button>
+                <div style={{ display:"flex",gap:10 }}>
+                  <button onClick={() => setDataToolsModal(true)}
+                    style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}>
+                    🗄️ {isAr ? "أدوات البيانات" : "Data Tools"}
+                  </button>
+                  <button onClick={() => setAddModal(true)}
+                    style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 20px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.35)",transition:"all .2s" }}>
+                    <span>＋</span> {tr.clinics.addClinic}
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1796,6 +2352,14 @@ export default function AdminPage() {
             clinic={subClinic}
             onSave={loadClinics}
             onClose={() => { setSubClinic(null); loadClinics(); }}
+          />
+        )}
+
+        {dataToolsModal && (
+          <DataToolsModal
+            lang={lang}
+            clinics={clinics}
+            onClose={() => setDataToolsModal(false)}
           />
         )}
 

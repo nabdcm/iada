@@ -169,12 +169,33 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     setSubmitting(true);
 
     try {
-      // ── 1. تحقق إذا المريض مسجل مسبقاً بنفس الهاتف ──────
+      const cleanPhone = form.phone.trim();
+
+      // ── 1. تحقق/إنشاء سجل مركزي في master_patients ──────
+      let mrn: string;
+      const { data: masterExisting } = await supabase
+        .from("master_patients")
+        .select("mrn")
+        .eq("phone", cleanPhone)
+        .maybeSingle();
+
+      if (masterExisting?.mrn) {
+        mrn = masterExisting.mrn;
+      } else {
+        const { data: masterInserted } = await supabase
+          .from("master_patients")
+          .insert({ phone: cleanPhone, name: form.name.trim() })
+          .select("mrn")
+          .single();
+        mrn = masterInserted?.mrn ?? `MRN-T-${Date.now()}`;
+      }
+
+      // ── 2. تحقق إذا المريض مسجل مسبقاً في هذه العيادة ──
       const { data: existing } = await supabase
         .from("patients")
         .select("id")
         .eq("user_id", clinicId)
-        .eq("phone", form.phone.trim())
+        .eq("phone", cleanPhone)
         .maybeSingle();
 
       let patientId: number;
@@ -182,18 +203,19 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
       if (existing) {
         patientId = existing.id;
       } else {
-        // ── 2. تسجيل المريض تلقائياً ──────────────────────
+        // ── 3. تسجيل المريض مع MRN ─────────────────────────
         const { data: newPatient, error: patientError } = await supabase
           .from("patients")
           .insert({
             user_id:          clinicId,
             name:             form.name.trim(),
-            phone:            form.phone.trim(),
+            phone:            cleanPhone,
             gender:           form.gender || null,
             has_diabetes:     form.has_diabetes,
             has_hypertension: form.has_hypertension,
             notes:            form.notes.trim() || null,
             is_hidden:        false,
+            mrn,
           })
           .select("id")
           .single();
@@ -202,8 +224,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
         patientId = newPatient.id;
       }
 
-      // ── 3. إنشاء الموعد بحالة "pending_approval" بدلاً من "scheduled" ──
-      // الموعد لن يظهر في قائمة المواعيد الفعلية حتى يوافق عليه الطبيب
+      // ── 4. إنشاء الموعد ────────────────────────────────────
       const { error: apptError } = await supabase
         .from("appointments")
         .insert({
@@ -214,7 +235,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
           duration:   clinic?.appointment_duration ?? 30,
           type:       "حجز إلكتروني / Online Booking",
           notes:      form.notes.trim() || null,
-          status:     "pending_approval", // ◀ الجديد: بانتظار موافقة الطبيب
+          status:     "pending_approval",
         });
 
       if (apptError) throw apptError;
