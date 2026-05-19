@@ -650,27 +650,28 @@ export default function LandingPage() {
 
         /* ── PRICING ── */
         .pricing-section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
+        /* ── PRICING TOGGLE ── */
         .pricing-toggle {
-          display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 48px;
+          display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 48px;
         }
-        .pricing-toggle-label { font-size: 15px; font-weight: 600; color: #888; }
-        .pricing-toggle-label.active { color: var(--primary); }
-        .toggle-switch {
-          position: relative; width: 52px; height: 28px; cursor: pointer;
+        .toggle-pill {
+          display: flex; align-items: center;
+          background: #eef2f8; border-radius: 40px; padding: 4px;
+          gap: 2px; cursor: pointer; user-select: none;
         }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .toggle-slider {
-          position: absolute; inset: 0; background: var(--primary);
-          border-radius: 28px; transition: 0.3s;
+        .toggle-pill-option {
+          padding: 8px 22px; border-radius: 32px;
+          font-size: 14px; font-weight: 600; color: #888;
+          transition: all 0.25s ease; white-space: nowrap;
         }
-        .toggle-slider::before {
-          content: ''; position: absolute; width: 20px; height: 20px;
-          background: #fff; border-radius: 50%; top: 4px; left: 4px; transition: 0.3s;
+        .toggle-pill-option.active {
+          background: var(--primary); color: #fff;
+          box-shadow: 0 4px 14px rgba(8,99,186,0.28);
         }
-        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(24px); }
         .pricing-save-badge {
-          background: rgba(8,99,186,0.1); color: var(--primary);
-          font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+          background: #e8f5e9; color: #2e7d32;
+          font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px;
+          margin-inline-start: 4px;
         }
         .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
         .pricing-card {
@@ -971,12 +972,20 @@ export default function LandingPage() {
             <p className="section-sub">{t.pricing.subtitle}</p>
           </div>
           <div className="pricing-toggle">
-            <span className={`pricing-toggle-label${!pricingAnnual ? " active" : ""}`}>{t.pricing.monthly}</span>
-            <label className="toggle-switch">
-              <input type="checkbox" checked={pricingAnnual} onChange={() => setPricingAnnual(!pricingAnnual)} />
-              <span className="toggle-slider" />
-            </label>
-            <span className={`pricing-toggle-label${pricingAnnual ? " active" : ""}`}>{t.pricing.annual}</span>
+            <div className="toggle-pill">
+              <div
+                className={`toggle-pill-option${!pricingAnnual ? " active" : ""}`}
+                onClick={() => setPricingAnnual(false)}
+              >
+                {t.pricing.monthly}
+              </div>
+              <div
+                className={`toggle-pill-option${pricingAnnual ? " active" : ""}`}
+                onClick={() => setPricingAnnual(true)}
+              >
+                {t.pricing.annual}
+              </div>
+            </div>
             {pricingAnnual && <span className="pricing-save-badge">{t.pricing.save}</span>}
           </div>
           <div className="pricing-grid">
