@@ -412,43 +412,44 @@ function Sidebar({ lang, setLang, activePage = "dashboard", plan = "basic" }: {
           borderTop: `1px solid ${SB_BORDER}`,
           background: SB_BG_FOOTER,
         }}>
-          {/* Plan badge */}
           {!collapsed && (
-            <div style={{
-              display:"flex", alignItems:"center", gap:6,
-              padding:"7px 12px", marginBottom:8,
-              background:"rgba(255,255,255,0.08)",
-              border:`1.5px solid ${PLAN_BADGE[plan].color}50`,
-              borderRadius:8,
-            }}>
-              <div style={{ width:8, height:8, borderRadius:"50%", background:PLAN_BADGE[plan].color, flexShrink:0 }} />
-              <span style={{ fontSize:11, color:"rgba(255,255,255,0.7)", flex:1 }}>
-                {isAr ? "خطة" : "Plan"}
-              </span>
-              <span style={{ fontSize:11, fontWeight:700, color:PLAN_BADGE[plan].color }}>
-                {PLAN_BADGE[plan].label[lang]}
-              </span>
-            </div>
+            <>
+              {/* Plan badge */}
+              <div style={{
+                display:"flex", alignItems:"center", gap:6,
+                padding:"7px 12px", marginBottom:8,
+                background:"rgba(255,255,255,0.08)",
+                border:`1.5px solid ${PLAN_BADGE[plan].color}50`,
+                borderRadius:8,
+              }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:PLAN_BADGE[plan].color, flexShrink:0 }} />
+                <span style={{ fontSize:11, color:"rgba(255,255,255,0.7)", flex:1 }}>
+                  {isAr ? "خطة" : "Plan"}
+                </span>
+                <span style={{ fontSize:11, fontWeight:700, color:PLAN_BADGE[plan].color }}>
+                  {PLAN_BADGE[plan].label[lang]}
+                </span>
+              </div>
+              {/* Language toggle */}
+              <button
+                onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+                style={{
+                  width:"100%", padding:"8px 12px", marginBottom:8,
+                  background:"rgba(255,255,255,0.1)",
+                  border:"1.5px solid rgba(255,255,255,0.15)",
+                  borderRadius:8, cursor:"pointer",
+                  fontSize:12, fontFamily:"Rubik,sans-serif",
+                  color:"rgba(255,255,255,0.75)", fontWeight:600,
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  transition:"all .2s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.18)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; }}
+              >
+                🌐 {lang === "ar" ? "English" : "العربية"}
+              </button>
+            </>
           )}
-            <button
-              onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-              style={{
-                width:"100%", padding:"8px 12px", marginBottom:8,
-                background:"rgba(255,255,255,0.1)",
-                border:"1.5px solid rgba(255,255,255,0.15)",
-                borderRadius:8, cursor:"pointer",
-                fontSize:12, fontFamily:"Rubik,sans-serif",
-                color:"rgba(255,255,255,0.75)", fontWeight:600,
-                display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                transition:"all .2s",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.18)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; }}
-            >
-              🌐 {lang === "ar" ? "English" : "العربية"}
-            </button>
-          )}
-
           <button
             onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
             style={{
