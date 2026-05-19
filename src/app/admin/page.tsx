@@ -166,7 +166,7 @@ const T = {
       cancel:"إلغاء",
       changePlan:"تغيير الخطة إلى",
       plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة" },
-      planDesc:{ basic:"إدارة المرضى والمواعيد", pro:"المرضى + المواعيد + المالية + رابط الحجز", enterprise:"جميع الميزات + متابعة المرضى" },
+      planDesc:{ basic:"إدارة المرضى والمواعيد والسجلات • حتى 300 مريض", pro:"الأساسية + رابط الحجز + المدفوعات + واتساب • حتى 1000 مريض", enterprise:"جميع الميزات + متابعة المرضى + بوابة المريض • غير محدود" },
       deleteConfirmTitle:"تأكيد الحذف النهائي",
       deleteConfirmMsg:"هل أنت متأكد من حذف عيادة",
       deleteConfirmWarning:"سيتم حذف جميع البيانات نهائياً ولا يمكن التراجع.",
@@ -296,7 +296,7 @@ const T = {
       cancel:"Cancel",
       changePlan:"Change Plan To",
       plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive" },
-      planDesc:{ basic:"Patients & appointments management", pro:"Patients + appointments + finances + booking link", enterprise:"All features + patient follow-up" },
+      planDesc:{ basic:"Patients & appointments & records • Up to 300 patients", pro:"Basic + booking link + payments + WhatsApp • Up to 1000 patients", enterprise:"All features + patient follow-up + portal • Unlimited" },
       deleteConfirmTitle:"Confirm Permanent Delete",
       deleteConfirmMsg:"Are you sure you want to delete clinic",
       deleteConfirmWarning:"All data will be permanently deleted and cannot be recovered.",
@@ -310,9 +310,32 @@ const PLAN_COLORS = { basic:"#0863ba", pro:"#7b2d8b", enterprise:"#e67e22" };
 
 // Plan pricing config
 const PLAN_PRICING = {
-  basic:      { monthly:10,  halfYear:39,  yearly:54  },
-  pro:        { monthly:15,  halfYear:49,  yearly:79  },
-  enterprise: { monthly:29,  halfYear:89,  yearly:149 },
+  basic:      { monthly:5.99,  yearly:59  },
+  pro:        { monthly:7.99,  yearly:79  },
+  enterprise: { monthly:14.99, yearly:149 },
+};
+
+// Patient limits per plan
+const PLAN_PATIENT_LIMITS = {
+  basic:      300,
+  pro:        1000,
+  enterprise: Infinity,
+};
+
+// Features per plan
+const PLAN_FEATURES = {
+  basic: {
+    ar: ["إدارة المرضى","السجلات الطبية","إدارة المواعيد","حتى 300 مريض"],
+    en: ["Patient management","Medical records","Appointments management","Up to 300 patients"],
+  },
+  pro: {
+    ar: ["جميع ميزات الأساسية","رابط حجز المواعيد","إدارة المدفوعات","مراسلة المرضى عبر واتساب","تذكير المواعيد","حتى 1000 مريض"],
+    en: ["All Basic features","Clinic booking link","Payments management","WhatsApp patient messaging","Appointment reminders","Up to 1000 patients"],
+  },
+  enterprise: {
+    ar: ["جميع ميزات الاحترافية","متابعة المرضى برابط خاص","تقارير يومية للمريض","بوابة خاصة بالمريض","تسجيل الوصفات الطبية","عدد مرضى غير محدود","أولوية في الدعم الفني"],
+    en: ["All Professional features","Patient follow-up link","Daily patient reports","Patient portal","Prescription records","Unlimited patients","Priority support"],
+  },
 };
 
 // Clinic type icons
@@ -532,7 +555,8 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                 ))}
               </div>
 
-              {/* رابط الحجز */}
+              {/* رابط الحجز — فقط للاحترافية والشاملة */}
+              {(form.plan === "pro" || form.plan === "enterprise") && (
               <div style={{ background:"rgba(8,99,186,.06)",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,padding:"14px 16px" }}>
                 <div style={{ fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:8,textTransform:"uppercase",letterSpacing:.5 }}>
                   🔗 {tr.modal.bookLink}
@@ -545,6 +569,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           ) : (
             /* ─── فورم الإضافة / التعديل ─── */
@@ -619,25 +644,25 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                 </div>
               </Field>
 
-              {/* الخطة مع الأسعار */}
               <Field label={tr.modal.plan}>
                 <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
                   {([
-                    { key:"basic" as const,      color:"#0863ba", features: isAr ? ["إدارة المرضى","إدارة المواعيد","بدون رابط حجز"] : ["Patients management","Appointments management","No booking link"] },
-                    { key:"pro" as const,         color:"#7b2d8b", features: isAr ? ["إدارة المرضى","إدارة المواعيد","الإدارة المالية","رابط حجز المواعيد"] : ["Patients management","Appointments management","Financial management","Booking link"] },
-                    { key:"enterprise" as const,  color:"#e67e22", features: isAr ? ["جميع ميزات الاحترافية","متابعة المرضى المباشرة","جميع الميزات"] : ["All Professional features","Direct patient follow-up","All features included"] },
+                    { key:"basic" as const,      color:"#0863ba", emoji:"🩺" },
+                    { key:"pro" as const,         color:"#7b2d8b", emoji:"🏥" },
+                    { key:"enterprise" as const,  color:"#e67e22", emoji:"🚀" },
                   ]).map(p => {
                     const isSelected = form.plan === p.key;
                     const pricing = PLAN_PRICING[p.key];
+                    const features = PLAN_FEATURES[p.key][isAr ? "ar" : "en"];
                     return (
                       <button key={p.key} type="button"
                         onClick={() => setForm(prev => ({ ...prev, plan: p.key }))}
                         style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:isAr?"right":"left",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
                         <div style={{ width:12,height:12,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:3,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
                         <div style={{ flex:1,minWidth:0 }}>
-                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4 }}>
+                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
                             <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>
-                              {tr.clinics.plans[p.key]}
+                              {p.emoji} {tr.clinics.plans[p.key]}
                             </span>
                             <div style={{ display:"flex",gap:6,flexShrink:0 }}>
                               <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:`${p.color}15`,color:p.color,fontWeight:700 }}>${pricing.monthly}{isAr?"/شهر":"/mo"}</span>
@@ -645,7 +670,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                             </div>
                           </div>
                           <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
-                            {p.features.map((f,i) => (
+                            {features.map((f,i) => (
                               <span key={i} style={{ fontSize:10,color:"#888",display:"flex",alignItems:"center",gap:3 }}>
                                 <span style={{ color:p.color }}>✓</span> {f}
                               </span>
@@ -1001,19 +1026,35 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                     const isSelected = form.plan === p.key;
                     const isCurrent  = clinic.plan === p.key;
                     const pricing    = PLAN_PRICING[p.key];
+                    const limit      = PLAN_PATIENT_LIMITS[p.key];
+                    const limitLabel = limit === Infinity ? (isAr?"غير محدود":"Unlimited") : `${limit}`;
+                    const features   = PLAN_FEATURES[p.key][isAr ? "ar" : "en"];
                     return (
                       <button key={p.key} onClick={() => setForm(prev=>({...prev,plan:p.key}))}
-                        style={{ display:"flex",alignItems:"center",gap:14,padding:"12px 16px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:"start",transition:"all .18s",fontFamily:"Rubik,sans-serif" }}>
-                        <div style={{ width:10,height:10,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{sm.plans[p.key]}</div>
-                          <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{sm.planDesc[p.key]}</div>
+                        style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 16px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:"start",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
+                        <div style={{ width:10,height:10,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:4,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:4 }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{sm.plans[p.key]}</span>
+                              {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${p.color}15`,color:p.color }}>{isAr?"الحالية":"Current"}</span>}
+                            </div>
+                            <div style={{ display:"flex",gap:5,flexShrink:0 }}>
+                              <span style={{ fontSize:11,fontWeight:700,color:p.color }}>${pricing.monthly}<span style={{ fontSize:9,color:"#aaa",fontWeight:400 }}>{isAr?"/شهر":"/mo"}</span></span>
+                              <span style={{ fontSize:10,color:"#2e7d32" }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
+                            </div>
+                          </div>
+                          <div style={{ display:"flex",flexWrap:"wrap",gap:3,marginBottom:4 }}>
+                            {features.map((f,i) => (
+                              <span key={i} style={{ fontSize:10,color:"#888",display:"flex",alignItems:"center",gap:2 }}>
+                                <span style={{ color:p.color }}>✓</span> {f}
+                              </span>
+                            ))}
+                          </div>
+                          <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
+                            👥 {isAr?"المرضى:":"Patients:"} {limitLabel}
+                          </div>
                         </div>
-                        <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2,flexShrink:0 }}>
-                          <span style={{ fontSize:11,fontWeight:700,color:p.color }}>${pricing.monthly}<span style={{ fontSize:9,color:"#aaa",fontWeight:400 }}>{isAr?"/شهر":"/mo"}</span></span>
-                          <span style={{ fontSize:10,color:"#2e7d32" }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
-                        </div>
-                        {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:20,background:`${p.color}15`,color:p.color,flexShrink:0 }}>{isAr?"الحالية":"Current"}</span>}
                       </button>
                     );
                   })}
@@ -2383,4 +2424,6 @@ export default function AdminPage() {
       </div>
     </>
   );
-}
+}-e 
+// ─── Exports for use in other pages ──────────────────────────
+export { PLAN_PRICING, PLAN_PATIENT_LIMITS, PLAN_FEATURES };
