@@ -105,7 +105,7 @@ const translations = {
       subtitle: "اختر الخطة التي تناسب احتياجات عيادتك",
       monthly: "شهرياً",
       annual: "سنوياً",
-      save: "وفّر 20%",
+      save: "شهران مجاناً 🎁",
       per_month: "$ / شهر",
       per_year: "$ / سنة",
       cta: "ابدأ الآن",
@@ -270,7 +270,7 @@ const translations = {
       subtitle: "Choose the plan that fits your clinic's needs",
       monthly: "Monthly",
       annual: "Annual",
-      save: "Save 20%",
+      save: "2 months free 🎁",
       per_month: "$ / mo",
       per_year: "$ / yr",
       cta: "Get Started",
@@ -987,18 +987,20 @@ export default function LandingPage() {
                 <div className="pricing-name">{plan.name}</div>
                 <div className="pricing-price">
                   <div className="pricing-amount">
-                    {pricingAnnual ? plan.annualMonthly : plan.monthlyPrice}
+                    {pricingAnnual ? plan.annualPrice : plan.monthlyPrice}
                     <span style={{ fontSize: 16, fontWeight: 500, color: "#999" }}>
-                      {isAr ? " $ / شهر" : " $ / mo"}
+                      {pricingAnnual
+                        ? (isAr ? " $ / سنة" : " $ / yr")
+                        : (isAr ? " $ / شهر" : " $ / mo")}
                     </span>
                   </div>
                   {pricingAnnual ? (
                     <div className="pricing-annual-save">
-                      {isAr ? `${plan.annualPrice}$ سنوياً — وفّر مقارنة بالشهري` : `${plan.annualPrice}$ / yr — billed annually`}
+                      {isAr ? "🎁 شهران مجاناً مقارنةً بالاشتراك الشهري" : "🎁 2 months free vs monthly billing"}
                     </div>
                   ) : (
                     <div className="pricing-period">
-                      {isAr ? `${plan.annualPrice}$ سنوياً عند الاشتراك السنوي` : `${plan.annualPrice}$ / yr (annual billing)`}
+                      {isAr ? "💡 اشترك سنوياً وادفع أقل — شهران مجاناً" : "💡 Go annual and save — 2 months free"}
                     </div>
                   )}
                 </div>
