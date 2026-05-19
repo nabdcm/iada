@@ -1570,7 +1570,6 @@ export default function PatientsPage() {
                     <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,textAlign:h.align as any,paddingLeft:h.pl }}>{h.label}</div>
                   ))}
                 </div>
-                </div>
 
                 {loading?(
                   <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
