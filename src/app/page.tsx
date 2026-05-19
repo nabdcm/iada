@@ -26,12 +26,13 @@ const LOGO_SVG = (
 );
 
 const WA_LINK = "https://wa.me/963998285483";
-const YT_LINK = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+const YT_LINK = "https://www.youtube.com/watch?v=ayeaWKZr_ZA";
 
 const translations = {
   ar: {
     nav: {
       features: "المميزات",
+      pricing: "الأسعار",
       about: "عن التطبيق",
       contact: "تواصل معنا",
       login: "تسجيل الدخول",
@@ -57,35 +58,102 @@ const translations = {
       items: [
         {
           icon: "👥",
-          title: "إدارة المرضى",
+          title: "تسجيل المرضى وإدارة السجلات الطبية",
           desc: "سجلات مرضى منظمة وكاملة مع تاريخ طبي لكل مريض، إمكانية البحث والتعديل بسهولة.",
         },
         {
           icon: "📅",
-          title: "نظام المواعيد",
+          title: "إدارة المواعيد",
           desc: "تقويم ذكي لإدارة المواعيد مع تنبيهات تلقائية قبل ربع ساعة من كل موعد.",
         },
         {
+          icon: "🔗",
+          title: "رابط مخصص لحجز المواعيد لعيادتك",
+          desc: "احصل على رابط حجز خاص بعيادتك يتيح للمرضى حجز مواعيدهم مباشرة بسهولة ويسر.",
+        },
+        {
           icon: "💳",
-          title: "إدارة المدفوعات",
+          title: "إدارة مالية متكاملة للعيادة",
           desc: "تتبع كامل للمدفوعات والفواتير مع لوحة إحصائيات توضح الأرقام المالية بوضوح.",
         },
         {
-          icon: "📊",
-          title: "لوحة التحكم",
-          desc: "نظرة شاملة على نشاط العيادة من إحصائيات ومؤشرات أداء بشكل يومي وشهري.",
-        },
-        {
-          icon: "🔔",
-          title: "نظام التنبيهات",
-          desc: "تنبيهات فورية للسكرتيرة بمواعيد المرضى القادمة حتى لا يفوت أي موعد.",
-        },
-        {
-          // Fix 7: Replace "ثنائي اللغة" with WhatsApp reminders card
           icon: "💬",
-          title: "تذكير المرضى عبر واتساب",
+          title: "تذكير المرضى بمواعيدهم عبر واتساب",
           desc: "أرسل تذكيراً تلقائياً للمريض على واتساب قبل موعده مباشرةً من التطبيق بضغطة واحدة.",
           whatsapp: true,
+        },
+        {
+          icon: "🩺",
+          title: "رابط مخصص للمريض لمتابعة حالته",
+          desc: "يحصل كل مريض على رابط خاص لمتابعة حالته والاطلاع على تقرير يومي عن صحته.",
+        },
+        {
+          icon: "📋",
+          title: "إدارة الوصفات الطبية",
+          desc: "سجّل الوصفات الطبية لكل مريض بسهولة واحتفظ بتاريخ كامل لأدويته وعلاجاته.",
+        },
+        {
+          icon: "📊",
+          title: "إحصائيات وتحليلات شاملة",
+          desc: "نظرة شاملة على نشاط العيادة من إحصائيات ومؤشرات أداء يومية وشهرية تسهّل مهامك اليومية.",
+        },
+      ],
+    },
+    pricing: {
+      title: "خطط الأسعار",
+      titleHighlight: "المرنة",
+      subtitle: "اختر الخطة التي تناسب احتياجات عيادتك",
+      monthly: "شهرياً",
+      annual: "سنوياً",
+      save: "وفّر 20%",
+      per_month: "$ / شهر",
+      per_year: "$ / سنة",
+      cta: "ابدأ الآن",
+      plans: [
+        {
+          icon: "🩺",
+          name: "الأساسية",
+          monthlyPrice: "5.99",
+          annualPrice: "59",
+          annualMonthly: "4.92",
+          features: [
+            "إدارة المرضى",
+            "السجلات الطبية",
+            "إدارة المواعيد",
+            "حتى 300 مريض",
+          ],
+        },
+        {
+          icon: "🏥",
+          name: "الاحترافية",
+          popular: true,
+          monthlyPrice: "7.99",
+          annualPrice: "79",
+          annualMonthly: "6.58",
+          features: [
+            "جميع ميزات الخطة الأساسية",
+            "رابط حجز المواعيد الخاص بالعيادة",
+            "إدارة المدفوعات والإدارة المالية",
+            "مراسلة المرضى عبر واتساب",
+            "تذكير المواعيد برسائل جاهزة",
+            "حتى 1000 مريض",
+          ],
+        },
+        {
+          icon: "🚀",
+          name: "الشاملة",
+          monthlyPrice: "14.99",
+          annualPrice: "149",
+          annualMonthly: "12.42",
+          features: [
+            "جميع ميزات الخطة الاحترافية",
+            "متابعة المرضى عبر رابط خاص",
+            "تقارير يومية لحالة المريض",
+            "بوابة خاصة بالمريض",
+            "عدد مرضى غير محدود",
+            "تسجيل الوصفات الطبية",
+            "أولوية في الدعم الفني",
+          ],
         },
       ],
     },
@@ -129,6 +197,7 @@ const translations = {
   en: {
     nav: {
       features: "Features",
+      pricing: "Pricing",
       about: "About",
       contact: "Contact",
       login: "Login",
@@ -154,34 +223,102 @@ const translations = {
       items: [
         {
           icon: "👥",
-          title: "Patient Management",
+          title: "Patient Registration & Medical Records",
           desc: "Organized patient records with complete medical history, easy search and editing capabilities.",
         },
         {
           icon: "📅",
-          title: "Appointment System",
+          title: "Appointment Management",
           desc: "Smart calendar for managing appointments with automatic alerts 15 minutes before each visit.",
         },
         {
+          icon: "🔗",
+          title: "Custom Booking Link for Your Clinic",
+          desc: "Get a dedicated booking link for your clinic so patients can easily schedule appointments online.",
+        },
+        {
           icon: "💳",
-          title: "Payment Management",
+          title: "Integrated Financial Management",
           desc: "Complete payment and invoice tracking with a statistics dashboard showing financial figures clearly.",
-        },
-        {
-          icon: "📊",
-          title: "Dashboard",
-          desc: "Comprehensive view of clinic activity with daily and monthly statistics and performance indicators.",
-        },
-        {
-          icon: "🔔",
-          title: "Alert System",
-          desc: "Instant notifications for the secretary about upcoming appointments so nothing gets missed.",
         },
         {
           icon: "💬",
           title: "WhatsApp Appointment Reminders",
           desc: "Send automatic WhatsApp reminders to patients before their appointment — directly from the app in one click.",
           whatsapp: true,
+        },
+        {
+          icon: "🩺",
+          title: "Patient Follow-up Link",
+          desc: "Each patient gets a personal link to track their health status and receive daily progress reports.",
+        },
+        {
+          icon: "📋",
+          title: "Prescription Management",
+          desc: "Record prescriptions for each patient and maintain a complete history of their medications and treatments.",
+        },
+        {
+          icon: "📊",
+          title: "Analytics & Comprehensive Insights",
+          desc: "Comprehensive view of clinic activity with daily and monthly statistics and performance indicators to simplify your daily tasks.",
+        },
+      ],
+    },
+    pricing: {
+      title: "Flexible Pricing",
+      titleHighlight: "Plans",
+      subtitle: "Choose the plan that fits your clinic's needs",
+      monthly: "Monthly",
+      annual: "Annual",
+      save: "Save 20%",
+      per_month: "$ / mo",
+      per_year: "$ / yr",
+      cta: "Get Started",
+      plans: [
+        {
+          icon: "🩺",
+          name: "Basic",
+          monthlyPrice: "5.99",
+          annualPrice: "59",
+          annualMonthly: "4.92",
+          features: [
+            "Patient Management",
+            "Medical Records",
+            "Appointment Management",
+            "Up to 300 Patients",
+          ],
+        },
+        {
+          icon: "🏥",
+          name: "Professional",
+          popular: true,
+          monthlyPrice: "7.99",
+          annualPrice: "79",
+          annualMonthly: "6.58",
+          features: [
+            "All Basic Plan Features",
+            "Clinic Custom Booking Link",
+            "Payments & Financial Management",
+            "WhatsApp Patient Messaging",
+            "Appointment Reminder Messages",
+            "Up to 1,000 Patients",
+          ],
+        },
+        {
+          icon: "🚀",
+          name: "Complete",
+          monthlyPrice: "14.99",
+          annualPrice: "149",
+          annualMonthly: "12.42",
+          features: [
+            "All Professional Plan Features",
+            "Patient Follow-up via Private Link",
+            "Daily Patient Progress Reports",
+            "Patient Portal",
+            "Unlimited Patients",
+            "Prescription Management",
+            "Priority Technical Support",
+          ],
         },
       ],
     },
@@ -227,6 +364,7 @@ const translations = {
 export default function LandingPage() {
   const [lang, setLang] = useState("ar");
   const [scrolled, setScrolled] = useState(false);
+  const [pricingAnnual, setPricingAnnual] = useState(false);
   const t = translations[lang];
   const isAr = lang === "ar";
 
@@ -480,7 +618,7 @@ export default function LandingPage() {
         }
         .section-title span { color: var(--primary); }
         .section-sub { font-size: 16px; color: #888; max-width: 500px; margin: 0 auto; line-height: 1.6; }
-        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
         .feature-card {
           background: var(--white); border-radius: 20px; padding: 32px 28px;
           box-shadow: var(--shadow); border: 1.5px solid transparent;
@@ -509,6 +647,84 @@ export default function LandingPage() {
           font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
           margin-top: 12px;
         }
+
+        /* ── PRICING ── */
+        .pricing-section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
+        .pricing-toggle {
+          display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 48px;
+        }
+        .pricing-toggle-label { font-size: 15px; font-weight: 600; color: #888; }
+        .pricing-toggle-label.active { color: var(--primary); }
+        .toggle-switch {
+          position: relative; width: 52px; height: 28px; cursor: pointer;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+          position: absolute; inset: 0; background: var(--primary);
+          border-radius: 28px; transition: 0.3s;
+        }
+        .toggle-slider::before {
+          content: ''; position: absolute; width: 20px; height: 20px;
+          background: #fff; border-radius: 50%; top: 4px; left: 4px; transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(24px); }
+        .pricing-save-badge {
+          background: rgba(8,99,186,0.1); color: var(--primary);
+          font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+        }
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+        .pricing-card {
+          background: var(--white); border-radius: 24px; padding: 36px 28px;
+          box-shadow: var(--shadow); border: 2px solid transparent;
+          transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .pricing-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .pricing-card.popular {
+          border-color: var(--primary);
+          background: linear-gradient(160deg, #fff 60%, rgba(8,99,186,0.04) 100%);
+        }
+        .popular-badge {
+          position: absolute; top: 20px;
+          ${isAr ? "left" : "right"}: 20px;
+          background: var(--primary); color: #fff;
+          font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+        }
+        .pricing-icon { font-size: 32px; margin-bottom: 12px; }
+        .pricing-name { font-size: 20px; font-weight: 800; color: var(--dark); margin-bottom: 8px; }
+        .pricing-price { margin-bottom: 24px; }
+        .pricing-amount { font-size: 38px; font-weight: 800; color: var(--primary); line-height: 1; }
+        .pricing-period { font-size: 14px; color: #999; margin-top: 4px; }
+        .pricing-annual { font-size: 13px; color: #aaa; margin-top: 4px; text-decoration: line-through; }
+        .pricing-annual-save { font-size: 13px; color: #2e7d32; font-weight: 600; margin-top: 2px; }
+        .pricing-divider { height: 1px; background: #f0f0f0; margin-bottom: 20px; }
+        .pricing-features { list-style: none; margin-bottom: 28px; }
+        .pricing-features li {
+          display: flex; align-items: flex-start; gap: 10px;
+          font-size: 14px; color: #555; margin-bottom: 10px; line-height: 1.5;
+        }
+        .pricing-check {
+          width: 18px; height: 18px; border-radius: 50%;
+          background: rgba(8,99,186,0.1); color: var(--primary);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 10px; flex-shrink: 0; margin-top: 1px;
+        }
+        .pricing-card.popular .pricing-check { background: rgba(8,99,186,0.15); }
+        .pricing-btn {
+          width: 100%; padding: 13px; border-radius: 12px;
+          font-family: 'Rubik', sans-serif; font-size: 15px; font-weight: 700;
+          cursor: pointer; border: none; transition: all 0.25s;
+          text-decoration: none; display: block; text-align: center;
+        }
+        .pricing-btn-outline {
+          background: transparent; color: var(--primary);
+          border: 2px solid var(--primary-light);
+        }
+        .pricing-btn-outline:hover { background: rgba(8,99,186,0.06); border-color: var(--primary); }
+        .pricing-btn-primary {
+          background: var(--primary); color: #fff;
+          box-shadow: 0 6px 20px rgba(8,99,186,0.3);
+        }
+        .pricing-btn-primary:hover { background: #054a8c; transform: translateY(-1px); box-shadow: 0 10px 28px rgba(8,99,186,0.4); }
 
         /* ── HOW IT WORKS ── */
         .hiw-section { padding: 80px 40px; background: var(--white); }
@@ -571,6 +787,8 @@ export default function LandingPage() {
           .hiw-steps { grid-template-columns: repeat(2, 1fr); }
           .hiw-step:nth-child(2)::after { display: none; }
           .hiw-step:nth-child(4)::after { display: none; }
+          .features-grid { grid-template-columns: repeat(2, 1fr); }
+          .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
         }
         @media (max-width: 768px) {
           .nav { padding: 14px 20px; }
@@ -583,6 +801,7 @@ export default function LandingPage() {
           .hiw-step::after { display: none !important; }
           .stats-section { padding: 0 20px 60px; }
           .features-section { padding: 60px 20px; }
+          .pricing-section { padding: 60px 20px; }
           .mockup-stats-row { flex-direction: column; }
         }
       `}</style>
@@ -601,6 +820,7 @@ export default function LandingPage() {
           </a>
           <ul className="nav-links">
             <li><a href="#features">{t.nav.features}</a></li>
+            <li><a href="#pricing">{t.nav.pricing}</a></li>
             <li><a href="#how">{t.nav.about}</a></li>
             <li><a href="#cta">{t.nav.contact}</a></li>
           </ul>
@@ -737,6 +957,64 @@ export default function LandingPage() {
                     WhatsApp
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── PRICING ── */}
+        <section className="pricing-section" id="pricing">
+          <div className="section-header">
+            <h2 className="section-title">
+              {t.pricing.title} <span>{t.pricing.titleHighlight}</span>
+            </h2>
+            <p className="section-sub">{t.pricing.subtitle}</p>
+          </div>
+          <div className="pricing-toggle">
+            <span className={`pricing-toggle-label${!pricingAnnual ? " active" : ""}`}>{t.pricing.monthly}</span>
+            <label className="toggle-switch">
+              <input type="checkbox" checked={pricingAnnual} onChange={() => setPricingAnnual(!pricingAnnual)} />
+              <span className="toggle-slider" />
+            </label>
+            <span className={`pricing-toggle-label${pricingAnnual ? " active" : ""}`}>{t.pricing.annual}</span>
+            {pricingAnnual && <span className="pricing-save-badge">{t.pricing.save}</span>}
+          </div>
+          <div className="pricing-grid">
+            {t.pricing.plans.map((plan: any, i: number) => (
+              <div className={`pricing-card${plan.popular ? " popular" : ""}`} key={i}>
+                {plan.popular && <div className="popular-badge">⭐ {isAr ? "الأكثر طلباً" : "Most Popular"}</div>}
+                <div className="pricing-icon">{plan.icon}</div>
+                <div className="pricing-name">{plan.name}</div>
+                <div className="pricing-price">
+                  <div className="pricing-amount">
+                    {pricingAnnual ? plan.annualMonthly : plan.monthlyPrice}
+                    <span style={{ fontSize: 16, fontWeight: 500, color: "#999" }}>
+                      {isAr ? " $ / شهر" : " $ / mo"}
+                    </span>
+                  </div>
+                  {pricingAnnual ? (
+                    <div className="pricing-annual-save">
+                      {isAr ? `${plan.annualPrice}$ سنوياً — وفّر مقارنة بالشهري` : `${plan.annualPrice}$ / yr — billed annually`}
+                    </div>
+                  ) : (
+                    <div className="pricing-period">
+                      {isAr ? `${plan.annualPrice}$ سنوياً عند الاشتراك السنوي` : `${plan.annualPrice}$ / yr (annual billing)`}
+                    </div>
+                  )}
+                </div>
+                <div className="pricing-divider" />
+                <ul className="pricing-features">
+                  {plan.features.map((f: string, j: number) => (
+                    <li key={j}>
+                      <div className="pricing-check">✓</div>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <a href={WA_LINK} target="_blank" rel="noopener noreferrer"
+                  className={`pricing-btn${plan.popular ? " pricing-btn-primary" : " pricing-btn-outline"}`}>
+                  {t.pricing.cta}
+                </a>
               </div>
             ))}
           </div>
