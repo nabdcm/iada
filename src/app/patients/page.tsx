@@ -1558,11 +1558,18 @@ export default function PatientsPage() {
 
             {/* DESKTOP TABLE */}
             <div className="desktop-table">
-              <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"visible" }}>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 90px 140px 220px",gap:0,padding:"12px 20px",background:"#f9fafb",borderRadius:"16px 16px 0 0",borderBottom:"1.5px solid #eef0f3" }}>
-                  {[tr.table.name,tr.table.phone,tr.table.gender,isAr?"الرقم الطبي":"Medical ID",tr.table.actions].map((h,i)=>(
-                    <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,textAlign:i===4?"center":"start",paddingLeft:i>0&&i<4?8:0 }}>{h}</div>
+              <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"hidden" }}>
+                <div style={{ display:"grid",gridTemplateColumns:"200px 130px 90px 140px 1fr",gap:0,padding:"12px 20px",background:"#f9fafb",borderRadius:"16px 16px 0 0",borderBottom:"1.5px solid #eef0f3" }}>
+                  {([
+                    { label: tr.table.name,                        align:"start",  pl:0  },
+                    { label: isAr?"الرقم الطبي":"Medical ID",      align:"start",  pl:12 },
+                    { label: tr.table.gender,                      align:"start",  pl:12 },
+                    { label: tr.table.phone,                       align:"start",  pl:12 },
+                    { label: tr.table.actions,                     align:"center", pl:0  },
+                  ] as {label:string;align:string;pl:number}[]).map((h,i)=>(
+                    <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,textAlign:h.align as any,paddingLeft:h.pl }}>{h.label}</div>
                   ))}
+                </div>
                 </div>
 
                 {loading?(
@@ -1576,22 +1583,34 @@ export default function PatientsPage() {
                     <div style={{ fontSize:15,fontWeight:600 }}>{search?tr.noResults:tr.noPatients}</div>
                   </div>
                 ):filtered.map(p=>(
-                  <div key={p.id} className="patient-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 90px 140px 220px",gap:0,padding:"14px 20px",alignItems:"center",opacity:p.is_hidden?0.5:1,animation:animIds.includes(p.id)?"rowIn .4s ease":undefined }}>
-                    <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                      <div style={{ width:38,height:38,borderRadius:10,background:getColor(p.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0 }}>{getInitials(p.name)}</div>
-                      <div>
-                        <div style={{ fontSize:14,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6 }}>{p.name}{p.is_hidden&&<span style={{ fontSize:10,background:"#f0f0f0",color:"#999",padding:"2px 7px",borderRadius:10 }}>{tr.hiddenBadge}</span>}</div>
-                        <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>#{p.id}</div>
+                  <div key={p.id} className="patient-row" style={{ display:"grid",gridTemplateColumns:"200px 130px 90px 140px 1fr",gap:0,padding:"13px 20px",alignItems:"center",opacity:p.is_hidden?0.5:1,animation:animIds.includes(p.id)?"rowIn .4s ease":undefined }}>
+                    {/* الاسم */}
+                    <div style={{ display:"flex",alignItems:"center",gap:10,minWidth:0 }}>
+                      <div style={{ width:36,height:36,borderRadius:10,background:getColor(p.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>{getInitials(p.name)}</div>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:13,fontWeight:700,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:5 }}>
+                          {p.name}
+                          {p.is_hidden&&<span style={{ fontSize:10,background:"#f0f0f0",color:"#999",padding:"1px 6px",borderRadius:8,flexShrink:0 }}>{tr.hiddenBadge}</span>}
+                        </div>
+                        <div style={{ fontSize:10,color:"#bbb",marginTop:1 }}>#{p.id}</div>
                       </div>
                     </div>
-                    <div style={{ fontSize:13,color:"#555",paddingLeft:8 }}>{p.phone||"—"}</div>
-                    <div style={{ paddingLeft:8 }}><span style={{ fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:20,background:p.gender==="male"?"rgba(41,128,185,.1)":"rgba(142,68,173,.1)",color:p.gender==="male"?"#2980b9":"#8e44ad" }}>{p.gender?tr.gender[p.gender as keyof typeof tr.gender]:"—"}</span></div>
-                    <div style={{ paddingLeft:8 }}>
+                    {/* الرقم الطبي */}
+                    <div style={{ paddingLeft:12 }}>
                       {(p as any).mrn
-                        ? <span style={{ fontSize:12,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.07)",padding:"4px 10px",borderRadius:8,letterSpacing:.5 }}>{(p as any).mrn}</span>
+                        ? <span style={{ fontSize:12,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.07)",padding:"3px 9px",borderRadius:7,letterSpacing:.4 }}>{(p as any).mrn}</span>
                         : <span style={{ fontSize:12,color:"#ddd" }}>—</span>}
                     </div>
-                    <div style={{ display:"flex",alignItems:"center",gap:6,justifyContent:"center",position:"relative" }} onClick={e=>e.stopPropagation()}>
+                    {/* الجنس */}
+                    <div style={{ paddingLeft:12 }}>
+                      <span style={{ fontSize:11,fontWeight:600,padding:"3px 9px",borderRadius:20,background:p.gender==="male"?"rgba(41,128,185,.1)":"rgba(142,68,173,.1)",color:p.gender==="male"?"#2980b9":"#8e44ad" }}>
+                        {p.gender?tr.gender[p.gender as keyof typeof tr.gender]:"—"}
+                      </span>
+                    </div>
+                    {/* الهاتف */}
+                    <div style={{ fontSize:13,color:"#555",paddingLeft:12,whiteSpace:"nowrap" }}>{p.phone||"—"}</div>
+                    {/* الإجراءات */}
+                    <div style={{ display:"flex",alignItems:"center",gap:5,justifyContent:"flex-end",paddingRight:4,flexWrap:"nowrap" }} onClick={e=>e.stopPropagation()}>
                       {/* زر السجل الطبي — أيقونة + نص */}
                       <button onClick={()=>setProfilePatient(p)} title={tr.actions.profile} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.25)",background:"rgba(8,99,186,.07)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#0863ba",whiteSpace:"nowrap",transition:"all .15s" }}
                         onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="rgba(8,99,186,.14)"}
