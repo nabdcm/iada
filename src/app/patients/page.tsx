@@ -667,7 +667,7 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
   );
 }
 
-// ─── Patient Profile Drawer ───────────────────────────────
+// ─── Patient Profile Modal ───────────────────────────────
 function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lang; patient:Patient; clinicType:ClinicType; onClose:()=>void }) {
   const t    = T[lang].profile;
   const isAr = lang==="ar";
@@ -680,6 +680,8 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving,         setSaving]         = useState(false);
   const [userId,         setUserId]         = useState<string>("");
+  const [expandedField,  setExpandedField]  = useState<string|null>(null);
+  const [draftValues,    setDraftValues]    = useState<Record<string,string>>({});
 
   useEffect(()=>{
     (async()=>{
@@ -687,7 +689,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
       const { data:{ user } } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
       const saved = await loadProfileFromDB(patient.id);
-      if (saved) setProfile(saved);
+      if (saved) { setProfile(saved); setDraftValues(saved.medical_fields??{}); }
       setLoadingProfile(false);
     })();
   },[patient.id]);
@@ -700,15 +702,15 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
     setSaving(false);
   };
 
+  const saveField = async (key:string) => {
+    const updated = { ...profile, medical_fields:{ ...profile.medical_fields, [key]:draftValues[key]??"" } };
+    await saveProfile(updated);
+    setExpandedField(null);
+  };
+
   const calcAge = (dob?:string|null) => {
     if (!dob) return "—";
     return Math.floor((Date.now()-new Date(dob).getTime())/(1000*60*60*24*365.25));
-  };
-
-  const inputSt: CSSProperties = {
-    width:"100%",padding:"10px 14px",border:"1.5px solid #e8eaed",borderRadius:10,
-    fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fafbfc",
-    outline:"none",resize:"vertical" as const,direction:isAr?"rtl":"ltr",lineHeight:1.6,
   };
 
   const tabs = [
@@ -720,143 +722,180 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
 
   return (
     <>
-      <style>{`@keyframes drawerIn{from{opacity:0;transform:translateX(${isAr?"-100%":"100%"})}to{opacity:1;transform:translateX(0)}} .ptab:hover{background:rgba(8,99,186,.06)!important}`}</style>
-      <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"fixed",top:0,bottom:0,[isAr?"left":"right"]:0,width:"min(520px, 100vw)",zIndex:301,background:"#fff",display:"flex",flexDirection:"column",boxShadow:isAr?"6px 0 40px rgba(0,0,0,.15)":"-6px 0 40px rgba(0,0,0,.15)",animation:"drawerIn .3s cubic-bezier(.4,0,.2,1)",direction:isAr?"rtl":"ltr" }}>
+      <style>{`
+        @keyframes modalFadeIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .ptab:hover{background:rgba(8,99,186,.07)!important}
+        .med-field-row:hover{background:#f0f5ff!important}
+        .med-field-row{transition:background .15s;}
+      `}</style>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)" }}/>
+      {/* Modal */}
+      <div style={{ position:"fixed",inset:0,zIndex:301,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",pointerEvents:"none" }}>
+        <div onClick={e=>e.stopPropagation()} style={{ pointerEvents:"all",background:"#fff",borderRadius:20,width:"100%",maxWidth:640,maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 24px 64px rgba(8,99,186,.2), 0 4px 16px rgba(0,0,0,.08)",animation:"modalFadeIn .28s cubic-bezier(.4,0,.2,1)",direction:isAr?"rtl":"ltr",overflow:"hidden" }}>
 
-        {/* Header */}
-        <div style={{ padding:"20px 24px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",gap:14 }}>
-          <div style={{ width:46,height:46,borderRadius:12,background:getColor(patient.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0 }}>
-            {getInitials(patient.name)}
-          </div>
-          <div style={{ flex:1,minWidth:0 }}>
-            <div style={{ fontSize:16,fontWeight:800,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{patient.name}</div>
-            <div style={{ fontSize:11,color:"#aaa",marginTop:2,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
-              {patient.gender&&<span>{isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")}</span>}
-              {calcAge(patient.date_of_birth)!=="—"&&<span>• {calcAge(patient.date_of_birth)} {t.years}</span>}
-              <span style={{ padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:700,background:`${meta.color}18`,color:meta.color }}>
-                {meta.icon} {isAr?meta.ar:meta.en}
-              </span>
-              {saving&&<span style={{ fontSize:10,color:"#aaa" }}>💾 {t.saving}</span>}
+          {/* Header */}
+          <div style={{ padding:"18px 22px 14px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",gap:12,flexShrink:0 }}>
+            <div style={{ width:44,height:44,borderRadius:12,background:getColor(patient.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0,boxShadow:`0 4px 12px ${getColor(patient.id)}55` }}>
+              {getInitials(patient.name)}
             </div>
-          </div>
-          <button onClick={onClose} style={{ width:34,height:34,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display:"flex",borderBottom:"1.5px solid #eef0f3",padding:"0 8px" }}>
-          {tabs.map(tab=>(
-            <button key={tab.key} className="ptab" onClick={()=>setActiveTab(tab.key)} style={{ flex:1,padding:"12px 4px",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:600,background:"transparent",color:activeTab===tab.key?"#0863ba":"#aaa",borderBottom:activeTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,transition:"all .18s" }}>
-              <span style={{ fontSize:16 }}>{tab.icon}</span>{tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Body */}
-        <div style={{ flex:1,overflowY:"auto",padding:"20px 24px" }}>
-          {loadingProfile?(
-            <div style={{ textAlign:"center",padding:"60px 0",color:"#ccc" }}>
-              <div style={{ fontSize:32,animation:"spin 1s linear infinite",display:"inline-block" }}>⚙️</div>
-              <div style={{ fontSize:13,marginTop:12 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
+            <div style={{ flex:1,minWidth:0 }}>
+              <div style={{ fontSize:16,fontWeight:800,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{patient.name}</div>
+              <div style={{ fontSize:11,color:"#aaa",marginTop:2,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+                {patient.gender&&<span>{isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")}</span>}
+                {calcAge(patient.date_of_birth)!=="—"&&<span>• {calcAge(patient.date_of_birth)} {t.years}</span>}
+                <span style={{ padding:"2px 8px",borderRadius:8,fontSize:10,fontWeight:700,background:`${meta.color}15`,color:meta.color }}>{meta.icon} {isAr?meta.ar:meta.en}</span>
+                {saving&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600 }}>💾 {t.saving}</span>}
+              </div>
             </div>
-          ):(
-            <>
-              {/* ── INFO ── */}
-              {activeTab==="info"&&(
-                <div>
-                  <div style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,marginBottom:14 }}>{t.personalInfo}</div>
-                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16 }}>
-                    {[
-                      { label:t.name,   value:patient.name,    icon:"👤" },
-                      { label:t.phone,  value:patient.phone||"—", icon:"📞" },
-                      { label:t.gender, value:patient.gender?(isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")):"—", icon:"⚧" },
-                      { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
-                      { label:t.age,    value:calcAge(patient.date_of_birth)!=="—"?`${calcAge(patient.date_of_birth)} ${t.years}`:"—", icon:"🎯" },
-                    ].map(f=>(
-                      <div key={f.label} style={{ background:"#f7f9fc",borderRadius:10,padding:"12px 14px",border:"1.5px solid #eef0f3" }}>
-                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>{f.icon} {f.label}</div>
-                        <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{f.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* حالات مزمنة عامة */}
-                  <div style={{ marginBottom:16 }}>
-                    <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}>⚕️ {t.conditions}</div>
-                    <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+            <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#888",fontWeight:700 }}>✕</button>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display:"flex",borderBottom:"1.5px solid #eef0f3",padding:"0 8px",background:"#fafbfc",flexShrink:0 }}>
+            {tabs.map(tab=>(
+              <button key={tab.key} className="ptab" onClick={()=>setActiveTab(tab.key)} style={{ flex:1,padding:"11px 4px",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:600,background:"transparent",color:activeTab===tab.key?"#0863ba":"#aaa",borderBottom:activeTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,transition:"all .18s" }}>
+                <span style={{ fontSize:15 }}>{tab.icon}</span>{tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Body */}
+          <div style={{ flex:1,overflowY:"auto",padding:"18px 22px" }}>
+            {loadingProfile?(
+              <div style={{ textAlign:"center",padding:"60px 0",color:"#ccc" }}>
+                <div style={{ fontSize:32,animation:"spin 1s linear infinite",display:"inline-block" }}>⚙️</div>
+                <div style={{ fontSize:13,marginTop:12 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
+              </div>
+            ):(
+              <>
+                {/* ── INFO ── */}
+                {activeTab==="info"&&(
+                  <div>
+                    <div style={{ fontSize:11,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:.5,marginBottom:12 }}>{t.personalInfo}</div>
+                    <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14 }}>
                       {[
-                        { key:"has_diabetes",     label:isAr?"السكري":"Diabetes",     icon:"🩸",color:"#c0392b",active:patient.has_diabetes },
-                        { key:"has_hypertension", label:isAr?"ضغط الدم":"Hypertension",icon:"💊",color:"#e67e22",active:patient.has_hypertension },
-                      ].map(c=>(
-                        <span key={c.key} style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:c.active?`${c.color}18`:"#f5f5f5",color:c.active?c.color:"#bbb",border:`1.5px solid ${c.active?`${c.color}40`:"#eee"}` }}>
-                          {c.icon} {c.label}: {c.active?(isAr?"نعم":"Yes"):(isAr?"لا":"No")}
-                        </span>
+                        { label:t.name,   value:patient.name, icon:"👤" },
+                        { label:t.phone,  value:patient.phone||"—", icon:"📞" },
+                        { label:t.gender, value:patient.gender?(isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")):"—", icon:"⚧" },
+                        { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
+                        { label:t.age,    value:calcAge(patient.date_of_birth)!=="—"?`${calcAge(patient.date_of_birth)} ${t.years}`:"—", icon:"🎯" },
+                        { label:isAr?"الرقم الطبي":"Medical ID", value:(patient as any).mrn||"—", icon:"🪪" },
+                      ].map(f=>(
+                        <div key={f.label} style={{ background:"#f7f9fc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>
+                          <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:4 }}>{f.icon} {f.label}</div>
+                          <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{f.value}</div>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                  {/* extra_form_fields المسجّلة من نموذج الإضافة */}
-                  {Object.keys(profile.extra_form_fields??{}).length>0&&(
-                    <div style={{ marginBottom:16 }}>
-                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}>📋 {isAr?"معلومات إضافية":"Additional Info"}</div>
-                      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
-                        {(EXTRA_QUESTIONS[clinicType]??[]).map(q=>{
-                          const val = profile.extra_form_fields?.[q.key];
-                          if (val===undefined||val==="") return null;
-                          return (
-                            <div key={q.key} style={{ background:"#f7f9fc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>
-                              <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:4 }}>{isAr?q.label_ar:q.label_en}</div>
-                              <div style={{ fontSize:13,fontWeight:600,color:`${meta.color}` }}>
-                                {typeof val==="boolean"?(val?(isAr?"نعم":"Yes"):(isAr?"لا":"No")):String(val)}
-                              </div>
-                            </div>
-                          );
-                        })}
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}>⚕️ {t.conditions}</div>
+                      <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                        {[
+                          { key:"has_diabetes",     label:isAr?"السكري":"Diabetes",     icon:"🩸",color:"#c0392b",active:patient.has_diabetes },
+                          { key:"has_hypertension", label:isAr?"ضغط الدم":"Hypertension",icon:"💊",color:"#e67e22",active:patient.has_hypertension },
+                        ].map(c=>(
+                          <span key={c.key} style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:c.active?`${c.color}15`:"#f5f5f5",color:c.active?c.color:"#bbb",border:`1.5px solid ${c.active?`${c.color}35`:"#eee"}` }}>
+                            {c.icon} {c.label}: {c.active?(isAr?"نعم":"Yes"):(isAr?"لا":"No")}
+                          </span>
+                        ))}
                       </div>
                     </div>
-                  )}
-                  {patient.notes&&(
-                    <div style={{ background:"#fffbf0",borderRadius:10,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
-                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>📝 {isAr?"ملاحظات":"Notes"}</div>
-                      <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{patient.notes}</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── MEDICAL (ديناميكي حسب نوع العيادة) ── */}
-              {activeTab==="medical"&&(
-                <div>
-                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 14px",background:`${meta.color}08`,borderRadius:10,border:`1px solid ${meta.color}20` }}>
-                    <span style={{ fontSize:18 }}>{meta.icon}</span>
-                    <span style={{ fontSize:13,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {t.medicalRecord}</span>
+                    {Object.keys(profile.extra_form_fields??{}).length>0&&(
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}>📋 {isAr?"معلومات إضافية":"Additional Info"}</div>
+                        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+                          {(EXTRA_QUESTIONS[clinicType]??[]).map(q=>{
+                            const val = profile.extra_form_fields?.[q.key];
+                            if (val===undefined||val==="") return null;
+                            return (
+                              <div key={q.key} style={{ background:"#f7f9fc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>
+                                <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:4 }}>{isAr?q.label_ar:q.label_en}</div>
+                                <div style={{ fontSize:13,fontWeight:600,color:meta.color }}>{typeof val==="boolean"?(val?(isAr?"نعم":"Yes"):(isAr?"لا":"No")):String(val)}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {patient.notes&&(
+                      <div style={{ background:"#fffbf0",borderRadius:10,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
+                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>📝 {isAr?"ملاحظات":"Notes"}</div>
+                        <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{patient.notes}</div>
+                      </div>
+                    )}
                   </div>
-                  {medFields.map(field=>(
-                    <div key={field.key} style={{ marginBottom:14 }}>
-                      <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"flex",alignItems:"center",gap:6,marginBottom:6 }}>
-                        <span>{field.icon}</span>{isAr?field.label_ar:field.label_en}
-                      </label>
-                      <textarea
-                        value={profile.medical_fields?.[field.key]??""}
-                        onChange={e=>setProfile(prev=>({ ...prev,medical_fields:{ ...prev.medical_fields,[field.key]:e.target.value } }))}
-                        onBlur={()=>saveProfile(profile)}
-                        rows={2}
-                        style={inputSt}
-                      />
+                )}
+
+                {/* ── MEDICAL — حقول قابلة للتوسع ── */}
+                {activeTab==="medical"&&(
+                  <div>
+                    <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"9px 12px",background:`${meta.color}08`,borderRadius:10,border:`1px solid ${meta.color}20` }}>
+                      <span style={{ fontSize:16 }}>{meta.icon}</span>
+                      <span style={{ fontSize:12,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {t.medicalRecord}</span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                      {medFields.map(field=>{
+                        const isExpanded = expandedField===field.key;
+                        const val = draftValues[field.key]??"";
+                        const savedVal = profile.medical_fields?.[field.key]??"";
+                        return (
+                          <div key={field.key} style={{ borderRadius:12,border:`1.5px solid ${isExpanded?"#0863ba":"#eef0f3"}`,background:isExpanded?"#fff":"#f9fafb",overflow:"hidden",transition:"border-color .2s, box-shadow .2s",boxShadow:isExpanded?"0 0 0 3px rgba(8,99,186,.08)":"none" }}>
+                            {/* رأس الحقل — قابل للنقر */}
+                            <div className="med-field-row" onClick={()=>{ if(isExpanded){setExpandedField(null);}else{setDraftValues(p=>({...p,[field.key]:savedVal}));setExpandedField(field.key);} }} style={{ padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",userSelect:"none" as const,background:isExpanded?"#f0f6ff":"transparent" }}>
+                              <div style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0 }}>
+                                <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
+                                <div style={{ minWidth:0 }}>
+                                  <div style={{ fontSize:12,fontWeight:700,color:isExpanded?"#0863ba":"#555" }}>{isAr?field.label_ar:field.label_en}</div>
+                                  {!isExpanded&&savedVal&&<div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:340 }}>{savedVal}</div>}
+                                  {!isExpanded&&!savedVal&&<div style={{ fontSize:11,color:"#ccc",fontStyle:"italic",marginTop:1 }}>{isAr?"انقر للإضافة...":"Click to add..."}</div>}
+                                </div>
+                              </div>
+                              <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0,marginRight:isAr?0:0,marginLeft:isAr?0:0 }}>
+                                {savedVal&&!isExpanded&&<span style={{ fontSize:10,background:"rgba(8,99,186,.1)",color:"#0863ba",fontWeight:700,padding:"2px 7px",borderRadius:20 }}>{isAr?"مُعبَّأ":"Filled"}</span>}
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isExpanded?"#0863ba":"#ccc"} strokeWidth="2.5" strokeLinecap="round"><polyline points={isExpanded?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+                              </div>
+                            </div>
+                            {/* منطقة التحرير — تظهر عند التوسع */}
+                            {isExpanded&&(
+                              <div style={{ padding:"0 14px 14px" }}>
+                                <textarea
+                                  autoFocus
+                                  value={val}
+                                  onChange={e=>setDraftValues(p=>({...p,[field.key]:e.target.value}))}
+                                  rows={5}
+                                  placeholder={isAr?"اكتب هنا...":"Write here..."}
+                                  style={{ width:"100%",padding:"10px 12px",border:"1.5px solid #c8d9f0",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",resize:"vertical",direction:isAr?"rtl":"ltr",lineHeight:1.7,boxSizing:"border-box",marginBottom:10 }}
+                                />
+                                <div style={{ display:"flex",gap:8 }}>
+                                  <button onClick={()=>saveField(field.key)} style={{ flex:1,padding:"9px 0",background:"#0863ba",color:"#fff",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                                    ✓ {isAr?"حفظ":"Save"}
+                                  </button>
+                                  <button onClick={()=>setExpandedField(null)} style={{ padding:"9px 16px",background:"#f0f0f0",color:"#777",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>
+                                    {isAr?"إلغاء":"Cancel"}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-              {/* ── X-RAYS ── */}
-              {activeTab==="xrays"&&(
-                <XRaySection lang={lang} xrays={profile.xrays} onChange={imgs=>saveProfile({...profile,xrays:imgs})}/>
-              )}
+                {/* ── X-RAYS ── */}
+                {activeTab==="xrays"&&(
+                  <XRaySection lang={lang} xrays={profile.xrays} onChange={imgs=>saveProfile({...profile,xrays:imgs})}/>
+                )}
 
-              {/* ── DENTAL ── */}
-              {activeTab==="dental"&&isDental&&(
-                <DentalChartSection lang={lang} chart={profile.dental_chart} onChange={c=>saveProfile({...profile,dental_chart:c})}/>
-              )}
-            </>
-          )}
+                {/* ── DENTAL ── */}
+                {activeTab==="dental"&&isDental&&(
+                  <DentalChartSection lang={lang} chart={profile.dental_chart} onChange={c=>saveProfile({...profile,dental_chart:c})}/>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </>
@@ -1520,9 +1559,9 @@ export default function PatientsPage() {
             {/* DESKTOP TABLE */}
             <div className="desktop-table">
               <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"visible" }}>
-                <div style={{ display:"grid",gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 160px",gap:0,padding:"12px 20px",background:"#f9fafb",borderRadius:"16px 16px 0 0",borderBottom:"1.5px solid #eef0f3" }}>
-                  {[tr.id,tr.table.name,tr.table.phone,tr.table.gender,tr.table.dob,tr.table.conditions,tr.table.actions].map((h,i)=>(
-                    <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,textAlign:i===0||i===6?"center":"start",paddingLeft:i>0&&i<6?8:0 }}>{h}</div>
+                <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 90px 140px 220px",gap:0,padding:"12px 20px",background:"#f9fafb",borderRadius:"16px 16px 0 0",borderBottom:"1.5px solid #eef0f3" }}>
+                  {[tr.table.name,tr.table.phone,tr.table.gender,isAr?"الرقم الطبي":"Medical ID",tr.table.actions].map((h,i)=>(
+                    <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,textAlign:i===4?"center":"start",paddingLeft:i>0&&i<4?8:0 }}>{h}</div>
                   ))}
                 </div>
 
@@ -1537,50 +1576,49 @@ export default function PatientsPage() {
                     <div style={{ fontSize:15,fontWeight:600 }}>{search?tr.noResults:tr.noPatients}</div>
                   </div>
                 ):filtered.map(p=>(
-                  <div key={p.id} className="patient-row" style={{ display:"grid",gridTemplateColumns:"60px 1fr 130px 90px 120px 120px 160px",gap:0,padding:"14px 20px",alignItems:"center",opacity:p.is_hidden?0.5:1,animation:animIds.includes(p.id)?"rowIn .4s ease":undefined }}>
-                    <div style={{ textAlign:"center" }}><span style={{ fontSize:11,fontWeight:700,color:"#aaa" }}>#{p.id}</span></div>
-                    <div style={{ display:"flex",alignItems:"center",gap:12,paddingLeft:8 }}>
+                  <div key={p.id} className="patient-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 90px 140px 220px",gap:0,padding:"14px 20px",alignItems:"center",opacity:p.is_hidden?0.5:1,animation:animIds.includes(p.id)?"rowIn .4s ease":undefined }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:12 }}>
                       <div style={{ width:38,height:38,borderRadius:10,background:getColor(p.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0 }}>{getInitials(p.name)}</div>
                       <div>
                         <div style={{ fontSize:14,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6 }}>{p.name}{p.is_hidden&&<span style={{ fontSize:10,background:"#f0f0f0",color:"#999",padding:"2px 7px",borderRadius:10 }}>{tr.hiddenBadge}</span>}</div>
-                        <div style={{ fontSize:10,color:"#0863ba",marginTop:2,fontWeight:700,letterSpacing:.3 }}>
-                          {(p as any).mrn ? (p as any).mrn : <span style={{ color:"#ddd" }}>—</span>}
-                        </div>
+                        <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>#{p.id}</div>
                       </div>
                     </div>
                     <div style={{ fontSize:13,color:"#555",paddingLeft:8 }}>{p.phone||"—"}</div>
                     <div style={{ paddingLeft:8 }}><span style={{ fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:20,background:p.gender==="male"?"rgba(41,128,185,.1)":"rgba(142,68,173,.1)",color:p.gender==="male"?"#2980b9":"#8e44ad" }}>{p.gender?tr.gender[p.gender as keyof typeof tr.gender]:"—"}</span></div>
-                    <div style={{ fontSize:12,color:"#888",paddingLeft:8 }}>{p.date_of_birth?new Date(p.date_of_birth).toLocaleDateString(lang==="ar"?"ar-SA":"en-US",{year:"numeric",month:"short",day:"numeric"}):"—"}</div>
-                    <div style={{ display:"flex",gap:5,flexWrap:"wrap",paddingLeft:8 }}>
-                      {p.has_diabetes&&<span style={{ fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"rgba(192,57,43,.1)",color:"#c0392b" }}>🩸 {tr.conditions.diabetes}</span>}
-                      {p.has_hypertension&&<span style={{ fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"rgba(230,126,34,.1)",color:"#e67e22" }}>💊 {tr.conditions.hypertension}</span>}
-                      {!p.has_diabetes&&!p.has_hypertension&&<span style={{ fontSize:12,color:"#ddd" }}>—</span>}
+                    <div style={{ paddingLeft:8 }}>
+                      {(p as any).mrn
+                        ? <span style={{ fontSize:12,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.07)",padding:"4px 10px",borderRadius:8,letterSpacing:.5 }}>{(p as any).mrn}</span>
+                        : <span style={{ fontSize:12,color:"#ddd" }}>—</span>}
                     </div>
-                    <div style={{ display:"flex",alignItems:"center",gap:5,justifyContent:"center",position:"relative" }} onClick={e=>e.stopPropagation()}>
-                      <button className="action-icon-btn" title={tr.actions.profile} onClick={()=>setProfilePatient(p)} style={{ background:"rgba(8,99,186,.06)",borderColor:"rgba(8,99,186,.2)" }}>📋</button>
+                    <div style={{ display:"flex",alignItems:"center",gap:6,justifyContent:"center",position:"relative" }} onClick={e=>e.stopPropagation()}>
+                      {/* زر السجل الطبي — أيقونة + نص */}
+                      <button onClick={()=>setProfilePatient(p)} title={tr.actions.profile} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.25)",background:"rgba(8,99,186,.07)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#0863ba",whiteSpace:"nowrap",transition:"all .15s" }}
+                        onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="rgba(8,99,186,.14)"}
+                        onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="rgba(8,99,186,.07)"}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        {isAr?"السجل الطبي":"Medical File"}
+                      </button>
+                      {/* زر واتساب — أيقونة + نص */}
                       {p.phone?(
-                        <button className="action-icon-btn" title={tr.actions.whatsapp} onClick={()=>openWhatsApp(p.phone!)} style={{ background:"rgba(37,211,102,.1)",borderColor:"rgba(37,211,102,.3)" }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        <button onClick={()=>openWhatsApp(p.phone!)} title={tr.actions.whatsapp} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:8,border:"1.5px solid rgba(37,211,102,.35)",background:"rgba(37,211,102,.09)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#128c5e",whiteSpace:"nowrap",transition:"all .15s" }}
+                          onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="rgba(37,211,102,.18)"}
+                          onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="rgba(37,211,102,.09)"}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                          WhatsApp
                         </button>
                       ):(
-                        <button className="action-icon-btn" disabled style={{ opacity:.3,cursor:"not-allowed" }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        <button disabled title={tr.actions.whatsapp} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:8,border:"1.5px solid #eee",background:"#f9f9f9",cursor:"not-allowed",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#ccc",opacity:.5,whiteSpace:"nowrap" }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#ccc"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                          WhatsApp
                         </button>
                       )}
+                      {/* أزرار أيقونات فقط: تعديل، إخفاء، حذف */}
                       <button className="action-icon-btn" title={tr.actions.edit} onClick={()=>setEditPatient(p)}>✏️</button>
                       <button className="action-icon-btn" title={p.is_hidden?tr.actions.show:tr.actions.hide} onClick={()=>toggleHide(p.id)}>
                         {p.is_hidden?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
                       </button>
-                      <div style={{ position:"relative" }}>
-                        <button className="action-icon-btn" onClick={e=>{e.stopPropagation();setOpenMenuId(openMenuId===p.id?null:p.id);}}>⋯</button>
-                        {openMenuId===p.id&&(
-                          <div className="dropdown-menu">
-                            <div className="dropdown-item" onClick={()=>setOpenMenuId(null)}>📅 {tr.actions.viewAppointments}</div>
-                            <div style={{ height:1,background:"#f0f0f0",margin:"4px 0" }}/>
-                            <div className="dropdown-item danger" onClick={()=>{ setDeletePatient(p);setOpenMenuId(null); }}>🗑️ {tr.actions.delete}</div>
-                          </div>
-                        )}
-                      </div>
+                      <button className="action-icon-btn" title={tr.actions.delete} onClick={()=>setDeletePatient(p)} style={{ color:"#e74c3c" }}>🗑️</button>
                     </div>
                   </div>
                 ))}
