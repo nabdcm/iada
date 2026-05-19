@@ -2424,6 +2424,7 @@ export default function AdminPage() {
       </div>
     </>
   );
-}-e 
+}
+
 // ─── Exports for use in other pages ──────────────────────────
 export { PLAN_PRICING, PLAN_PATIENT_LIMITS, PLAN_FEATURES };

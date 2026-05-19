@@ -126,9 +126,25 @@ function getGreetingKey(): "greeting_morning" | "greeting_afternoon" | "greeting
   return "greeting_evening";
 }
 
+// ─── Plan access rules ────────────────────────────────────
+const PLAN_ACCESS: Record<string, string[]> = {
+  payments:      ["pro", "enterprise"],
+  prescriptions: ["enterprise"],
+  tracking:      ["enterprise"],
+};
+type PlanType = "basic" | "pro" | "enterprise";
+const canAccess = (feature: string, plan: PlanType) =>
+  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
+
+const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string }> = {
+  basic:      { label:{ ar:"الأساسية",    en:"Basic"        }, color:"#0863ba" },
+  pro:        { label:{ ar:"الاحترافية",  en:"Professional" }, color:"#7b2d8b" },
+  enterprise: { label:{ ar:"الشاملة",    en:"Comprehensive"}, color:"#e67e22" },
+};
+
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, activePage = "dashboard" }: {
-  lang: Lang; setLang: (l: Lang) => void; activePage?: string;
+function Sidebar({ lang, setLang, activePage = "dashboard", plan = "basic" }: {
+  lang: Lang; setLang: (l: Lang) => void; activePage?: string; plan?: PlanType;
 }) {
   const tr = t[lang];
   const isAr = lang === "ar";
@@ -330,12 +346,15 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
         {/* ── Nav items ── */}
         <nav style={{ flex:1, padding: collapsed ? "16px 10px" : "14px 12px", overflowY:"auto" }}>
           {navItems.map(item => {
-            const isActive = item.key === activePage;
+            const isActive   = item.key === activePage;
+            const isLocked   = !canAccess(item.key, plan);
+            const lockLabel  = isAr ? "غير متاح في خطتك" : "Not available in your plan";
             return (
               <a
                 key={item.key}
-                href={item.href}
-                title={collapsed ? item.label : undefined}
+                href={isLocked ? undefined : item.href}
+                title={collapsed ? (isLocked ? lockLabel : item.label) : (isLocked ? lockLabel : undefined)}
+                onClick={isLocked ? (e) => e.preventDefault() : undefined}
                 style={{
                   display:"flex", alignItems:"center",
                   gap: collapsed ? 0 : 11,
@@ -345,7 +364,7 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
                   marginBottom: 4,
                   textDecoration:"none",
                   background: isActive ? SB_ACTIVE_BG : "transparent",
-                  color: isActive ? SB_ACTIVE_TEXT : SB_IDLE_TEXT,
+                  color: isLocked ? "rgba(255,255,255,0.28)" : (isActive ? SB_ACTIVE_TEXT : SB_IDLE_TEXT),
                   fontWeight: isActive ? 600 : 400,
                   fontSize: 13.5,
                   transition:"all .18s",
@@ -353,12 +372,8 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
                   border: isActive
                     ? "1px solid rgba(255,255,255,0.18)"
                     : "1px solid transparent",
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+                  cursor: isLocked ? "not-allowed" : "pointer",
+                  opacity: isLocked ? 0.5 : 1,
                 }}
               >
                 {/* Active indicator bar */}
@@ -380,7 +395,11 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
                   {item.icon}
                 </span>
                 {!collapsed && (
-                  <span style={{ lineHeight:1.3 }}>{item.label}</span>
+                  <span style={{ lineHeight:1.3, flex:1 }}>{item.label}</span>
+                )}
+                {/* Lock icon for restricted items */}
+                {isLocked && !collapsed && (
+                  <span style={{ fontSize:11, opacity:0.6 }}>🔒</span>
                 )}
               </a>
             );
@@ -393,7 +412,24 @@ function Sidebar({ lang, setLang, activePage = "dashboard" }: {
           borderTop: `1px solid ${SB_BORDER}`,
           background: SB_BG_FOOTER,
         }}>
+          {/* Plan badge */}
           {!collapsed && (
+            <div style={{
+              display:"flex", alignItems:"center", gap:6,
+              padding:"7px 12px", marginBottom:8,
+              background:"rgba(255,255,255,0.08)",
+              border:`1.5px solid ${PLAN_BADGE[plan].color}50`,
+              borderRadius:8,
+            }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:PLAN_BADGE[plan].color, flexShrink:0 }} />
+              <span style={{ fontSize:11, color:"rgba(255,255,255,0.7)", flex:1 }}>
+                {isAr ? "خطة" : "Plan"}
+              </span>
+              <span style={{ fontSize:11, fontWeight:700, color:PLAN_BADGE[plan].color }}>
+                {PLAN_BADGE[plan].label[lang]}
+              </span>
+            </div>
+          )}
             <button
               onClick={() => setLang(lang === "ar" ? "en" : "ar")}
               style={{
@@ -535,6 +571,7 @@ export default function DashboardPage() {
   const tr   = t[lang];
 
   const [loadingStats, setLoadingStats] = useState(true);
+  const [plan, setPlan] = useState<PlanType>("basic");
 
   // Patients
   const [totalPatients, setTotalPatients] = useState(0);
@@ -576,6 +613,11 @@ export default function DashboardPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
+
+      // ── Clinic plan ──
+      const { data: clinicData } = await supabase
+        .from("clinics").select("plan").eq("user_id", userId).single();
+      if (clinicData?.plan) setPlan(clinicData.plan as PlanType);
 
       const localNow   = new Date();
       const yyyy       = localNow.getFullYear();
@@ -721,7 +763,7 @@ export default function DashboardPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="dashboard" />
+        <Sidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan} />
 
         <main
           className="main-fade main-content"
@@ -764,7 +806,7 @@ export default function DashboardPage() {
           <div style={{ paddingTop:28 }}>
 
             {/* STATS */}
-            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:18,marginBottom:28 }}>
+            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:`repeat(${canAccess("payments",plan)?4:2},1fr)`,gap:18,marginBottom:28 }}>
               <StatCard
                 icon="📅" accent="#0863ba" delay={0} loading={loadingStats}
                 label={tr.stats.todayAppointments}
@@ -779,30 +821,34 @@ export default function DashboardPage() {
                 sub={newThisMonth > 0 ? `+${newThisMonth} ${tr.stats.newThisMonth}` : undefined}
                 subColor="#2e7d32"
               />
-              <StatCard
-                icon="💰" accent="#e67e22" delay={160} loading={loadingStats}
-                label={tr.stats.monthRevenue}
-                value={fmtCurrency(monthRevenue)}
-                subColor="#2e7d32"
-              />
-              <StatCard
-                icon="⏳" accent="#ffb5b5" delay={240} loading={loadingStats}
-                label={tr.stats.pendingPayments}
-                value={fmtCurrency(pendingAmount)}
-                sub={pendingCount > 0 ? `${pendingCount} ${tr.stats.unpaid}` : undefined}
-                subColor="#c0392b"
-              />
+              {canAccess("payments", plan) && (
+                <StatCard
+                  icon="💰" accent="#e67e22" delay={160} loading={loadingStats}
+                  label={tr.stats.monthRevenue}
+                  value={fmtCurrency(monthRevenue)}
+                  subColor="#2e7d32"
+                />
+              )}
+              {canAccess("payments", plan) && (
+                <StatCard
+                  icon="⏳" accent="#ffb5b5" delay={240} loading={loadingStats}
+                  label={tr.stats.pendingPayments}
+                  value={fmtCurrency(pendingAmount)}
+                  sub={pendingCount > 0 ? `${pendingCount} ${tr.stats.unpaid}` : undefined}
+                  subColor="#c0392b"
+                />
+              )}
             </div>
 
             {/* QUICK ACTIONS */}
             <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:"20px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
               <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",marginBottom:16 }}>{tr.quickActions.title}</h3>
-              <div className="quick-actions-grid" style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
+              <div className="quick-actions-grid" style={{ display:"grid",gridTemplateColumns:`repeat(${canAccess("payments",plan)?3:2},1fr)`,gap:12 }}>
                 {[
-                  { icon:"📅", label:tr.quickActions.newAppointment, color:"#0863ba", bg:"rgba(8,99,186,.08)",   href:"/appointments" },
-                  { icon:"👤", label:tr.quickActions.addPatient,      color:"#2e7d32", bg:"rgba(46,125,50,.08)",  href:"/patients"     },
-                  { icon:"💳", label:tr.quickActions.recordPayment,   color:"#e67e22", bg:"rgba(230,126,34,.08)", href:"/payments"     },
-                ].map(a => (
+                  { icon:"📅", label:tr.quickActions.newAppointment, color:"#0863ba", bg:"rgba(8,99,186,.08)",   href:"/appointments",  feature: null },
+                  { icon:"👤", label:tr.quickActions.addPatient,      color:"#2e7d32", bg:"rgba(46,125,50,.08)",  href:"/patients",      feature: null },
+                  { icon:"💳", label:tr.quickActions.recordPayment,   color:"#e67e22", bg:"rgba(230,126,34,.08)", href:"/payments",      feature: "payments" },
+                ].filter(a => !a.feature || canAccess(a.feature, plan)).map(a => (
                   <a key={a.label} href={a.href} className="action-btn">
                     <div className="action-btn-icon" style={{ background:a.bg,color:a.color }}>{a.icon}</div>
                     <span className="action-btn-label" style={{ color:a.color }}>{a.label}</span>
