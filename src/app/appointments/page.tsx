@@ -164,6 +164,22 @@ function playNotificationSound() {
   } catch {}
 }
 
+// ─── Plan access rules ────────────────────────────────────
+type PlanType = "basic" | "pro" | "enterprise";
+const PLAN_ACCESS: Record<string, string[]> = {
+  payments:      ["pro", "enterprise"],
+  prescriptions: ["enterprise"],
+  tracking:      ["enterprise"],
+};
+const canAccess = (feature: string, plan: PlanType) =>
+  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
+
+const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string }> = {
+  basic:      { label:{ ar:"الأساسية",   en:"Basic"         }, color:"#0863ba" },
+  pro:        { label:{ ar:"الاحترافية", en:"Professional"  }, color:"#7b2d8b" },
+  enterprise: { label:{ ar:"الشاملة",   en:"Comprehensive" }, color:"#e67e22" },
+};
+
 // ─── Sidebar ──────────────────────────────────────────────
 const SB_BG          = "#0558a8";
 const SB_BG_HEADER   = "#044d96";
@@ -187,8 +203,8 @@ const TrackingIcon = () => (
   </svg>
 );
 
-function Sidebar({ lang, setLang, activePage = "appointments" }: {
-  lang: Lang; setLang: (l: Lang) => void; activePage?: string;
+function Sidebar({ lang, setLang, activePage = "appointments", plan = "basic" }: {
+  lang: Lang; setLang: (l: Lang) => void; activePage?: string; plan?: PlanType;
 }) {
   const tr = T[lang]; const isAr = lang === "ar";
   const [col, setCol] = useState(false);
@@ -280,14 +296,20 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
         <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
           {navItems.map(item => {
             const isActive = item.key === activePage;
+            const isLocked = !canAccess(item.key, plan);
+            const lockLabel = isAr ? "غير متاح في خطتك" : "Not available in your plan";
             return (
-              <a key={item.key} href={item.href}
-                onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
+              <a key={item.key}
+                href={isLocked ? undefined : item.href}
+                title={col ? (isLocked ? lockLabel : navLabel(item.key)) : (isLocked ? lockLabel : undefined)}
+                onClick={isLocked ? (e) => e.preventDefault() : undefined}
+                onMouseEnter={e=>{if(!isActive&&!isLocked)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
                 onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
-                style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT,fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+                style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.28)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:isLocked?0.5:1 }}>
                 {isActive && <div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>}
                 <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
-                {!col && <span>{navLabel(item.key)}</span>}
+                {!col && <span style={{ flex:1 }}>{navLabel(item.key)}</span>}
+                {isLocked && !col && <span style={{ fontSize:11,opacity:0.7 }}>🔒</span>}
               </a>
             );
           })}
@@ -296,12 +318,20 @@ function Sidebar({ lang, setLang, activePage = "appointments" }: {
         {/* Footer */}
         <div style={{ padding:col?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
           {!col && (
-            <button onClick={()=>setLang(lang==="ar"?"en":"ar")}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}}
-              style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>
-              🌐 {lang==="ar"?"English":"العربية"}
-            </button>
+            <>
+              {/* Plan badge */}
+              <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8 }}>
+                <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }} />
+                <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
+                <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang]}</span>
+              </div>
+              <button onClick={()=>setLang(lang==="ar"?"en":"ar")}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}}
+                style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>
+                🌐 {lang==="ar"?"English":"العربية"}
+              </button>
+            </>
           )}
           <button
             onClick={()=>{ supabase.auth.signOut(); window.location.href="/login"; }}
@@ -927,6 +957,7 @@ export default function AppointmentsPage() {
   const [loading,             setLoading]             = useState(true);
   const [saving,              setSaving]              = useState(false);
   const [clinicId,            setClinicId]            = useState("");
+  const [plan,                setPlan]                = useState<PlanType>("basic");
   const [shareModal,          setShareModal]          = useState(false);
   const [copied,              setCopied]              = useState(false);
   const [viewMonth,           setViewMonth]           = useState(now.getMonth());
@@ -980,7 +1011,15 @@ export default function AppointmentsPage() {
   useEffect(() => {
     loadPatients();
     loadAppointments();
-    supabase.auth.getUser().then(({ data: { user } }) => { if (user) setClinicId(user.id); });
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        setClinicId(user.id);
+        // جلب خطة العيادة
+        const { data: clinicData } = await supabase
+          .from("clinics").select("plan").eq("user_id", user.id).single();
+        if (clinicData?.plan) setPlan(clinicData.plan as PlanType);
+      }
+    });
   }, []);
 
   // ── Realtime: مراقبة طلبات الحجز الجديدة ─────────────────
@@ -1211,7 +1250,7 @@ export default function AppointmentsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc",display:"flex" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="appointments"/>
+        <Sidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan}/>
 
         <main style={{ marginRight:isAr&&!isMobile?240:undefined, marginLeft:!isAr&&!isMobile?240:undefined, flex:1, padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", maxWidth:isMobile?"100vw":"calc(100vw - 240px)" }}>
 
@@ -1223,26 +1262,21 @@ export default function AppointmentsPage() {
                   <h1 style={{ fontSize:isMobile?17:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
                   {!isMobile&&<p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>}
                 </div>
-                {/* بادج عدد الطلبات المعلقة في التوب بار */}
-                {pendingAppointments.length > 0 && (
-                  <div style={{
-                    display:"flex",alignItems:"center",gap:5,
-                    background:"rgba(230,126,34,.1)",
-                    border:"1.5px solid rgba(230,126,34,.3)",
-                    borderRadius:20,padding:"4px 10px",
-                    animation:"pendingPulse 2s ease infinite",
-                  }}>
+                {/* بادج عدد الطلبات المعلقة — فقط للاحترافية والشاملة */}
+                {canAccess("payments", plan) && pendingAppointments.length > 0 && (
+                  <div style={{ display:"flex",alignItems:"center",gap:5,background:"rgba(230,126,34,.1)",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:20,padding:"4px 10px",animation:"pendingPulse 2s ease infinite" }}>
                     <span style={{ fontSize:14 }}>🔔</span>
-                    <span style={{ fontSize:12,fontWeight:700,color:"#e67e22" }}>
-                      {pendingAppointments.length}
-                    </span>
+                    <span style={{ fontSize:12,fontWeight:700,color:"#e67e22" }}>{pendingAppointments.length}</span>
                   </div>
                 )}
               </div>
               <div style={{ display:"flex",gap:isMobile?6:10,alignItems:"center" }}>
-                {!isMobile&&<button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                  🔗 {isAr?"رابط الحجز":"Booking Link"}
-                </button>}
+                {/* رابط الحجز — فقط للاحترافية والشاملة */}
+                {!isMobile && canAccess("payments", plan) && (
+                  <button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
+                    🔗 {isAr?"رابط الحجز":"Booking Link"}
+                  </button>
+                )}
                 {/* زر التحديث */}
                 <button
                   onClick={() => { loadPatients(); loadAppointments(); }}
@@ -1294,15 +1328,17 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          {/* ════ قسم طلبات الحجز المعلقة (يظهر فوق التقويم إذا وُجدت طلبات) ════ */}
-          <PendingBookingsSection
-            lang={lang}
-            pendingAppointments={pendingAppointments}
-            patients={patients}
-            onApprove={handleApproveBooking}
-            onReject={handleRejectBooking}
-            isMobile={isMobile}
-          />
+          {/* ════ قسم طلبات الحجز المعلقة — فقط للاحترافية والشاملة ════ */}
+          {canAccess("payments", plan) && (
+            <PendingBookingsSection
+              lang={lang}
+              pendingAppointments={pendingAppointments}
+              patients={patients}
+              onApprove={handleApproveBooking}
+              onReject={handleRejectBooking}
+              isMobile={isMobile}
+            />
+          )}
 
           {/* CALENDAR + TIMELINE */}
           <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:18 }}>
@@ -1416,6 +1452,8 @@ export default function AppointmentsPage() {
                               </div>
                               {/* أزرار */}
                               <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                                {/* زر واتساب — فقط للاحترافية والشاملة */}
+                                {canAccess("payments", plan) && (
                                 <button
                                   title="WhatsApp"
                                   onClick={e=>{ e.stopPropagation(); sendWhatsApp(appt); }}
@@ -1427,6 +1465,7 @@ export default function AppointmentsPage() {
                                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                                   </svg>
                                 </button>
+                                )}
                                 <button
                                   title={lang==="ar"?"تعديل الموعد":"Edit Appointment"}
                                   onClick={()=>setEditAppt(appt)}
