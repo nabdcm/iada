@@ -916,7 +916,27 @@ const TrackingIcon = () => (
 );
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, activePage="patients" }: { lang:Lang; setLang:(l:Lang)=>void; activePage?:string }) {
+// ─── Plan access rules ────────────────────────────────────
+type PlanType = "basic" | "pro" | "enterprise";
+const PLAN_ACCESS: Record<string, string[]> = {
+  payments:      ["pro", "enterprise"],
+  prescriptions: ["enterprise"],
+  tracking:      ["enterprise"],
+};
+const PLAN_LIMITS: Record<PlanType, number> = {
+  basic: 300, pro: 1000, enterprise: Infinity,
+};
+const canAccess = (feature: string, plan: PlanType) =>
+  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
+
+const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string }> = {
+  basic:      { label:{ ar:"الأساسية",   en:"Basic"         }, color:"#0863ba" },
+  pro:        { label:{ ar:"الاحترافية", en:"Professional"  }, color:"#7b2d8b" },
+  enterprise: { label:{ ar:"الشاملة",   en:"Comprehensive" }, color:"#e67e22" },
+};
+
+// ─── Sidebar ──────────────────────────────────────────────
+function Sidebar({ lang, setLang, activePage="patients", plan="basic" }: { lang:Lang; setLang:(l:Lang)=>void; activePage?:string; plan?:PlanType }) {
   const tr   = T[lang];
   const isAr = lang==="ar";
   const [collapsed,  setCollapsed]  = useState(false);
@@ -972,19 +992,36 @@ function Sidebar({ lang, setLang, activePage="patients" }: { lang:Lang; setLang:
         </div>
         <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
           {navItems.map(item=>{
-            const isActive=item.key===activePage;
+            const isActive = item.key===activePage;
+            const isLocked = !canAccess(item.key, plan);
+            const lockLabel = isAr ? "غير متاح في خطتك" : "Not available in your plan";
             return (
-              <a key={item.key} href={item.href} onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}} onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
-                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT,fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+              <a key={item.key}
+                href={isLocked ? undefined : item.href}
+                title={collapsed ? (isLocked ? lockLabel : tr.nav[item.key]) : (isLocked ? lockLabel : undefined)}
+                onClick={isLocked ? (e)=>e.preventDefault() : undefined}
+                onMouseEnter={e=>{if(!isActive&&!isLocked)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
+                onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
+                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.28)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:isLocked?0.5:1 }}>
                 {isActive&&<div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>}
                 <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
-                {!collapsed&&<span>{tr.nav[item.key]}</span>}
+                {!collapsed&&<span style={{ flex:1 }}>{tr.nav[item.key]}</span>}
+                {isLocked&&!collapsed&&<span style={{ fontSize:11,opacity:0.7 }}>🔒</span>}
               </a>
             );
           })}
         </nav>
         <div style={{ padding:collapsed?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
-          {!collapsed&&<button onClick={()=>setLang(lang==="ar"?"en":"ar")} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}} style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>🌐 {lang==="ar"?"English":"العربية"}</button>}
+          {!collapsed&&(
+            <>
+              <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8 }}>
+                <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }}/>
+                <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
+                <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang]}</span>
+              </div>
+              <button onClick={()=>setLang(lang==="ar"?"en":"ar")} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}} style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>🌐 {lang==="ar"?"English":"العربية"}</button>
+            </>
+          )}
           <button onClick={async()=>{ try { await supabase.auth.signOut(); window.location.href="/login"; } catch { window.location.href="/login"; } }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.3)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.15)";}}
             style={{ width:"100%",padding:collapsed?"10px 0":"10px 14px",background:"rgba(192,57,43,.15)",border:"1.5px solid rgba(192,57,43,.3)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#ffb3a7",fontWeight:600,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:8,transition:"all .2s" }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1265,6 +1302,7 @@ export default function PatientsPage() {
   // ── نوع العيادة — يُقرأ من جدول clinics ─────────────────
   const [clinicType, setClinicTypeState] = useState<ClinicType>("general");
   const [clinicMeta, setClinicMeta]      = useState(CLINIC_TYPE_META.general);
+  const [plan,       setPlan]            = useState<PlanType>("basic");
 
   const [patients,       setPatients]       = useState<Patient[]>([]);
   const [loading,        setLoading]        = useState(true);
@@ -1282,12 +1320,13 @@ export default function PatientsPage() {
     try {
       const { data:{ user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("clinics").select("clinic_type").eq("user_id",user.id).maybeSingle();
+      const { data } = await supabase.from("clinics").select("clinic_type, plan").eq("user_id",user.id).maybeSingle();
       if (data?.clinic_type) {
         const ct = data.clinic_type as ClinicType;
         setClinicTypeState(ct);
         setClinicMeta(CLINIC_TYPE_META[ct]??CLINIC_TYPE_META.general);
       }
+      if (data?.plan) setPlan(data.plan as PlanType);
     } catch {}
   };
 
@@ -1474,7 +1513,7 @@ export default function PatientsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="patients"/>
+        <Sidebar lang={lang} setLang={setLang} activePage="patients" plan={plan}/>
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 
@@ -1502,6 +1541,33 @@ export default function PatientsPage() {
           </div>
 
           <div className="content-padding" style={{ padding:"28px 0 0" }}>
+
+            {/* ── شريط حد المرضى ── */}
+            {(() => {
+              const limit = PLAN_LIMITS[plan];
+              const count = patients.filter(p=>!p.is_hidden).length;
+              if (limit === Infinity) return null;
+              const pct = Math.min((count/limit)*100, 100);
+              const near = pct >= 80;
+              const full = count >= limit;
+              const barColor = full ? "#c0392b" : near ? "#e67e22" : "#2e7d32";
+              return (
+                <div style={{ background:full?"rgba(192,57,43,.06)":near?"rgba(230,126,34,.06)":"rgba(46,125,50,.06)", border:`1.5px solid ${barColor}30`, borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontSize:12, fontWeight:700, color:barColor }}>
+                        {full ? (isAr?"⛔ وصلت إلى الحد الأقصى للمرضى":"⛔ Patient limit reached") : near ? (isAr?"⚠️ اقتربت من الحد الأقصى":"⚠️ Approaching patient limit") : (isAr?"👥 المرضى المسجلون":"👥 Registered Patients")}
+                      </span>
+                      <span style={{ fontSize:12, fontWeight:700, color:barColor }}>{count} / {limit}</span>
+                    </div>
+                    <div style={{ height:6, background:"rgba(0,0,0,0.08)", borderRadius:10, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${pct}%`, background:barColor, borderRadius:10, transition:"width .4s" }}/>
+                    </div>
+                    {full && <p style={{ fontSize:11, color:"#c0392b", marginTop:6, fontWeight:600 }}>{isAr?"قم بترقية خطتك لإضافة المزيد من المرضى":"Upgrade your plan to add more patients"}</p>}
+                  </div>
+                </div>
+              );
+            })()}
             {/* STATS */}
             <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:28 }}>
               {[
