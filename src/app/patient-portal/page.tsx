@@ -629,31 +629,62 @@ function PatientDashboard({ master, lang, onLogout }: {
     (async () => {
       setLoading(true);
       try {
-        // 1) جلب جميع سجلات هذا المريض (بالهاتف) من جدول patients
+        // 1) جلب جميع سجلات هذا المريض من patients مع بيانات العيادة مباشرة
+        // نستخدم الـ foreign key relationship إذا كان موجوداً، وإلا نجلب كل شيء
         const { data: patientsData, error: pErr } = await supabase
           .from("patients")
-          .select("id, name, phone, gender, date_of_birth, has_diabetes, has_hypertension, notes, user_id")
+          .select("*")
           .eq("phone", master.phone);
 
         if (pErr) console.error("patients fetch error:", pErr);
+        console.log("patientsData:", JSON.stringify(patientsData));
+
         if (!patientsData || patientsData.length === 0) {
           setLoading(false);
           return;
         }
 
-        // 2) جلب بيانات العيادات بناءً على user_id الخاصة بكل سجل
+        // 2) جلب بيانات العيادات — نحاول جلبها بـ user_id
         const userIds = [...new Set((patientsData as any[]).map((p: any) => p.user_id).filter(Boolean))];
-        const { data: clinicsData, error: cErr } = await supabase
-          .from("clinics")
-          .select("user_id, name, clinic_type, doctor_name")
-          .in("user_id", userIds);
+        console.log("userIds:", userIds);
 
-        if (cErr) console.error("clinics fetch error:", cErr);
+        let clinicsMap: Record<string, any> = {};
 
-        const clinicsMap: Record<string, any> = {};
-        (clinicsData ?? []).forEach((c: any) => {
-          clinicsMap[c.user_id] = c;
-        });
+        if (userIds.length > 0) {
+          // محاولة الجلب بـ user_id
+          const { data: clinicsData, error: cErr } = await supabase
+            .from("clinics")
+            .select("*")
+            .in("user_id", userIds);
+
+          console.log("clinicsData:", JSON.stringify(clinicsData), "error:", cErr);
+
+          if (!cErr && clinicsData && clinicsData.length > 0) {
+            clinicsData.forEach((c: any) => {
+              clinicsMap[c.user_id] = c;
+            });
+          } else {
+            // محاولة بديلة: جلب بـ id إذا كان patients يحتوي clinic_id
+            const clinicIds = [...new Set((patientsData as any[]).map((p: any) => p.clinic_id).filter(Boolean))];
+            console.log("clinicIds fallback:", clinicIds);
+
+            if (clinicIds.length > 0) {
+              const { data: clinicsData2, error: cErr2 } = await supabase
+                .from("clinics")
+                .select("*")
+                .in("id", clinicIds);
+
+              console.log("clinicsData2:", JSON.stringify(clinicsData2), "error:", cErr2);
+
+              if (!cErr2 && clinicsData2) {
+                clinicsData2.forEach((c: any) => {
+                  // خريطة بـ id للمطابقة لاحقاً
+                  clinicsMap[`id_${c.id}`] = c;
+                });
+              }
+            }
+          }
+        }
 
         // 3) جلب الملفات الطبية من patient_profiles
         const patientIds = (patientsData as any[]).map((p: any) => p.id);
@@ -663,6 +694,7 @@ function PatientDashboard({ master, lang, onLogout }: {
           .in("patient_id", patientIds);
 
         if (prErr) console.error("profiles fetch error:", prErr);
+        console.log("profilesData:", JSON.stringify(profilesData));
 
         const profilesMap: Record<number, any> = {};
         (profilesData ?? []).forEach((pr: any) => {
@@ -671,12 +703,39 @@ function PatientDashboard({ master, lang, onLogout }: {
 
         // 4) بناء قائمة السجلات النهائية
         const built: ClinicRecord[] = (patientsData as any[]).map((p: any) => {
-          const clinic = clinicsMap[p.user_id] ?? {};
+          // محاولة إيجاد العيادة بـ user_id أولاً، ثم بـ clinic_id
+          const clinic =
+            clinicsMap[p.user_id] ??
+            clinicsMap[`id_${p.clinic_id}`] ??
+            {};
+
+          console.log(`patient ${p.id} → clinic:`, JSON.stringify(clinic));
+
           const prof = profilesMap[p.id] ?? {};
+
+          // اسم العيادة: نحاول عدة أعمدة محتملة
+          const clinicName =
+            clinic?.clinic_name ??
+            clinic?.name ??
+            "—";
+
+          // نوع العيادة: نحاول عدة أعمدة محتملة
+          const rawType =
+            clinic?.clinic_type ??
+            clinic?.type ??
+            "";
+
+          // اسم الطبيب: نحاول عدة أعمدة محتملة
+          const doctorName =
+            clinic?.doctor_name ??
+            clinic?.owner_name ??
+            clinic?.full_name ??
+            "—";
+
           return {
-            clinic_name: clinic?.name ?? "—",
-            clinic_type: (clinic?.clinic_type ?? "other") as ClinicType,
-            doctor_name: clinic?.doctor_name ?? "—",
+            clinic_name: clinicName,
+            clinic_type: (rawType || "other") as ClinicType,
+            doctor_name: doctorName,
             patient_id: p.id,
             mrn: master.mrn,
             medical_fields: prof.medical_fields ?? {},
@@ -692,6 +751,12 @@ function PatientDashboard({ master, lang, onLogout }: {
             },
           } satisfies ClinicRecord;
         });
+
+        console.log("final records:", JSON.stringify(built.map(r => ({
+          clinic_name: r.clinic_name,
+          clinic_type: r.clinic_type,
+          doctor_name: r.doctor_name,
+        }))));
 
         setRecords(built);
         if (built.length > 0) setPatientInfo(built[0].patient_info);
