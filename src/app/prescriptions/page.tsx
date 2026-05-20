@@ -194,8 +194,23 @@ const TrackingIcon = () => (
   </svg>
 );
 
-function Sidebar({ lang, setLang, activePage = "prescriptions" }: {
-  lang: Lang; setLang: (l: Lang) => void; activePage?: string;
+// ─── Plan access rules ────────────────────────────────────
+type PlanType = "basic" | "pro" | "enterprise";
+const PLAN_ACCESS: Record<string,string[]> = {
+  payments:      ["pro","enterprise"],
+  prescriptions: ["enterprise"],
+  tracking:      ["enterprise"],
+};
+const canAccess = (feature:string, plan:PlanType) =>
+  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
+const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
+  basic:      {label:{ar:"الأساسية",   en:"Basic"},         color:"#0863ba"},
+  pro:        {label:{ar:"الاحترافية", en:"Professional"},  color:"#7b2d8b"},
+  enterprise: {label:{ar:"الشاملة",   en:"Comprehensive"}, color:"#e67e22"},
+};
+
+function Sidebar({ lang, setLang, activePage = "prescriptions", plan = "basic" }: {
+  lang: Lang; setLang: (l: Lang) => void; activePage?: string; plan?: PlanType;
 }) {
   const tr = t[lang];
   const isAr = lang === "ar";
@@ -284,14 +299,20 @@ function Sidebar({ lang, setLang, activePage = "prescriptions" }: {
         <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
           {navItems.map(item => {
             const isActive = item.key === activePage;
+            const isLocked = !canAccess(item.key, plan);
+            const lockLabel = isAr ? "غير متاح في خطتك" : "Not available in your plan";
             return (
-              <a key={item.key} href={item.href}
-                onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
+              <a key={item.key}
+                href={isLocked ? undefined : item.href}
+                title={collapsed ? (isLocked ? lockLabel : (tr.nav as Record<string,string>)[item.key]) : (isLocked ? lockLabel : undefined)}
+                onClick={isLocked ? (e) => e.preventDefault() : undefined}
+                onMouseEnter={e=>{if(!isActive&&!isLocked)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
                 onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
-                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT,fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.28)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:isLocked?0.5:1 }}>
                 {isActive && <div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>}
                 <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
-                {!collapsed && <span>{(tr.nav as Record<string,string>)[item.key]}</span>}
+                {!collapsed && <span style={{ flex:1 }}>{(tr.nav as Record<string,string>)[item.key]}</span>}
+                {isLocked && !collapsed && <span style={{ fontSize:11,opacity:0.7 }}>🔒</span>}
               </a>
             );
           })}
@@ -300,12 +321,19 @@ function Sidebar({ lang, setLang, activePage = "prescriptions" }: {
         {/* Footer */}
         <div style={{ padding:collapsed?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
           {!collapsed && (
-            <button onClick={() => setLang(lang==="ar"?"en":"ar")}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}}
-              style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>
-              🌐 {lang==="ar"?"English":"العربية"}
-            </button>
+            <>
+              <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8 }}>
+                <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }}/>
+                <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
+                <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang]}</span>
+              </div>
+              <button onClick={() => setLang(lang==="ar"?"en":"ar")}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}}
+                style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>
+                🌐 {lang==="ar"?"English":"العربية"}
+              </button>
+            </>
           )}
           <button
             onClick={async()=>{ await supabase.auth.signOut(); window.location.href="/login"; }}
@@ -622,6 +650,7 @@ export default function PrescriptionsPage() {
   const [clinicName, setClinicName] = useState("عيادة نبض");
   const [doctorName, setDoctorName] = useState("الطبيب");
   const [isMobile, setIsMobile] = useState(false);
+  const [plan, setPlan] = useState<PlanType>("basic");
 
   // Form state
   const [form, setForm] = useState<Omit<Prescription, "id" | "created_at">>({
@@ -658,7 +687,7 @@ export default function PrescriptionsPage() {
         .order("name");
       setPatients(patientsData ?? []);
 
-      // Load clinic/doctor settings
+      // Load clinic/doctor settings + plan
       const { data: settingsData } = await supabase
         .from("settings").select("clinic_name, doctor_name")
         .eq("user_id", userId).single();
@@ -666,6 +695,9 @@ export default function PrescriptionsPage() {
         setClinicName(settingsData.clinic_name ?? "عيادة نبض");
         setDoctorName(settingsData.doctor_name ?? "الطبيب");
       }
+      const { data: clinicData } = await supabase
+        .from("clinics").select("plan").eq("user_id", userId).maybeSingle();
+      if (clinicData?.plan) setPlan(clinicData.plan as PlanType);
 
       // Load prescriptions
       const { data: rxData } = await supabase
@@ -799,7 +831,7 @@ export default function PrescriptionsPage() {
         }
       `}</style>
 
-      <Sidebar lang={lang} setLang={setLang} activePage="prescriptions" />
+      <Sidebar lang={lang} setLang={setLang} activePage="prescriptions" plan={plan} />
 
       <main style={{
         marginRight: isAr ? sidebarWidth : 0,
@@ -810,6 +842,27 @@ export default function PrescriptionsPage() {
         direction: isAr ? "rtl" : "ltr",
         fontFamily: "Rubik, sans-serif",
       }}>
+
+        {/* ── شاشة "غير متاح في خطتك" ── */}
+        {!loading && !canAccess("prescriptions", plan) && (
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16 }}>
+            <div style={{ fontSize:56 }}>🔒</div>
+            <h2 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>
+              {isAr ? "الوصفات الطبية غير متاحة في خطتك" : "Prescriptions Unavailable"}
+            </h2>
+            <p style={{ fontSize:14,color:"#888",maxWidth:360,lineHeight:1.7 }}>
+              {isAr
+                ? "هذه الميزة متاحة فقط في الخطة الشاملة. قم بترقية خطتك لتتمكن من تسجيل وطباعة الوصفات الطبية."
+                : "This feature is only available in the Comprehensive plan. Upgrade to create and print prescriptions."}
+            </p>
+            <a href="/dashboard" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#e67e22",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(230,126,34,.35)" }}>
+              {isAr ? "⬆️ ترقية الخطة" : "⬆️ Upgrade Plan"}
+            </a>
+          </div>
+        )}
+
+        {/* ── المحتوى الرئيسي — للشاملة فقط ── */}
+        {canAccess("prescriptions", plan) && (<>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
@@ -942,6 +995,7 @@ export default function PrescriptionsPage() {
             })}
           </div>
         )}
+        </>)}
       </main>
 
       {/* ─── Add/Edit Modal ─── */}
