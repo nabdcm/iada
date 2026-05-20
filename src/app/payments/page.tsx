@@ -796,14 +796,13 @@ export default function PaymentsPage() {
           .eq("id", user.id)
           .single();
         if (profile?.clinic_name) setClinicName(profile.clinic_name);
-        else {
-          // جلب خطة العيادة
-        const { data: clinicRow } = await supabase
-          .from("clinics").select("name, plan").eq("user_id", user.id).single();
-        if (clinicRow?.name) setClinicName(clinicRow.name);
-        if (clinicRow?.plan) setPlan(clinicRow.plan as PlanType);
-        }
       }
+
+      // جلب خطة العيادة دائماً — مستقلة عن مصدر الاسم
+      const { data: clinicRow } = await supabase
+        .from("clinics").select("name, plan").eq("user_id", user.id).single();
+      if (clinicRow?.name && !clinicMeta) setClinicName(prev => prev || clinicRow.name);
+      if (clinicRow?.plan) setPlan(clinicRow.plan as PlanType);
 
       const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
         supabase
