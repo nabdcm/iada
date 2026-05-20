@@ -1532,10 +1532,19 @@ export default function PatientsPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                   <span className="refresh-btn-text">{isAr?"تحديث":"Refresh"}</span>
                 </button>
-                <button className="desktop-add-btn" onClick={()=>setAddModal(true)}
-                  style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:clinicMeta.color,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 16px ${clinicMeta.color}40` }}>
-                  <span style={{ fontSize:18,lineHeight:1 }}>＋</span> {tr.addPatient}
-                </button>
+                {(() => {
+                  const limit = PLAN_LIMITS[plan];
+                  const count = patients.filter(p=>!p.is_hidden).length;
+                  const full  = limit !== Infinity && count >= limit;
+                  return (
+                    <button className="desktop-add-btn"
+                      onClick={()=>{ if (!full) setAddModal(true); }}
+                      title={full ? (isAr?"وصلت للحد الأقصى، قم بترقية خطتك":"Limit reached, upgrade your plan") : undefined}
+                      style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:full?"#ccc":clinicMeta.color,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:full?"not-allowed":"pointer",boxShadow:full?"none":`0 4px 16px ${clinicMeta.color}40`,opacity:full?0.7:1,transition:"all .2s" }}>
+                      <span style={{ fontSize:18,lineHeight:1 }}>＋</span> {tr.addPatient}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>
