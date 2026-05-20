@@ -629,35 +629,49 @@ function PatientDashboard({ master, lang, onLogout }: {
     (async () => {
       setLoading(true);
       try {
-        // جلب جميع المرضى بنفس رقم الهاتف من جدول patients (عيادات مختلفة)
-        const { data: patientsData } = await supabase
+        // 1) جلب جميع سجلات هذا المريض (بالهاتف) من جدول patients
+        const { data: patientsData, error: pErr } = await supabase
           .from("patients")
-          .select(`
-            id, name, phone, gender, date_of_birth, has_diabetes, has_hypertension, notes,
-            clinics!inner (id, name, clinic_type, doctor_name)
-          `)
+          .select("id, name, phone, gender, date_of_birth, has_diabetes, has_hypertension, notes, user_id")
           .eq("phone", master.phone);
 
+        if (pErr) console.error("patients fetch error:", pErr);
         if (!patientsData || patientsData.length === 0) {
           setLoading(false);
           return;
         }
 
-        // جلب الملفات الطبية لكل مريض
-        const patientIds = patientsData.map((p: any) => p.id);
-        const { data: profilesData } = await supabase
+        // 2) جلب بيانات العيادات بناءً على user_id الخاصة بكل سجل
+        const userIds = [...new Set((patientsData as any[]).map((p: any) => p.user_id).filter(Boolean))];
+        const { data: clinicsData, error: cErr } = await supabase
+          .from("clinics")
+          .select("user_id, name, clinic_type, doctor_name")
+          .in("user_id", userIds);
+
+        if (cErr) console.error("clinics fetch error:", cErr);
+
+        const clinicsMap: Record<string, any> = {};
+        (clinicsData ?? []).forEach((c: any) => {
+          clinicsMap[c.user_id] = c;
+        });
+
+        // 3) جلب الملفات الطبية من patient_profiles
+        const patientIds = (patientsData as any[]).map((p: any) => p.id);
+        const { data: profilesData, error: prErr } = await supabase
           .from("patient_profiles")
           .select("patient_id, medical_fields, xrays")
           .in("patient_id", patientIds);
+
+        if (prErr) console.error("profiles fetch error:", prErr);
 
         const profilesMap: Record<number, any> = {};
         (profilesData ?? []).forEach((pr: any) => {
           profilesMap[pr.patient_id] = pr;
         });
 
-        // بناء قائمة السجلات
+        // 4) بناء قائمة السجلات النهائية
         const built: ClinicRecord[] = (patientsData as any[]).map((p: any) => {
-          const clinic = Array.isArray(p.clinics) ? p.clinics[0] : p.clinics;
+          const clinic = clinicsMap[p.user_id] ?? {};
           const prof = profilesMap[p.id] ?? {};
           return {
             clinic_name: clinic?.name ?? "—",
