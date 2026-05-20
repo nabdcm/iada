@@ -193,10 +193,25 @@ const TrackingIcon = () => (
   </svg>
 );
 
-function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePage = "payments" }: {
+// ─── Plan access rules ────────────────────────────────────
+type PlanType = "basic" | "pro" | "enterprise";
+const PLAN_ACCESS: Record<string,string[]> = {
+  payments:      ["pro","enterprise"],
+  prescriptions: ["enterprise"],
+  tracking:      ["enterprise"],
+};
+const canAccess = (feature:string, plan:PlanType) =>
+  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
+const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
+  basic:      {label:{ar:"الأساسية",   en:"Basic"},         color:"#0863ba"},
+  pro:        {label:{ar:"الاحترافية", en:"Professional"},  color:"#7b2d8b"},
+  enterprise: {label:{ar:"الشاملة",   en:"Comprehensive"}, color:"#e67e22"},
+};
+
+function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePage = "payments", plan = "basic" }: {
   lang: string; setLang: (l: string) => void;
   isMobile: boolean; mobileOpen: boolean; setMobileOpen: (v: boolean) => void;
-  activePage?: string;
+  activePage?: string; plan?: PlanType;
 }) {
   const tr = T[lang]; const isAr = lang==="ar";
   const [col, setCol] = useState(false);
@@ -283,16 +298,22 @@ function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePag
         <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
           {navItems.map(item => {
             const isActive = item.key === activePage;
+            const isLocked = !canAccess(item.key, plan);
+            const lockLabel = lang==="ar" ? "غير متاح في خطتك" : "Not available in your plan";
             return (
-              <a key={item.key} href={item.href}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)"; }}
+              <a key={item.key}
+                href={isLocked ? undefined : item.href}
+                title={col ? (isLocked ? lockLabel : (tr.nav as Record<string,string>)[item.key]) : (isLocked ? lockLabel : undefined)}
+                onClick={isLocked ? (e) => e.preventDefault() : undefined}
+                onMouseEnter={e => { if (!isActive && !isLocked) (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)"; }}
                 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background="transparent"; }}
-                style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT,fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative" }}>
+                style={{ display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.28)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:isLocked?0.5:1 }}>
                 {isActive && (
                   <div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>
                 )}
                 <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
-                {!col && <span>{(tr.nav as Record<string,string>)[item.key]}</span>}
+                {!col && <span style={{ flex:1 }}>{(tr.nav as Record<string,string>)[item.key]}</span>}
+                {isLocked && !col && <span style={{ fontSize:11,opacity:0.7 }}>🔒</span>}
               </a>
             );
           })}
@@ -301,14 +322,21 @@ function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePag
         {/* Footer */}
         <div style={{ padding:col?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
           {!col && (
-            <button
-              onClick={() => setLang(lang==="ar"?"en":"ar")}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)"; }}
-              style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}
-            >
-              🌐 {lang==="ar" ? "English" : "العربية"}
-            </button>
+            <>
+              <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8 }}>
+                <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }}/>
+                <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
+                <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang as "ar"|"en"]}</span>
+              </div>
+              <button
+                onClick={() => setLang(lang==="ar"?"en":"ar")}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)"; }}
+                style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}
+              >
+                🌐 {lang==="ar" ? "English" : "العربية"}
+              </button>
+            </>
           )}
           <button
             onClick={async () => { const { supabase: sb } = await import("@/lib/supabase"); await sb.auth.signOut(); window.location.href = "/login"; }}
@@ -743,6 +771,7 @@ export default function PaymentsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showExpenseModal,  setShowExpenseModal]  = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [plan, setPlan] = useState<PlanType>("basic");
 
   // ── جلب البيانات من Supabase ────────────────────────────────
   useEffect(() => {
@@ -768,13 +797,11 @@ export default function PaymentsPage() {
           .single();
         if (profile?.clinic_name) setClinicName(profile.clinic_name);
         else {
-          // fallback ثاني: جدول clinics
-          const { data: clinicRow } = await supabase
-            .from("clinics")
-            .select("name")
-            .eq("user_id", user.id)
-            .single();
-          if (clinicRow?.name) setClinicName(clinicRow.name);
+          // جلب خطة العيادة
+        const { data: clinicRow } = await supabase
+          .from("clinics").select("name, plan").eq("user_id", user.id).single();
+        if (clinicRow?.name) setClinicName(clinicRow.name);
+        if (clinicRow?.plan) setPlan(clinicRow.plan as PlanType);
         }
       }
 
@@ -1263,9 +1290,30 @@ export default function PaymentsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} isMobile={isMobile} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}/>
+        <Sidebar lang={lang} setLang={setLang} isMobile={isMobile} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} plan={plan}/>
 
         <main className="page-anim main-content" style={{ padding:"0 32px 48px", transition:"margin .3s" }}>
+
+          {/* ── شاشة "غير متاح في خطتك" للأساسية ── */}
+          {!loading && !canAccess("payments", plan) && (
+            <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:16 }}>
+              <div style={{ fontSize:56 }}>🔒</div>
+              <h2 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>
+                {isAr ? "إدارة المدفوعات غير متاحة في خطتك" : "Payments Unavailable"}
+              </h2>
+              <p style={{ fontSize:14,color:"#888",maxWidth:380,lineHeight:1.7 }}>
+                {isAr
+                  ? "هذه الميزة متاحة في الخطة الاحترافية والشاملة. قم بترقية خطتك لتتمكن من إدارة المدفوعات والإيرادات."
+                  : "This feature is available in the Professional and Comprehensive plans. Upgrade to manage payments and revenue."}
+              </p>
+              <a href="/dashboard" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#7b2d8b",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(123,45,139,.35)" }}>
+                {isAr ? "⬆️ ترقية الخطة" : "⬆️ Upgrade Plan"}
+              </a>
+            </div>
+          )}
+
+          {/* ── المحتوى الكامل — للاحترافية والشاملة فقط ── */}
+          {canAccess("payments", plan) && (<>
 
           {/* TOP BAR */}
           <div className="topbar-pad" style={{ position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
@@ -1637,6 +1685,7 @@ export default function PaymentsPage() {
 
             </div>
           </div>
+          </>)}
         </main>
 
         {/* Add Modal */}
