@@ -57,6 +57,10 @@ const T = {
     errorBook:       "حدث خطأ، حاول مجدداً",
     poweredBy:       "مدعوم بواسطة نبض",
     offDay:          "هذا اليوم خارج أوقات عمل العيادة",
+    slotBooked:      "محجوز",
+    slotAvailable:   "متاح",
+    slotsLegend:     "دليل الألوان",
+    slotBookedErr:   "هذا الموعد محجوز مسبقاً، الرجاء اختيار وقت آخر",
   },
   en: {
     loading:         "Loading...",
@@ -92,6 +96,10 @@ const T = {
     errorBook:       "An error occurred, please try again",
     poweredBy:       "Powered by NABD",
     offDay:          "This day is outside clinic working hours",
+    slotBooked:      "Booked",
+    slotAvailable:   "Available",
+    slotsLegend:     "Color Guide",
+    slotBookedErr:   "This slot is already booked, please choose another time",
   },
 } as const;
 
@@ -136,6 +144,10 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     notes:            "",
   });
 
+  // المواعيد المحجوزة للتاريخ المختار
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
   const isAr = lang === "ar";
   const tr   = T[lang];
 
@@ -153,6 +165,26 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
       });
   }, [clinicId]);
 
+  // جلب المواعيد المحجوزة عند تغيير التاريخ
+  useEffect(() => {
+    if (!form.date || !clinicId) {
+      setBookedSlots([]);
+      return;
+    }
+    setLoadingSlots(true);
+    supabase
+      .from("appointments")
+      .select("time")
+      .eq("user_id", clinicId)
+      .eq("date", form.date)
+      .in("status", ["pending_approval", "confirmed", "scheduled"])
+      .then(({ data }) => {
+        const times = (data ?? []).map((r: { time: string }) => r.time.slice(0, 5));
+        setBookedSlots(times);
+        setLoadingSlots(false);
+      });
+  }, [form.date, clinicId]);
+
   const timeSlots = clinic
     ? generateTimeSlots(clinic.working_hours_start, clinic.working_hours_end, clinic.appointment_duration)
     : [];
@@ -163,6 +195,11 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim() || !form.date || !form.time) {
       setError(tr.required);
+      return;
+    }
+    // التحقق من أن الموعد لم يُحجز بعد تحديد الوقت
+    if (bookedSlots.includes(form.time)) {
+      setError(tr.slotBookedErr);
       return;
     }
     setError("");
@@ -251,6 +288,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
 
   const resetForm = () => {
     setSuccess(false);
+    setBookedSlots([]);
     setForm({ name:"", phone:"", gender:"", has_diabetes:false, has_hypertension:false, date:"", time:"", notes:"" });
   };
 
@@ -302,8 +340,10 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
         @keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
         .book-input:focus{border-color:#0863ba !important;box-shadow:0 0 0 3px rgba(8,99,186,.1)}
         .time-slot{padding:10px;border:1.5px solid #e0e0e0;border-radius:10px;background:#fff;cursor:pointer;font-family:'Rubik',sans-serif;font-size:13px;font-weight:500;color:#555;transition:all .2s;text-align:center}
-        .time-slot:hover{border-color:#0863ba;color:#0863ba;background:rgba(8,99,186,.04)}
+        .time-slot:hover:not(.booked){border-color:#0863ba;color:#0863ba;background:rgba(8,99,186,.04)}
         .time-slot.selected{border-color:#0863ba !important;background:#0863ba !important;color:#fff !important;font-weight:700}
+        .time-slot.booked{border-color:#e8c5c5 !important;background:#fdf2f2 !important;color:#c0392b !important;cursor:not-allowed;opacity:.85;font-weight:600}
+        .time-slot.booked::after{content:' •';font-size:10px}
       `}</style>
 
       <div style={{ minHeight:"100vh",background:"#f7f9fc",fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr" }}>
@@ -463,15 +503,51 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                   {form.date && isDayWorking(form.date, clinic.working_days) && (
                     <div style={{ marginBottom:14 }}>
                       <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:10 }}>{tr.time}</label>
-                      <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8 }}>
-                        {timeSlots.map(slot => (
-                          <button key={slot} type="button"
-                            className={`time-slot${form.time===slot?" selected":""}`}
-                            onClick={()=>setForm({...form,time:slot})}>
-                            {slot}
-                          </button>
-                        ))}
+
+                      {/* دليل الألوان */}
+                      <div style={{ display:"flex",gap:16,marginBottom:12,padding:"10px 14px",background:"#f7f9fc",borderRadius:10,border:"1px solid #eef0f3",flexWrap:"wrap" }}>
+                        <div style={{ display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#555" }}>
+                          <span style={{ width:14,height:14,borderRadius:4,background:"#fff",border:"1.5px solid #e0e0e0",display:"inline-block" }}/>
+                          {tr.slotAvailable}
+                        </div>
+                        <div style={{ display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#c0392b" }}>
+                          <span style={{ width:14,height:14,borderRadius:4,background:"#fdf2f2",border:"1.5px solid #e8c5c5",display:"inline-block" }}/>
+                          {tr.slotBooked}
+                        </div>
+                        <div style={{ display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#0863ba" }}>
+                          <span style={{ width:14,height:14,borderRadius:4,background:"#0863ba",border:"1.5px solid #0863ba",display:"inline-block" }}/>
+                          {isAr ? "مختار" : "Selected"}
+                        </div>
                       </div>
+
+                      {loadingSlots ? (
+                        <div style={{ textAlign:"center",padding:"20px 0",color:"#aaa",fontSize:13 }}>
+                          <div style={{ width:24,height:24,border:"2px solid #e0e0e0",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px" }}/>
+                          {isAr ? "جاري تحميل المواعيد..." : "Loading slots..."}
+                        </div>
+                      ) : (
+                        <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8 }}>
+                          {timeSlots.map(slot => {
+                            const isBooked   = bookedSlots.includes(slot);
+                            const isSelected = form.time === slot;
+                            return (
+                              <button key={slot} type="button"
+                                className={`time-slot${isSelected?" selected":""}${isBooked?" booked":""}`}
+                                onClick={() => {
+                                  if (isBooked) {
+                                    setError(tr.slotBookedErr);
+                                    return;
+                                  }
+                                  setError("");
+                                  setForm({...form, time: slot});
+                                }}
+                                title={isBooked ? tr.slotBooked : tr.slotAvailable}>
+                                {slot}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
 
