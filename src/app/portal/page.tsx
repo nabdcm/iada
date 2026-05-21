@@ -1,548 +1,776 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { supabase } from "@/lib/supabase";
 
 // ============================================================
-// NABD — نبض | App Portal Page
-// واجهة التطبيق الرئيسية — بوابة الدخول للمستخدمين
+// NABD — نبض | Portal Page v2
+// Dark theme · Switch selector · Inline login · ? info modal
 // ============================================================
 
 type Lang = "ar" | "en";
+type Portal = "clinic" | "pharmacy" | "patient";
 
 const T = {
   ar: {
     tagline: "نبض عيادتك في يدك",
-    desc: "منصة متكاملة لإدارة العيادات والصيدليات — مرضى، مواعيد، ومدفوعات في مكان واحد.",
-    choosePortal: "اختر بوابتك",
-    portals: [
-      {
-        key: "clinic",
-        icon: "🏥",
-        title: "نبض عيادة",
-        subtitle: "للأطباء وإدارة العيادات",
-        desc: "إدارة المرضى، المواعيد، والمدفوعات",
-        color: "#0863ba",
-        bg: "rgba(8,99,186,0.06)",
-        border: "rgba(8,99,186,0.2)",
-        url: "https://www.nabd.clinic/login",
-        badge: null,
+    desc: "منصة متكاملة لإدارة العيادات والصيدليات",
+    switchLabel: "اختر نوع الدخول",
+    portals: {
+      clinic:   { icon: "🏥", label: "عيادة",   sub: "للأطباء وإدارة العيادات" },
+      pharmacy: { icon: "💊", label: "صيدلية",  sub: "لإدارة الصيدليات", badge: "جديد" },
+      patient:  { icon: "👤", label: "مريض",    sub: "للمرضى ومتابعة الحالة" },
+    },
+    login: {
+      email:       "البريد الإلكتروني",
+      emailPh:     "أدخل بريدك الإلكتروني",
+      pass:        "كلمة المرور",
+      passPh:      "أدخل كلمة المرور",
+      phone:       "رقم الهاتف",
+      phonePh:     "05xxxxxxxx",
+      mrn:         "رقم السجل الطبي (MRN)",
+      mrnPh:       "مثال: NABD-00001",
+      mrnHelp:     "رقم السجل يُعطى لك من الطبيب عند تسجيلك",
+      btn:         "تسجيل الدخول",
+      loading:     "جارٍ الدخول...",
+      errors: {
+        invalid:  "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+        network:  "تعذّر الاتصال. تحقق من الإنترنت وحاول مجدداً.",
+        notFound: "لا يوجد حساب بهذا البريد الإلكتروني.",
+        unknown:  "حدث خطأ غير متوقع. حاول مجدداً.",
+        patient:  "رقم الهاتف أو رقم السجل الطبي غير صحيح.",
       },
-      {
-        key: "pharmacy",
-        icon: "💊",
-        title: "نبض صيدلية",
-        subtitle: "لإدارة الصيدليات",
-        desc: "جرد الأدوية، الوصفات، والمبيعات",
-        color: "#0d7a4e",
-        bg: "rgba(13,122,78,0.06)",
-        border: "rgba(13,122,78,0.2)",
-        url: "https://www.nabd.clinic/pharmacy/login",
-        badge: "جديد",
-      },
-      {
-        key: "patient",
-        icon: "👤",
-        title: "بوابة المريض",
-        subtitle: "للمرضى ومتابعة الحالة",
-        desc: "تتبع حالتك الصحية وحجز المواعيد",
-        color: "#7c3aed",
-        bg: "rgba(124,58,237,0.06)",
-        border: "rgba(124,58,237,0.2)",
-        url: "https://www.nabd.clinic/patient-portal",
-        badge: null,
-      },
-    ],
-    features: [
-      { icon: "👥", text: "إدارة كاملة لملفات المرضى" },
-      { icon: "📅", text: "جدولة المواعيد بذكاء" },
-      { icon: "💳", text: "تتبع المدفوعات والفواتير" },
-      { icon: "💬", text: "تذكير عبر واتساب" },
-      { icon: "🔒", text: "بيانات آمنة ومشفّرة" },
-      { icon: "📊", text: "إحصائيات وتحليلات شاملة" },
-    ],
-    stats: [
-      { value: "+50", label: "عيادة تثق بنا" },
-      { value: "99%", label: "رضا العملاء" },
-      { value: "24/7", label: "دعم مستمر" },
-    ],
-    aboutTitle: "ما هو نبض؟",
-    aboutDesc:
-      "نبض هو نظام متكامل لإدارة العيادات الطبية والصيدليات. يتيح للأطباء إدارة مرضاهم ومواعيدهم ومدفوعاتهم بكل سهولة، ويمنح المرضى رابطاً خاصاً لمتابعة حالتهم الصحية وحجز مواعيدهم مباشرة.",
-    privacy: "سياسة الخصوصية",
-    contact: "تواصل معنا",
+    },
+    about: {
+      title: "ما هو نبض؟",
+      desc: "نبض هو نظام متكامل لإدارة العيادات الطبية والصيدليات. يتيح للأطباء إدارة مرضاهم ومواعيدهم ومدفوعاتهم بكل سهولة، ويمنح المرضى رابطاً خاصاً لمتابعة حالتهم الصحية وحجز مواعيدهم مباشرة.",
+      features: [
+        { icon: "👥", text: "إدارة كاملة لملفات المرضى" },
+        { icon: "📅", text: "جدولة المواعيد بذكاء" },
+        { icon: "💳", text: "تتبع المدفوعات والفواتير" },
+        { icon: "💬", text: "تذكير عبر واتساب" },
+        { icon: "🔒", text: "بيانات آمنة ومشفّرة" },
+        { icon: "📊", text: "إحصائيات وتحليلات شاملة" },
+      ],
+      close: "إغلاق",
+    },
+    privacy:   "سياسة الخصوصية",
+    contact:   "تواصل معنا",
     copyright: "© ٢٠٢٦ نبض — جميع الحقوق محفوظة",
-    enter: "دخول",
   },
   en: {
     tagline: "Your Clinic's Pulse in Your Hands",
-    desc: "An integrated platform for managing clinics and pharmacies — patients, appointments, and payments in one place.",
-    choosePortal: "Choose your portal",
-    portals: [
-      {
-        key: "clinic",
-        icon: "🏥",
-        title: "NABD Clinic",
-        subtitle: "For doctors & clinic management",
-        desc: "Manage patients, appointments & payments",
-        color: "#0863ba",
-        bg: "rgba(8,99,186,0.06)",
-        border: "rgba(8,99,186,0.2)",
-        url: "https://www.nabd.clinic/login",
-        badge: null,
+    desc: "An integrated platform for clinics and pharmacies",
+    switchLabel: "Choose access type",
+    portals: {
+      clinic:   { icon: "🏥", label: "Clinic",   sub: "For doctors & clinic management" },
+      pharmacy: { icon: "💊", label: "Pharmacy", sub: "For pharmacy management", badge: "New" },
+      patient:  { icon: "👤", label: "Patient",  sub: "For patients & health tracking" },
+    },
+    login: {
+      email:    "Email Address",
+      emailPh:  "Enter your email",
+      pass:     "Password",
+      passPh:   "Enter your password",
+      phone:    "Phone Number",
+      phonePh:  "05xxxxxxxx",
+      mrn:      "Medical Record Number (MRN)",
+      mrnPh:    "e.g. NABD-00001",
+      mrnHelp:  "Your MRN is provided by your doctor upon registration",
+      btn:      "Sign In",
+      loading:  "Signing in...",
+      errors: {
+        invalid:  "Incorrect email or password.",
+        network:  "Connection failed. Check your internet and try again.",
+        notFound: "No account found with this email.",
+        unknown:  "An unexpected error occurred. Please try again.",
+        patient:  "Phone number or MRN is incorrect.",
       },
-      {
-        key: "pharmacy",
-        icon: "💊",
-        title: "NABD Pharmacy",
-        subtitle: "For pharmacy management",
-        desc: "Inventory, prescriptions & sales",
-        color: "#0d7a4e",
-        bg: "rgba(13,122,78,0.06)",
-        border: "rgba(13,122,78,0.2)",
-        url: "https://www.nabd.clinic/pharmacy/login",
-        badge: "New",
-      },
-      {
-        key: "patient",
-        icon: "👤",
-        title: "Patient Portal",
-        subtitle: "For patients & health tracking",
-        desc: "Track your health & book appointments",
-        color: "#7c3aed",
-        bg: "rgba(124,58,237,0.06)",
-        border: "rgba(124,58,237,0.2)",
-        url: "https://www.nabd.clinic/patient-portal",
-        badge: null,
-      },
-    ],
-    features: [
-      { icon: "👥", text: "Complete patient record management" },
-      { icon: "📅", text: "Smart appointment scheduling" },
-      { icon: "💳", text: "Payment and billing tracking" },
-      { icon: "💬", text: "WhatsApp reminders" },
-      { icon: "🔒", text: "Secure and encrypted data" },
-      { icon: "📊", text: "Comprehensive analytics" },
-    ],
-    stats: [
-      { value: "50+", label: "Trusted clinics" },
-      { value: "99%", label: "Client satisfaction" },
-      { value: "24/7", label: "Continuous support" },
-    ],
-    aboutTitle: "What is NABD?",
-    aboutDesc:
-      "NABD is an integrated system for managing medical clinics and pharmacies. It enables doctors to manage their patients, appointments, and payments with ease, and gives patients a personal link to track their health and book appointments directly.",
-    privacy: "Privacy Policy",
-    contact: "Contact Us",
+    },
+    about: {
+      title: "What is NABD?",
+      desc: "NABD is an integrated system for managing medical clinics and pharmacies. It enables doctors to manage their patients, appointments, and payments with ease, and gives patients a personal link to track their health and book appointments directly.",
+      features: [
+        { icon: "👥", text: "Complete patient record management" },
+        { icon: "📅", text: "Smart appointment scheduling" },
+        { icon: "💳", text: "Payment and billing tracking" },
+        { icon: "💬", text: "WhatsApp reminders" },
+        { icon: "🔒", text: "Secure and encrypted data" },
+        { icon: "📊", text: "Comprehensive analytics" },
+      ],
+      close: "Close",
+    },
+    privacy:   "Privacy Policy",
+    contact:   "Contact Us",
     copyright: "© 2026 NABD — All rights reserved",
-    enter: "Enter",
   },
 } as const;
 
-export default function NabdPortalPage() {
-  const [lang, setLang] = useState<Lang>("ar");
+// ─── Portal accent colours ────────────────────────────────────
+const PORTAL_ACCENT: Record<Portal, { color: string; glow: string }> = {
+  clinic:   { color: "#4a9eff", glow: "rgba(74,158,255,0.18)" },
+  pharmacy: { color: "#34d399", glow: "rgba(52,211,153,0.18)" },
+  patient:  { color: "#a78bfa", glow: "rgba(167,139,250,0.18)" },
+};
+
+// ─── Patient login (phone + MRN) ──────────────────────────────
+function PatientLoginForm({ lang, tr }: { lang: Lang; tr: typeof T["ar"]["login"] }) {
   const isAr = lang === "ar";
-  const tr = T[lang];
+  const [phone, setPhone]     = useState("");
+  const [mrn, setMrn]         = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const { data, error: rpcErr } = await supabase.rpc("get_patient_by_phone_mrn", {
+        p_phone: phone.trim(),
+        p_mrn:   mrn.trim().toUpperCase(),
+      });
+      if (rpcErr || !data || data.length === 0) {
+        setError(tr.errors.patient);
+        setLoading(false);
+        return;
+      }
+      // store patient session and redirect to patient portal
+      try { sessionStorage.setItem("nabd_patient", JSON.stringify(data[0])); } catch { /* ignore */ }
+      window.location.href = "/patient-portal";
+    } catch {
+      setError(tr.errors.network);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="login-form" dir={isAr ? "rtl" : "ltr"}>
+      {error && <div className="err-box"><span>⚠️</span> {error}</div>}
+      <div className="field">
+        <label className="field-lbl">{tr.phone}</label>
+        <input type="tel" className="field-inp" placeholder={tr.phonePh}
+          value={phone} onChange={e => setPhone(e.target.value)} required />
+      </div>
+      <div className="field">
+        <label className="field-lbl">{tr.mrn}</label>
+        <input type="text" className="field-inp" placeholder={tr.mrnPh}
+          value={mrn} onChange={e => setMrn(e.target.value)}
+          style={{ textTransform: "uppercase" }} required />
+        <span className="field-hint">{tr.mrnHelp}</span>
+      </div>
+      <button type="submit" className="submit-btn" disabled={loading}>
+        {loading ? <><span className="spinner" /> {tr.loading}</> : tr.btn}
+      </button>
+    </form>
+  );
+}
+
+// ─── Clinic / Pharmacy login (email + password) ───────────────
+function ClinicLoginForm({ lang, tr, redirectTo }: {
+  lang: Lang;
+  tr: typeof T["ar"]["login"];
+  redirectTo: string;
+}) {
+  const isAr = lang === "ar";
+  const [email, setEmail]     = useState("");
+  const [pass, setPass]       = useState("");
+  const [showPass, setShow]   = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const { error: authErr } = await supabase.auth.signInWithPassword({
+        email:    email.trim(),
+        password: pass,
+      });
+      if (authErr) {
+        const msg = authErr.message.toLowerCase();
+        if (msg.includes("invalid") || msg.includes("credentials") || msg.includes("password"))
+          setError(tr.errors.invalid);
+        else if (msg.includes("not found") || msg.includes("user"))
+          setError(tr.errors.notFound);
+        else if (msg.includes("network") || msg.includes("fetch"))
+          setError(tr.errors.network);
+        else setError(tr.errors.unknown);
+        setLoading(false);
+        return;
+      }
+      window.location.href = redirectTo;
+    } catch {
+      setError(tr.errors.network);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="login-form" dir={isAr ? "rtl" : "ltr"}>
+      {error && <div className="err-box" key={error}><span>⚠️</span> {error}</div>}
+      <div className="field">
+        <label className="field-lbl">{tr.email}</label>
+        <input type="email" className="field-inp" placeholder={tr.emailPh}
+          value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
+      </div>
+      <div className="field">
+        <label className="field-lbl">{tr.pass}</label>
+        <div style={{ position: "relative" }}>
+          <input
+            type={showPass ? "text" : "password"}
+            className="field-inp"
+            placeholder={tr.passPh}
+            value={pass}
+            onChange={e => setPass(e.target.value)}
+            autoComplete="current-password"
+            style={{ paddingInlineEnd: "44px" }}
+            required
+          />
+          <button type="button" className="pass-eye" onClick={() => setShow(!showPass)}>
+            {showPass ? "🙈" : "👁️"}
+          </button>
+        </div>
+      </div>
+      <button type="submit" className="submit-btn" disabled={loading}>
+        {loading ? <><span className="spinner" /> {tr.loading}</> : tr.btn}
+      </button>
+    </form>
+  );
+}
+
+// ─── About modal ──────────────────────────────────────────────
+function AboutModal({ tr, isAr, onClose }: {
+  tr: typeof T["ar"]["about"];
+  isAr: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-overlay" onClick={onClose} dir={isAr ? "rtl" : "ltr"}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <div className="modal-title">💡 {tr.title}</div>
+        <p className="modal-desc">{tr.desc}</p>
+        <div className="modal-features">
+          {tr.features.map((f) => (
+            <div key={f.text} className="modal-feat">
+              <span className="modal-feat-icon">{f.icon}</span>
+              <span>{f.text}</span>
+            </div>
+          ))}
+        </div>
+        <button className="modal-close-btn" onClick={onClose}>{tr.close}</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────
+function PortalPageContent() {
+  const [lang, setLang]         = useState<Lang>("ar");
+  const [portal, setPortal]     = useState<Portal>("clinic");
+  const [showAbout, setAbout]   = useState(false);
+  const isAr = lang === "ar";
+  const tr   = T[lang];
+  const accent = PORTAL_ACCENT[portal];
+
+  const PORTALS: Portal[] = ["clinic", "pharmacy", "patient"];
+
+  const redirectTo =
+    portal === "pharmacy" ? "/pharmacy/dashboard" : "/dashboard";
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap');
-
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
           font-family: 'Rubik', sans-serif;
-          background: #f0f4fa;
+          background: #0a0f1e;
           min-height: 100vh;
           direction: ${isAr ? "rtl" : "ltr"};
         }
 
-        .portal-root {
+        /* ── Root ── */
+        .root {
           min-height: 100vh;
           display: flex;
           flex-direction: column;
           align-items: center;
-          background: #f0f4fa;
+          background: #0a0f1e;
           font-family: 'Rubik', sans-serif;
           direction: ${isAr ? "rtl" : "ltr"};
+          position: relative;
+          overflow: hidden;
         }
+
+        /* subtle radial glow behind hero */
+        .root::before {
+          content: '';
+          position: fixed;
+          top: -120px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 600px;
+          height: 400px;
+          background: radial-gradient(ellipse, ${accent.glow} 0%, transparent 70%);
+          pointer-events: none;
+          transition: background 0.5s ease;
+          z-index: 0;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+          width: 100%;
+          max-width: 420px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 20px 0;
+          position: relative;
+          z-index: 10;
+        }
+        .topbar-actions { display: flex; align-items: center; gap: 10px; }
+        .btn-ghost {
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.7);
+          border-radius: 10px;
+          padding: 6px 14px;
+          font-family: 'Rubik', sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all .2s;
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+        .btn-info {
+          width: 34px; height: 34px;
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.6);
+          border-radius: 50%;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: all .2s;
+          font-family: 'Rubik', sans-serif;
+        }
+        .btn-info:hover { background: ${accent.glow}; border-color: ${accent.color}; color: ${accent.color}; }
 
         /* ── Hero ── */
         .hero {
           width: 100%;
-          background: linear-gradient(155deg, #0863ba 0%, #054a8c 55%, #03346e 100%);
-          position: relative;
-          overflow: hidden;
-          padding: 52px 20px 44px;
+          max-width: 420px;
           display: flex;
           flex-direction: column;
           align-items: center;
           text-align: center;
+          padding: 36px 20px 28px;
+          position: relative;
+          z-index: 1;
         }
-        .hero::before {
-          content: '';
-          position: absolute; inset: 0;
-          background: radial-gradient(ellipse at 20% 50%, rgba(164,196,228,0.18) 0%, transparent 60%),
-                      radial-gradient(ellipse at 80% 20%, rgba(255,181,181,0.12) 0%, transparent 50%);
-          pointer-events: none;
-        }
-        .hero-dots {
-          position: absolute; inset: 0;
-          background-image: radial-gradient(rgba(255,255,255,0.07) 1.5px, transparent 1.5px);
-          background-size: 28px 28px;
-          pointer-events: none;
-        }
-        .hero-inner { position: relative; z-index: 1; max-width: 420px; width: 100%; }
-
-        .logo-wrap {
-          width: 76px; height: 76px;
-          background: rgba(255,255,255,0.14);
+        .logo-ring {
+          width: 74px; height: 74px;
           border-radius: 22px;
-          border: 1.5px solid rgba(255,255,255,0.22);
-          backdrop-filter: blur(10px);
+          background: rgba(255,255,255,0.06);
+          border: 1.5px solid rgba(255,255,255,0.14);
           display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 18px;
+          margin-bottom: 18px;
+          transition: border-color .4s, box-shadow .4s;
+          box-shadow: 0 0 0 0px ${accent.glow};
+        }
+        .logo-ring.lit {
+          border-color: ${accent.color}44;
+          box-shadow: 0 0 0 6px ${accent.glow};
         }
         .hero-name {
-          font-size: 38px; font-weight: 900;
+          font-size: 36px; font-weight: 900;
           color: #fff; letter-spacing: -1px;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
         }
-        .hero-tagline {
-          font-size: 14px; color: rgba(255,255,255,0.72);
-          margin-bottom: 14px; font-weight: 500;
-        }
-        .hero-desc {
-          font-size: 14px; color: rgba(255,255,255,0.82);
-          line-height: 1.7; max-width: 340px; margin: 0 auto;
-        }
+        .hero-tagline { font-size: 13px; color: rgba(255,255,255,0.45); font-weight: 500; }
 
-        /* ── Stats bar ── */
-        .stats-bar {
-          width: 100%;
-          max-width: 420px;
-          display: flex;
-          background: rgba(255,255,255,0.12);
-          backdrop-filter: blur(12px);
-          border-radius: 0 0 20px 20px;
-          border: 1px solid rgba(255,255,255,0.15);
-          border-top: none;
-          padding: 14px 0;
-          margin-top: -1px;
+        /* ── Switch selector ── */
+        .switch-wrap {
+          width: 100%; max-width: 420px;
+          padding: 0 20px 24px;
+          position: relative; z-index: 1;
         }
-        .stat-item {
-          flex: 1;
-          text-align: center;
-          border-${isAr ? "left" : "right"}: 1px solid rgba(255,255,255,0.15);
-        }
-        .stat-item:last-child { border: none; }
-        .stat-val { font-size: 20px; font-weight: 800; color: #fff; }
-        .stat-lbl { font-size: 11px; color: rgba(255,255,255,0.65); margin-top: 2px; }
-
-        /* ── Main content ── */
-        .content {
-          width: 100%;
-          max-width: 420px;
-          padding: 28px 16px 40px;
-          flex: 1;
-        }
-
-        .section-title {
-          font-size: 13px;
-          font-weight: 700;
-          color: #888;
+        .switch-label {
+          font-size: 11px; font-weight: 700;
+          color: rgba(255,255,255,0.35);
           text-transform: uppercase;
-          letter-spacing: 1px;
-          margin-bottom: 14px;
-          text-align: center;
-        }
-
-        /* ── Portal cards ── */
-        .portal-card {
-          background: #fff;
-          border-radius: 18px;
-          border: 1.5px solid #e8edf5;
-          padding: 20px;
+          letter-spacing: .8px;
           margin-bottom: 12px;
+          text-align: ${isAr ? "right" : "left"};
+        }
+        .switch-track {
           display: flex;
-          align-items: center;
-          gap: 16px;
-          cursor: pointer;
-          text-decoration: none;
-          transition: all 0.2s ease;
-          position: relative;
-          overflow: hidden;
-        }
-        .portal-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 28px rgba(0,0,0,0.10);
-        }
-        .portal-card:active { transform: translateY(0); }
-
-        .portal-icon-wrap {
-          width: 56px; height: 56px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 16px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 26px;
-          flex-shrink: 0;
+          padding: 5px;
+          gap: 4px;
+          position: relative;
         }
-        .portal-texts { flex: 1; min-width: 0; }
-        .portal-title {
-          font-size: 17px;
-          font-weight: 800;
-          color: #1a1a2e;
-          margin-bottom: 2px;
-        }
-        .portal-subtitle {
-          font-size: 12px;
-          color: #888;
-          margin-bottom: 5px;
-          font-weight: 500;
-        }
-        .portal-desc {
-          font-size: 13px;
-          color: #555;
-          line-height: 1.5;
-        }
-        .portal-arrow {
-          font-size: 20px;
-          opacity: 0.4;
-          flex-shrink: 0;
-          transform: ${isAr ? "rotate(180deg)" : "none"};
-        }
-        .portal-badge {
-          position: absolute;
-          top: 12px;
-          ${isAr ? "left" : "right"}: 12px;
-          font-size: 10px;
-          font-weight: 700;
-          padding: 3px 9px;
-          border-radius: 20px;
-          color: #fff;
-        }
-
-        /* ── About section ── */
-        .about-card {
-          background: #fff;
-          border-radius: 18px;
-          border: 1.5px solid #e8edf5;
-          padding: 22px;
-          margin-bottom: 12px;
-          margin-top: 8px;
-        }
-        .about-title {
-          font-size: 16px;
-          font-weight: 800;
-          color: #1a1a2e;
-          margin-bottom: 10px;
+        .switch-tab {
+          flex: 1;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: 8px;
-        }
-        .about-desc {
-          font-size: 14px;
-          color: #555;
-          line-height: 1.75;
-        }
-
-        /* ── Features grid ── */
-        .features-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          margin-top: 16px;
-        }
-        .feature-chip {
-          background: #f5f8ff;
+          gap: 3px;
+          padding: 10px 6px;
           border-radius: 12px;
-          padding: 12px;
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          font-size: 13px;
-          color: #444;
-          font-weight: 500;
-          border: 1px solid #edf0f7;
-        }
-        .feature-chip-icon { font-size: 18px; flex-shrink: 0; }
-
-        /* ── Top bar ── */
-        .top-bar {
-          position: absolute;
-          top: 16px;
-          ${isAr ? "left" : "right"}: 16px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          z-index: 10;
-        }
-        .lang-btn {
-          background: rgba(255,255,255,0.18);
-          border: 1px solid rgba(255,255,255,0.3);
-          color: #fff;
-          border-radius: 8px;
-          padding: 5px 13px;
-          font-family: 'Rubik', sans-serif;
-          font-size: 13px;
-          font-weight: 700;
+          border: none;
+          background: transparent;
           cursor: pointer;
-          backdrop-filter: blur(8px);
-          transition: background 0.2s;
+          transition: all .25s cubic-bezier(.4,0,.2,1);
+          font-family: 'Rubik', sans-serif;
+          position: relative;
         }
-        .lang-btn:hover { background: rgba(255,255,255,0.28); }
+        .switch-tab.active {
+          background: ${accent.color}22;
+          box-shadow: inset 0 0 0 1.5px ${accent.color}66;
+        }
+        .switch-tab-icon { font-size: 22px; line-height: 1; }
+        .switch-tab-label {
+          font-size: 13px; font-weight: 700;
+          color: rgba(255,255,255,0.4);
+          transition: color .25s;
+          white-space: nowrap;
+        }
+        .switch-tab.active .switch-tab-label { color: ${accent.color}; }
+        .switch-tab-badge {
+          position: absolute;
+          top: 6px;
+          ${isAr ? "left" : "right"}: 6px;
+          background: ${accent.color};
+          color: #0a0f1e;
+          font-size: 9px;
+          font-weight: 800;
+          padding: 2px 6px;
+          border-radius: 20px;
+          line-height: 1.3;
+        }
+
+        /* ── Login card ── */
+        .login-card {
+          width: 100%; max-width: 420px;
+          padding: 0 20px 12px;
+          position: relative; z-index: 1;
+        }
+        .login-box {
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 20px;
+          padding: 24px 20px;
+          transition: border-color .4s;
+        }
+        .login-box.accent-border { border-color: ${accent.color}44; }
+        .login-portal-header {
+          display: flex; align-items: center; gap: 12px;
+          margin-bottom: 22px;
+          direction: ${isAr ? "rtl" : "ltr"};
+        }
+        .login-portal-icon {
+          width: 44px; height: 44px;
+          background: ${accent.glow};
+          border: 1.5px solid ${accent.color}44;
+          border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 22px;
+          flex-shrink: 0;
+        }
+        .login-portal-title { font-size: 17px; font-weight: 800; color: #fff; }
+        .login-portal-sub   { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+
+        /* ── Form fields ── */
+        .login-form { display: flex; flex-direction: column; gap: 0; }
+        .field { margin-bottom: 16px; }
+        .field-lbl {
+          display: block;
+          font-size: 12px; font-weight: 700;
+          color: rgba(255,255,255,0.5);
+          margin-bottom: 8px;
+        }
+        .field-inp {
+          width: 100%;
+          padding: 13px 16px;
+          background: rgba(255,255,255,0.06);
+          border: 1.5px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          font-family: 'Rubik', sans-serif;
+          font-size: 15px;
+          color: #fff;
+          outline: none;
+          transition: border-color .2s, background .2s;
+        }
+        .field-inp::placeholder { color: rgba(255,255,255,0.2); }
+        .field-inp:focus {
+          border-color: ${accent.color}88;
+          background: rgba(255,255,255,0.09);
+        }
+        .field-hint { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 6px; display: block; }
+        .pass-eye {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          ${isAr ? "left" : "right"}: 14px;
+          background: none; border: none; cursor: pointer;
+          font-size: 16px; color: rgba(255,255,255,0.3);
+          padding: 4px; transition: color .2s;
+        }
+        .pass-eye:hover { color: rgba(255,255,255,0.7); }
+
+        .err-box {
+          background: rgba(239,68,68,0.12);
+          border: 1.5px solid rgba(239,68,68,0.3);
+          border-radius: 10px;
+          padding: 11px 14px;
+          font-size: 13px; color: #fca5a5;
+          margin-bottom: 16px;
+          display: flex; align-items: center; gap: 8px;
+          animation: shake .4s ease;
+        }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
+
+        .submit-btn {
+          width: 100%;
+          padding: 14px;
+          background: ${accent.color};
+          color: #0a0f1e;
+          border: none;
+          border-radius: 12px;
+          font-family: 'Rubik', sans-serif;
+          font-size: 15px; font-weight: 800;
+          cursor: pointer;
+          transition: all .25s;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          margin-top: 4px;
+        }
+        .submit-btn:hover:not(:disabled) {
+          filter: brightness(1.12);
+          transform: translateY(-1px);
+        }
+        .submit-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+        .spinner {
+          width: 16px; height: 16px;
+          border: 2px solid rgba(10,15,30,.25);
+          border-top-color: #0a0f1e;
+          border-radius: 50%;
+          animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Footer ── */
         .footer {
-          width: 100%;
-          text-align: center;
-          padding: 20px 16px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 14px;
-          border-top: 1px solid #e8edf5;
-          background: #fff;
+          width: 100%; max-width: 420px;
+          padding: 20px 20px 32px;
+          display: flex; flex-direction: column; align-items: center; gap: 12px;
+          border-top: 1px solid rgba(255,255,255,0.06);
+          margin-top: auto;
+          position: relative; z-index: 1;
         }
-        .footer-links {
-          display: flex;
-          gap: 20px;
-        }
+        .footer-links { display: flex; gap: 20px; }
         .footer-link {
+          font-size: 12px; color: rgba(255,255,255,0.3);
+          text-decoration: none; transition: color .2s;
+        }
+        .footer-link:hover { color: ${accent.color}; }
+        .footer-copy { font-size: 11px; color: rgba(255,255,255,0.2); }
+
+        /* ── About modal ── */
+        .modal-overlay {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,0.75);
+          backdrop-filter: blur(6px);
+          display: flex; align-items: flex-end;
+          z-index: 100;
+          animation: fadeIn .2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-box {
+          width: 100%; max-width: 480px;
+          margin: 0 auto;
+          background: #131929;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 24px 24px 0 0;
+          padding: 28px 24px 40px;
+          position: relative;
+          animation: slideUp .3s cubic-bezier(.4,0,.2,1);
+        }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-close {
+          position: absolute; top: 18px;
+          ${isAr ? "left" : "right"}: 18px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.5);
+          width: 30px; height: 30px;
+          border-radius: 50%; cursor: pointer;
           font-size: 13px;
-          color: #0863ba;
-          text-decoration: none;
-          font-weight: 600;
+          display: flex; align-items: center; justify-content: center;
+          transition: all .2s;
         }
-        .footer-link:hover { text-decoration: underline; }
-        .footer-copy {
-          font-size: 12px;
-          color: #bbb;
+        .modal-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+        .modal-title {
+          font-size: 18px; font-weight: 800; color: #fff;
+          margin-bottom: 14px;
         }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media (max-width: 480px) {
-          .hero { padding: 48px 16px 40px; }
-          .hero-name { font-size: 34px; }
+        .modal-desc {
+          font-size: 14px; color: rgba(255,255,255,0.55);
+          line-height: 1.75; margin-bottom: 20px;
         }
+        .modal-features {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+          margin-bottom: 24px;
+        }
+        .modal-feat {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 12px;
+          padding: 12px;
+          display: flex; align-items: center; gap: 9px;
+          font-size: 13px; color: rgba(255,255,255,0.65);
+          font-weight: 500;
+        }
+        .modal-feat-icon { font-size: 18px; flex-shrink: 0; }
+        .modal-close-btn {
+          width: 100%; padding: 13px;
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.6);
+          border-radius: 12px;
+          font-family: 'Rubik', sans-serif;
+          font-size: 15px; font-weight: 700;
+          cursor: pointer; transition: all .2s;
+        }
+        .modal-close-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
       `}</style>
 
-      <div className="portal-root">
-        {/* ── Hero ── */}
-        <div className="hero">
-          <div className="hero-dots" />
+      <div className="root">
 
-          {/* Lang toggle */}
-          <div className="top-bar">
-            <button className="lang-btn" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
+        {/* ── Top bar ── */}
+        <div className="topbar">
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:32, height:32, borderRadius:8 }} />
+            <span style={{ fontSize:18, fontWeight:900, color:"#fff", letterSpacing:"-0.5px" }}>
+              {isAr ? "نبض" : "NABD"}
+            </span>
+          </div>
+          <div className="topbar-actions">
+            <button className="btn-info" onClick={() => setAbout(true)} title="ما هو نبض؟">?</button>
+            <button className="btn-ghost" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
               {lang === "ar" ? "EN" : "عر"}
             </button>
           </div>
+        </div>
 
-          <div className="hero-inner">
-            <div className="logo-wrap">
-              <img
-                src="/Logo_Nabd.svg"
-                alt="NABD"
-                style={{ width: 48, height: 48, borderRadius: 12 }}
-              />
-            </div>
-            <div className="hero-name">{isAr ? "نبض" : "NABD"}</div>
-            <div className="hero-tagline">{tr.tagline}</div>
-            <div className="hero-desc">{tr.desc}</div>
+        {/* ── Hero ── */}
+        <div className="hero">
+          <div className={`logo-ring lit`} style={{
+            borderColor: `${accent.color}44`,
+            boxShadow: `0 0 0 8px ${accent.glow}`,
+          }}>
+            <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:44, height:44, borderRadius:12 }} />
           </div>
+          <div className="hero-name">{isAr ? "نبض" : "NABD"}</div>
+          <div className="hero-tagline">{tr.tagline}</div>
+        </div>
 
-          {/* Stats */}
-          <div className="stats-bar">
-            {tr.stats.map((s) => (
-              <div key={s.label} className="stat-item">
-                <div className="stat-val">{s.value}</div>
-                <div className="stat-lbl">{s.label}</div>
-              </div>
-            ))}
+        {/* ── Switch selector ── */}
+        <div className="switch-wrap">
+          <div className="switch-label">{tr.switchLabel}</div>
+          <div className="switch-track">
+            {PORTALS.map((p) => {
+              const pd = tr.portals[p];
+              const isActive = portal === p;
+              return (
+                <button
+                  key={p}
+                  className={`switch-tab${isActive ? " active" : ""}`}
+                  onClick={() => setPortal(p)}
+                  style={isActive ? {
+                    background: `${PORTAL_ACCENT[p].color}1a`,
+                    boxShadow: `inset 0 0 0 1.5px ${PORTAL_ACCENT[p].color}55`,
+                  } : {}}
+                >
+                  {"badge" in pd && pd.badge && (
+                    <span className="switch-tab-badge" style={{ background: PORTAL_ACCENT[p].color }}>
+                      {pd.badge}
+                    </span>
+                  )}
+                  <span className="switch-tab-icon">{pd.icon}</span>
+                  <span className="switch-tab-label" style={isActive ? { color: PORTAL_ACCENT[p].color } : {}}>
+                    {pd.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* ── Main content ── */}
-        <div className="content">
-
-          {/* Portal selector */}
-          <div className="section-title">{tr.choosePortal}</div>
-
-          {tr.portals.map((p) => (
-            <a
-              key={p.key}
-              href={p.url}
-              className="portal-card"
-              style={{ borderColor: p.border }}
-            >
-              {p.badge && (
-                <div
-                  className="portal-badge"
-                  style={{ background: p.color }}
-                >
-                  {p.badge}
-                </div>
-              )}
-              <div
-                className="portal-icon-wrap"
-                style={{ background: p.bg }}
-              >
-                <span style={{ fontSize: 28 }}>{p.icon}</span>
+        {/* ── Login card ── */}
+        <div className="login-card">
+          <div className="login-box" style={{ borderColor: `${accent.color}33` }}>
+            <div className="login-portal-header">
+              <div className="login-portal-icon" style={{
+                background: accent.glow,
+                borderColor: `${accent.color}44`,
+              }}>
+                {tr.portals[portal].icon}
               </div>
-              <div className="portal-texts">
-                <div className="portal-title" style={{ color: p.color }}>
-                  {p.title}
-                </div>
-                <div className="portal-subtitle">{p.subtitle}</div>
-                <div className="portal-desc">{p.desc}</div>
+              <div>
+                <div className="login-portal-title">{tr.portals[portal].label}</div>
+                <div className="login-portal-sub">{tr.portals[portal].sub}</div>
               </div>
-              <div className="portal-arrow">›</div>
-            </a>
-          ))}
-
-          {/* About section */}
-          <div className="about-card">
-            <div className="about-title">
-              <span>💡</span> {tr.aboutTitle}
             </div>
-            <div className="about-desc">{tr.aboutDesc}</div>
 
-            <div className="features-grid">
-              {tr.features.map((f) => (
-                <div key={f.text} className="feature-chip">
-                  <span className="feature-chip-icon">{f.icon}</span>
-                  <span>{f.text}</span>
-                </div>
-              ))}
-            </div>
+            {portal === "patient" ? (
+              <PatientLoginForm lang={lang} tr={tr.login} />
+            ) : (
+              <ClinicLoginForm lang={lang} tr={tr.login} redirectTo={redirectTo} />
+            )}
           </div>
-
         </div>
 
         {/* ── Footer ── */}
         <div className="footer">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img
-              src="/Logo_Nabd.svg"
-              alt="NABD"
-              style={{ width: 22, height: 22, borderRadius: 6 }}
-            />
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>
-              {isAr ? "نبض" : "NABD"}
-            </span>
-          </div>
           <div className="footer-links">
-            <a href="/privacy-policy" className="footer-link">
-              {tr.privacy}
-            </a>
+            <a href="/privacy-policy" className="footer-link">{tr.privacy}</a>
             <a href="https://wa.me/963998285483" className="footer-link" target="_blank" rel="noreferrer">
               {tr.contact}
             </a>
           </div>
           <div className="footer-copy">{tr.copyright}</div>
         </div>
+
       </div>
+
+      {/* ── About modal ── */}
+      {showAbout && (
+        <AboutModal tr={tr.about} isAr={isAr} onClose={() => setAbout(false)} />
+      )}
     </>
+  );
+}
+
+export default function NabdPortalPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#0a0f1e" }}>
+        <div style={{ textAlign:"center" }}>
+          <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:48, height:48, marginBottom:16, borderRadius:12 }} />
+          <div style={{ width:32, height:32, border:"3px solid rgba(255,255,255,0.1)", borderTopColor:"#4a9eff", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto" }} />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      </div>
+    }>
+      <PortalPageContent />
+    </Suspense>
   );
 }
