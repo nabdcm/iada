@@ -244,8 +244,10 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
 }
 
 // ─── About modal ──────────────────────────────────────────────
+type AboutTranslation = typeof T["ar"]["about"] | typeof T["en"]["about"];
+
 function AboutModal({ tr, isAr, onClose }: {
-  tr: typeof T["ar"]["about"];
+  tr: AboutTranslation;
   isAr: boolean;
   onClose: () => void;
 }) {
