@@ -275,17 +275,10 @@ function LoginScreen({ lang, onLogin }: { lang: Lang; onLogin: (master: MasterPa
       }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28, justifyContent: "center" }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 14,
-            background: "linear-gradient(135deg, #0863ba, #05a0c4)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22, color: "#fff", fontWeight: 800, boxShadow: "0 4px 16px rgba(8,99,186,0.35)",
-          }}>
-            ❤️
-          </div>
+          <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 44, height: 44, borderRadius: 12 }} />
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#0863ba", lineHeight: 1 }}>
-              {T[lang].appName}
+              {isAr ? "نبض | NABD" : "NABD | نبض"}
             </div>
             <div style={{ fontSize: 12, color: "#888", fontWeight: 500, marginTop: 2 }}>
               {T[lang].appSub}
@@ -411,12 +404,12 @@ function ClinicCard({ record, lang, isExpanded, onToggle }: {
 
   return (
     <div style={{
-      borderRadius: 18, overflow: "hidden",
-      border: `1.5px solid ${isExpanded ? meta.color + "50" : "#e8eaed"}`,
+      borderRadius: 20, overflow: "hidden",
+      border: `1.5px solid ${isExpanded ? meta.color + "40" : "#eef0f3"}`,
       background: "#fff",
       boxShadow: isExpanded
-        ? `0 8px 32px ${meta.color}20`
-        : "0 2px 8px rgba(0,0,0,0.05)",
+        ? `0 8px 24px rgba(8,99,186,0.10)`
+        : "0 4px 24px rgba(8,99,186,0.06)",
       transition: "all .25s",
       marginBottom: 0,
     }}>
@@ -708,16 +701,16 @@ function PatientDashboard({ master, lang, onLogout }: {
   return (
     <div style={{
       minHeight: "100dvh",
-      background: "#f4f6f9",
+      background: "#f7f9fc",
       fontFamily: "Rubik, sans-serif",
       direction: isAr ? "rtl" : "ltr",
     }}>
       {/* Top bar */}
       <div style={{
-        background: "linear-gradient(135deg, #0f1b35 0%, #0863ba 100%)",
+        background: "linear-gradient(135deg, #0863ba 0%, #054a8c 100%)",
         padding: "0 20px",
         position: "sticky", top: 0, zIndex: 50,
-        boxShadow: "0 4px 20px rgba(8,99,186,0.3)",
+        boxShadow: "0 4px 20px rgba(8,99,186,0.25)",
       }}>
         <div style={{
           maxWidth: 680, margin: "0 auto",
@@ -725,17 +718,12 @@ function PatientDashboard({ master, lang, onLogout }: {
           height: 60,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: "rgba(255,255,255,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16,
-            }}>❤️</div>
+            <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)" }} />
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>
-                {T[lang].appName}
+                {isAr ? "نبض | NABD" : "NABD | نبض"}
               </div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.65)" }}>
                 {T[lang].appSub}
               </div>
             </div>
@@ -786,17 +774,33 @@ function PatientDashboard({ master, lang, onLogout }: {
             <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>
               {patientInfo?.name ?? master.name}
             </div>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              background: "rgba(255,255,255,0.18)",
-              borderRadius: 20, padding: "6px 14px",
-              backdropFilter: "blur(4px)",
-              border: "1px solid rgba(255,255,255,0.25)",
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.5px" }}>
-                {t.mrn}: {master.mrn}
-              </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "rgba(255,255,255,0.18)",
+                borderRadius: 20, padding: "6px 14px",
+                backdropFilter: "blur(4px)",
+                border: "1px solid rgba(255,255,255,0.25)",
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+                <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.5px" }}>
+                  {t.mrn}: {master.mrn}
+                </span>
+              </div>
+              {age !== null && (
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "rgba(255,255,255,0.18)",
+                  borderRadius: 20, padding: "6px 14px",
+                  backdropFilter: "blur(4px)",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                }}>
+                  <span style={{ fontSize: 13 }}>🎂</span>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>
+                    {age} {t.years}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -804,9 +808,9 @@ function PatientDashboard({ master, lang, onLogout }: {
         {/* Personal Info */}
         {patientInfo && (
           <div style={{
-            background: "#fff", borderRadius: 18, padding: "18px 20px",
-            marginBottom: 20, border: "1.5px solid #e8eaed",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            background: "#fff", borderRadius: 20, padding: "18px 20px",
+            marginBottom: 20, border: "1.5px solid #eef0f3",
+            boxShadow: "0 4px 24px rgba(8,99,186,0.08)",
           }}>
             <div style={{
               fontSize: 12, fontWeight: 700, color: "#888",
@@ -933,11 +937,18 @@ function PatientDashboard({ master, lang, onLogout }: {
         )}
       </div>
 
+      {/* Footer */}
+      <div style={{ textAlign: "center", padding: "8px 0 32px", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+        <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 18, height: 18, borderRadius: 4 }} />
+        <span style={{ fontSize: 12, color: "#bbb" }}>{isAr ? "مدعوم بواسطة نبض" : "Powered by NABD"}</span>
+      </div>
+
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..900&display=swap');
+        *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
       `}</style>
     </div>
   );
@@ -948,13 +959,31 @@ export default function PatientPortalPage() {
   const [lang] = useState<Lang>("ar");
   const [master, setMaster] = useState<MasterPatient | null>(null);
 
+  // استعادة الجلسة عند تحديث الصفحة
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("nabd_patient");
+      if (saved) setMaster(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleLogin = (m: MasterPatient) => {
+    try { sessionStorage.setItem("nabd_patient", JSON.stringify(m)); } catch { /* ignore */ }
+    setMaster(m);
+  };
+
+  const handleLogout = () => {
+    try { sessionStorage.removeItem("nabd_patient"); } catch { /* ignore */ }
+    setMaster(null);
+  };
+
   return master ? (
     <PatientDashboard
       master={master}
       lang={lang}
-      onLogout={() => setMaster(null)}
+      onLogout={handleLogout}
     />
   ) : (
-    <LoginScreen lang={lang} onLogin={setMaster} />
+    <LoginScreen lang={lang} onLogin={handleLogin} />
   );
 }
