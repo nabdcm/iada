@@ -113,8 +113,11 @@ const PORTAL_ACCENT: Record<Portal, { color: string; glow: string }> = {
   patient:  { color: "#a78bfa", glow: "rgba(167,139,250,0.18)" },
 };
 
+// ─── Shared login translation type ───────────────────────────
+type LoginTranslation = typeof T["ar"]["login"] | typeof T["en"]["login"];
+
 // ─── Patient login (phone + MRN) ──────────────────────────────
-function PatientLoginForm({ lang, tr }: { lang: Lang; tr: typeof T["ar"]["login"] }) {
+function PatientLoginForm({ lang, tr }: { lang: Lang; tr: LoginTranslation }) {
   const isAr = lang === "ar";
   const [phone, setPhone]     = useState("");
   const [mrn, setMrn]         = useState("");
@@ -169,7 +172,7 @@ function PatientLoginForm({ lang, tr }: { lang: Lang; tr: typeof T["ar"]["login"
 // ─── Clinic / Pharmacy login (email + password) ───────────────
 function ClinicLoginForm({ lang, tr, redirectTo }: {
   lang: Lang;
-  tr: typeof T["ar"]["login"];
+  tr: LoginTranslation;
   redirectTo: string;
 }) {
   const isAr = lang === "ar";
