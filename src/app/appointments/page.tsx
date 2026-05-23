@@ -27,6 +27,7 @@ const T = {
       date:"التاريخ *", time:"الوقت *",
       duration:"المدة (بالدقائق) *", type:"نوع الزيارة",
       typePh:"مثال: متابعة، فحص عام", notes:"ملاحظات", notesPh:"أي ملاحظات...",
+      doctor:"الطبيب المسؤول", doctorPh:"مثال: د. أحمد، د. سارة...",
       save:"حفظ الموعد", update:"تحديث الموعد", cancel:"إلغاء",
       required:"المريض والتاريخ والوقت مطلوبة",
       delete:"حذف الموعد", deleting:"جاري الحذف...",
@@ -39,7 +40,7 @@ const T = {
     notification:{ title:"تذكير بموعد", msg:"سيحين موعد المريض", in:"خلال ١٥ دقيقة", dismiss:"تجاهل" },
     errorSave:"حدث خطأ أثناء الحفظ", errorLoad:"حدث خطأ أثناء التحميل",
     errorDelete:"حدث خطأ أثناء الحذف",
-    conflictError:"يوجد موعد آخر في نفس الوقت، يرجى اختيار وقت مختلف",
+    conflictError:"يوجد موعد آخر في نفس الوقت مع نفس الطبيب، يرجى اختيار وقت مختلف أو طبيب آخر",
     whatsappMsg:(name:string, date:string, time:string) =>
       `مرحباً ${name}، نذكّركم بموعدكم في عيادتنا بتاريخ ${date} الساعة ${time}. نتطلع لرؤيتكم 💙`,
     nowCard:{ title:"الوقت الآن", dateLabel:"التاريخ" },
@@ -82,6 +83,7 @@ const T = {
       date:"Date *", time:"Time *",
       duration:"Duration (minutes) *", type:"Visit Type",
       typePh:"e.g. Follow-up, General", notes:"Notes", notesPh:"Any notes...",
+      doctor:"Assigned Doctor", doctorPh:"e.g. Dr. Ahmed, Dr. Sara...",
       save:"Save Appointment", update:"Update Appointment", cancel:"Cancel",
       required:"Patient, date and time are required",
       delete:"Delete Appointment", deleting:"Deleting...",
@@ -94,7 +96,7 @@ const T = {
     notification:{ title:"Appointment Reminder", msg:"Upcoming appointment for", in:"in 15 minutes", dismiss:"Dismiss" },
     errorSave:"Error saving appointment", errorLoad:"Error loading data",
     errorDelete:"Error deleting appointment",
-    conflictError:"Another appointment exists at the same time, please choose a different time",
+    conflictError:"Another appointment exists at the same time with the same doctor, please choose a different time or doctor",
     whatsappMsg:(name:string, date:string, time:string) =>
       `Hello ${name}, this is a reminder for your appointment on ${date} at ${time}. We look forward to seeing you 💙`,
     nowCard:{ title:"Current Time", dateLabel:"Date" },
@@ -359,6 +361,7 @@ type ApptForm = {
   patient_id: number | "";
   date: string; time: string; duration: number;
   type: string; notes: string; status: Status;
+  assigned_doctor: string;
 };
 
 // ─── Modal موعد ───────────────────────────────────────────
@@ -375,6 +378,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
     date: appt?.date ?? defaultDate, time: appt?.time ?? "09:00",
     duration: appt?.duration ?? 30, type: appt?.type ?? "",
     notes: appt?.notes ?? "", status: appt?.status ?? "scheduled",
+    assigned_doctor: (appt as any)?.assigned_doctor ?? "",
   });
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -416,7 +420,13 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
       if (isEdit && a.id === appt!.id) return false;
       const aStart = timeToMinutes(a.time);
       const aEnd   = aStart + (a.duration || 30);
-      return newStart < aEnd && newEnd > aStart;
+      const timeOverlap = newStart < aEnd && newEnd > aStart;
+      if (!timeOverlap) return false;
+      // إذا كلا الموعدين لهما طبيب مختلف → لا يُعدّ تعارضاً
+      const aDoctor = (a as any).assigned_doctor?.trim() || "";
+      const newDoctor = form.assigned_doctor?.trim() || "";
+      if (aDoctor && newDoctor && aDoctor !== newDoctor) return false;
+      return true;
     });
     if (conflict) {
       const cTime = conflict.time.slice(0,5);
@@ -529,8 +539,39 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
             </Field>
             <Field label={tr.modal.type} half><input value={form.type} onChange={e=>setForm({...form,type:e.target.value})} placeholder={tr.modal.typePh} style={inputSt} className="appt-input"/></Field>
           </div>
+          {/* حقل الطبيب المسؤول */}
+          <Field label={tr.modal.doctor}>
+            <div style={{ position:"relative" }}>
+              <input
+                list="doctors-list"
+                value={form.assigned_doctor}
+                onChange={e=>setForm({...form,assigned_doctor:e.target.value})}
+                placeholder={tr.modal.doctorPh}
+                className="appt-input"
+                style={{ ...inputSt, paddingInlineStart: isAr ? 14 : 40 }}
+                autoComplete="off"
+              />
+              <span style={{ position:"absolute", top:"50%", insetInlineStart:12, transform:"translateY(-50%)", fontSize:15, pointerEvents:"none" }}>👨‍⚕️</span>
+              <datalist id="doctors-list">
+                {Array.from(new Set(appointments.map(a=>(a as any).assigned_doctor).filter(Boolean))).map((d,i)=>(
+                  <option key={i} value={d as string}/>
+                ))}
+              </datalist>
+            </div>
+            {form.assigned_doctor && (
+              <div style={{ marginTop:6, fontSize:11, color:"#2e7d32", fontWeight:600 }}>
+                {isAr ? `✓ سيُعيَّن الموعد للطبيب: ${form.assigned_doctor}` : `✓ Assigned to: ${form.assigned_doctor}`}
+              </div>
+            )}
+            {!form.assigned_doctor && (
+              <div style={{ marginTop:5, fontSize:11, color:"#aaa" }}>
+                {isAr ? "إذا تُركت فارغة، ستُطبَّق قاعدة عدم التعارض للعيادة كاملاً" : "If empty, conflict check applies clinic-wide"}
+              </div>
+            )}
+          </Field>
           <Field label={tr.modal.notes}>
             <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.modal.notesPh} rows={3} className="appt-input" style={{ ...inputSt,resize:"vertical",lineHeight:1.6 } as React.CSSProperties}/>
+          </Field>
           </Field>
           {isEdit&&(
             <div style={{ marginBottom:8 }}>
@@ -1100,9 +1141,9 @@ export default function AppointmentsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
       if (id) {
-        await supabase.from("appointments").update({ patient_id:form.patient_id, date:form.date, time:form.time, duration:form.duration, type:form.type||null, notes:form.notes||null, status:form.status }).eq("id",id);
+        await supabase.from("appointments").update({ patient_id:form.patient_id, date:form.date, time:form.time, duration:form.duration, type:form.type||null, notes:form.notes||null, status:form.status, assigned_doctor:form.assigned_doctor||null }).eq("id",id);
       } else {
-        await supabase.from("appointments").insert({ user_id:userId, patient_id:form.patient_id, date:form.date, time:form.time, duration:form.duration, type:form.type||null, notes:form.notes||null, status:"scheduled" });
+        await supabase.from("appointments").insert({ user_id:userId, patient_id:form.patient_id, date:form.date, time:form.time, duration:form.duration, type:form.type||null, notes:form.notes||null, status:"scheduled", assigned_doctor:form.assigned_doctor||null });
       }
       await loadAppointments();
       setSelectedKey(form.date);
@@ -1385,6 +1426,11 @@ export default function AppointmentsPage() {
                   <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>
                     {dayAppointments.length} {tr.appointments}
                     {dayAppointments.length>=16&&<span style={{ marginInlineStart:8,color:"#c0392b",fontWeight:600 }}>• {tr.fullDay}</span>}
+                    {(() => {
+                      const docs = Array.from(new Set(dayAppointments.map(a=>(a as any).assigned_doctor).filter(Boolean)));
+                      if (docs.length < 2) return null;
+                      return <span style={{ marginInlineStart:8,color:"#0863ba",fontWeight:600 }}>• 👨‍⚕️ {docs.length} {isAr?"أطباء":"doctors"}</span>;
+                    })()}
                   </p>
                 </div>
                 <button onClick={()=>setAddModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 14px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
@@ -1443,8 +1489,13 @@ export default function AppointmentsPage() {
                               {/* تفاصيل */}
                               <div style={{ flex:1,minWidth:0 }}>
                                 <div style={{ fontSize:14,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</div>
-                                <div style={{ fontSize:11,color:"#999",marginTop:2 }}>
+                                <div style={{ fontSize:11,color:"#999",marginTop:2,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
                                   {appt.type && <span>{appt.type} · </span>}
+                                  {(appt as any).assigned_doctor && (
+                                    <span style={{ display:"inline-flex",alignItems:"center",gap:3,padding:"1px 7px",borderRadius:20,background:"rgba(8,99,186,.07)",color:"#0863ba",fontWeight:600,fontSize:10 }}>
+                                      👨‍⚕️ {(appt as any).assigned_doctor}
+                                    </span>
+                                  )}
                                   <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
                                     {tr.statuses[appt.status as Status]}
                                   </span>
