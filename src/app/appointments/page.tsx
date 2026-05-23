@@ -572,7 +572,6 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onS
           <Field label={tr.modal.notes}>
             <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.modal.notesPh} rows={3} className="appt-input" style={{ ...inputSt,resize:"vertical",lineHeight:1.6 } as React.CSSProperties}/>
           </Field>
-          </Field>
           {isEdit&&(
             <div style={{ marginBottom:8 }}>
               <div style={{ fontSize:11,fontWeight:700,color:"#aaa",marginBottom:8,textTransform:"uppercase",letterSpacing:.5 }}>{lang==="ar"?"تغيير حالة الموعد":"Update Status"}</div>
