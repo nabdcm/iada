@@ -24,26 +24,23 @@ const T = {
     modal:{
       addTitle:"إضافة موعد جديد", editTitle:"تعديل الموعد",
       patient:"المريض *", selectPatient:"اختر المريض",
-      doctor:"الطبيب *", selectDoctor:"اختر الطبيب",
       date:"التاريخ *", time:"الوقت *",
       duration:"المدة (بالدقائق) *", type:"نوع الزيارة",
       typePh:"مثال: متابعة، فحص عام", notes:"ملاحظات", notesPh:"أي ملاحظات...",
+      doctor:"الطبيب المسؤول", doctorPh:"مثال: د. أحمد، د. سارة...",
       save:"حفظ الموعد", update:"تحديث الموعد", cancel:"إلغاء",
       required:"المريض والتاريخ والوقت مطلوبة",
-      requiredDoctor:"يرجى اختيار الطبيب",
       delete:"حذف الموعد", deleting:"جاري الحذف...",
       deleteConfirmTitle:"تأكيد حذف الموعد",
       deleteConfirmMsg:"هل أنت متأكد من حذف هذا الموعد؟ لا يمكن التراجع عن هذه العملية.",
       deleteConfirm:"نعم، احذف", deleteCancel:"لا، تراجع",
-      filterByDoctor:"تصفية حسب الطبيب",
-      allDoctors:"جميع الأطباء",
     },
     stats:{ total:"مواعيد الشهر", today:"مواعيد اليوم", completed:"مكتملة", pending:"قادمة", occupancy:"إشغال العيادة اليوم" },
     signOut:"تسجيل الخروج", selectedDay:"المحدد", appointments:"مواعيد", appt:"موعد",
     notification:{ title:"تذكير بموعد", msg:"سيحين موعد المريض", in:"خلال ١٥ دقيقة", dismiss:"تجاهل" },
     errorSave:"حدث خطأ أثناء الحفظ", errorLoad:"حدث خطأ أثناء التحميل",
     errorDelete:"حدث خطأ أثناء الحذف",
-    conflictError:"يوجد موعد آخر في نفس الوقت، يرجى اختيار وقت مختلف",
+    conflictError:"يوجد موعد آخر في نفس الوقت مع نفس الطبيب، يرجى اختيار وقت مختلف أو طبيب آخر",
     whatsappMsg:(name:string, date:string, time:string) =>
       `مرحباً ${name}، نذكّركم بموعدكم في عيادتنا بتاريخ ${date} الساعة ${time}. نتطلع لرؤيتكم 💙`,
     nowCard:{ title:"الوقت الآن", dateLabel:"التاريخ" },
@@ -83,26 +80,23 @@ const T = {
     modal:{
       addTitle:"New Appointment", editTitle:"Edit Appointment",
       patient:"Patient *", selectPatient:"Select a patient",
-      doctor:"Doctor *", selectDoctor:"Select a doctor",
       date:"Date *", time:"Time *",
       duration:"Duration (minutes) *", type:"Visit Type",
       typePh:"e.g. Follow-up, General", notes:"Notes", notesPh:"Any notes...",
+      doctor:"Assigned Doctor", doctorPh:"e.g. Dr. Ahmed, Dr. Sara...",
       save:"Save Appointment", update:"Update Appointment", cancel:"Cancel",
       required:"Patient, date and time are required",
-      requiredDoctor:"Please select a doctor",
       delete:"Delete Appointment", deleting:"Deleting...",
       deleteConfirmTitle:"Confirm Delete",
       deleteConfirmMsg:"Are you sure you want to delete this appointment? This cannot be undone.",
       deleteConfirm:"Yes, Delete", deleteCancel:"No, Cancel",
-      filterByDoctor:"Filter by Doctor",
-      allDoctors:"All Doctors",
     },
     stats:{ total:"Monthly Appts", today:"Today's Appts", completed:"Completed", pending:"Upcoming", occupancy:"Today's Occupancy" },
     signOut:"Sign Out", selectedDay:"Selected", appointments:"Appointments", appt:"appt",
     notification:{ title:"Appointment Reminder", msg:"Upcoming appointment for", in:"in 15 minutes", dismiss:"Dismiss" },
     errorSave:"Error saving appointment", errorLoad:"Error loading data",
     errorDelete:"Error deleting appointment",
-    conflictError:"Another appointment exists at the same time, please choose a different time",
+    conflictError:"Another appointment exists at the same time with the same doctor, please choose a different time or doctor",
     whatsappMsg:(name:string, date:string, time:string) =>
       `Hello ${name}, this is a reminder for your appointment on ${date} at ${time}. We look forward to seeing you 💙`,
     nowCard:{ title:"Current Time", dateLabel:"Date" },
@@ -173,43 +167,19 @@ function playNotificationSound() {
 }
 
 // ─── Plan access rules ────────────────────────────────────
-type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
-
-// الخطط المشتركة وحدودها من الأطباء
-const SHARED_PLAN_DOCTOR_LIMITS: Record<string, number> = {
-  shared_basic:      2,
-  shared_pro:        3,
-  shared_enterprise: 5, // قابل للزيادة من لوحة الأدمن
-};
-
-const isSharedPlan = (plan: PlanType) => plan.startsWith("shared_");
-
-// الخطة الفردية المقابلة للخطة المشتركة (لتطبيق نفس قواعد الوصول)
-const getBasePlan = (plan: PlanType): "basic" | "pro" | "enterprise" => {
-  if (plan === "shared_basic")      return "basic";
-  if (plan === "shared_pro")        return "pro";
-  if (plan === "shared_enterprise") return "enterprise";
-  return plan as "basic" | "pro" | "enterprise";
-};
-
+type PlanType = "basic" | "pro" | "enterprise";
 const PLAN_ACCESS: Record<string, string[]> = {
   payments:      ["pro", "enterprise"],
   prescriptions: ["enterprise"],
   tracking:      ["enterprise"],
 };
-
-const canAccess = (feature: string, plan: PlanType) => {
-  const base = getBasePlan(plan);
-  return PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(base) : true;
-};
+const canAccess = (feature: string, plan: PlanType) =>
+  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 
 const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string }> = {
-  basic:            { label:{ ar:"الأساسية",              en:"Basic"                 }, color:"#0863ba" },
-  pro:              { label:{ ar:"الاحترافية",            en:"Professional"          }, color:"#7b2d8b" },
-  enterprise:       { label:{ ar:"الشاملة",              en:"Comprehensive"         }, color:"#e67e22" },
-  shared_basic:     { label:{ ar:"المشتركة - الأساسية",  en:"Shared - Basic"        }, color:"#0891b2" },
-  shared_pro:       { label:{ ar:"المشتركة - الاحترافية",en:"Shared - Professional" }, color:"#6d28d9" },
-  shared_enterprise:{ label:{ ar:"المشتركة - الشاملة",  en:"Shared - Comprehensive"}, color:"#b45309" },
+  basic:      { label:{ ar:"الأساسية",   en:"Basic"         }, color:"#0863ba" },
+  pro:        { label:{ ar:"الاحترافية", en:"Professional"  }, color:"#7b2d8b" },
+  enterprise: { label:{ ar:"الشاملة",   en:"Comprehensive" }, color:"#e67e22" },
 };
 
 // ─── Sidebar ──────────────────────────────────────────────
@@ -389,36 +359,26 @@ const Field = ({ label, children, half }: { label: string; children: React.React
 
 type ApptForm = {
   patient_id: number | "";
-  doctor_id: number | "";   // للخطط المشتركة فقط
   date: string; time: string; duration: number;
   type: string; notes: string; status: Status;
-};
-
-// نوع الطبيب للخطط المشتركة
-type Doctor = {
-  id: number;
-  name: string;
-  specialty?: string;
-  user_id: string;
+  assigned_doctor: string;
 };
 
 // ─── Modal موعد ───────────────────────────────────────────
-function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, plan, onSave, onClose, onStatusChange, onDelete, saving }: {
+function AppointmentModal({ lang, appt, defaultDate, patients, appointments, onSave, onClose, onStatusChange, onDelete, saving }: {
   lang: Lang; appt: Appointment | null; defaultDate: string; patients: Patient[];
   appointments: Appointment[];
-  doctors: Doctor[]; plan: PlanType;
   onSave: (form: ApptForm, id?: number) => void; onClose: () => void;
   onStatusChange: (id: number, status: Status) => void;
   onDelete: (id: number) => void; saving: boolean;
 }) {
   const tr = T[lang]; const isAr = lang === "ar"; const isEdit = !!appt?.id;
-  const isShared = isSharedPlan(plan);
   const [form, setForm] = useState<ApptForm>({
     patient_id: appt?.patient_id ?? "",
-    doctor_id: (appt as any)?.doctor_id ?? "",
     date: appt?.date ?? defaultDate, time: appt?.time ?? "09:00",
     duration: appt?.duration ?? 30, type: appt?.type ?? "",
     notes: appt?.notes ?? "", status: appt?.status ?? "scheduled",
+    assigned_doctor: (appt as any)?.assigned_doctor ?? "",
   });
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -448,7 +408,6 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
 
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
-    if (isShared && !form.doctor_id) { setError(tr.modal.requiredDoctor); return; }
     const timeToMinutes = (t: string) => {
       const [h, m] = t.slice(0,5).split(":").map(Number);
       return h * 60 + m;
@@ -461,7 +420,13 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
       if (isEdit && a.id === appt!.id) return false;
       const aStart = timeToMinutes(a.time);
       const aEnd   = aStart + (a.duration || 30);
-      return newStart < aEnd && newEnd > aStart;
+      const timeOverlap = newStart < aEnd && newEnd > aStart;
+      if (!timeOverlap) return false;
+      // إذا كلا الموعدين لهما طبيب مختلف → لا يُعدّ تعارضاً
+      const aDoctor = (a as any).assigned_doctor?.trim() || "";
+      const newDoctor = form.assigned_doctor?.trim() || "";
+      if (aDoctor && newDoctor && aDoctor !== newDoctor) return false;
+      return true;
     });
     if (conflict) {
       const cTime = conflict.time.slice(0,5);
@@ -562,24 +527,6 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
               )}
             </div>
           </Field>
-          {/* حقل الطبيب — يظهر فقط في الخطط المشتركة */}
-          {isShared && (
-            <Field label={tr.modal.doctor}>
-              <select
-                value={form.doctor_id}
-                onChange={e => setForm({...form, doctor_id: e.target.value ? Number(e.target.value) : ""})}
-                style={{ ...inputSt, cursor:"pointer" }}
-                className="appt-input"
-              >
-                <option value="">{tr.modal.selectDoctor}</option>
-                {doctors.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}{d.specialty ? ` — ${d.specialty}` : ""}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
           <div style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.date} half><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} className="appt-input"/></Field>
             <Field label={tr.modal.time} half><select value={form.time} onChange={e=>setForm({...form,time:e.target.value})} style={{ ...inputSt,cursor:"pointer" }} className="appt-input">{Array.from({length:15*4},(_,i)=>{const totalMin=8*60+i*15;const hh=String(Math.floor(totalMin/60)).padStart(2,"0");const mm=String(totalMin%60).padStart(2,"0");return `${hh}:${mm}`;}).map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
@@ -592,6 +539,36 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
             </Field>
             <Field label={tr.modal.type} half><input value={form.type} onChange={e=>setForm({...form,type:e.target.value})} placeholder={tr.modal.typePh} style={inputSt} className="appt-input"/></Field>
           </div>
+          {/* حقل الطبيب المسؤول */}
+          <Field label={tr.modal.doctor}>
+            <div style={{ position:"relative" }}>
+              <input
+                list="doctors-list"
+                value={form.assigned_doctor}
+                onChange={e=>setForm({...form,assigned_doctor:e.target.value})}
+                placeholder={tr.modal.doctorPh}
+                className="appt-input"
+                style={{ ...inputSt, paddingInlineStart: isAr ? 14 : 40 }}
+                autoComplete="off"
+              />
+              <span style={{ position:"absolute", top:"50%", insetInlineStart:12, transform:"translateY(-50%)", fontSize:15, pointerEvents:"none" }}>👨‍⚕️</span>
+              <datalist id="doctors-list">
+                {Array.from(new Set(appointments.map(a=>(a as any).assigned_doctor).filter(Boolean))).map((d,i)=>(
+                  <option key={i} value={d as string}/>
+                ))}
+              </datalist>
+            </div>
+            {form.assigned_doctor && (
+              <div style={{ marginTop:6, fontSize:11, color:"#2e7d32", fontWeight:600 }}>
+                {isAr ? `✓ سيُعيَّن الموعد للطبيب: ${form.assigned_doctor}` : `✓ Assigned to: ${form.assigned_doctor}`}
+              </div>
+            )}
+            {!form.assigned_doctor && (
+              <div style={{ marginTop:5, fontSize:11, color:"#aaa" }}>
+                {isAr ? "إذا تُركت فارغة، ستُطبَّق قاعدة عدم التعارض للعيادة كاملاً" : "If empty, conflict check applies clinic-wide"}
+              </div>
+            )}
+          </Field>
           <Field label={tr.modal.notes}>
             <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.modal.notesPh} rows={3} className="appt-input" style={{ ...inputSt,resize:"vertical",lineHeight:1.6 } as React.CSSProperties}/>
           </Field>
@@ -1017,8 +994,6 @@ export default function AppointmentsPage() {
   const [appointments,        setAppointments]        = useState<Appointment[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [patients,            setPatients]            = useState<Patient[]>([]);
-  const [doctors,             setDoctors]             = useState<Doctor[]>([]);
-  const [selectedDoctorId,    setSelectedDoctorId]    = useState<number | "all">("all");
   const [loading,             setLoading]             = useState(true);
   const [saving,              setSaving]              = useState(false);
   const [clinicId,            setClinicId]            = useState("");
@@ -1041,15 +1016,6 @@ export default function AppointmentsPage() {
       .from("patients").select("id, name, user_id, phone, has_diabetes, has_hypertension, is_hidden, created_at")
       .eq("user_id", userId).eq("is_hidden", false).order("name");
     setPatients((data ?? []) as Patient[]);
-  };
-
-  const loadDoctors = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
-    const { data } = await supabase
-      .from("doctors").select("id, name, specialty, user_id")
-      .eq("user_id", userId).order("name");
-    setDoctors((data ?? []) as Doctor[]);
   };
 
   const loadAppointments = async () => {
@@ -1091,14 +1057,7 @@ export default function AppointmentsPage() {
         // جلب خطة العيادة
         const { data: clinicData } = await supabase
           .from("clinics").select("plan").eq("user_id", user.id).single();
-        if (clinicData?.plan) {
-          const fetchedPlan = clinicData.plan as PlanType;
-          setPlan(fetchedPlan);
-          // جلب الأطباء فقط إذا كانت خطة مشتركة
-          if (isSharedPlan(fetchedPlan)) {
-            await loadDoctors();
-          }
-        }
+        if (clinicData?.plan) setPlan(clinicData.plan as PlanType);
       }
     });
   }, []);
@@ -1180,22 +1139,10 @@ export default function AppointmentsPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
-      const payload: Record<string, unknown> = {
-        patient_id: form.patient_id,
-        date: form.date, time: form.time,
-        duration: form.duration,
-        type: form.type||null,
-        notes: form.notes||null,
-        status: form.status,
-      };
-      // إضافة doctor_id فقط في الخطط المشتركة
-      if (isSharedPlan(plan) && form.doctor_id) {
-        payload.doctor_id = form.doctor_id;
-      }
       if (id) {
-        await supabase.from("appointments").update(payload).eq("id",id);
+        await supabase.from("appointments").update({ patient_id:form.patient_id, date:form.date, time:form.time, duration:form.duration, type:form.type||null, notes:form.notes||null, status:form.status, assigned_doctor:form.assigned_doctor||null }).eq("id",id);
       } else {
-        await supabase.from("appointments").insert({ user_id:userId, ...payload, status:"scheduled" });
+        await supabase.from("appointments").insert({ user_id:userId, patient_id:form.patient_id, date:form.date, time:form.time, duration:form.duration, type:form.type||null, notes:form.notes||null, status:"scheduled", assigned_doctor:form.assigned_doctor||null });
       }
       await loadAppointments();
       setSelectedKey(form.date);
@@ -1249,14 +1196,7 @@ export default function AppointmentsPage() {
   };
 
   // ── Computed ──────────────────────────────────────────────
-  const dayAppointments = appointments
-    .filter(a => a.date === selectedKey)
-    .filter(a => {
-      if (!isSharedPlan(plan)) return true;
-      if (selectedDoctorId === "all") return true;
-      return (a as any).doctor_id === selectedDoctorId;
-    })
-    .sort((a,b)=>a.time.localeCompare(b.time));
+  const dayAppointments = appointments.filter(a => a.date === selectedKey).sort((a,b)=>a.time.localeCompare(b.time));
   const countByKey: Record<string,number> = {};
   appointments.forEach(a => { countByKey[a.date] = (countByKey[a.date]||0)+1; });
 
@@ -1428,39 +1368,6 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          {/* بانر الخطة المشتركة — معلومات الأطباء */}
-          {isSharedPlan(plan) && doctors.length > 0 && (
-            <div style={{
-              background:"linear-gradient(135deg, rgba(109,40,217,.06) 0%, rgba(91,33,182,.04) 100%)",
-              border:"1.5px solid rgba(109,40,217,.18)",
-              borderRadius:14,
-              padding:"12px 18px",
-              marginBottom:16,
-              display:"flex",
-              alignItems:"center",
-              gap:12,
-              flexWrap:"wrap",
-              animation:"fadeUp .4s ease",
-            }}>
-              <div style={{ width:36,height:36,borderRadius:10,background:"rgba(109,40,217,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>👨‍⚕️</div>
-              <div style={{ flex:1,minWidth:0 }}>
-                <div style={{ fontSize:12,fontWeight:700,color:"#6d28d9",marginBottom:4 }}>
-                  {isAr ? `خطة مشتركة · ${doctors.length} أطباء مسجلين` : `Shared Plan · ${doctors.length} registered doctors`}
-                  <span style={{ marginInlineStart:8,fontSize:10,fontWeight:600,color:"#888" }}>
-                    ({isAr ? `الحد الأقصى: ${SHARED_PLAN_DOCTOR_LIMITS[plan] ?? "∞"}` : `Max: ${SHARED_PLAN_DOCTOR_LIMITS[plan] ?? "∞"}`})
-                  </span>
-                </div>
-                <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-                  {doctors.map(d => (
-                    <span key={d.id} style={{ fontSize:11,fontWeight:600,color:"#6d28d9",background:"rgba(109,40,217,.08)",border:"1px solid rgba(109,40,217,.15)",borderRadius:20,padding:"2px 10px" }}>
-                      {d.name}{d.specialty ? ` · ${d.specialty}` : ""}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ════ قسم طلبات الحجز المعلقة — فقط للاحترافية والشاملة ════ */}
           {canAccess("payments", plan) && (
             <PendingBookingsSection
@@ -1518,38 +1425,16 @@ export default function AppointmentsPage() {
                   <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>
                     {dayAppointments.length} {tr.appointments}
                     {dayAppointments.length>=16&&<span style={{ marginInlineStart:8,color:"#c0392b",fontWeight:600 }}>• {tr.fullDay}</span>}
+                    {(() => {
+                      const docs = Array.from(new Set(dayAppointments.map(a=>(a as any).assigned_doctor).filter(Boolean)));
+                      if (docs.length < 2) return null;
+                      return <span style={{ marginInlineStart:8,color:"#0863ba",fontWeight:600 }}>• 👨‍⚕️ {docs.length} {isAr?"أطباء":"doctors"}</span>;
+                    })()}
                   </p>
                 </div>
-                <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-                  {/* فلتر الطبيب — يظهر فقط في الخطط المشتركة */}
-                  {isSharedPlan(plan) && doctors.length > 0 && (
-                    <select
-                      value={selectedDoctorId}
-                      onChange={e => setSelectedDoctorId(e.target.value === "all" ? "all" : Number(e.target.value))}
-                      style={{
-                        padding:"6px 10px",
-                        border:"1.5px solid rgba(8,99,186,.18)",
-                        borderRadius:9,
-                        fontFamily:"Rubik,sans-serif",
-                        fontSize:12,
-                        fontWeight:600,
-                        color:"#0863ba",
-                        background:"rgba(8,99,186,.05)",
-                        cursor:"pointer",
-                        outline:"none",
-                        maxWidth:isMobile?120:180,
-                      }}
-                    >
-                      <option value="all">{tr.modal.allDoctors}</option>
-                      {doctors.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
-                  )}
-                  <button onClick={()=>setAddModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 14px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                    ＋ {tr.appt}
-                  </button>
-                </div>
+                <button onClick={()=>setAddModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 14px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
+                  ＋ {tr.appt}
+                </button>
               </div>
 
               <div ref={timelineRef} className="timeline-scroll" style={{ padding:"12px 16px 16px" }}>
@@ -1603,20 +1488,16 @@ export default function AppointmentsPage() {
                               {/* تفاصيل */}
                               <div style={{ flex:1,minWidth:0 }}>
                                 <div style={{ fontSize:14,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</div>
-                                <div style={{ fontSize:11,color:"#999",marginTop:2 }}>
+                                <div style={{ fontSize:11,color:"#999",marginTop:2,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
                                   {appt.type && <span>{appt.type} · </span>}
+                                  {(appt as any).assigned_doctor && (
+                                    <span style={{ display:"inline-flex",alignItems:"center",gap:3,padding:"1px 7px",borderRadius:20,background:"rgba(8,99,186,.07)",color:"#0863ba",fontWeight:600,fontSize:10 }}>
+                                      👨‍⚕️ {(appt as any).assigned_doctor}
+                                    </span>
+                                  )}
                                   <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
                                     {tr.statuses[appt.status as Status]}
                                   </span>
-                                  {/* اسم الطبيب — للخطط المشتركة فقط */}
-                                  {isSharedPlan(plan) && (appt as any).doctor_id && (() => {
-                                    const doc = doctors.find(d => d.id === (appt as any).doctor_id);
-                                    return doc ? (
-                                      <span style={{ marginInlineStart:6,fontSize:10,fontWeight:600,color:"#6d28d9",background:"rgba(109,40,217,.08)",border:"1px solid rgba(109,40,217,.2)",padding:"1px 7px",borderRadius:20 }}>
-                                        👨‍⚕️ {doc.name}
-                                      </span>
-                                    ) : null;
-                                  })()}
                                 </div>
                               </div>
                               {/* أزرار */}
@@ -1661,7 +1542,6 @@ export default function AppointmentsPage() {
         {(addModal||editAppt)&&(
           <AppointmentModal lang={lang} appt={editAppt} defaultDate={selectedKey} patients={patients}
             appointments={appointments}
-            doctors={doctors} plan={plan}
             onSave={handleSave} onClose={()=>{ setAddModal(false); setEditAppt(null); }}
             onStatusChange={handleStatusChange} onDelete={handleDelete} saving={saving}/>
         )}
