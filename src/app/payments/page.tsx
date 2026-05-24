@@ -85,6 +85,23 @@ const T = {
     expensesSection:{ title:"مصروفات العيادة", empty:"لا توجد مصروفات مسجّلة" },
     txType:{ income:"دخل", withdrawal:"سحب", expense:"مصروف" },
     filterType:{ all:"الكل", income:"دخل", withdrawal:"سحوبات", expense:"مصروفات" },
+    sharedClinic:{
+      badge:"عيادة مشتركة",
+      filterByDoctor:"فلترة حسب الطبيب",
+      allDoctors:"جميع الأطباء",
+      doctor:"الطبيب",
+      doctorRevenue:"إيرادات حسب الطبيب",
+      planLimits:{
+        clinic_basic:     "حتى طبيبين",
+        clinic_pro:       "حتى 3 أطباء",
+        clinic_enterprise:"حتى 5 أطباء",
+      },
+      planPricing:{
+        clinic_basic:     "٧.٩٩ $ / شهر · ٧٩ $ / سنة",
+        clinic_pro:       "١٣.٩٩ $ / شهر · ١٣٩ $ / سنة",
+        clinic_enterprise:"تسعير مخصص",
+      },
+    },
   },
   en: {
     appName:"NABD", appSub:"Clinic Manager",
@@ -161,6 +178,23 @@ const T = {
     expensesSection:{ title:"Clinic Expenses", empty:"No expenses recorded" },
     txType:{ income:"Income", withdrawal:"Withdrawal", expense:"Expense" },
     filterType:{ all:"All", income:"Income", withdrawal:"Withdrawals", expense:"Expenses" },
+    sharedClinic:{
+      badge:"Shared Clinic",
+      filterByDoctor:"Filter by Doctor",
+      allDoctors:"All Doctors",
+      doctor:"Doctor",
+      doctorRevenue:"Revenue by Doctor",
+      planLimits:{
+        clinic_basic:     "Up to 2 doctors",
+        clinic_pro:       "Up to 3 doctors",
+        clinic_enterprise:"Up to 5 doctors",
+      },
+      planPricing:{
+        clinic_basic:     "$7.99/mo · $79/yr",
+        clinic_pro:       "$13.99/mo · $139/yr",
+        clinic_enterprise:"Custom pricing",
+      },
+    },
   },
 };
 
@@ -194,18 +228,39 @@ const TrackingIcon = () => (
 );
 
 // ─── Plan access rules ────────────────────────────────────
-type PlanType = "basic" | "pro" | "enterprise";
+type PlanType = "basic" | "pro" | "enterprise" | "clinic_basic" | "clinic_pro" | "clinic_enterprise";
+// الخطط المشتركة للعيادات
+const SHARED_CLINIC_PLANS: PlanType[] = ["clinic_basic", "clinic_pro", "clinic_enterprise"];
+const isSharedClinicPlan = (plan: PlanType) => SHARED_CLINIC_PLANS.includes(plan);
+
+// حدود الأطباء لكل خطة مشتركة
+const CLINIC_PLAN_DOCTOR_LIMITS: Record<string, number> = {
+  clinic_basic:      2,
+  clinic_pro:        3,
+  clinic_enterprise: 5,
+};
+
+// أسعار الخطط المشتركة (دولار)
+const CLINIC_PLAN_PRICING = {
+  clinic_basic:      { monthly: 7.99,  yearly: 79  },
+  clinic_pro:        { monthly: 13.99, yearly: 139 },
+  clinic_enterprise: { monthly: null,  yearly: null }, // مخصص
+};
+
 const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise"],
-  prescriptions: ["enterprise"],
-  tracking:      ["enterprise"],
+  payments:      ["pro","enterprise","clinic_basic","clinic_pro","clinic_enterprise"],
+  prescriptions: ["enterprise","clinic_basic","clinic_pro","clinic_enterprise"],
+  tracking:      ["enterprise","clinic_basic","clinic_pro","clinic_enterprise"],
 };
 const canAccess = (feature:string, plan:PlanType) =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
-const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
-  basic:      {label:{ar:"الأساسية",   en:"Basic"},         color:"#0863ba"},
-  pro:        {label:{ar:"الاحترافية", en:"Professional"},  color:"#7b2d8b"},
-  enterprise: {label:{ar:"الشاملة",   en:"Comprehensive"}, color:"#e67e22"},
+const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string;isShared?:boolean}> = {
+  basic:             {label:{ar:"الأساسية",             en:"Basic"},             color:"#0863ba"},
+  pro:               {label:{ar:"الاحترافية",           en:"Professional"},      color:"#7b2d8b"},
+  enterprise:        {label:{ar:"الشاملة",              en:"Comprehensive"},     color:"#e67e22"},
+  clinic_basic:      {label:{ar:"عيادات — أساسية",      en:"Clinics — Basic"},   color:"#0891b2", isShared:true},
+  clinic_pro:        {label:{ar:"عيادات — احترافية",    en:"Clinics — Pro"},     color:"#7c3aed", isShared:true},
+  clinic_enterprise: {label:{ar:"عيادات — شاملة",      en:"Clinics — Full"},    color:"#b45309", isShared:true},
 };
 
 function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePage = "payments", plan = "basic" }: {
@@ -325,7 +380,9 @@ function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePag
             <>
               <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8 }}>
                 <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }}/>
-                <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
+                <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>
+                  {isSharedClinicPlan(plan) ? (isAr?"عيادة مشتركة":"Shared") : (isAr?"خطة":"Plan")}
+                </span>
                 <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang as "ar"|"en"]}</span>
               </div>
               <button
@@ -367,11 +424,19 @@ function F({ label, children, half }: { label: any; children: React.ReactNode; h
 }
 
 // ─── Modal إضافة دفعة ─────────────────────────────────────
-function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patients: Patient[]; onSave: (data: Omit<Payment,'id'|'user_id'|'created_at'>) => Promise<void>; onClose: () => void }) {
+function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose }: {
+  lang: string;
+  patients: Patient[];
+  doctors?: {id: number; name: string}[];
+  isSharedClinic?: boolean;
+  onSave: (data: Omit<Payment,'id'|'user_id'|'created_at'>) => Promise<void>;
+  onClose: () => void
+}) {
   const tr = T[lang]; const isAr = lang==="ar";
   const [form, setForm] = useState({
     patientId:"", amount:"", description:"", method:"cash",
     date:fmt(new Date()), status:"paid", notes:"",
+    doctorId:"", // للخطط المشتركة فقط
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -396,6 +461,7 @@ function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patie
 
   const handleSave = async (asPending=false) => {
     if (!form.patientId||!form.amount||!form.description.trim()) { setError(tr.modal.required); return; }
+    if (isSharedClinic && !form.doctorId) { setError(isAr ? "يرجى اختيار الطبيب" : "Please select a doctor"); return; }
     setSaving(true);
     try {
       await onSave({
@@ -406,6 +472,7 @@ function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patie
         date: form.date,
         status: (asPending ? "pending" : "paid") as "paid"|"pending"|"cancelled",
         notes: form.notes || undefined,
+        ...(isSharedClinic && form.doctorId ? { doctor_id: Number(form.doctorId) } : {}),
       } as any);
     } catch(e) {
       setError(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving payment");
@@ -501,6 +568,31 @@ function PaymentModal({ lang, patients, onSave, onClose }: { lang: string; patie
               )}
             </div>
           </F>
+
+          {/* حقل الطبيب — للخطط المشتركة فقط */}
+          {isSharedClinic && doctors && doctors.length > 0 && (
+            <F label={isAr ? "الطبيب المسؤول *" : "Responsible Doctor *"}>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
+                {doctors.map(doc => (
+                  <button key={doc.id} onClick={() => setForm({...form, doctorId: String(doc.id)})}
+                    style={{
+                      padding:"9px 16px", borderRadius:10, cursor:"pointer",
+                      border: form.doctorId===String(doc.id) ? "1.5px solid #0891b2" : "1.5px solid #eee",
+                      background: form.doctorId===String(doc.id) ? "rgba(8,145,178,.08)" : "#fafbfc",
+                      fontFamily:"Rubik,sans-serif", fontSize:13,
+                      fontWeight: form.doctorId===String(doc.id) ? 700 : 400,
+                      color: form.doctorId===String(doc.id) ? "#0891b2" : "#666",
+                      transition:"all .2s", display:"flex", alignItems:"center", gap:7,
+                    }}>
+                    <div style={{ width:22,height:22,borderRadius:6,background:form.doctorId===String(doc.id)?"#0891b2":"#ccc",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700 }}>
+                      {getInitials(doc.name)}
+                    </div>
+                    {isAr ? "د. " : "Dr. "}{doc.name}
+                  </button>
+                ))}
+              </div>
+            </F>
+          )}
           <div style={{ display:"flex",gap:12 }}>
             <F label={tr.modal.amount} half>
               <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder={tr.modal.amountPh} style={inputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
@@ -772,6 +864,9 @@ export default function PaymentsPage() {
   const [showExpenseModal,  setShowExpenseModal]  = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
   const [plan, setPlan] = useState<PlanType>("basic");
+  // خطط العيادات المشتركة: قائمة الأطباء والفلتر المحدد
+  const [doctors, setDoctors] = useState<{id: number; name: string; color?: string}[]>([]);
+  const [selectedDoctor, setSelectedDoctor] = useState<number|null>(null);
 
   // ── جلب البيانات من Supabase ────────────────────────────────
   useEffect(() => {
@@ -822,6 +917,17 @@ export default function PaymentsPage() {
       setPayments(paymentsData || []);
       setPatients((patientsData ?? []) as unknown as Patient[]);
 
+      // جلب قائمة الأطباء لخطط العيادات المشتركة
+      const activePlan = (clinicRow?.plan as PlanType) || "basic";
+      if (SHARED_CLINIC_PLANS.includes(activePlan)) {
+        const { data: doctorsData } = await supabase
+          .from("clinic_doctors")
+          .select("id, name, color")
+          .eq("user_id", user.id)
+          .order("name");
+        setDoctors(doctorsData || []);
+      }
+
       // جلب السحوبات والمصروفات
       const { data: withdrawalsData } = await supabase
         .from("clinic_withdrawals")
@@ -853,13 +959,17 @@ export default function PaymentsPage() {
       if (filter === "pending" && p.status !== "pending") return false;
       if (filter === "cash"    && p.method !== "cash")    return false;
       if (filter === "card"    && p.method !== "card")    return false;
+      // فلتر الطبيب — للخطط المشتركة فقط
+      if (isSharedClinicPlan(plan) && selectedDoctor !== null) {
+        if ((p as any).doctor_id !== selectedDoctor) return false;
+      }
       return true;
     }).sort((a, b) => {
       const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
       if (dateDiff !== 0) return dateDiff;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [payments, patients, search, filter]);
+  }, [payments, patients, search, filter, selectedDoctor, plan]);
 
   const pendingPayments = useMemo(() => payments.filter(p => p.status === "pending"), [payments]);
 
@@ -901,7 +1011,23 @@ export default function PaymentsPage() {
     ];
   }, [payments]);
 
-  // ── بيانات مخطط الإيرادات (آخر 6 أشهر) ─────────────────────
+  // ── إحصائيات الإيرادات حسب الطبيب — للخطط المشتركة فقط ─────
+  const doctorRevenueStats = useMemo(() => {
+    if (!isSharedClinicPlan(plan) || doctors.length === 0) return [];
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    return doctors.map(doc => {
+      const docPayments = payments.filter(p =>
+        (p as any).doctor_id === doc.id && p.status === "paid" && p.date.startsWith(thisMonth)
+      );
+      return {
+        id: doc.id,
+        name: doc.name,
+        color: doc.color || "#0863ba",
+        monthlyRevenue: docPayments.reduce((s, p) => s + p.amount, 0),
+        count: docPayments.length,
+      };
+    });
+  }, [payments, doctors, plan]);
   const revenueData = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 6 }, (_, i) => {
@@ -1362,7 +1488,61 @@ export default function PaymentsPage() {
 
           <div style={{ paddingTop:24 }}>
 
-            {/* ── STATS ── */}
+            {/* ── شريط الخطة المشتركة ── */}
+            {isSharedClinicPlan(plan) && (
+              <div style={{ marginBottom:20,padding:"14px 20px",background:"linear-gradient(135deg,rgba(8,145,178,.06),rgba(124,58,237,.06))",border:"1.5px solid rgba(8,145,178,.2)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                  <div style={{ width:38,height:38,background:"rgba(8,145,178,.12)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>🏥</div>
+                  <div>
+                    <div style={{ fontSize:13,fontWeight:800,color:"#0891b2" }}>
+                      {PLAN_BADGE[plan].label[lang as "ar"|"en"]}
+                      {" · "}
+                      <span style={{ fontSize:11,fontWeight:500,color:"#888" }}>
+                        {isAr
+                          ? (tr as any).sharedClinic.planLimits[plan]
+                          : (tr as any).sharedClinic.planLimits[plan]}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>
+                      {isAr
+                        ? `${doctors.length} طبيب مسجّل · ${(tr as any).sharedClinic.planPricing[plan]}`
+                        : `${doctors.length} registered doctor(s) · ${(tr as any).sharedClinic.planPricing[plan]}`}
+                    </div>
+                  </div>
+                </div>
+                {/* فلتر سريع بالطبيب */}
+                {doctors.length > 0 && (
+                  <div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+                    <span style={{ fontSize:12,color:"#888",fontWeight:600 }}>
+                      {isAr ? (tr as any).sharedClinic.filterByDoctor : (tr as any).sharedClinic.filterByDoctor}:
+                    </span>
+                    <button
+                      onClick={() => setSelectedDoctor(null)}
+                      style={{ padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Rubik,sans-serif",
+                        borderColor: selectedDoctor===null ? "#0891b2" : "#e0e0e0",
+                        background: selectedDoctor===null ? "rgba(8,145,178,.1)" : "#fff",
+                        color: selectedDoctor===null ? "#0891b2" : "#888",
+                      }}>
+                      {isAr ? (tr as any).sharedClinic.allDoctors : (tr as any).sharedClinic.allDoctors}
+                    </button>
+                    {doctors.map(doc => (
+                      <button key={doc.id}
+                        onClick={() => setSelectedDoctor(selectedDoctor===doc.id ? null : doc.id)}
+                        style={{ padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Rubik,sans-serif",display:"flex",alignItems:"center",gap:5,
+                          borderColor: selectedDoctor===doc.id ? "#0891b2" : "#e0e0e0",
+                          background: selectedDoctor===doc.id ? "rgba(8,145,178,.1)" : "#fff",
+                          color: selectedDoctor===doc.id ? "#0891b2" : "#888",
+                        }}>
+                        <div style={{ width:16,height:16,borderRadius:4,background:doc.color||"#0891b2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:"#fff" }}>
+                          {getInitials(doc.name)}
+                        </div>
+                        {isAr ? "د. " : "Dr. "}{doc.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               {/* Monthly Revenue - big card */}
               <div className="stat-big" style={{ gridColumn:"span 1",animation:"fadeUp .4s 0ms ease both" }}>
@@ -1474,9 +1654,13 @@ export default function PaymentsPage() {
                   </div>
 
                   {/* Header row — desktop only */}
-                  <div className="desktop-table-header" style={{ gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
-                    {[tr.table.date,tr.table.patient,tr.table.description,tr.table.method,tr.table.status,tr.table.amount,""].map((h,i)=>(
-                      <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.4,textAlign:i===5||i===6?"center":"start",paddingLeft:i>0&&i<6?8:0 }}>{h}</div>
+                  <div className="desktop-table-header" style={{ gridTemplateColumns: isSharedClinicPlan(plan) ? "110px 1fr 120px 110px 90px 90px 90px 40px" : "110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
+                    {[
+                      tr.table.date, tr.table.patient,
+                      ...(isSharedClinicPlan(plan) ? [isAr ? "الطبيب" : "Doctor"] : []),
+                      tr.table.description, tr.table.method, tr.table.status, tr.table.amount, ""
+                    ].map((h,i)=>(
+                      <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.4,textAlign:i===(isSharedClinicPlan(plan)?6:5)||i===(isSharedClinicPlan(plan)?7:6)?"center":"start",paddingLeft:i>0&&i<(isSharedClinicPlan(plan)?7:6)?8:0 }}>{h}</div>
                     ))}
                   </div>
 
@@ -1499,6 +1683,7 @@ export default function PaymentsPage() {
                           const ss = statusStyle[p.status]||statusStyle.paid;
                           const isNew = animIds.includes(p.id);
                           const amtColor = p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32";
+                          const doctor = isSharedClinicPlan(plan) ? doctors.find(d => d.id === (p as any).doctor_id) : null;
                           return (
                             <div key={p.id} className="tx-row" style={{ padding:"14px 16px",animation:isNew?"rowPop .4s ease":undefined }}>
                               <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
@@ -1509,6 +1694,15 @@ export default function PaymentsPage() {
                                   <div>
                                     <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{patient?.name||"—"}</div>
                                     <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
+                                    {/* اسم الطبيب في البطاقة المحمولة */}
+                                    {doctor && (
+                                      <div style={{ fontSize:10,color:"#0891b2",fontWeight:600,marginTop:2,display:"flex",alignItems:"center",gap:4 }}>
+                                        <div style={{ width:14,height:14,borderRadius:3,background:doctor.color||"#0891b2",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700 }}>
+                                          {getInitials(doctor.name)}
+                                        </div>
+                                        {isAr?"د. ":"Dr. "}{doctor.name}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 <div style={{ textAlign:"end" }}>
@@ -1535,8 +1729,9 @@ export default function PaymentsPage() {
                           const patient = patients.find(x=>x.id===p.patient_id);
                           const ss = statusStyle[p.status]||statusStyle.paid;
                           const isNew = animIds.includes(p.id);
+                          const doctor = isSharedClinicPlan(plan) ? doctors.find(d => d.id === (p as any).doctor_id) : null;
                           return (
-                            <div key={p.id} className="tx-row" style={{ display:"grid",gridTemplateColumns:"110px 1fr 130px 90px 90px 90px 40px",padding:"13px 20px",alignItems:"center",animation:isNew?"rowPop .4s ease":undefined }}>
+                            <div key={p.id} className="tx-row" style={{ display:"grid",gridTemplateColumns:isSharedClinicPlan(plan)?"110px 1fr 120px 110px 90px 90px 90px 40px":"110px 1fr 130px 90px 90px 90px 40px",padding:"13px 20px",alignItems:"center",animation:isNew?"rowPop .4s ease":undefined }}>
                               <div style={{ fontSize:12,color:"#888" }}>{fmtDate(p.date)}</div>
                               <div style={{ display:"flex",alignItems:"center",gap:10,paddingLeft:8 }}>
                                 <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
@@ -1546,6 +1741,21 @@ export default function PaymentsPage() {
                                   {patient?.name||"—"}
                                 </div>
                               </div>
+                              {/* عمود الطبيب — للخطط المشتركة فقط */}
+                              {isSharedClinicPlan(plan) && (
+                                <div style={{ paddingLeft:8,display:"flex",alignItems:"center",gap:5 }}>
+                                  {doctor ? (
+                                    <>
+                                      <div style={{ width:22,height:22,borderRadius:6,background:doctor.color||"#0891b2",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,flexShrink:0 }}>
+                                        {getInitials(doctor.name)}
+                                      </div>
+                                      <span style={{ fontSize:11,color:"#0891b2",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:70 }}>
+                                        {isAr?"د. ":"Dr. "}{doctor.name}
+                                      </span>
+                                    </>
+                                  ) : <span style={{ fontSize:11,color:"#ccc" }}>—</span>}
+                                </div>
+                              )}
                               <div style={{ fontSize:12,color:"#666",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{p.description}</div>
                               <div style={{ paddingLeft:8,fontSize:12,color:"#888",display:"flex",alignItems:"center",gap:6 }}>
                                 <span>{methodIcon[p.method]}</span>
@@ -1585,6 +1795,45 @@ export default function PaymentsPage() {
                 <div style={{ marginBottom:16 }}>
                   <RevenueChart lang={lang} months={tr.months} revenueData={revenueData} />
                 </div>
+
+                {/* إيرادات حسب الطبيب — للخطط المشتركة فقط */}
+                {isSharedClinicPlan(plan) && doctorRevenueStats.length > 0 && (
+                  <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(8,145,178,.2)",padding:"18px 18px",boxShadow:"0 2px 16px rgba(8,145,178,.06)",marginBottom:16 }}>
+                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
+                      <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
+                        <span style={{ fontSize:16 }}>👨‍⚕️</span>
+                        {isAr ? (tr as any).sharedClinic.doctorRevenue : (tr as any).sharedClinic.doctorRevenue}
+                      </h3>
+                      <span style={{ fontSize:11,background:"rgba(8,145,178,.08)",color:"#0891b2",padding:"3px 10px",borderRadius:20,fontWeight:600 }}>
+                        {isAr ? "هذا الشهر" : "This Month"}
+                      </span>
+                    </div>
+                    {doctorRevenueStats.map((doc, i) => {
+                      const maxRev = Math.max(...doctorRevenueStats.map(d => d.monthlyRevenue), 1);
+                      return (
+                        <div key={doc.id} style={{ marginBottom:i < doctorRevenueStats.length-1 ? 14 : 0 }}>
+                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5 }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                              <div style={{ width:26,height:26,borderRadius:7,background:doc.color||"#0891b2",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700 }}>
+                                {getInitials(doc.name)}
+                              </div>
+                              <span style={{ fontSize:12,fontWeight:600,color:"#353535" }}>
+                                {isAr ? "د. " : "Dr. "}{doc.name}
+                              </span>
+                            </div>
+                            <div style={{ textAlign:"end" }}>
+                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{doc.monthlyRevenue.toLocaleString()} ل.س</span>
+                              <span style={{ fontSize:10,color:"#aaa",marginInlineStart:6 }}>({doc.count} {isAr?"معاملة":"tx"})</span>
+                            </div>
+                          </div>
+                          <div style={{ height:5,background:"#f0f0f0",borderRadius:10,overflow:"hidden" }}>
+                            <div style={{ height:"100%",width:`${Math.round((doc.monthlyRevenue/maxRev)*100)}%`,background:doc.color||"#0891b2",borderRadius:10,transition:"width .8s" }}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Pending Dues */}
                 <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",padding:"18px 18px",boxShadow:"0 2px 16px rgba(8,99,186,.06)" }}>
@@ -1688,7 +1937,7 @@ export default function PaymentsPage() {
         </main>
 
         {/* Add Modal */}
-        {showModal&&<PaymentModal lang={lang} patients={patients} onSave={handleSave} onClose={()=>setShowModal(false)}/>}
+        {showModal&&<PaymentModal lang={lang} patients={patients} doctors={doctors} isSharedClinic={isSharedClinicPlan(plan)} onSave={handleSave} onClose={()=>setShowModal(false)}/>}
 
         {/* Withdraw Modal */}
         {showWithdrawModal&&<WithdrawModal lang={lang} onSave={handleWithdraw} onClose={()=>setShowWithdrawModal(false)}/>}
