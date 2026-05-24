@@ -367,7 +367,7 @@ type PatientForm = {
   date_of_birth:string; has_diabetes:boolean; has_hypertension:boolean;
   notes:string;
   extra_fields: Record<string, string | boolean>;
-  doctor_id?: string; // للخطط المشتركة فقط
+
 };
 
 type ToothStatus = "healthy"|"filled"|"crown"|"missing"|"extraction"|"root_canal"|"bridge"|"implant"|"fractured"|"decayed";
@@ -1066,11 +1066,9 @@ function Field({ label, children }:{ label:string; children:ReactNode }) {
 }
 
 // ─── PatientModal مع أسئلة ديناميكية ─────────────────────
-function PatientModal({ lang, patient, clinicType, onSave, onClose, doctors, isShared }: {
+function PatientModal({ lang, patient, clinicType, onSave, onClose }: {
   lang:Lang; patient:Patient|null; clinicType:ClinicType;
   onSave:(form:PatientForm,id?:number)=>void; onClose:()=>void;
-  doctors?:{id:string;name:string;name_en?:string;color?:string;is_active?:boolean}[];
-  isShared?:boolean;
 }) {
   const tr     = T[lang];
   const isAr   = lang==="ar";
@@ -1093,7 +1091,6 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, doctors, isS
     gender:patient?.gender??"", date_of_birth:patient?.date_of_birth??"",
     has_diabetes:patient?.has_diabetes??false, has_hypertension:patient?.has_hypertension??false,
     notes:patient?.notes??"", extra_fields:{},
-    doctor_id:(patient as any)?.doctor_id??"",
   });
   const [error, setError] = useState("");
 
@@ -1103,7 +1100,6 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, doctors, isS
   const handleSave = () => {
     if (!form.name.trim()||!form.gender) { setError(tr.modal.required); return; }
     if (!form.phone.trim()) { setError(isAr ? "رقم الهاتف مطلوب" : "Phone number is required"); return; }
-    if (isShared && (!form.doctor_id)) { setError(isAr ? "يرجى تحديد الطبيب المسؤول" : "Please select the assigned doctor"); return; }
     onSave(form,patient?.id);
   };
 
@@ -1170,38 +1166,6 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, doctors, isS
               );
             })}
           </div>
-
-          {/* ── تحديد الطبيب — للخطط المشتركة فقط ── */}
-          {isShared && doctors && doctors.length > 0 && (
-            <div style={{ marginBottom:18, padding:"14px 16px", background:"rgba(14,138,110,.06)", border:"1.5px solid rgba(14,138,110,.2)", borderRadius:12 }}>
-              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
-                <span style={{ fontSize:18 }}>👨‍⚕️</span>
-                <span style={{ fontSize:13,fontWeight:700,color:"#0e8a6e" }}>{isAr ? "تخصيص الطبيب المسؤول" : "Assign Responsible Doctor"}</span>
-              </div>
-              <select
-                value={form.doctor_id??""}
-                onChange={e=>setForm(p=>({...p,doctor_id:e.target.value}))}
-                style={{ ...inputSt, borderColor: form.doctor_id ? "rgba(14,138,110,.5)" : "#e8eaed", background: form.doctor_id ? "rgba(14,138,110,.04)" : "#fafbfc" }}
-              >
-                <option value="">{isAr ? "-- اختر الطبيب --" : "-- Select Doctor --"}</option>
-                {doctors.map(dr=>(
-                  <option key={dr.id} value={dr.id}>{isAr ? dr.name : (dr.name_en || dr.name)}</option>
-                ))}
-              </select>
-              {/* معاينة الطبيب المختار مع لونه */}
-              {form.doctor_id && (() => {
-                const sel = doctors.find(d=>d.id===form.doctor_id);
-                if (!sel) return null;
-                const c = sel.color||"#0e8a6e";
-                return (
-                  <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, padding:"6px 10px", background:`${c}10`, borderRadius:8, border:`1px solid ${c}30` }}>
-                    <span style={{ width:10, height:10, borderRadius:"50%", background:c, flexShrink:0 }}/>
-                    <span style={{ fontSize:12, fontWeight:700, color:c }}>{isAr?sel.name:(sel.name_en||sel.name)}</span>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
 
           {/* ── أسئلة مخصصة حسب نوع العيادة ── */}
           {extraQs.length>0&&(
@@ -1364,7 +1328,6 @@ export default function PatientsPage() {
   const [maxDoctors, setMaxDoctors]      = useState<number>(2); // الحد المخصص من الأدمن
   // للخطط المشتركة: قائمة الأطباء + الطبيب المحدد لتصفية المرضى
   const [doctors,        setDoctors]        = useState<{id:string; name:string; name_en?:string; color?:string; is_active?:boolean}[]>([]);
-  const [selectedDoctor, setSelectedDoctor] = useState<string>("all"); // "all" أو doctor_id
 
   const [patients,       setPatients]       = useState<Patient[]>([]);
   const [loading,        setLoading]        = useState(true);
@@ -1449,7 +1412,7 @@ export default function PatientsPage() {
     if (filter==="diabetic"&&!p.has_diabetes) return false;
     if (filter==="hypertension"&&!p.has_hypertension) return false;
     // تصفية حسب الطبيب في الخطط المشتركة
-    if (isSharedPlan(plan) && selectedDoctor !== "all" && (p as any).doctor_id !== selectedDoctor) return false;
+
     return true;
   });
 
@@ -1477,7 +1440,6 @@ export default function PatientsPage() {
           date_of_birth:form.date_of_birth||null, has_diabetes:form.has_diabetes,
           has_hypertension:form.has_hypertension, notes:form.notes||null,
           ...(mrn ? { mrn } : {}),
-          ...(isSharedPlan(plan) && form.doctor_id ? { doctor_id: form.doctor_id } : {}),
         }).eq("id",id);
         // حفظ extra_fields في patient_profiles
         if (Object.keys(form.extra_fields).length) {
@@ -1492,7 +1454,6 @@ export default function PatientsPage() {
           user_id:userId, name:form.name, phone:form.phone, gender:form.gender,
           date_of_birth:form.date_of_birth||null, has_diabetes:form.has_diabetes,
           has_hypertension:form.has_hypertension, notes:form.notes, is_hidden:false, mrn,
-          ...(isSharedPlan(plan) && form.doctor_id ? { doctor_id: form.doctor_id } : {}),
         }).select().single();
         if (error) throw error;
         if (newPatient) {
@@ -1642,8 +1603,8 @@ export default function PatientsPage() {
                   </div>
                   <div style={{ fontSize:11, color:"#888" }}>
                     {isAr
-                      ? `خطتك تدعم حتى ${maxDoctors} أطباء — المرضى مرتبطون بالطبيب المخصص`
-                      : `Your plan supports up to ${maxDoctors} doctors — patients are assigned per doctor`}
+                      ? `خطتك تدعم حتى ${maxDoctors} أطباء`
+                      : `Your plan supports up to ${maxDoctors} doctors`}
                   </div>
                 </div>
                 <div style={{ textAlign:"center", flexShrink:0 }}>
@@ -1695,41 +1656,6 @@ export default function PatientsPage() {
               ))}
             </div>
 
-            {/* ── شريط تصفية الأطباء — للخطط المشتركة فقط ── */}
-            {isSharedPlan(plan) && doctors.length > 0 && (
-              <div style={{ background:"#fff", borderRadius:14, padding:"14px 18px", border:"1.5px solid rgba(14,138,110,.2)", boxShadow:"0 2px 8px rgba(14,138,110,.08)", marginBottom:16 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                  <span style={{ fontSize:14 }}>👨‍⚕️</span>
-                  <span style={{ fontSize:12, fontWeight:700, color:"#0e8a6e" }}>{isAr ? "عرض حسب الطبيب" : "Filter by Doctor"}</span>
-                  <span style={{ fontSize:11, color:"#aaa", marginRight:"auto", marginLeft:isAr?"auto":0 }}>
-                    {isAr ? `${maxDoctors} أطباء كحد أقصى` : `Up to ${maxDoctors} doctors`}
-                  </span>
-                </div>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  <button
-                    onClick={()=>setSelectedDoctor("all")}
-                    style={{ padding:"7px 16px", borderRadius:20, fontFamily:"Rubik,sans-serif", fontSize:12, fontWeight:600, cursor:"pointer", border:`1.5px solid ${selectedDoctor==="all"?"#0e8a6e":"#eef0f3"}`, background:selectedDoctor==="all"?"rgba(14,138,110,.1)":"#fafbfc", color:selectedDoctor==="all"?"#0e8a6e":"#888", transition:"all .15s" }}>
-                    {isAr ? "الكل" : "All"}
-                    <span style={{ marginRight:isAr?6:0, marginLeft:isAr?0:6, fontSize:11, background:"rgba(14,138,110,.15)", color:"#0e8a6e", padding:"1px 7px", borderRadius:10, fontWeight:700 }}>
-                      {patients.filter(p=>!p.is_hidden).length}
-                    </span>
-                  </button>
-                  {doctors.map(dr=>{
-                    const drCount = patients.filter(p=>!p.is_hidden && (p as any).doctor_id===dr.id).length;
-                    const isActive = selectedDoctor === dr.id;
-                    const drColor = dr.color || "#0e8a6e";
-                    return (
-                      <button key={dr.id} onClick={()=>setSelectedDoctor(dr.id)}
-                        style={{ padding:"7px 16px", borderRadius:20, fontFamily:"Rubik,sans-serif", fontSize:12, fontWeight:600, cursor:"pointer", border:`1.5px solid ${isActive?drColor:"#eef0f3"}`, background:isActive?`${drColor}18`:"#fafbfc", color:isActive?drColor:"#888", transition:"all .15s", display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ width:8, height:8, borderRadius:"50%", background:drColor, display:"inline-block", flexShrink:0 }}/>
-                        {isAr ? dr.name : (dr.name_en || dr.name)}
-                        <span style={{ fontSize:11, background:isActive?`${drColor}28`:"#f0f0f0", color:isActive?drColor:"#aaa", padding:"1px 7px", borderRadius:10, fontWeight:700 }}>{drCount}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* SEARCH + FILTERS */}
             <div className="search-filter-box" style={{ background:"#fff",borderRadius:14,padding:"18px 20px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 10px rgba(8,99,186,.05)",marginBottom:16 }}>
@@ -1806,12 +1732,6 @@ export default function PatientsPage() {
                         </div>
                         <div style={{ fontSize:10,color:"#bbb",marginTop:1,display:"flex",alignItems:"center",gap:5 }}>
                           <span>#{p.id}</span>
-                          {/* شارة الطبيب — في الخطط المشتركة فقط */}
-                          {isSharedPlan(plan) && (p as any).doctor_id && (() => {
-                            const dr = doctors.find(d=>d.id===(p as any).doctor_id);
-                            const drColor = dr?.color || "#0e8a6e";
-                            return dr ? <span style={{ fontSize:9,background:`${drColor}15`,color:drColor,padding:"1px 6px",borderRadius:8,fontWeight:700 }}>👨‍⚕️ {isAr?dr.name:(dr.name_en||dr.name)}</span> : null;
-                          })()}
                         </div>
                       </div>
                     </div>
@@ -1874,7 +1794,7 @@ export default function PatientsPage() {
         <button className="fab-add" onClick={()=>setAddModal(true)} style={{ display:"none",position:"fixed",bottom:24,right:isAr?20:undefined,left:isAr?undefined:20,width:58,height:58,borderRadius:"50%",background:clinicMeta.color,color:"#fff",border:"none",cursor:"pointer",fontSize:28,lineHeight:1,boxShadow:`0 6px 24px ${clinicMeta.color}60`,zIndex:30,alignItems:"center",justifyContent:"center" }}>＋</button>
 
         {(addModal||editPatient)&&(
-          <PatientModal lang={lang} patient={editPatient} clinicType={clinicType} onSave={handleSave} onClose={()=>{ setAddModal(false);setEditPatient(null); }} doctors={doctors} isShared={isSharedPlan(plan)}/>
+          <PatientModal lang={lang} patient={editPatient} clinicType={clinicType} onSave={handleSave} onClose={()=>{ setAddModal(false);setEditPatient(null); }}/>
         )}
         {deletePatient&&<DeleteModal lang={lang} patient={deletePatient} onConfirm={handleDelete} onClose={()=>setDeletePatient(null)}/>}
         {profilePatient&&<PatientProfileDrawer lang={lang} patient={profilePatient} clinicType={clinicType} onClose={()=>setProfilePatient(null)}/>}
