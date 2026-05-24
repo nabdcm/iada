@@ -955,7 +955,7 @@ const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: s
 };
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, activePage="patients", plan="basic" }: { lang:Lang; setLang:(l:Lang)=>void; activePage?:string; plan?:PlanType }) {
+function Sidebar({ lang, setLang, activePage="patients", plan="basic", maxDoctors=2 }: { lang:Lang; setLang:(l:Lang)=>void; activePage?:string; plan?:PlanType; maxDoctors?:number }) {
   const tr   = T[lang];
   const isAr = lang==="ar";
   const [collapsed,  setCollapsed]  = useState(false);
@@ -1594,7 +1594,7 @@ export default function PatientsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="patients" plan={plan}/>
+        <Sidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} maxDoctors={maxDoctors}/>
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 
