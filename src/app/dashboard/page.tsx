@@ -131,8 +131,8 @@ const t = {
 type Lang = "ar" | "en";
 
 const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2980b9","#8e44ad"];
-const getColor    = (id: number) => AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length];
-const getInitials = (name: string) => name.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
+const getColor    = (id: number) => AVATAR_COLORS[Math.abs(id ?? 0) % AVATAR_COLORS.length] ?? "#0863ba";
+const getInitials = (name: string) => (name || "?").split(" ").slice(0,2).map(w => w[0] ?? "").join("").toUpperCase() || "?";
 
 // ── Force Western (Latin) numerals regardless of locale ─────
 const toWestern = (val: string | number): string => {
@@ -632,6 +632,20 @@ export default function DashboardPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [plan, setPlan] = useState<PlanType>("basic");
 
+  // Fix hydration mismatch (React error #418): date/time computed client-side only
+  const [greetingKey, setGreetingKey] = useState<"greeting_morning"|"greeting_afternoon"|"greeting_evening">("greeting_morning");
+  const [dateStr, setDateStr]         = useState("");
+  const [daysElapsed, setDaysElapsed] = useState(1);
+
+  useEffect(() => {
+    const now = new Date();
+    setGreetingKey(getGreetingKey());
+    setDateStr(now.toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+    }));
+    setDaysElapsed(now.getDate());
+  }, [lang]);
+
   // Clinic plan: doctors
   const [doctors, setDoctors] = useState<{ id: number; name: string }[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
@@ -656,12 +670,6 @@ export default function DashboardPage() {
 
   // Top patients
   const [topPatients, setTopPatients] = useState<{ id:number; name:string; visits:number }[]>([]);
-
-  const now         = new Date();
-  const greetingKey = getGreetingKey();
-  const dateStr     = now.toLocaleDateString(lang==="ar"?"ar-SA":"en-US", {
-    weekday:"long", year:"numeric", month:"long", day:"numeric",
-  });
 
   const statusColors: Record<string, { bg:string; color:string }> = {
     scheduled: { bg:"rgba(8,99,186,.1)",    color:"#0863ba" },
@@ -795,7 +803,6 @@ export default function DashboardPage() {
     return lang === "ar" ? `${formatted} ${tr.currency}` : `${formatted} ${tr.currency}`;
   };
 
-  const daysElapsed = now.getDate();
   const dailyAvg    = daysElapsed > 0 ? (monthTotalVisits / daysElapsed).toFixed(1) : "0";
 
   // ── Render ────────────────────────────────────────────
