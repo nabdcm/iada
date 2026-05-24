@@ -46,6 +46,17 @@ interface ClinicData {
   doctors_count?: number;     // عدد الأطباء الفعلي المضاف
 }
 
+interface Doctor {
+  id?: number;
+  user_id: string;
+  name: string;
+  specialty: string;
+  phone: string;
+  email: string;
+  color: string;
+  is_active: boolean;
+}
+
 // ============================================================
 // NABD - نبض | Admin Panel
 // ============================================================
@@ -189,6 +200,21 @@ const T = {
       deleteConfirmWarning:"سيتم حذف جميع البيانات نهائياً ولا يمكن التراجع.",
       deleteConfirm:"نعم، احذف نهائياً",
       deleteCancel:"لا، تراجع",
+      tabDoctors:"الأطباء",
+      doctors:{
+        title:"إدارة الأطباء", addDoctor:"إضافة طبيب",
+        name:"اسم الطبيب *", namePh:"د. محمد الأحمد",
+        specialty:"التخصص", specialtyPh:"طب عام، أسنان...",
+        phone:"رقم الهاتف", phonePh:"05xxxxxxxx",
+        email:"البريد الإلكتروني", emailPh:"doctor@clinic.com",
+        color:"اللون التعريفي", save:"حفظ الطبيب", saving:"جاري الحفظ...",
+        cancel:"إلغاء", edit:"تعديل", remove:"حذف",
+        active:"نشط", inactive:"موقوف", toggleActive:"تبديل الحالة",
+        limitReached:"وصلت للحد الأقصى من الأطباء",
+        noName:"يرجى إدخال اسم الطبيب",
+        confirmRemove:"هل تريد حذف هذا الطبيب؟",
+        capacity:"الطاقة الاستيعابية",
+      },
     },
   },
   en: {
@@ -329,6 +355,21 @@ const T = {
       deleteConfirmWarning:"All data will be permanently deleted and cannot be recovered.",
       deleteConfirm:"Yes, Delete Permanently",
       deleteCancel:"No, Cancel",
+      tabDoctors:"Doctors",
+      doctors:{
+        title:"Manage Doctors", addDoctor:"Add Doctor",
+        name:"Doctor Name *", namePh:"Dr. John Smith",
+        specialty:"Specialty", specialtyPh:"General, Dental...",
+        phone:"Phone", phonePh:"05xxxxxxxx",
+        email:"Email", emailPh:"doctor@clinic.com",
+        color:"Color", save:"Save Doctor", saving:"Saving...",
+        cancel:"Cancel", edit:"Edit", remove:"Remove",
+        active:"Active", inactive:"Suspended", toggleActive:"Toggle Status",
+        limitReached:"Reached max doctors limit",
+        noName:"Please enter doctor name",
+        confirmRemove:"Remove this doctor?",
+        capacity:"Capacity",
+      },
     },
   },
 };
@@ -944,6 +985,86 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
 
+  // ── Doctors state ─────────────────────────────────────────
+  const DOCTOR_COLORS = ["#0863ba","#7b2d8b","#0e7c6a","#b5451b","#e67e22","#4a1480","#c0392b","#2e7d32"];
+  const isSharedPlan  = ["shared_basic","shared_pro","shared_enterprise"].includes(clinic.plan);
+  const maxDoctors    = clinic.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[clinic.plan] ?? 2;
+
+  const [doctors,        setDoctors]        = useState<Doctor[]>([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [doctorForm,     setDoctorForm]     = useState<Doctor | null>(null);
+  const [doctorSaving,   setDoctorSaving]   = useState(false);
+  const [doctorError,    setDoctorError]    = useState("");
+
+  useEffect(() => {
+    if (isSharedPlan && clinic.user_id) loadDoctors();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clinic.user_id]);
+
+  const loadDoctors = async () => {
+    setDoctorsLoading(true);
+    const { data, error: err } = await supabase
+      .from("doctors")
+      .select("*")
+      .eq("user_id", clinic.user_id)
+      .order("id");
+    if (!err && data) setDoctors(data as Doctor[]);
+    setDoctorsLoading(false);
+  };
+
+  const openAddDoctor = () => {
+    setDoctorError("");
+    setDoctorForm({
+      user_id:   clinic.user_id!,
+      name:      "",
+      specialty: "",
+      phone:     "",
+      email:     "",
+      color:     DOCTOR_COLORS[doctors.length % DOCTOR_COLORS.length],
+      is_active: true,
+    });
+  };
+
+  const openEditDoctor = (d: Doctor) => {
+    setDoctorError("");
+    setDoctorForm({ ...d });
+  };
+
+  const handleSaveDoctor = async () => {
+    if (!doctorForm?.name.trim()) { setDoctorError(sm.doctors.noName); return; }
+    setDoctorSaving(true); setDoctorError("");
+    if (doctorForm.id) {
+      const { error: err } = await supabase.from("doctors").update({
+        name: doctorForm.name, specialty: doctorForm.specialty,
+        phone: doctorForm.phone, email: doctorForm.email,
+        color: doctorForm.color, is_active: doctorForm.is_active,
+      }).eq("id", doctorForm.id);
+      if (err) { setDoctorError(err.message); setDoctorSaving(false); return; }
+    } else {
+      if (doctors.length >= maxDoctors) { setDoctorError(sm.doctors.limitReached); setDoctorSaving(false); return; }
+      const { error: err } = await supabase.from("doctors").insert({
+        user_id: clinic.user_id, name: doctorForm.name,
+        specialty: doctorForm.specialty, phone: doctorForm.phone,
+        email: doctorForm.email, color: doctorForm.color, is_active: doctorForm.is_active,
+      });
+      if (err) { setDoctorError(err.message); setDoctorSaving(false); return; }
+    }
+    setDoctorSaving(false);
+    setDoctorForm(null);
+    loadDoctors();
+  };
+
+  const handleToggleDoctor = async (d: Doctor) => {
+    await supabase.from("doctors").update({ is_active: !d.is_active }).eq("id", d.id!);
+    loadDoctors();
+  };
+
+  const handleRemoveDoctor = async (d: Doctor) => {
+    if (!window.confirm(sm.doctors.confirmRemove)) return;
+    await supabase.from("doctors").delete().eq("id", d.id!);
+    loadDoctors();
+  };
+
   // ── helpers ──────────────────────────────────────────────
   const genAndSetPass = useCallback(() => {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#";
@@ -1111,8 +1232,13 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
           {/* Tabs */}
           <div style={{ display:"flex",gap:4,background:"#f7f9fc",borderRadius:12,padding:4 }}>
-            <button style={tabStyle("info")}    onClick={() => setActiveTab("info")}>{sm.tabInfo}</button>
-            <button style={tabStyle("sub")}     onClick={() => setActiveTab("sub")}>{sm.tabSub}</button>
+            <button style={tabStyle("info")}     onClick={() => setActiveTab("info")}>{sm.tabInfo}</button>
+            <button style={tabStyle("sub")}      onClick={() => setActiveTab("sub")}>{sm.tabSub}</button>
+            {isSharedPlan && (
+              <button style={tabStyle("doctors")} onClick={() => setActiveTab("doctors")}>
+                👨‍⚕️ {sm.tabDoctors}
+              </button>
+            )}
             <button style={tabStyle("security")} onClick={() => setActiveTab("security")}>{sm.tabSecurity}</button>
           </div>
           <div style={{ height:1,background:"#eef0f3",marginTop:16 }} />
@@ -1331,6 +1457,141 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── TAB: DOCTORS ── */}
+          {activeTab === "doctors" && (
+            <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
+
+              {/* شريط الطاقة الاستيعابية */}
+              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(14,124,106,.05)",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:12,padding:"12px 16px" }}>
+                <div>
+                  <div style={{ fontSize:12,fontWeight:700,color:"#0e7c6a" }}>👨‍⚕️ {sm.doctors.capacity}</div>
+                  <div style={{ fontSize:11,color:"#888",marginTop:2 }}>
+                    {doctors.filter(d=>d.is_active).length} {isAr?"نشط /":"active /"} {doctors.length} {isAr?"مضاف /":"added /"} {maxDoctors} {isAr?"حد أقصى":"max"}
+                  </div>
+                </div>
+                <div style={{ width:80 }}>
+                  <div style={{ height:6,background:"#e8eaed",borderRadius:20,overflow:"hidden" }}>
+                    <div style={{ height:"100%",width:`${Math.min((doctors.length/maxDoctors)*100,100)}%`,background:doctors.length>=maxDoctors?"#c0392b":"#0e7c6a",borderRadius:20,transition:"width .3s" }} />
+                  </div>
+                  <div style={{ fontSize:10,color:"#aaa",textAlign:"center",marginTop:3 }}>{doctors.length}/{maxDoctors}</div>
+                </div>
+              </div>
+
+              {/* زر إضافة */}
+              {doctors.length < maxDoctors && !doctorForm && (
+                <button onClick={openAddDoctor}
+                  style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"11px",border:"1.5px dashed rgba(14,124,106,.4)",borderRadius:12,background:"rgba(14,124,106,.03)",color:"#0e7c6a",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                  ➕ {sm.doctors.addDoctor}
+                </button>
+              )}
+              {doctors.length >= maxDoctors && !doctorForm && (
+                <div style={{ textAlign:"center",fontSize:12,color:"#aaa",padding:"8px",background:"rgba(192,57,43,.04)",border:"1.5px solid rgba(192,57,43,.1)",borderRadius:10 }}>
+                  🔒 {sm.doctors.limitReached} ({maxDoctors})
+                </div>
+              )}
+
+              {/* فورم إضافة / تعديل */}
+              {doctorForm && (
+                <div style={{ background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:14,padding:"16px" }}>
+                  <div style={{ fontSize:13,fontWeight:700,color:"#353535",marginBottom:14 }}>
+                    {doctorForm.id ? (isAr?"تعديل الطبيب":"Edit Doctor") : (isAr?"طبيب جديد":"New Doctor")}
+                  </div>
+                  {doctorError && (
+                    <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#c0392b",marginBottom:10 }}>⚠️ {doctorError}</div>
+                  )}
+                  <div style={{ display:"flex",gap:10,marginBottom:10 }}>
+                    <div style={{ flex:2 }}>
+                      <label style={{ display:"block",fontSize:10,fontWeight:700,color:"#666",marginBottom:5,textTransform:"uppercase" as const }}>{sm.doctors.name}</label>
+                      <input value={doctorForm.name} onChange={e=>setDoctorForm(p=>p?{...p,name:e.target.value}:p)}
+                        placeholder={sm.doctors.namePh}
+                        style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none" }} />
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <label style={{ display:"block",fontSize:10,fontWeight:700,color:"#666",marginBottom:5,textTransform:"uppercase" as const }}>{sm.doctors.specialty}</label>
+                      <input value={doctorForm.specialty} onChange={e=>setDoctorForm(p=>p?{...p,specialty:e.target.value}:p)}
+                        placeholder={sm.doctors.specialtyPh}
+                        style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none" }} />
+                    </div>
+                  </div>
+                  <div style={{ display:"flex",gap:10,marginBottom:10 }}>
+                    <div style={{ flex:1 }}>
+                      <label style={{ display:"block",fontSize:10,fontWeight:700,color:"#666",marginBottom:5,textTransform:"uppercase" as const }}>{sm.doctors.phone}</label>
+                      <input value={doctorForm.phone} onChange={e=>setDoctorForm(p=>p?{...p,phone:e.target.value}:p)}
+                        placeholder={sm.doctors.phonePh}
+                        style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",direction:"ltr" }} />
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <label style={{ display:"block",fontSize:10,fontWeight:700,color:"#666",marginBottom:5,textTransform:"uppercase" as const }}>{sm.doctors.email}</label>
+                      <input value={doctorForm.email} onChange={e=>setDoctorForm(p=>p?{...p,email:e.target.value}:p)}
+                        placeholder={sm.doctors.emailPh}
+                        style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",direction:"ltr" }} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom:14 }}>
+                    <label style={{ display:"block",fontSize:10,fontWeight:700,color:"#666",marginBottom:7,textTransform:"uppercase" as const }}>{sm.doctors.color}</label>
+                    <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                      {DOCTOR_COLORS.map(c => (
+                        <button key={c} type="button" onClick={()=>setDoctorForm(p=>p?{...p,color:c}:p)}
+                          style={{ width:28,height:28,borderRadius:"50%",background:c,border:doctorForm.color===c?"3px solid #353535":"2px solid transparent",cursor:"pointer",boxShadow:doctorForm.color===c?"0 0 0 3px rgba(0,0,0,.15)":"none" }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display:"flex",gap:8 }}>
+                    <button onClick={handleSaveDoctor} disabled={doctorSaving}
+                      style={{ flex:1,padding:"10px",background:"#0e7c6a",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:doctorSaving?"not-allowed":"pointer",opacity:doctorSaving?.7:1 }}>
+                      {doctorSaving ? sm.doctors.saving : sm.doctors.save}
+                    </button>
+                    <button onClick={()=>{setDoctorForm(null);setDoctorError("");}}
+                      style={{ padding:"10px 18px",background:"#f7f9fc",color:"#666",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>
+                      {sm.doctors.cancel}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* قائمة الأطباء */}
+              {doctorsLoading ? (
+                <div style={{ textAlign:"center",padding:"24px",color:"#aaa",fontSize:13 }}>⏳ {isAr?"جاري التحميل...":"Loading..."}</div>
+              ) : doctors.length === 0 && !doctorForm ? (
+                <div style={{ textAlign:"center",padding:"32px 20px",color:"#bbb" }}>
+                  <div style={{ fontSize:40,marginBottom:8 }}>👨‍⚕️</div>
+                  <div style={{ fontSize:13 }}>{isAr?"لا يوجد أطباء مضافون بعد":"No doctors added yet"}</div>
+                </div>
+              ) : (
+                <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                  {doctors.map(d => (
+                    <div key={d.id} style={{ display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#fafbfc",border:`1.5px solid ${d.is_active?"#eef0f3":"rgba(192,57,43,.1)"}`,borderRadius:12,opacity:d.is_active?1:.65 }}>
+                      <div style={{ width:38,height:38,borderRadius:"50%",background:d.color,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:15,fontWeight:800 }}>
+                        {d.name.trim().charAt(0)}
+                      </div>
+                      <div style={{ flex:1,minWidth:0 }}>
+                        <div style={{ fontSize:13,fontWeight:700,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{d.name}</div>
+                        <div style={{ fontSize:11,color:"#aaa",marginTop:2,display:"flex",gap:8,flexWrap:"wrap" }}>
+                          {d.specialty && <span>🏥 {d.specialty}</span>}
+                          {d.phone && <span>📞 {d.phone}</span>}
+                        </div>
+                      </div>
+                      <span style={{ fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:20,background:d.is_active?"rgba(46,125,50,.1)":"rgba(192,57,43,.1)",color:d.is_active?"#2e7d32":"#c0392b",flexShrink:0 }}>
+                        {d.is_active ? sm.doctors.active : sm.doctors.inactive}
+                      </span>
+                      <div style={{ display:"flex",gap:4,flexShrink:0 }}>
+                        <button onClick={()=>openEditDoctor(d)} title={sm.doctors.edit}
+                          style={{ width:30,height:30,borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}>✏️</button>
+                        <button onClick={()=>handleToggleDoctor(d)} title={sm.doctors.toggleActive}
+                          style={{ width:30,height:30,borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                          {d.is_active?"⏸":"▶"}
+                        </button>
+                        <button onClick={()=>handleRemoveDoctor(d)} title={sm.doctors.remove}
+                          style={{ width:30,height:30,borderRadius:8,border:"1.5px solid rgba(192,57,43,.2)",background:"rgba(192,57,43,.04)",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}>🗑️</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
             </div>
           )}
 
