@@ -1003,12 +1003,15 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
   const loadDoctors = async () => {
     setDoctorsLoading(true);
-    const { data, error: err } = await supabase
-      .from("doctors")
-      .select("*")
-      .eq("user_id", clinic.user_id)
-      .order("id");
-    if (!err && data) setDoctors(data as Doctor[]);
+    try {
+      const res = await fetch(`/api/doctors?user_id=${clinic.user_id}`, { cache:"no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setDoctors(data as Doctor[]);
+      }
+    } catch (err) {
+      console.error("loadDoctors error:", err);
+    }
     setDoctorsLoading(false);
   };
 
@@ -1033,35 +1036,45 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
   const handleSaveDoctor = async () => {
     if (!doctorForm?.name.trim()) { setDoctorError(sm.doctors.noName); return; }
     setDoctorSaving(true); setDoctorError("");
-    if (doctorForm.id) {
-      const { error: err } = await supabase.from("doctors").update({
-        name: doctorForm.name, specialty: doctorForm.specialty,
-        phone: doctorForm.phone, email: doctorForm.email,
-        color: doctorForm.color, is_active: doctorForm.is_active,
-      }).eq("id", doctorForm.id);
-      if (err) { setDoctorError(err.message); setDoctorSaving(false); return; }
-    } else {
-      if (doctors.length >= maxDoctors) { setDoctorError(sm.doctors.limitReached); setDoctorSaving(false); return; }
-      const { error: err } = await supabase.from("doctors").insert({
-        user_id: clinic.user_id, name: doctorForm.name,
-        specialty: doctorForm.specialty, phone: doctorForm.phone,
-        email: doctorForm.email, color: doctorForm.color, is_active: doctorForm.is_active,
-      });
-      if (err) { setDoctorError(err.message); setDoctorSaving(false); return; }
-    }
+    const action = doctorForm.id ? "update" : "add";
+    const res = await fetch("/api/doctors", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        action,
+        id:        doctorForm.id,
+        user_id:   clinic.user_id,
+        name:      doctorForm.name,
+        specialty: doctorForm.specialty,
+        phone:     doctorForm.phone,
+        email:     doctorForm.email,
+        color:     doctorForm.color,
+        is_active: doctorForm.is_active,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) { setDoctorError(json.error || (isAr ? "حدث خطأ" : "An error occurred")); setDoctorSaving(false); return; }
     setDoctorSaving(false);
     setDoctorForm(null);
     loadDoctors();
   };
 
   const handleToggleDoctor = async (d: Doctor) => {
-    await supabase.from("doctors").update({ is_active: !d.is_active }).eq("id", d.id!);
+    await fetch("/api/doctors", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ action: "toggle", id: d.id }),
+    });
     loadDoctors();
   };
 
   const handleRemoveDoctor = async (d: Doctor) => {
     if (!window.confirm(sm.doctors.confirmRemove)) return;
-    await supabase.from("doctors").delete().eq("id", d.id!);
+    await fetch("/api/doctors", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ action: "delete", id: d.id }),
+    });
     loadDoctors();
   };
 
