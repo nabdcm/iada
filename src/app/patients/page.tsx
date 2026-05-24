@@ -1038,7 +1038,7 @@ function Sidebar({ lang, setLang, activePage="patients", plan="basic" }: { lang:
                 <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2 }}>
                   <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang]}</span>
-                  {isSharedPlan(plan)&&<span style={{ fontSize:9,color:"rgba(255,255,255,0.5)" }}>{isAr?`👨‍⚕️ حتى ${SHARED_PLAN_MAX_DOCTORS[plan]} أطباء`:`👨‍⚕️ up to ${SHARED_PLAN_MAX_DOCTORS[plan]} drs`}</span>}
+                  {isSharedPlan(plan)&&<span style={{ fontSize:9,color:"rgba(255,255,255,0.5)" }}>{isAr?`👨‍⚕️ حتى ${maxDoctors} أطباء`:`👨‍⚕️ up to ${maxDoctors} drs`}</span>}
                 </div>
               </div>
               <button onClick={()=>setLang(lang==="ar"?"en":"ar")} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}} style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>🌐 {lang==="ar"?"English":"العربية"}</button>
@@ -1069,7 +1069,7 @@ function Field({ label, children }:{ label:string; children:ReactNode }) {
 function PatientModal({ lang, patient, clinicType, onSave, onClose, doctors, isShared }: {
   lang:Lang; patient:Patient|null; clinicType:ClinicType;
   onSave:(form:PatientForm,id?:number)=>void; onClose:()=>void;
-  doctors?:{id:string;name:string;name_en?:string}[];
+  doctors?:{id:string;name:string;name_en?:string;color?:string;is_active?:boolean}[];
   isShared?:boolean;
 }) {
   const tr     = T[lang];
@@ -1188,6 +1188,18 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, doctors, isS
                   <option key={dr.id} value={dr.id}>{isAr ? dr.name : (dr.name_en || dr.name)}</option>
                 ))}
               </select>
+              {/* معاينة الطبيب المختار مع لونه */}
+              {form.doctor_id && (() => {
+                const sel = doctors.find(d=>d.id===form.doctor_id);
+                if (!sel) return null;
+                const c = sel.color||"#0e8a6e";
+                return (
+                  <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:8, padding:"6px 10px", background:`${c}10`, borderRadius:8, border:`1px solid ${c}30` }}>
+                    <span style={{ width:10, height:10, borderRadius:"50%", background:c, flexShrink:0 }}/>
+                    <span style={{ fontSize:12, fontWeight:700, color:c }}>{isAr?sel.name:(sel.name_en||sel.name)}</span>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1349,8 +1361,9 @@ export default function PatientsPage() {
   const [clinicType, setClinicTypeState] = useState<ClinicType>("general");
   const [clinicMeta, setClinicMeta]      = useState(CLINIC_TYPE_META.general);
   const [plan,       setPlan]            = useState<PlanType>("basic");
+  const [maxDoctors, setMaxDoctors]      = useState<number>(2); // الحد المخصص من الأدمن
   // للخطط المشتركة: قائمة الأطباء + الطبيب المحدد لتصفية المرضى
-  const [doctors,        setDoctors]        = useState<{id:string; name:string; name_en?:string}[]>([]);
+  const [doctors,        setDoctors]        = useState<{id:string; name:string; name_en?:string; color?:string; is_active?:boolean}[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("all"); // "all" أو doctor_id
 
   const [patients,       setPatients]       = useState<Patient[]>([]);
@@ -1369,7 +1382,7 @@ export default function PatientsPage() {
     try {
       const { data:{ user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("clinics").select("clinic_type, plan").eq("user_id",user.id).maybeSingle();
+      const { data } = await supabase.from("clinics").select("clinic_type, plan, max_doctors").eq("user_id",user.id).maybeSingle();
       if (data?.clinic_type) {
         const ct = data.clinic_type as ClinicType;
         setClinicTypeState(ct);
@@ -1378,12 +1391,16 @@ export default function PatientsPage() {
       if (data?.plan) {
         const p = data.plan as PlanType;
         setPlan(p);
-        // تحميل قائمة الأطباء للخطط المشتركة
+        // تحميل الحد المخصص من الأدمن (مع fallback للافتراضي)
+        const customMax = data.max_doctors ?? SHARED_PLAN_MAX_DOCTORS[p] ?? 2;
+        setMaxDoctors(customMax);
+        // تحميل قائمة الأطباء للخطط المشتركة (النشطون فقط)
         if (isSharedPlan(p)) {
           const { data: drs } = await supabase
             .from("clinic_doctors")
-            .select("id, name, name_en")
+            .select("id, name, name_en, color, is_active")
             .eq("user_id", user.id)
+            .eq("is_active", true)
             .order("created_at", { ascending: true });
           if (drs) setDoctors(drs);
         }
@@ -1625,8 +1642,8 @@ export default function PatientsPage() {
                   </div>
                   <div style={{ fontSize:11, color:"#888" }}>
                     {isAr
-                      ? `خطتك تدعم حتى ${SHARED_PLAN_MAX_DOCTORS[plan]} أطباء — المرضى مرتبطون بالطبيب المخصص`
-                      : `Your plan supports up to ${SHARED_PLAN_MAX_DOCTORS[plan]} doctors — patients are assigned per doctor`}
+                      ? `خطتك تدعم حتى ${maxDoctors} أطباء — المرضى مرتبطون بالطبيب المخصص`
+                      : `Your plan supports up to ${maxDoctors} doctors — patients are assigned per doctor`}
                   </div>
                 </div>
                 <div style={{ textAlign:"center", flexShrink:0 }}>
@@ -1685,7 +1702,7 @@ export default function PatientsPage() {
                   <span style={{ fontSize:14 }}>👨‍⚕️</span>
                   <span style={{ fontSize:12, fontWeight:700, color:"#0e8a6e" }}>{isAr ? "عرض حسب الطبيب" : "Filter by Doctor"}</span>
                   <span style={{ fontSize:11, color:"#aaa", marginRight:"auto", marginLeft:isAr?"auto":0 }}>
-                    {isAr ? `${SHARED_PLAN_MAX_DOCTORS[plan]} أطباء كحد أقصى` : `Up to ${SHARED_PLAN_MAX_DOCTORS[plan]} doctors`}
+                    {isAr ? `${maxDoctors} أطباء كحد أقصى` : `Up to ${maxDoctors} doctors`}
                   </span>
                 </div>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
@@ -1700,11 +1717,13 @@ export default function PatientsPage() {
                   {doctors.map(dr=>{
                     const drCount = patients.filter(p=>!p.is_hidden && (p as any).doctor_id===dr.id).length;
                     const isActive = selectedDoctor === dr.id;
+                    const drColor = dr.color || "#0e8a6e";
                     return (
                       <button key={dr.id} onClick={()=>setSelectedDoctor(dr.id)}
-                        style={{ padding:"7px 16px", borderRadius:20, fontFamily:"Rubik,sans-serif", fontSize:12, fontWeight:600, cursor:"pointer", border:`1.5px solid ${isActive?"#0e8a6e":"#eef0f3"}`, background:isActive?"rgba(14,138,110,.1)":"#fafbfc", color:isActive?"#0e8a6e":"#888", transition:"all .15s", display:"flex", alignItems:"center", gap:6 }}>
+                        style={{ padding:"7px 16px", borderRadius:20, fontFamily:"Rubik,sans-serif", fontSize:12, fontWeight:600, cursor:"pointer", border:`1.5px solid ${isActive?drColor:"#eef0f3"}`, background:isActive?`${drColor}18`:"#fafbfc", color:isActive?drColor:"#888", transition:"all .15s", display:"flex", alignItems:"center", gap:6 }}>
+                        <span style={{ width:8, height:8, borderRadius:"50%", background:drColor, display:"inline-block", flexShrink:0 }}/>
                         {isAr ? dr.name : (dr.name_en || dr.name)}
-                        <span style={{ fontSize:11, background:isActive?"rgba(14,138,110,.2)":"#f0f0f0", color:isActive?"#0e8a6e":"#aaa", padding:"1px 7px", borderRadius:10, fontWeight:700 }}>{drCount}</span>
+                        <span style={{ fontSize:11, background:isActive?`${drColor}28`:"#f0f0f0", color:isActive?drColor:"#aaa", padding:"1px 7px", borderRadius:10, fontWeight:700 }}>{drCount}</span>
                       </button>
                     );
                   })}
@@ -1790,7 +1809,8 @@ export default function PatientsPage() {
                           {/* شارة الطبيب — في الخطط المشتركة فقط */}
                           {isSharedPlan(plan) && (p as any).doctor_id && (() => {
                             const dr = doctors.find(d=>d.id===(p as any).doctor_id);
-                            return dr ? <span style={{ fontSize:9,background:"rgba(14,138,110,.1)",color:"#0e8a6e",padding:"1px 6px",borderRadius:8,fontWeight:700 }}>👨‍⚕️ {isAr?dr.name:(dr.name_en||dr.name)}</span> : null;
+                            const drColor = dr?.color || "#0e8a6e";
+                            return dr ? <span style={{ fontSize:9,background:`${drColor}15`,color:drColor,padding:"1px 6px",borderRadius:8,fontWeight:700 }}>👨‍⚕️ {isAr?dr.name:(dr.name_en||dr.name)}</span> : null;
                           })()}
                         </div>
                       </div>
