@@ -148,25 +148,23 @@ function getGreetingKey(): "greeting_morning" | "greeting_afternoon" | "greeting
 
 // ─── Plan access rules ────────────────────────────────────
 const PLAN_ACCESS: Record<string, string[]> = {
-  payments:      ["pro", "enterprise", "clinic_basic", "clinic_pro", "clinic_enterprise"],
-  prescriptions: ["enterprise", "clinic_enterprise"],
-  tracking:      ["enterprise", "clinic_enterprise"],
+  payments:      ["pro", "enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+  prescriptions: ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+  tracking:      ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
 };
 
-// Individual plans
-// clinic_basic      → up to 2 doctors  | $7.99/mo  | $79/yr
-// clinic_pro        → up to 3 doctors  | $13.99/mo | $139/yr
-// clinic_enterprise → up to 5 doctors+ | custom pricing
-type PlanType = "basic" | "pro" | "enterprise" | "clinic_basic" | "clinic_pro" | "clinic_enterprise";
+// خطط فردية: basic | pro | enterprise
+// خطط مشتركة: shared_basic (2 أطباء) | shared_pro (3 أطباء) | shared_enterprise (5 أطباء+)
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
 
-const isClinicPlan = (plan: PlanType) =>
-  ["clinic_basic", "clinic_pro", "clinic_enterprise"].includes(plan);
+const isSharedPlan = (plan: PlanType) =>
+  ["shared_basic", "shared_pro", "shared_enterprise"].includes(plan);
 
-// Max doctors per shared plan (admin can override in admin panel)
-const CLINIC_PLAN_MAX_DOCTORS: Record<string, number> = {
-  clinic_basic:      2,
-  clinic_pro:        3,
-  clinic_enterprise: 5,
+// الحد الافتراضي للأطباء — الأدمن يستطيع تعديله لكل عيادة
+const SHARED_PLAN_DEFAULT_MAX: Record<string, number> = {
+  shared_basic:      2,
+  shared_pro:        3,
+  shared_enterprise: 5,
 };
 
 const canAccess = (feature: string, plan: PlanType) =>
@@ -176,12 +174,12 @@ const canAccess = (feature: string, plan: PlanType) =>
 const getPlanBadge = (plan: PlanType) => PLAN_BADGE[plan] ?? PLAN_BADGE["basic"];
 
 const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string; isShared?: boolean }> = {
-  basic:             { label:{ ar:"الأساسية",              en:"Basic"              }, color:"#0863ba" },
-  pro:               { label:{ ar:"الاحترافية",            en:"Professional"       }, color:"#7b2d8b" },
-  enterprise:        { label:{ ar:"الشاملة",               en:"Comprehensive"      }, color:"#e67e22" },
-  clinic_basic:      { label:{ ar:"عيادة - أساسية",        en:"Clinic Basic"       }, color:"#0891b2", isShared:true },
-  clinic_pro:        { label:{ ar:"عيادة - احترافية",      en:"Clinic Pro"         }, color:"#7c3aed", isShared:true },
-  clinic_enterprise: { label:{ ar:"عيادة - شاملة",         en:"Clinic Enterprise"  }, color:"#d97706", isShared:true },
+  basic:             { label:{ ar:"الأساسية",           en:"Basic"           }, color:"#0863ba" },
+  pro:               { label:{ ar:"الاحترافية",         en:"Professional"    }, color:"#7b2d8b" },
+  enterprise:        { label:{ ar:"الشاملة",            en:"Comprehensive"   }, color:"#e67e22" },
+  shared_basic:      { label:{ ar:"مشتركة - أساسية",   en:"Shared Basic"    }, color:"#0e7c6a", isShared:true },
+  shared_pro:        { label:{ ar:"مشتركة - احترافية", en:"Shared Pro"      }, color:"#b5451b", isShared:true },
+  shared_enterprise: { label:{ ar:"مشتركة - شاملة",    en:"Shared Enterprise"}, color:"#4a1480", isShared:true },
 };
 
 // ─── Sidebar ──────────────────────────────────────────────
@@ -649,11 +647,11 @@ export default function DashboardPage() {
     setDaysElapsed(now.getDate());
   }, [lang]);
 
-  // Clinic plan: doctors
-  const [doctors, setDoctors] = useState<{ id: number; name: string }[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
+  // Shared clinic plan: doctors
+  const [doctors, setDoctors] = useState<{ id: string; name: string; name_en?: string; color?: string }[]>([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [activeDoctorCount, setActiveDoctorCount] = useState(0);
-  const maxDoctorCount = CLINIC_PLAN_MAX_DOCTORS[plan] ?? 0;
+  const [maxDoctors, setMaxDoctors] = useState(0);
 
   // Patients
   const [totalPatients, setTotalPatients] = useState(0);
@@ -692,18 +690,22 @@ export default function DashboardPage() {
 
       // ── Clinic plan ──
       const { data: clinicData } = await supabase
-        .from("clinics").select("plan").eq("user_id", userId).single();
+        .from("clinics").select("plan, max_doctors").eq("user_id", userId).single();
       const fetchedPlan = (clinicData?.plan ?? "basic") as PlanType;
       if (clinicData?.plan) setPlan(fetchedPlan);
+      // max_doctors: يُقرأ من قاعدة البيانات (الأدمن يضبطه) مع fallback للافتراضي
+      const fetchedMax = clinicData?.max_doctors ?? SHARED_PLAN_DEFAULT_MAX[fetchedPlan] ?? 0;
+      setMaxDoctors(fetchedMax);
 
       // ── Doctors (only for shared clinic plans) ──
-      let doctorList: { id: number; name: string }[] = [];
-      if (isClinicPlan(fetchedPlan)) {
+      let doctorList: { id: string; name: string; name_en?: string; color?: string }[] = [];
+      if (isSharedPlan(fetchedPlan)) {
         const { data: doctorsData } = await supabase
-          .from("doctors")
-          .select("id, name")
+          .from("clinic_doctors")
+          .select("id, name, name_en, color")
           .eq("user_id", userId)
-          .eq("is_active", true);
+          .eq("is_active", true)
+          .order("created_at", { ascending: true });
         doctorList = doctorsData ?? [];
         setDoctors(doctorList);
         setActiveDoctorCount(doctorList.length);
@@ -738,15 +740,15 @@ export default function DashboardPage() {
         .filter(a => a.date === todayISO)
         .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
 
-      const doctorMap: Record<number, string> = {};
-      doctorList.forEach(d => { doctorMap[d.id] = d.name; });
+      const doctorMap: Record<string, string> = {};
+      doctorList.forEach(d => { doctorMap[String(d.id)] = d.name; });
 
       setTodayTotal(todayAppts.length);
       setTodayCompleted(todayAppts.filter(a => a.status === "completed").length);
       setTodayAppointments(todayAppts.map(a => ({
         ...a,
         patientName: patientMap[a.patient_id] ?? (lang === "ar" ? "مريض" : "Patient"),
-        doctorName:  a.doctor_id ? (doctorMap[a.doctor_id] ?? "") : "",
+        doctorName:  a.doctor_id ? (doctorMap[String(a.doctor_id)] ?? "") : "",
       })));
 
       const weekStart = new Date(localNow);
@@ -857,8 +859,8 @@ export default function DashboardPage() {
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
         <Sidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan}
-          doctorCount={isClinicPlan(plan) ? activeDoctorCount : undefined}
-          maxDoctorCount={isClinicPlan(plan) ? maxDoctorCount : undefined}
+          doctorCount={isSharedPlan(plan) ? activeDoctorCount : undefined}
+          maxDoctorCount={isSharedPlan(plan) ? maxDoctors : undefined}
         />
 
         <main
@@ -953,20 +955,23 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* CLINIC PLAN: Doctor filter bar */}
-            {isClinicPlan(plan) && doctors.length > 0 && (
+            {/* SHARED PLAN: Doctor filter bar */}
+            {isSharedPlan(plan) && doctors.length > 0 && (
               <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:"16px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
                 <div style={{ display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" }}>
                   <div style={{ display:"flex",alignItems:"center",gap:6,marginInlineEnd:8 }}>
                     <span style={{ fontSize:18 }}>👨‍⚕️</span>
                     <span style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{tr.filterByDoctor}</span>
+                    <span style={{ fontSize:11,color:"#aaa",marginInlineStart:4 }}>
+                      ({toWestern(activeDoctorCount)}/{toWestern(maxDoctors)} {isAr?"طبيب":"drs"})
+                    </span>
                   </div>
                   {/* All doctors button */}
                   <button
                     onClick={() => setSelectedDoctorId(null)}
                     style={{
                       padding:"6px 16px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
-                      background: selectedDoctorId === null ? "#0863ba" : "#f0f4fa",
+                      background: selectedDoctorId === null ? "#353535" : "#f0f4fa",
                       color: selectedDoctorId === null ? "#fff" : "#555",
                       border: selectedDoctorId === null ? "none" : "1.5px solid #eef0f3",
                       transition:"all .18s",
@@ -974,9 +979,10 @@ export default function DashboardPage() {
                   >
                     {tr.allDoctors} ({toWestern(todayAppointments.length)})
                   </button>
-                  {/* Per-doctor buttons */}
+                  {/* Per-doctor buttons — كل طبيب بلونه الخاص */}
                   {doctors.map(doc => {
-                    const docAppts = todayAppointments.filter(a => a.doctor_id === doc.id);
+                    const docColor = doc.color || getPlanBadge(plan).color;
+                    const docAppts = todayAppointments.filter(a => String(a.doctor_id) === String(doc.id));
                     const isSelected = selectedDoctorId === doc.id;
                     return (
                       <button
@@ -984,17 +990,18 @@ export default function DashboardPage() {
                         onClick={() => setSelectedDoctorId(doc.id)}
                         style={{
                           padding:"6px 16px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
-                          background: isSelected ? getPlanBadge(plan).color : "#f0f4fa",
+                          background: isSelected ? docColor : "#f0f4fa",
                           color: isSelected ? "#fff" : "#555",
-                          border: isSelected ? "none" : "1.5px solid #eef0f3",
+                          border: isSelected ? `1.5px solid ${docColor}` : "1.5px solid #eef0f3",
                           transition:"all .18s",
                           display:"flex",alignItems:"center",gap:6,
                         }}
                       >
-                        <span>{doc.name}</span>
+                        <span style={{ width:8,height:8,borderRadius:"50%",background:isSelected?"rgba(255,255,255,.7)":docColor,display:"inline-block",flexShrink:0 }}/>
+                        <span>{isAr ? doc.name : (doc.name_en || doc.name)}</span>
                         <span style={{
-                          background: isSelected ? "rgba(255,255,255,0.25)" : "#e0e7ef",
-                          color: isSelected ? "#fff" : "#0863ba",
+                          background: isSelected ? "rgba(255,255,255,0.25)" : `${docColor}20`,
+                          color: isSelected ? "#fff" : docColor,
                           borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:700,
                         }}>
                           {toWestern(docAppts.length)}
@@ -1014,7 +1021,7 @@ export default function DashboardPage() {
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20 }}>
                   <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>
                     {tr.todaySchedule.title}
-                    {isClinicPlan(plan) && selectedDoctorId !== null && (
+                    {isSharedPlan(plan) && selectedDoctorId !== null && (
                       <span style={{ fontSize:12,color:getPlanBadge(plan).color,marginInlineStart:8,fontWeight:500 }}>
                         — {doctors.find(d=>d.id===selectedDoctorId)?.name}
                       </span>
@@ -1029,8 +1036,8 @@ export default function DashboardPage() {
                     <div style={{ fontSize:13 }}>{tr.loading}</div>
                   </div>
                 ) : (() => {
-                  const filteredAppts = isClinicPlan(plan) && selectedDoctorId !== null
-                    ? todayAppointments.filter(a => a.doctor_id === selectedDoctorId)
+                  const filteredAppts = isSharedPlan(plan) && selectedDoctorId !== null
+                    ? todayAppointments.filter(a => String(a.doctor_id) === String(selectedDoctorId))
                     : todayAppointments;
                   if (filteredAppts.length === 0) return (
                     <div style={{ textAlign:"center",padding:"40px 20px",color:"#ccc" }}>
@@ -1059,7 +1066,7 @@ export default function DashboardPage() {
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{appt.patientName}</div>
                           {/* Show doctor name only in clinic plans when viewing all doctors */}
-                          {isClinicPlan(plan) && selectedDoctorId === null && appt.doctorName ? (
+                          {isSharedPlan(plan) && selectedDoctorId === null && appt.doctorName ? (
                             <div style={{ fontSize:11,color:getPlanBadge(plan).color,marginTop:2,fontWeight:500 }}>
                               👨‍⚕️ {appt.doctorName}
                             </div>
@@ -1088,12 +1095,17 @@ export default function DashboardPage() {
                 <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",marginBottom:20 }}>{tr.patientStats}</h3>
 
                 <div className="patient-stats-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20 }}>
-                  {[
+                  {(isSharedPlan(plan) ? [
+                    { label:tr.apptThisMonth,     value:String(monthTotalVisits), color:getPlanBadge(plan).color, bg:`${getPlanBadge(plan).color}10`, icon:"📅" },
+                    { label:tr.dailyAvgLabel,      value:dailyAvg,                color:"#2e7d32", bg:"rgba(46,125,50,.06)",  icon:"📊" },
+                    { label:tr.activeDoctors,      value:String(activeDoctorCount), color:"#7b2d8b", bg:"rgba(123,45,139,.06)", icon:"👨‍⚕️" },
+                    { label:tr.totalPatientsLabel, value:String(totalPatients),   color:"#e67e22", bg:"rgba(230,126,34,.06)", icon:"👥" },
+                  ] : [
                     { label:tr.apptThisMonth,     value:String(monthTotalVisits), color:"#0863ba", bg:"rgba(8,99,186,.06)",   icon:"📅" },
                     { label:tr.dailyAvgLabel,      value:dailyAvg,                color:"#2e7d32", bg:"rgba(46,125,50,.06)",  icon:"📊" },
                     { label:tr.newPatientsMonth,   value:String(newThisMonth),    color:"#7b2d8b", bg:"rgba(123,45,139,.06)", icon:"👤" },
                     { label:tr.totalPatientsLabel, value:String(totalPatients),   color:"#e67e22", bg:"rgba(230,126,34,.06)", icon:"👥" },
-                  ].map((s,i) => (
+                  ]).map((s,i) => (
                     <div key={i} style={{ background:s.bg,borderRadius:12,padding:"14px 16px",border:`1.5px solid ${s.color}20` }}>
                       <div style={{ fontSize:18,marginBottom:6 }}>{s.icon}</div>
                       <div style={{ fontSize:22,fontWeight:800,color:s.color,lineHeight:1,fontVariantNumeric:"tabular-nums" }}>
@@ -1103,6 +1115,36 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* إحصائية خاصة بالعيادات المشتركة: مواعيد اليوم لكل طبيب */}
+                {isSharedPlan(plan) && !loadingStats && doctors.length > 0 && (
+                  <div style={{ padding:14,background:`${getPlanBadge(plan).color}08`,borderRadius:12,border:`1px solid ${getPlanBadge(plan).color}20`,marginBottom:12 }}>
+                    <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>
+                      {isAr ? "مواعيد اليوم لكل طبيب" : "Today's Appointments per Doctor"}
+                    </div>
+                    {doctors.map((doc, di) => {
+                      const docColor = doc.color || AVATAR_COLORS[di % AVATAR_COLORS.length];
+                      const cnt = todayAppointments.filter(a => String(a.doctor_id) === String(doc.id)).length;
+                      const pct = todayTotal > 0 ? Math.round((cnt / todayTotal) * 100) : 0;
+                      return (
+                        <div key={doc.id} style={{ marginBottom:10 }}>
+                          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                              <span style={{ width:8,height:8,borderRadius:"50%",background:docColor,display:"inline-block",flexShrink:0 }}/>
+                              <span style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{isAr ? doc.name : (doc.name_en || doc.name)}</span>
+                            </div>
+                            <span style={{ fontSize:12,fontWeight:700,color:docColor,fontVariantNumeric:"tabular-nums" }}>
+                              {toWestern(cnt)} {isAr?"موعد":"appts"} · {toWestern(pct)}%
+                            </span>
+                          </div>
+                          <div style={{ height:5,background:"#eef0f3",borderRadius:10,overflow:"hidden" }}>
+                            <div style={{ height:"100%",width:`${pct}%`,background:docColor,borderRadius:10,transition:"width .8s ease" }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Today breakdown */}
                 {!loadingStats && todayAppointments.length > 0 && (
@@ -1188,45 +1230,67 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* CLINIC PLAN: Today's appointments breakdown by doctor */}
-            {isClinicPlan(plan) && doctors.length > 0 && !loadingStats && (
-              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginTop:20 }}>
-                <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",marginBottom:20 }}>{tr.todayByDoctor}</h3>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12 }}>
+            {/* SHARED PLAN: ملخص أداء كل طبيب اليوم */}
+            {isSharedPlan(plan) && doctors.length > 0 && !loadingStats && (
+              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:`1.5px solid ${getPlanBadge(plan).color}30`,marginTop:20 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:20 }}>
+                  <span style={{ fontSize:20 }}>👨‍⚕️</span>
+                  <div>
+                    <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",margin:0 }}>{tr.todayByDoctor}</h3>
+                    <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>
+                      {isAr ? `${activeDoctorCount} أطباء نشطون · حد أقصى ${maxDoctors}` : `${activeDoctorCount} active doctors · max ${maxDoctors}`}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12 }}>
                   {doctors.map((doc, di) => {
-                    const docAppts   = todayAppointments.filter(a => a.doctor_id === doc.id);
+                    const docColor   = doc.color || AVATAR_COLORS[di % AVATAR_COLORS.length];
+                    const docAppts   = todayAppointments.filter(a => String(a.doctor_id) === String(doc.id));
                     const docDone    = docAppts.filter(a => a.status === "completed").length;
-                    const docColor   = AVATAR_COLORS[di % AVATAR_COLORS.length];
+                    const docPending = docAppts.filter(a => a.status === "scheduled").length;
                     const pct        = docAppts.length > 0 ? Math.round((docDone / docAppts.length) * 100) : 0;
+                    const isSelected = selectedDoctorId === doc.id;
                     return (
                       <div
                         key={doc.id}
-                        onClick={() => setSelectedDoctorId(selectedDoctorId === doc.id ? null : doc.id)}
+                        onClick={() => setSelectedDoctorId(isSelected ? null : doc.id)}
                         style={{
-                          padding:16,borderRadius:12,cursor:"pointer",
-                          border: selectedDoctorId === doc.id ? `2px solid ${docColor}` : "1.5px solid #eef0f3",
-                          background: selectedDoctorId === doc.id ? `${docColor}08` : "#fafbfc",
+                          padding:16,borderRadius:14,cursor:"pointer",
+                          border: isSelected ? `2px solid ${docColor}` : `1.5px solid ${docColor}25`,
+                          background: isSelected ? `${docColor}08` : "#fafbfc",
                           transition:"all .18s",
+                          boxShadow: isSelected ? `0 4px 16px ${docColor}20` : "none",
                         }}
                       >
-                        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:12 }}>
-                          <div style={{ width:36,height:36,borderRadius:10,background:docColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0 }}>
+                        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:14 }}>
+                          <div style={{ width:40,height:40,borderRadius:12,background:docColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0,boxShadow:`0 3px 10px ${docColor}40` }}>
                             {getInitials(doc.name)}
                           </div>
                           <div style={{ flex:1,minWidth:0 }}>
-                            <div style={{ fontSize:12,fontWeight:700,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{doc.name}</div>
-                            <div style={{ fontSize:11,color:"#aaa" }}>{tr.doctorLabel}</div>
+                            <div style={{ fontSize:13,fontWeight:700,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+                              {isAr ? doc.name : (doc.name_en || doc.name)}
+                            </div>
+                            <div style={{ fontSize:10,color:docColor,fontWeight:600,marginTop:2 }}>{tr.doctorLabel}</div>
                           </div>
+                          {isSelected && <span style={{ fontSize:16 }}>✓</span>}
                         </div>
-                        <div style={{ display:"flex",justifyContent:"space-between",marginBottom:6 }}>
+                        {/* إجمالي المواعيد */}
+                        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
                           <span style={{ fontSize:11,color:"#888" }}>{tr.stats.todayAppointments}</span>
-                          <span style={{ fontSize:13,fontWeight:800,color:docColor,fontVariantNumeric:"tabular-nums" }}>{toWestern(docAppts.length)}</span>
+                          <span style={{ fontSize:18,fontWeight:800,color:docColor,fontVariantNumeric:"tabular-nums" }}>{toWestern(docAppts.length)}</span>
                         </div>
-                        <div style={{ height:5,background:"#eef0f3",borderRadius:10,overflow:"hidden" }}>
+                        {/* شريط التقدم */}
+                        <div style={{ height:6,background:"#eef0f3",borderRadius:10,overflow:"hidden",marginBottom:8 }}>
                           <div style={{ height:"100%",width:`${pct}%`,background:docColor,borderRadius:10,transition:"width .8s ease" }} />
                         </div>
-                        <div style={{ fontSize:10,color:"#aaa",marginTop:4,textAlign:"end",fontVariantNumeric:"tabular-nums" }}>
-                          {toWestern(docDone)} / {toWestern(docAppts.length)} {tr.stats.completed}
+                        {/* تفاصيل */}
+                        <div style={{ display:"flex",justifyContent:"space-between" }}>
+                          <span style={{ fontSize:10,color:"#2e7d32",fontWeight:600,fontVariantNumeric:"tabular-nums" }}>
+                            ✓ {toWestern(docDone)} {isAr?"مكتمل":"done"}
+                          </span>
+                          <span style={{ fontSize:10,color:"#0863ba",fontWeight:600,fontVariantNumeric:"tabular-nums" }}>
+                            ⏳ {toWestern(docPending)} {isAr?"متبقي":"pending"}
+                          </span>
                         </div>
                       </div>
                     );
