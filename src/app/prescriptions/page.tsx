@@ -166,6 +166,7 @@ interface Prescription {
   notes: string;
   medications: Medication[];
   doctor_name?: string;
+  doctor_id?: string;   // للخطط المشتركة — معرّف الطبيب المُصدِر
   clinic_name?: string;
   created_at?: string;
   user_id?: string;
@@ -195,18 +196,32 @@ const TrackingIcon = () => (
 );
 
 // ─── Plan access rules ────────────────────────────────────
-type PlanType = "basic" | "pro" | "enterprise";
+// individual: basic | pro | enterprise
+// shared clinic: shared_basic (2 drs) | shared_pro (3 drs) | shared_enterprise (5 drs)
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
+
+const isSharedPlan = (plan: PlanType): boolean =>
+  plan === "shared_basic" || plan === "shared_pro" || plan === "shared_enterprise";
+
+const SHARED_PLAN_MAX_DOCTORS: Record<PlanType, number> = {
+  basic: 1, pro: 1, enterprise: 1,
+  shared_basic: 2, shared_pro: 3, shared_enterprise: 5,
+};
+
 const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise"],
-  prescriptions: ["enterprise"],
-  tracking:      ["enterprise"],
+  payments:      ["pro","enterprise","shared_basic","shared_pro","shared_enterprise"],
+  prescriptions: ["enterprise","shared_basic","shared_pro","shared_enterprise"],
+  tracking:      ["enterprise","shared_basic","shared_pro","shared_enterprise"],
 };
 const canAccess = (feature:string, plan:PlanType) =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
-  basic:      {label:{ar:"الأساسية",   en:"Basic"},         color:"#0863ba"},
-  pro:        {label:{ar:"الاحترافية", en:"Professional"},  color:"#7b2d8b"},
-  enterprise: {label:{ar:"الشاملة",   en:"Comprehensive"}, color:"#e67e22"},
+  basic:             {label:{ar:"الأساسية",          en:"Basic"},           color:"#0863ba"},
+  pro:               {label:{ar:"الاحترافية",        en:"Professional"},    color:"#7b2d8b"},
+  enterprise:        {label:{ar:"الشاملة",           en:"Comprehensive"},   color:"#e67e22"},
+  shared_basic:      {label:{ar:"مشتركة - أساسية",  en:"Shared - Basic"},  color:"#0e8a6e"},
+  shared_pro:        {label:{ar:"مشتركة - احترافية",en:"Shared - Pro"},    color:"#6a1fa8"},
+  shared_enterprise: {label:{ar:"مشتركة - شاملة",   en:"Shared - Full"},   color:"#c0620a"},
 };
 
 function Sidebar({ lang, setLang, activePage = "prescriptions", plan = "basic" }: {
@@ -325,7 +340,10 @@ function Sidebar({ lang, setLang, activePage = "prescriptions", plan = "basic" }
               <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8 }}>
                 <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }}/>
                 <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
-                <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang]}</span>
+                <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2 }}>
+                  <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang]}</span>
+                  {isSharedPlan(plan)&&<span style={{ fontSize:9,color:"rgba(255,255,255,0.5)" }}>{isAr?`👨‍⚕️ حتى ${SHARED_PLAN_MAX_DOCTORS[plan]} أطباء`:`👨‍⚕️ up to ${SHARED_PLAN_MAX_DOCTORS[plan]} drs`}</span>}
+                </div>
               </div>
               <button onClick={() => setLang(lang==="ar"?"en":"ar")}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}}
@@ -651,6 +669,9 @@ export default function PrescriptionsPage() {
   const [doctorName, setDoctorName] = useState("الطبيب");
   const [isMobile, setIsMobile] = useState(false);
   const [plan, setPlan] = useState<PlanType>("basic");
+  // للخطط المشتركة: قائمة الأطباء + الطبيب المحدد لإصدار الوصفة
+  const [doctors, setDoctors] = useState<{id:string; name:string; name_en?:string}[]>([]);
+  const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>("all");
 
   // Form state
   const [form, setForm] = useState<Omit<Prescription, "id" | "created_at">>({
@@ -661,6 +682,7 @@ export default function PrescriptionsPage() {
     notes: "",
     medications: [],
     doctor_name: "",
+    doctor_id: "",
     clinic_name: "",
     user_id: "",
   });
@@ -697,7 +719,19 @@ export default function PrescriptionsPage() {
       }
       const { data: clinicData } = await supabase
         .from("clinics").select("plan").eq("user_id", userId).maybeSingle();
-      if (clinicData?.plan) setPlan(clinicData.plan as PlanType);
+      if (clinicData?.plan) {
+        const p = clinicData.plan as PlanType;
+        setPlan(p);
+        // تحميل قائمة الأطباء للخطط المشتركة
+        if (isSharedPlan(p)) {
+          const { data: drs } = await supabase
+            .from("clinic_doctors")
+            .select("id, name, name_en")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true });
+          if (drs) setDoctors(drs);
+        }
+      }
 
       // Load prescriptions
       const { data: rxData } = await supabase
@@ -726,7 +760,8 @@ export default function PrescriptionsPage() {
       patient_id: 0, patient_name: "",
       date: new Date().toISOString().split("T")[0],
       diagnosis: "", notes: "", medications: [],
-      doctor_name: doctorName, clinic_name: clinicName,
+      doctor_name: doctorName, doctor_id: "",
+      clinic_name: clinicName,
       user_id: "",
     });
     setShowModal(true);
@@ -758,20 +793,30 @@ export default function PrescriptionsPage() {
 
   async function savePrescription() {
     if (!form.patient_id || form.medications.length === 0) return;
+    // للخطط المشتركة: الطبيب مطلوب
+    if (isSharedPlan(plan) && !form.doctor_id) return;
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
 
-      const payload = {
+      // استخرج اسم الطبيب بناءً على الخطة
+      let resolvedDoctorName = doctorName;
+      if (isSharedPlan(plan) && form.doctor_id) {
+        const dr = doctors.find(d => d.id === form.doctor_id);
+        if (dr) resolvedDoctorName = dr.name;
+      }
+
+      const payload: Record<string, unknown> = {
         patient_id: form.patient_id,
         date: form.date,
         diagnosis: form.diagnosis,
         notes: form.notes,
         medications: JSON.stringify(form.medications),
-        doctor_name: doctorName,
+        doctor_name: resolvedDoctorName,
         clinic_name: clinicName,
         user_id: userId,
+        ...(isSharedPlan(plan) && form.doctor_id ? { doctor_id: form.doctor_id } : {}),
       };
 
       if (editingId) {
@@ -793,9 +838,11 @@ export default function PrescriptionsPage() {
     await loadData();
   }
 
-  const filtered = prescriptions.filter(rx =>
-    !search || rx.patient_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = prescriptions.filter(rx => {
+    if (search && !rx.patient_name?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (isSharedPlan(plan) && selectedDoctorFilter !== "all" && rx.doctor_id !== selectedDoctorFilter) return false;
+    return true;
+  });
 
   const sidebarWidth = isMobile ? 0 : 240;
 
@@ -850,10 +897,10 @@ export default function PrescriptionsPage() {
             <h2 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>
               {isAr ? "الوصفات الطبية غير متاحة في خطتك" : "Prescriptions Unavailable"}
             </h2>
-            <p style={{ fontSize:14,color:"#888",maxWidth:360,lineHeight:1.7 }}>
+            <p style={{ fontSize:14,color:"#888",maxWidth:400,lineHeight:1.7 }}>
               {isAr
-                ? "هذه الميزة متاحة فقط في الخطة الشاملة. قم بترقية خطتك لتتمكن من تسجيل وطباعة الوصفات الطبية."
-                : "This feature is only available in the Comprehensive plan. Upgrade to create and print prescriptions."}
+                ? "هذه الميزة متاحة في الخطة الشاملة أو أي من الخطط المشتركة. قم بترقية خطتك لتتمكن من تسجيل وطباعة الوصفات الطبية."
+                : "This feature is available in the Comprehensive plan or any Shared plan. Upgrade to create and print prescriptions."}
             </p>
             <a href="/dashboard" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#e67e22",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(230,126,34,.35)" }}>
               {isAr ? "⬆️ ترقية الخطة" : "⬆️ Upgrade Plan"}
@@ -927,6 +974,43 @@ export default function PrescriptionsPage() {
           ))}
         </div>
 
+        {/* ── شريط تصفية الأطباء — للخطط المشتركة فقط ── */}
+        {isSharedPlan(plan) && doctors.length > 0 && (
+          <div style={{ background:"#fff", borderRadius:14, padding:"14px 18px", border:"1.5px solid rgba(14,138,110,.2)", boxShadow:"0 2px 8px rgba(14,138,110,.07)", marginBottom:20 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+              <span style={{ fontSize:16 }}>👨‍⚕️</span>
+              <span style={{ fontSize:12, fontWeight:700, color:"#0e8a6e" }}>{isAr ? "عرض حسب الطبيب" : "Filter by Doctor"}</span>
+            </div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <button onClick={()=>setSelectedDoctorFilter("all")}
+                style={{ padding:"6px 16px", borderRadius:20, fontFamily:"Rubik,sans-serif", fontSize:12, fontWeight:600, cursor:"pointer",
+                  border:`1.5px solid ${selectedDoctorFilter==="all"?"#0e8a6e":"#eef0f3"}`,
+                  background:selectedDoctorFilter==="all"?"rgba(14,138,110,.1)":"#fafbfc",
+                  color:selectedDoctorFilter==="all"?"#0e8a6e":"#888", transition:"all .15s" }}>
+                {isAr ? "الكل" : "All"}
+                <span style={{ marginRight:isAr?6:0, marginLeft:isAr?0:6, fontSize:11, background:"rgba(14,138,110,.15)", color:"#0e8a6e", padding:"1px 7px", borderRadius:10, fontWeight:700 }}>
+                  {prescriptions.length}
+                </span>
+              </button>
+              {doctors.map(dr => {
+                const count = prescriptions.filter(rx => rx.doctor_id === dr.id).length;
+                const isActive = selectedDoctorFilter === dr.id;
+                return (
+                  <button key={dr.id} onClick={()=>setSelectedDoctorFilter(dr.id)}
+                    style={{ padding:"6px 16px", borderRadius:20, fontFamily:"Rubik,sans-serif", fontSize:12, fontWeight:600, cursor:"pointer",
+                      border:`1.5px solid ${isActive?"#0e8a6e":"#eef0f3"}`,
+                      background:isActive?"rgba(14,138,110,.1)":"#fafbfc",
+                      color:isActive?"#0e8a6e":"#888", transition:"all .15s",
+                      display:"flex", alignItems:"center", gap:6 }}>
+                    {isAr ? dr.name : (dr.name_en || dr.name)}
+                    <span style={{ fontSize:11, background:isActive?"rgba(14,138,110,.2)":"#f0f0f0", color:isActive?"#0e8a6e":"#aaa", padding:"1px 7px", borderRadius:10, fontWeight:700 }}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Prescriptions Grid */}
         {loading ? (
           <div style={{ textAlign: "center", padding: "80px 0", color: "#ccc" }}>
@@ -960,13 +1044,27 @@ export default function PrescriptionsPage() {
                       </div>
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a2e" }}>{rx.patient_name}</div>
-                        <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: "#aaa", marginTop: 2, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
                           📅 {new Date(rx.date).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          {/* شارة الطبيب — للخطط المشتركة فقط */}
+                          {isSharedPlan(plan) && rx.doctor_id && (() => {
+                            const dr = doctors.find(d => d.id === rx.doctor_id);
+                            return dr ? (
+                              <span style={{ fontSize:10, background:"rgba(14,138,110,.1)", color:"#0e8a6e", padding:"1px 7px", borderRadius:8, fontWeight:700 }}>
+                                👨‍⚕️ {isAr ? dr.name : (dr.name_en || dr.name)}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button className="icon-btn" onClick={() => printPrescription({ ...rx, doctor_name: doctorName, clinic_name: clinicName }, lang, clinicName, doctorName)} title={tr.printPrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(46,125,50,.08)", border: "1.5px solid rgba(46,125,50,.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🖨️</button>
+                      <button className="icon-btn" onClick={() => {
+                        const drName = isSharedPlan(plan) && rx.doctor_id
+                          ? (doctors.find(d=>d.id===rx.doctor_id)?.name ?? doctorName)
+                          : doctorName;
+                        printPrescription({ ...rx, doctor_name: drName, clinic_name: clinicName }, lang, clinicName, drName);
+                      }} title={tr.printPrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(46,125,50,.08)", border: "1.5px solid rgba(46,125,50,.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🖨️</button>
                       <button className="icon-btn" onClick={() => openEdit(rx)} title={tr.editPrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(8,99,186,.08)", border: "1.5px solid rgba(8,99,186,.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✏️</button>
                       <button className="icon-btn" onClick={() => setDeleteConfirm(rx.id)} title={tr.deletePrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.12)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🗑️</button>
                     </div>
@@ -1016,7 +1114,12 @@ export default function PrescriptionsPage() {
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #0863ba, #1a7fd4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>💊</div>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1a2e" }}>{editingId ? tr.editPrescription : tr.addPrescription}</div>
-                  <div style={{ fontSize: 11, color: "#aaa" }}>{clinicName} — {doctorName}</div>
+                  <div style={{ fontSize: 11, color: "#aaa" }}>
+                    {clinicName}
+                    {isSharedPlan(plan) && form.doctor_id
+                      ? ` — 👨‍⚕️ ${doctors.find(d=>d.id===form.doctor_id)?.[isAr?"name":"name_en"] || doctors.find(d=>d.id===form.doctor_id)?.name || doctorName}`
+                      : ` — ${doctorName}`}
+                  </div>
                 </div>
               </div>
               <button onClick={() => setShowModal(false)} style={{ width: 36, height: 36, borderRadius: 10, background: "#f7f9fc", border: "1.5px solid #eef0f3", cursor: "pointer", fontSize: 18, color: "#666", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
@@ -1054,6 +1157,34 @@ export default function PrescriptionsPage() {
                   />
                 </div>
               </div>
+
+              {/* ── تحديد الطبيب — للخطط المشتركة فقط ── */}
+              {isSharedPlan(plan) && doctors.length > 0 && (
+                <div style={{ marginBottom:16, padding:"14px 16px", background:"rgba(14,138,110,.05)", border:"1.5px solid rgba(14,138,110,.2)", borderRadius:12 }}>
+                  <label style={{ fontSize:12, fontWeight:700, color:"#0e8a6e", display:"block", marginBottom:8 }}>
+                    👨‍⚕️ {isAr ? "الطبيب المُصدِر للوصفة *" : "Issuing Doctor *"}
+                  </label>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    {doctors.map(dr => {
+                      const isSelected = form.doctor_id === dr.id;
+                      return (
+                        <button key={dr.id} type="button"
+                          onClick={() => setForm(f => ({ ...f, doctor_id: dr.id }))}
+                          style={{ padding:"8px 16px", borderRadius:10, fontFamily:"Rubik,sans-serif", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all .15s",
+                            border:`1.5px solid ${isSelected?"#0e8a6e":"#eef0f3"}`,
+                            background:isSelected?"rgba(14,138,110,.1)":"#fafbfc",
+                            color:isSelected?"#0e8a6e":"#888" }}>
+                          {isAr ? dr.name : (dr.name_en || dr.name)}
+                          {isSelected && <span style={{ marginRight:isAr?6:0, marginLeft:isAr?0:6 }}>✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!form.doctor_id && <div style={{ fontSize:11, color:"#c0392b", marginTop:8, fontWeight:600 }}>
+                    {isAr ? "⚠️ يرجى تحديد الطبيب المُصدِر للوصفة" : "⚠️ Please select the issuing doctor"}
+                  </div>}
+                </div>
+              )}
 
               {/* Diagnosis */}
               <div style={{ marginBottom: 16 }}>
@@ -1117,12 +1248,17 @@ export default function PrescriptionsPage() {
               </button>
               <button
                 onClick={savePrescription}
-                disabled={saving || !form.patient_id || form.medications.length === 0}
+                disabled={saving || !form.patient_id || form.medications.length === 0 || (isSharedPlan(plan) && !form.doctor_id)}
                 style={{
-                  padding: "10px 28px", background: form.patient_id && form.medications.length > 0 ? "linear-gradient(135deg, #0863ba, #1a7fd4)" : "#ccc",
-                  border: "none", borderRadius: 10, cursor: form.patient_id && form.medications.length > 0 ? "pointer" : "not-allowed",
+                  padding: "10px 28px",
+                  background: (form.patient_id && form.medications.length > 0 && (!isSharedPlan(plan) || form.doctor_id))
+                    ? "linear-gradient(135deg, #0863ba, #1a7fd4)" : "#ccc",
+                  border: "none", borderRadius: 10,
+                  cursor: (form.patient_id && form.medications.length > 0 && (!isSharedPlan(plan) || form.doctor_id))
+                    ? "pointer" : "not-allowed",
                   color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "Rubik,sans-serif",
-                  boxShadow: form.patient_id && form.medications.length > 0 ? "0 4px 14px rgba(8,99,186,.3)" : "none",
+                  boxShadow: (form.patient_id && form.medications.length > 0 && (!isSharedPlan(plan) || form.doctor_id))
+                    ? "0 4px 14px rgba(8,99,186,.3)" : "none",
                   opacity: saving ? .7 : 1,
                 }}
               >
