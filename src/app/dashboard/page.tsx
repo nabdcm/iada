@@ -172,6 +172,9 @@ const CLINIC_PLAN_MAX_DOCTORS: Record<string, number> = {
 const canAccess = (feature: string, plan: PlanType) =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 
+// Safe accessor — falls back to "basic" badge if plan value is unexpected
+const getPlanBadge = (plan: PlanType) => PLAN_BADGE[plan] ?? PLAN_BADGE["basic"];
+
 const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string; isShared?: boolean }> = {
   basic:             { label:{ ar:"الأساسية",              en:"Basic"              }, color:"#0863ba" },
   pro:               { label:{ ar:"الاحترافية",            en:"Professional"       }, color:"#7b2d8b" },
@@ -459,19 +462,19 @@ function Sidebar({ lang, setLang, activePage = "dashboard", plan = "basic", doct
                 display:"flex", alignItems:"center", gap:6,
                 padding:"7px 12px", marginBottom:8,
                 background:"rgba(255,255,255,0.08)",
-                border:`1.5px solid ${PLAN_BADGE[plan].color}50`,
+                border:`1.5px solid ${getPlanBadge(plan).color}50`,
                 borderRadius:8,
               }}>
-                <div style={{ width:8, height:8, borderRadius:"50%", background:PLAN_BADGE[plan].color, flexShrink:0 }} />
+                <div style={{ width:8, height:8, borderRadius:"50%", background:getPlanBadge(plan).color, flexShrink:0 }} />
                 <span style={{ fontSize:11, color:"rgba(255,255,255,0.7)", flex:1 }}>
-                  {isAr ? (PLAN_BADGE[plan].isShared ? "عيادة" : "خطة") : (PLAN_BADGE[plan].isShared ? "Clinic" : "Plan")}
+                  {isAr ? (getPlanBadge(plan).isShared ? "عيادة" : "خطة") : (getPlanBadge(plan).isShared ? "Clinic" : "Plan")}
                 </span>
-                <span style={{ fontSize:11, fontWeight:700, color:PLAN_BADGE[plan].color }}>
-                  {PLAN_BADGE[plan].label[lang]}
+                <span style={{ fontSize:11, fontWeight:700, color:getPlanBadge(plan).color }}>
+                  {getPlanBadge(plan).label[lang]}
                 </span>
               </div>
               {/* Doctor count badge for shared clinic plans */}
-              {PLAN_BADGE[plan].isShared && doctorCount !== undefined && maxDoctorCount !== undefined && (
+              {getPlanBadge(plan).isShared && doctorCount !== undefined && maxDoctorCount !== undefined && (
                 <div style={{
                   display:"flex", alignItems:"center", gap:6,
                   padding:"6px 12px", marginBottom:8,
@@ -483,7 +486,7 @@ function Sidebar({ lang, setLang, activePage = "dashboard", plan = "basic", doct
                   <span style={{ fontSize:11, color:"rgba(255,255,255,0.6)", flex:1 }}>
                     {isAr ? tr.activeDoctors : tr.activeDoctors}
                   </span>
-                  <span style={{ fontSize:11, fontWeight:700, color:PLAN_BADGE[plan].color }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:getPlanBadge(plan).color }}>
                     {toWestern(doctorCount)} / {toWestern(maxDoctorCount)}
                   </span>
                 </div>
@@ -981,7 +984,7 @@ export default function DashboardPage() {
                         onClick={() => setSelectedDoctorId(doc.id)}
                         style={{
                           padding:"6px 16px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
-                          background: isSelected ? PLAN_BADGE[plan].color : "#f0f4fa",
+                          background: isSelected ? getPlanBadge(plan).color : "#f0f4fa",
                           color: isSelected ? "#fff" : "#555",
                           border: isSelected ? "none" : "1.5px solid #eef0f3",
                           transition:"all .18s",
@@ -1012,7 +1015,7 @@ export default function DashboardPage() {
                   <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>
                     {tr.todaySchedule.title}
                     {isClinicPlan(plan) && selectedDoctorId !== null && (
-                      <span style={{ fontSize:12,color:PLAN_BADGE[plan].color,marginInlineStart:8,fontWeight:500 }}>
+                      <span style={{ fontSize:12,color:getPlanBadge(plan).color,marginInlineStart:8,fontWeight:500 }}>
                         — {doctors.find(d=>d.id===selectedDoctorId)?.name}
                       </span>
                     )}
@@ -1057,7 +1060,7 @@ export default function DashboardPage() {
                           <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{appt.patientName}</div>
                           {/* Show doctor name only in clinic plans when viewing all doctors */}
                           {isClinicPlan(plan) && selectedDoctorId === null && appt.doctorName ? (
-                            <div style={{ fontSize:11,color:PLAN_BADGE[plan].color,marginTop:2,fontWeight:500 }}>
+                            <div style={{ fontSize:11,color:getPlanBadge(plan).color,marginTop:2,fontWeight:500 }}>
                               👨‍⚕️ {appt.doctorName}
                             </div>
                           ) : appt.type ? (
