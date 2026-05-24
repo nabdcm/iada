@@ -15,7 +15,17 @@ type ClinicProfile = {
   working_hours_end: string;
   working_days: string[];
   appointment_duration: number;
+  plan?: string;
 };
+
+type ClinicDoctor = {
+  id: number;
+  name: string;
+  specialty?: string;
+  color?: string;
+};
+
+const SHARED_CLINIC_PLANS = ["clinic_basic", "clinic_pro", "clinic_enterprise"];
 
 const WORKING_DAYS_MAP: Record<string, number> = {
   sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6
@@ -61,6 +71,11 @@ const T = {
     slotAvailable:   "متاح",
     slotsLegend:     "دليل الألوان",
     slotBookedErr:   "هذا الموعد محجوز مسبقاً، الرجاء اختيار وقت آخر",
+    selectDoctor:    "اختر طبيبك",
+    selectDoctorSub: "اختر الطبيب الذي تريد الحجز معه",
+    doctor:          "الطبيب",
+    doctorRequired:  "يرجى اختيار الطبيب أولاً",
+    noDoctors:       "لا يوجد أطباء متاحون حالياً",
   },
   en: {
     loading:         "Loading...",
@@ -100,6 +115,11 @@ const T = {
     slotAvailable:   "Available",
     slotsLegend:     "Color Guide",
     slotBookedErr:   "This slot is already booked, please choose another time",
+    selectDoctor:    "Choose your doctor",
+    selectDoctorSub: "Select the doctor you'd like to book with",
+    doctor:          "Doctor",
+    doctorRequired:  "Please select a doctor first",
+    noDoctors:       "No doctors available at the moment",
   },
 } as const;
 
@@ -133,6 +153,10 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
   const [submitting, setSubmitting] = useState(false);
   const [error,      setError]      = useState("");
 
+  // قائمة الأطباء للعيادات المشتركة
+  const [doctors,        setDoctors]        = useState<ClinicDoctor[]>([]);
+  const [selectedDoctor, setSelectedDoctor] = useState<ClinicDoctor | null>(null);
+
   const [form, setForm] = useState({
     name:             "",
     phone:            "",
@@ -148,42 +172,81 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  const isSharedClinic = clinic ? SHARED_CLINIC_PLANS.includes(clinic.plan ?? "") : false;
+
   const isAr = lang === "ar";
   const tr   = T[lang];
 
   useEffect(() => {
     if (!clinicId) return;
-    supabase
-      .from("clinic_profiles")
-      .select("*")
-      .eq("id", clinicId)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data) setClinic(null);
-        else setClinic(data as ClinicProfile);
-        setLoading(false);
-      });
+
+    // جلب بيانات العيادة + الخطة من جدول clinics
+    const loadClinic = async () => {
+      const { data: profileData, error: profileError } = await supabase
+        .from("clinic_profiles")
+        .select("*")
+        .eq("id", clinicId)
+        .single();
+
+      if (profileError || !profileData) { setClinic(null); setLoading(false); return; }
+
+      // جلب الخطة من جدول clinics
+      const { data: clinicRow } = await supabase
+        .from("clinics")
+        .select("plan")
+        .eq("user_id", clinicId)
+        .single();
+
+      const clinicWithPlan = { ...profileData, plan: clinicRow?.plan ?? "" } as ClinicProfile;
+      setClinic(clinicWithPlan);
+
+      // إذا كانت عيادة مشتركة، جلب قائمة الأطباء
+      if (clinicRow?.plan && SHARED_CLINIC_PLANS.includes(clinicRow.plan)) {
+        const { data: doctorsData } = await supabase
+          .from("clinic_doctors")
+          .select("id, name, specialty, color")
+          .eq("user_id", clinicId)
+          .order("name");
+        setDoctors(doctorsData ?? []);
+      }
+
+      setLoading(false);
+    };
+
+    loadClinic();
+
   }, [clinicId]);
 
-  // جلب المواعيد المحجوزة عند تغيير التاريخ
+  // جلب المواعيد المحجوزة عند تغيير التاريخ أو الطبيب (للعيادات المشتركة)
   useEffect(() => {
     if (!form.date || !clinicId) {
       setBookedSlots([]);
       return;
     }
+    // للعيادات المشتركة: لا تجلب المواعيد حتى يُختار الطبيب
+    if (isSharedClinic && !selectedDoctor) {
+      setBookedSlots([]);
+      return;
+    }
     setLoadingSlots(true);
-    supabase
+    let query = supabase
       .from("appointments")
       .select("time")
       .eq("user_id", clinicId)
       .eq("date", form.date)
-      .in("status", ["pending_approval", "confirmed", "scheduled"])
-      .then(({ data }) => {
-        const times = (data ?? []).map((r: { time: string }) => r.time.slice(0, 5));
-        setBookedSlots(times);
-        setLoadingSlots(false);
-      });
-  }, [form.date, clinicId]);
+      .in("status", ["pending_approval", "confirmed", "scheduled"]);
+
+    // فلترة بالطبيب للعيادات المشتركة
+    if (isSharedClinic && selectedDoctor) {
+      query = query.eq("doctor_id", selectedDoctor.id);
+    }
+
+    query.then(({ data }) => {
+      const times = (data ?? []).map((r: { time: string }) => r.time.slice(0, 5));
+      setBookedSlots(times);
+      setLoadingSlots(false);
+    });
+  }, [form.date, clinicId, selectedDoctor, isSharedClinic]);
 
   const timeSlots = clinic
     ? generateTimeSlots(clinic.working_hours_start, clinic.working_hours_end, clinic.appointment_duration)
@@ -195,6 +258,11 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim() || !form.date || !form.time) {
       setError(tr.required);
+      return;
+    }
+    // للعيادات المشتركة: يجب اختيار الطبيب
+    if (isSharedClinic && !selectedDoctor) {
+      setError(isAr ? "يرجى اختيار الطبيب أولاً" : "Please select a doctor first");
       return;
     }
     // التحقق من أن الموعد لم يُحجز بعد تحديد الوقت
@@ -273,6 +341,8 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
           type:       "حجز إلكتروني / Online Booking",
           notes:      form.notes.trim() || null,
           status:     "pending_approval",
+          // للعيادات المشتركة: تسجيل الطبيب المختار
+          ...(isSharedClinic && selectedDoctor ? { doctor_id: selectedDoctor.id } : {}),
         });
 
       if (apptError) throw apptError;
@@ -289,6 +359,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
   const resetForm = () => {
     setSuccess(false);
     setBookedSlots([]);
+    setSelectedDoctor(null);
     setForm({ name:"", phone:"", gender:"", has_diabetes:false, has_hypertension:false, date:"", time:"", notes:"" });
   };
 
@@ -365,7 +436,25 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
             <div style={{ color:"#fff" }}>
               <div style={{ fontSize:13,opacity:.75,marginBottom:4 }}>{isAr?"حجز موعد في":"Book at"}</div>
               <h1 style={{ fontSize:26,fontWeight:800,marginBottom:6 }}>{clinic.clinic_name}</h1>
-              {clinic.doctor_name && <div style={{ fontSize:14,opacity:.85,marginBottom:8 }}>👨‍⚕️ {clinic.doctor_name}</div>}
+              {/* للعيادات الفردية: عرض اسم الطبيب. للمشتركة: عرض بادج "عيادة مشتركة" */}
+              {!isSharedClinic && clinic.doctor_name && (
+                <div style={{ fontSize:14,opacity:.85,marginBottom:8 }}>👨‍⚕️ {clinic.doctor_name}</div>
+              )}
+              {isSharedClinic && doctors.length > 0 && (
+                <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap" }}>
+                  <span style={{ fontSize:12,padding:"3px 10px",background:"rgba(255,255,255,.18)",border:"1px solid rgba(255,255,255,.3)",borderRadius:20,color:"#fff",fontWeight:600 }}>
+                    🏥 {isAr ? "عيادة مشتركة" : "Shared Clinic"}
+                  </span>
+                  {doctors.slice(0,3).map(doc => (
+                    <span key={doc.id} style={{ fontSize:12,color:"rgba(255,255,255,.85)" }}>
+                      {isAr?"د. ":"Dr. "}{doc.name.split(" ")[0]}
+                    </span>
+                  ))}
+                  {doctors.length > 3 && (
+                    <span style={{ fontSize:12,color:"rgba(255,255,255,.6)" }}>+{doctors.length - 3}</span>
+                  )}
+                </div>
+              )}
               <div style={{ display:"flex",flexWrap:"wrap",gap:14,opacity:.8,fontSize:13,marginTop:4 }}>
                 {clinic.phone   && <span>📞 {clinic.phone}</span>}
                 {clinic.address && <span>📍 {clinic.address}</span>}
@@ -389,7 +478,13 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
               </div>
               <div style={{ background:"#f7f9fc",borderRadius:12,padding:"16px 20px",marginBottom:28,textAlign:isAr?"right":"left" }}>
                 <div style={{ fontSize:13,color:"#555",marginBottom:6 }}>📅 {form.date} — {form.time}</div>
-                <div style={{ fontSize:13,color:"#555" }}>👤 {form.name} | 📞 {form.phone}</div>
+                <div style={{ fontSize:13,color:"#555",marginBottom: isSharedClinic && selectedDoctor ? 6 : 0 }}>👤 {form.name} | 📞 {form.phone}</div>
+                {isSharedClinic && selectedDoctor && (
+                  <div style={{ fontSize:13,color:"#0891b2",fontWeight:600 }}>
+                    👨‍⚕️ {isAr?"د. ":"Dr. "}{selectedDoctor.name}
+                    {selectedDoctor.specialty && <span style={{ fontWeight:400,color:"#888" }}> — {selectedDoctor.specialty}</span>}
+                  </div>
+                )}
               </div>
               <button onClick={resetForm}
                 style={{ padding:"12px 28px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>
@@ -407,6 +502,59 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                 {error && (
                   <div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:20,display:"flex",alignItems:"center",gap:8 }}>
                     ⚠️ {error}
+                  </div>
+                )}
+
+                {/* ══ اختيار الطبيب — للعيادات المشتركة فقط ══ */}
+                {isSharedClinic && (
+                  <div style={{ marginBottom:24,background:"linear-gradient(135deg,rgba(8,145,178,.04),rgba(124,58,237,.04))",border:"1.5px solid rgba(8,145,178,.18)",borderRadius:14,padding:"18px" }}>
+                    {secTitle("👨‍⚕️", (tr as any).selectDoctor, "#0891b2")}
+                    <p style={{ fontSize:12,color:"#888",marginBottom:14,marginTop:-8 }}>{(tr as any).selectDoctorSub}</p>
+                    {doctors.length === 0 ? (
+                      <div style={{ textAlign:"center",padding:"16px",color:"#aaa",fontSize:13 }}>
+                        {(tr as any).noDoctors}
+                      </div>
+                    ) : (
+                      <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                        {doctors.map(doc => {
+                          const isSelected = selectedDoctor?.id === doc.id;
+                          const docColor = doc.color || "#0891b2";
+                          return (
+                            <button key={doc.id} type="button"
+                              onClick={() => {
+                                setSelectedDoctor(isSelected ? null : doc);
+                                setForm(f => ({ ...f, date: "", time: "" }));
+                                setBookedSlots([]);
+                              }}
+                              style={{
+                                display:"flex", alignItems:"center", gap:14,
+                                padding:"14px 16px", borderRadius:12, cursor:"pointer",
+                                border: isSelected ? `2px solid ${docColor}` : "1.5px solid #e0e0e0",
+                                background: isSelected ? `${docColor}10` : "#fff",
+                                fontFamily:"Rubik,sans-serif", textAlign:"start",
+                                transition:"all .2s",
+                              }}>
+                              <div style={{ width:44,height:44,borderRadius:12,background:docColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0 }}>
+                                {doc.name.split(" ").slice(0,2).map((w:string)=>w[0]).join("").toUpperCase()}
+                              </div>
+                              <div style={{ flex:1 }}>
+                                <div style={{ fontSize:15,fontWeight:700,color: isSelected ? docColor : "#353535" }}>
+                                  {isAr ? "د. " : "Dr. "}{doc.name}
+                                </div>
+                                {doc.specialty && (
+                                  <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{doc.specialty}</div>
+                                )}
+                              </div>
+                              {isSelected && (
+                                <div style={{ width:22,height:22,borderRadius:"50%",background:docColor,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -500,9 +648,27 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                     )}
                   </div>
 
+                  {/* للعيادات المشتركة: تنبيه إذا لم يُختار طبيب بعد */}
+                  {isSharedClinic && !selectedDoctor && form.date && isDayWorking(form.date, clinic.working_days) && (
+                    <div style={{ padding:"12px 14px",background:"rgba(8,145,178,.06)",border:"1.5px solid rgba(8,145,178,.2)",borderRadius:10,fontSize:13,color:"#0891b2",fontWeight:600,marginBottom:10 }}>
+                      👨‍⚕️ {isAr ? "اختر الطبيب أولاً لعرض المواعيد المتاحة" : "Select a doctor first to view available slots"}
+                    </div>
+                  )}
+
                   {form.date && isDayWorking(form.date, clinic.working_days) && (
                     <div style={{ marginBottom:14 }}>
                       <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:10 }}>{tr.time}</label>
+                      {/* عرض الطبيب المختار فوق الأوقات — للعيادات المشتركة */}
+                      {isSharedClinic && selectedDoctor && (
+                        <div style={{ display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:`${selectedDoctor.color||"#0891b2"}10`,border:`1.5px solid ${selectedDoctor.color||"#0891b2"}30`,borderRadius:10,marginBottom:12 }}>
+                          <div style={{ width:28,height:28,borderRadius:7,background:selectedDoctor.color||"#0891b2",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800 }}>
+                            {selectedDoctor.name.split(" ").slice(0,2).map((w:string)=>w[0]).join("").toUpperCase()}
+                          </div>
+                          <span style={{ fontSize:13,fontWeight:700,color:selectedDoctor.color||"#0891b2" }}>
+                            {isAr?"د. ":"Dr. "}{selectedDoctor.name}
+                          </span>
+                        </div>
+                      )}
 
                       {/* دليل الألوان */}
                       <div style={{ display:"flex",gap:16,marginBottom:12,padding:"10px 14px",background:"#f7f9fc",borderRadius:10,border:"1px solid #eef0f3",flexWrap:"wrap" }}>
