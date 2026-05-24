@@ -26,17 +26,24 @@ type ClinicType =
   | "urology"
   | "other";
 
+// الخطط الفردية: basic, pro, enterprise
+// الخطط المشتركة: shared_basic, shared_pro, shared_enterprise
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
+
 interface ClinicData {
   id?: number;
   name: string;
   owner: string;
   email: string;
   phone: string;
-  plan: "basic" | "pro" | "enterprise";
+  plan: PlanType;
   expiry: string;
   status: "active" | "inactive" | "expired";
   user_id?: string;
   clinic_type?: ClinicType;
+  // للخطط المشتركة فقط
+  max_doctors?: number;       // الحد الأقصى من الأطباء (قابل للتعديل من الأدمن)
+  doctors_count?: number;     // عدد الأطباء الفعلي المضاف
 }
 
 // ============================================================
@@ -57,7 +64,10 @@ const T = {
       search:"ابحث باسم العيادة...",
       table:{ name:"العيادة", owner:"المالك", email:"البريد الإلكتروني", status:"الحالة", plan:"الخطة", expiry:"انتهاء الاشتراك", actions:"الإجراءات" },
       statuses:{ active:"نشط", inactive:"موقوف", expired:"منتهي" },
-      plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة" },
+      plans:{
+        basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة",
+        shared_basic:"مشتركة أساسية", shared_pro:"مشتركة احترافية", shared_enterprise:"مشتركة شاملة",
+      },
       actions:{ edit:"تعديل", suspend:"تعليق", activate:"تفعيل", resetPass:"إعادة كلمة المرور", delete:"حذف", viewDetails:"التفاصيل" },
     },
     modal: {
@@ -165,8 +175,16 @@ const T = {
       saving:"جاري الحفظ...",
       cancel:"إلغاء",
       changePlan:"تغيير الخطة إلى",
+      sharedPlansTitle:"الخطط المشتركة للعيادات",
+      sharedPlansDesc:"للعيادات التي تضم أكثر من طبيب واحد",
+      individualPlansTitle:"الخطط الفردية",
+      individualPlansDesc:"لعيادة طبيب واحد",
+      maxDoctors:"الحد الأقصى للأطباء",
+      maxDoctorsNote:"يمكن تعديل هذا الرقم بالاتفاق مع العميل",
+      doctorsCount:"عدد الأطباء الحالي",
       plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة" },
       planDesc:{ basic:"إدارة المرضى والمواعيد والسجلات • حتى 300 مريض", pro:"الأساسية + رابط الحجز + المدفوعات + واتساب • حتى 1000 مريض", enterprise:"جميع الميزات + متابعة المرضى + بوابة المريض • غير محدود" },
+      plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة", shared_basic:"مشتركة أساسية", shared_pro:"مشتركة احترافية", shared_enterprise:"مشتركة شاملة" },
       deleteConfirmTitle:"تأكيد الحذف النهائي",
       deleteConfirmMsg:"هل أنت متأكد من حذف عيادة",
       deleteConfirmWarning:"سيتم حذف جميع البيانات نهائياً ولا يمكن التراجع.",
@@ -187,7 +205,10 @@ const T = {
       search:"Search by clinic name...",
       table:{ name:"Clinic", owner:"Owner", email:"Email", status:"Status", plan:"Plan", expiry:"Expiry", actions:"Actions" },
       statuses:{ active:"Active", inactive:"Suspended", expired:"Expired" },
-      plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive" },
+      plans:{
+        basic:"Basic", pro:"Professional", enterprise:"Comprehensive",
+        shared_basic:"Shared Basic", shared_pro:"Shared Professional", shared_enterprise:"Shared Comprehensive",
+      },
       actions:{ edit:"Edit", suspend:"Suspend", activate:"Activate", resetPass:"Reset Password", delete:"Delete", viewDetails:"Details" },
     },
     modal: {
@@ -295,8 +316,16 @@ const T = {
       saving:"Saving...",
       cancel:"Cancel",
       changePlan:"Change Plan To",
+      sharedPlansTitle:"Shared Clinic Plans",
+      sharedPlansDesc:"For clinics with more than one doctor",
+      individualPlansTitle:"Individual Plans",
+      individualPlansDesc:"For single-doctor clinic",
+      maxDoctors:"Max Doctors",
+      maxDoctorsNote:"This number can be adjusted by agreement with the client",
+      doctorsCount:"Current Doctors Count",
       plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive" },
       planDesc:{ basic:"Patients & appointments & records • Up to 300 patients", pro:"Basic + booking link + payments + WhatsApp • Up to 1000 patients", enterprise:"All features + patient follow-up + portal • Unlimited" },
+      plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive", shared_basic:"Shared Basic", shared_pro:"Shared Pro", shared_enterprise:"Shared Comprehensive" },
       deleteConfirmTitle:"Confirm Permanent Delete",
       deleteConfirmMsg:"Are you sure you want to delete clinic",
       deleteConfirmWarning:"All data will be permanently deleted and cannot be recovered.",
@@ -306,24 +335,42 @@ const T = {
   },
 };
 
-const PLAN_COLORS = { basic:"#0863ba", pro:"#7b2d8b", enterprise:"#e67e22" };
+const PLAN_COLORS: Record<string, string> = {
+  basic:"#0863ba", pro:"#7b2d8b", enterprise:"#e67e22",
+  shared_basic:"#0e7c6a", shared_pro:"#b5451b", shared_enterprise:"#4a1480",
+};
 
 // Plan pricing config
-const PLAN_PRICING = {
-  basic:      { monthly:5.99,  yearly:59  },
-  pro:        { monthly:7.99,  yearly:79  },
-  enterprise: { monthly:14.99, yearly:149 },
+const PLAN_PRICING: Record<string, { monthly: number; yearly: number }> = {
+  basic:             { monthly:5.99,  yearly:59  },
+  pro:               { monthly:7.99,  yearly:79  },
+  enterprise:        { monthly:14.99, yearly:149 },
+  // الخطط المشتركة
+  shared_basic:      { monthly:7.99,  yearly:79  },   // حتى 2 أطباء
+  shared_pro:        { monthly:13.99, yearly:139 },   // حتى 3 أطباء
+  shared_enterprise: { monthly:21.99, yearly:219 },   // حتى 5 أطباء (مخصص)
+};
+
+// Default max doctors per shared plan
+const SHARED_PLAN_DEFAULT_DOCTORS: Record<string, number> = {
+  shared_basic:      2,
+  shared_pro:        3,
+  shared_enterprise: 5,
 };
 
 // Patient limits per plan
-const PLAN_PATIENT_LIMITS = {
-  basic:      300,
-  pro:        1000,
-  enterprise: Infinity,
+const PLAN_PATIENT_LIMITS: Record<string, number> = {
+  basic:             300,
+  pro:               1000,
+  enterprise:        Infinity,
+  // الخطط المشتركة — نفس قوانين الخطط الفردية
+  shared_basic:      300,
+  shared_pro:        1000,
+  shared_enterprise: Infinity,
 };
 
 // Features per plan
-const PLAN_FEATURES = {
+const PLAN_FEATURES: Record<string, { ar: string[]; en: string[] }> = {
   basic: {
     ar: ["إدارة المرضى","السجلات الطبية","إدارة المواعيد","حتى 300 مريض"],
     en: ["Patient management","Medical records","Appointments management","Up to 300 patients"],
@@ -335,6 +382,19 @@ const PLAN_FEATURES = {
   enterprise: {
     ar: ["جميع ميزات الاحترافية","متابعة المرضى برابط خاص","تقارير يومية للمريض","بوابة خاصة بالمريض","تسجيل الوصفات الطبية","عدد مرضى غير محدود","أولوية في الدعم الفني"],
     en: ["All Professional features","Patient follow-up link","Daily patient reports","Patient portal","Prescription records","Unlimited patients","Priority support"],
+  },
+  // ── الخطط المشتركة (نفس ميزات الفردية + إدارة متعددة الأطباء) ──
+  shared_basic: {
+    ar: ["إدارة المرضى","السجلات الطبية","إدارة المواعيد","حتى 300 مريض","حتى طبيبين","تخصيص المرضى لكل طبيب"],
+    en: ["Patient management","Medical records","Appointments management","Up to 300 patients","Up to 2 doctors","Patients assigned per doctor"],
+  },
+  shared_pro: {
+    ar: ["جميع ميزات الأساسية المشتركة","رابط حجز المواعيد","إدارة المدفوعات","مراسلة المرضى عبر واتساب","تذكير المواعيد","حتى 1000 مريض","حتى 3 أطباء"],
+    en: ["All Shared Basic features","Clinic booking link","Payments management","WhatsApp messaging","Appointment reminders","Up to 1000 patients","Up to 3 doctors"],
+  },
+  shared_enterprise: {
+    ar: ["جميع ميزات الاحترافية المشتركة","متابعة المرضى","تقارير يومية","بوابة المريض","وصفات طبية","عدد مرضى غير محدود","حتى 5 أطباء","أولوية في الدعم","عدد أطباء مخصص"],
+    en: ["All Shared Pro features","Patient follow-up","Daily reports","Patient portal","Prescriptions","Unlimited patients","Up to 5 doctors","Priority support","Custom doctor count"],
   },
 };
 
@@ -404,10 +464,11 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
     owner:       clinic?.owner       || "",
     email:       clinic?.email       || "",
     phone:       clinic?.phone       || "",
-    plan:        (clinic?.plan       || "basic") as "basic" | "pro" | "enterprise",
+    plan:        (clinic?.plan       || "basic") as PlanType,
     expiry:      clinic?.expiry      || "",
     status:      (clinic?.status     || "active") as "active" | "inactive" | "expired",
     clinic_type: (clinic?.clinic_type || "general") as ClinicType,
+    max_doctors: clinic?.max_doctors ?? 2,
   });
 
   const [creds,    setCreds]    = useState<{ password: string } | null>(null);
@@ -415,6 +476,9 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
   const [error,    setError]    = useState("");
   const [saving,   setSaving]   = useState(false);
   const [savedUserId, setSavedUserId] = useState<string | null>(null);
+  const [planTab,  setPlanTab]  = useState<"individual"|"shared">(
+    ["shared_basic","shared_pro","shared_enterprise"].includes(clinic?.plan||"") ? "shared" : "individual"
+  );
 
   // inputSt ثابت ومعرّف خارج render
   const inputSt: React.CSSProperties = useMemo(() => ({
@@ -555,8 +619,8 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                 ))}
               </div>
 
-              {/* رابط الحجز — فقط للاحترافية والشاملة */}
-              {(form.plan === "pro" || form.plan === "enterprise") && (
+              {/* رابط الحجز — فقط للاحترافية والشاملة (فردية ومشتركة) */}
+              {(form.plan === "pro" || form.plan === "enterprise" || form.plan === "shared_pro" || form.plan === "shared_enterprise") && (
               <div style={{ background:"rgba(8,99,186,.06)",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,padding:"14px 16px" }}>
                 <div style={{ fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:8,textTransform:"uppercase",letterSpacing:.5 }}>
                   🔗 {tr.modal.bookLink}
@@ -645,42 +709,127 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               </Field>
 
               <Field label={tr.modal.plan}>
-                <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-                  {([
-                    { key:"basic" as const,      color:"#0863ba", emoji:"🩺" },
-                    { key:"pro" as const,         color:"#7b2d8b", emoji:"🏥" },
-                    { key:"enterprise" as const,  color:"#e67e22", emoji:"🚀" },
-                  ]).map(p => {
-                    const isSelected = form.plan === p.key;
-                    const pricing = PLAN_PRICING[p.key];
-                    const features = PLAN_FEATURES[p.key][isAr ? "ar" : "en"];
-                    return (
-                      <button key={p.key} type="button"
-                        onClick={() => setForm(prev => ({ ...prev, plan: p.key }))}
-                        style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:isAr?"right":"left",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
-                        <div style={{ width:12,height:12,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:3,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
-                        <div style={{ flex:1,minWidth:0 }}>
-                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
-                            <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>
-                              {p.emoji} {tr.clinics.plans[p.key]}
-                            </span>
-                            <div style={{ display:"flex",gap:6,flexShrink:0 }}>
-                              <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:`${p.color}15`,color:p.color,fontWeight:700 }}>${pricing.monthly}{isAr?"/شهر":"/mo"}</span>
-                              <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:"rgba(46,125,50,.08)",color:"#2e7d32",fontWeight:600 }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
-                            </div>
-                          </div>
-                          <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
-                            {features.map((f,i) => (
-                              <span key={i} style={{ fontSize:10,color:"#888",display:"flex",alignItems:"center",gap:3 }}>
-                                <span style={{ color:p.color }}>✓</span> {f}
-                              </span>
-                            ))}
-                          </div>
+                {/* تبويب الخطط الفردية / المشتركة */}
+                {(() => {
+                  const isSharedSelected = ["shared_basic","shared_pro","shared_enterprise"].includes(form.plan);
+                  const individualPlans: { key: PlanType; color: string; emoji: string }[] = [
+                    { key:"basic",      color:"#0863ba", emoji:"🩺" },
+                    { key:"pro",        color:"#7b2d8b", emoji:"🏥" },
+                    { key:"enterprise", color:"#e67e22", emoji:"🚀" },
+                  ];
+                  const sharedPlans: { key: PlanType; color: string; emoji: string; defaultDoctors: number }[] = [
+                    { key:"shared_basic",      color:"#0e7c6a", emoji:"👥", defaultDoctors:2 },
+                    { key:"shared_pro",        color:"#b5451b", emoji:"🏨", defaultDoctors:3 },
+                    { key:"shared_enterprise", color:"#4a1480", emoji:"🏗️", defaultDoctors:5 },
+                  ];
+                  return (
+                    <div>
+                      {/* تبويب */}
+                      <div style={{ display:"flex",gap:4,background:"#f7f9fc",borderRadius:10,padding:4,marginBottom:12 }}>
+                        <button type="button" onClick={() => { setPlanTab("individual"); if(isSharedSelected) setForm(prev=>({...prev,plan:"basic"})); }}
+                          style={{ flex:1,padding:"7px",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:planTab==="individual"?700:400,background:planTab==="individual"?"#fff":"transparent",color:planTab==="individual"?"#0863ba":"#888",boxShadow:planTab==="individual"?"0 2px 6px rgba(8,99,186,.1)":"none",transition:"all .15s" }}>
+                          🩺 {isAr?"خطط فردية":"Individual"}
+                        </button>
+                        <button type="button" onClick={() => { setPlanTab("shared"); if(!isSharedSelected) setForm(prev=>({...prev,plan:"shared_basic",max_doctors:2})); }}
+                          style={{ flex:1,padding:"7px",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:planTab==="shared"?700:400,background:planTab==="shared"?"#fff":"transparent",color:planTab==="shared"?"#0e7c6a":"#888",boxShadow:planTab==="shared"?"0 2px 6px rgba(14,124,106,.1)":"none",transition:"all .15s" }}>
+                          👥 {isAr?"خطط مشتركة":"Shared"}
+                        </button>
+                      </div>
+                      {/* الخطط الفردية */}
+                      {planTab === "individual" && (
+                        <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                          {individualPlans.map(p => {
+                            const isSelected = form.plan === p.key;
+                            const pricing = PLAN_PRICING[p.key];
+                            const features = PLAN_FEATURES[p.key][isAr ? "ar" : "en"];
+                            return (
+                              <button key={p.key} type="button"
+                                onClick={() => setForm(prev => ({ ...prev, plan: p.key }))}
+                                style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:isAr?"right":"left",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
+                                <div style={{ width:12,height:12,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:3,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
+                                <div style={{ flex:1,minWidth:0 }}>
+                                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
+                                    <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>
+                                      {p.emoji} {tr.clinics.plans[p.key]}
+                                    </span>
+                                    <div style={{ display:"flex",gap:6,flexShrink:0 }}>
+                                      <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:`${p.color}15`,color:p.color,fontWeight:700 }}>${pricing.monthly}{isAr?"/شهر":"/mo"}</span>
+                                      <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:"rgba(46,125,50,.08)",color:"#2e7d32",fontWeight:600 }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
+                                    </div>
+                                  </div>
+                                  <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
+                                    {features.map((f,i) => (
+                                      <span key={i} style={{ fontSize:10,color:"#888",display:"flex",alignItems:"center",gap:3 }}>
+                                        <span style={{ color:p.color }}>✓</span> {f}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                      )}
+                      {/* الخطط المشتركة */}
+                      {planTab === "shared" && (
+                        <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                          <div style={{ background:"rgba(14,124,106,.05)",border:"1.5px solid rgba(14,124,106,.15)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#0e7c6a",marginBottom:4 }}>
+                            👥 {isAr?"للعيادات التي تضم أكثر من طبيب واحد — يتم تخصيص المرضى لكل طبيب بشكل مستقل":"For clinics with multiple doctors — patients are assigned per doctor"}
+                          </div>
+                          {sharedPlans.map(p => {
+                            const isSelected = form.plan === p.key;
+                            const pricing = PLAN_PRICING[p.key];
+                            const features = PLAN_FEATURES[p.key][isAr ? "ar" : "en"];
+                            return (
+                              <button key={p.key} type="button"
+                                onClick={() => setForm(prev => ({ ...prev, plan: p.key, max_doctors: SHARED_PLAN_DEFAULT_DOCTORS[p.key] ?? p.defaultDoctors }))}
+                                style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:isAr?"right":"left",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
+                                <div style={{ width:12,height:12,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:3,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
+                                <div style={{ flex:1,minWidth:0 }}>
+                                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
+                                    <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>
+                                      {p.emoji} {tr.clinics.plans[p.key]}
+                                    </span>
+                                    <div style={{ display:"flex",gap:6,flexShrink:0 }}>
+                                      <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:`${p.color}15`,color:p.color,fontWeight:700 }}>${pricing.monthly}{isAr?"/شهر":"/mo"}</span>
+                                      <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:"rgba(46,125,50,.08)",color:"#2e7d32",fontWeight:600 }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
+                                    </div>
+                                  </div>
+                                  <div style={{ display:"flex",flexWrap:"wrap",gap:4,marginBottom:6 }}>
+                                    {features.map((f,i) => (
+                                      <span key={i} style={{ fontSize:10,color:"#888",display:"flex",alignItems:"center",gap:3 }}>
+                                        <span style={{ color:p.color }}>✓</span> {f}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
+                                    👨‍⚕️ {isAr?"الأطباء:":"Doctors:"} {isAr?`حتى ${p.defaultDoctors}`:`Up to ${p.defaultDoctors}`}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                          {/* تعديل عدد الأطباء للخطة المشتركة المختارة */}
+                          {isSharedSelected && (
+                            <div style={{ background:"#f7f9fc",borderRadius:10,padding:"12px 14px",border:"1.5px solid #eef0f3",marginTop:4 }}>
+                              <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:8,textTransform:"uppercase" as const }}>
+                                ✏️ {isAr?"الحد الأقصى للأطباء (قابل للتخصيص)":"Max Doctors (Customizable)"}
+                              </label>
+                              <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                                <input type="number" min={1} max={50} value={form.max_doctors}
+                                  onChange={e => setForm(prev => ({ ...prev, max_doctors: parseInt(e.target.value)||1 }))}
+                                  style={{ width:80,padding:"8px 12px",border:"1.5px solid #e8eaed",borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,color:"#353535",textAlign:"center",outline:"none" }}
+                                />
+                                <span style={{ fontSize:12,color:"#888" }}>{isAr?"طبيب (الحد الافتراضي حسب الخطة)":"doctors (default by plan)"}</span>
+                              </div>
+                              <p style={{ fontSize:11,color:"#aaa",marginTop:6 }}>⚙️ {isAr?tr.subModal.maxDoctorsNote:tr.subModal.maxDoctorsNote}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </Field>
 
               <Field label={tr.modal.expiry} half>
@@ -783,10 +932,11 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     email:  clinic.email  || "",
     owner:  clinic.owner  || "",
     phone:  clinic.phone  || "",
-    plan:   clinic.plan   as "basic"|"pro"|"enterprise",
+    plan:   clinic.plan   as PlanType,
     expiry: clinic.expiry || "",
     status: clinic.status as "active"|"inactive"|"expired",
     clinic_type: (clinic.clinic_type || "general") as ClinicType,
+    max_doctors: clinic.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[clinic.plan] ?? 2,
   });
   const [newPass,       setNewPass]       = useState("");
   const [copied,        setCopied]        = useState(false);
@@ -819,6 +969,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     expiry: form.expiry,
     status: form.status,
     clinic_type: form.clinic_type,
+    max_doctors: form.max_doctors,
     ...overrides,
   });
 
@@ -924,10 +1075,13 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     outline:"none", direction: isAr?"rtl":"ltr",
   };
 
-  const PLAN_INFO: { key:"basic"|"pro"|"enterprise"; color:string }[] = [
-    { key:"basic",      color:"#0863ba" },
-    { key:"pro",        color:"#7b2d8b" },
-    { key:"enterprise", color:"#e67e22" },
+  const PLAN_INFO: { key: PlanType; color: string; emoji: string; isShared?: boolean; defaultDoctors?: number }[] = [
+    { key:"basic",             color:"#0863ba", emoji:"🩺" },
+    { key:"pro",               color:"#7b2d8b", emoji:"🏥" },
+    { key:"enterprise",        color:"#e67e22", emoji:"🚀" },
+    { key:"shared_basic",      color:"#0e7c6a", emoji:"👥", isShared:true, defaultDoctors:2 },
+    { key:"shared_pro",        color:"#b5451b", emoji:"🏨", isShared:true, defaultDoctors:3 },
+    { key:"shared_enterprise", color:"#4a1480", emoji:"🏗️", isShared:true, defaultDoctors:5 },
   ];
 
   const tabStyle = (t: string): React.CSSProperties => ({
@@ -1021,8 +1175,13 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               {/* Plan selector */}
               <div>
                 <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:10,textTransform:"uppercase",letterSpacing:.4 }}>{sm.changePlan}</label>
-                <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-                  {PLAN_INFO.map(p => {
+                {/* قسم الخطط الفردية */}
+                <div style={{ fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:8,display:"flex",alignItems:"center",gap:6 }}>
+                  <span style={{ background:"rgba(8,99,186,.08)",padding:"2px 10px",borderRadius:20 }}>🩺 {isAr?"خطط فردية":"Individual Plans"}</span>
+                  <span style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{isAr?"لطبيب واحد":"Single doctor"}</span>
+                </div>
+                <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:16 }}>
+                  {PLAN_INFO.filter(p => !p.isShared).map(p => {
                     const isSelected = form.plan === p.key;
                     const isCurrent  = clinic.plan === p.key;
                     const pricing    = PLAN_PRICING[p.key];
@@ -1036,7 +1195,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:4 }}>
                             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{sm.plans[p.key]}</span>
+                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{p.emoji} {sm.plans[p.key]}</span>
                               {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${p.color}15`,color:p.color }}>{isAr?"الحالية":"Current"}</span>}
                             </div>
                             <div style={{ display:"flex",gap:5,flexShrink:0 }}>
@@ -1059,6 +1218,72 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                     );
                   })}
                 </div>
+                {/* قسم الخطط المشتركة */}
+                <div style={{ fontSize:11,fontWeight:700,color:"#0e7c6a",marginBottom:8,display:"flex",alignItems:"center",gap:6 }}>
+                  <span style={{ background:"rgba(14,124,106,.08)",padding:"2px 10px",borderRadius:20 }}>👥 {isAr?"خطط مشتركة":"Shared Plans"}</span>
+                  <span style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{isAr?"لأكثر من طبيب":"Multi-doctor"}</span>
+                </div>
+                <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                  {PLAN_INFO.filter(p => p.isShared).map(p => {
+                    const isSelected = form.plan === p.key;
+                    const isCurrent  = clinic.plan === p.key;
+                    const pricing    = PLAN_PRICING[p.key];
+                    const limit      = PLAN_PATIENT_LIMITS[p.key];
+                    const limitLabel = limit === Infinity ? (isAr?"غير محدود":"Unlimited") : `${limit}`;
+                    const features   = PLAN_FEATURES[p.key][isAr ? "ar" : "en"];
+                    return (
+                      <button key={p.key} onClick={() => setForm(prev=>({...prev,plan:p.key,max_doctors:SHARED_PLAN_DEFAULT_DOCTORS[p.key]??p.defaultDoctors??2}))}
+                        style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 16px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:"start",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
+                        <div style={{ width:10,height:10,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:4,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:4 }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{p.emoji} {sm.plans[p.key]}</span>
+                              {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${p.color}15`,color:p.color }}>{isAr?"الحالية":"Current"}</span>}
+                            </div>
+                            <div style={{ display:"flex",gap:5,flexShrink:0 }}>
+                              <span style={{ fontSize:11,fontWeight:700,color:p.color }}>${pricing.monthly}<span style={{ fontSize:9,color:"#aaa",fontWeight:400 }}>{isAr?"/شهر":"/mo"}</span></span>
+                              <span style={{ fontSize:10,color:"#2e7d32" }}>${pricing.yearly}{isAr?"/سنة":"/yr"}</span>
+                            </div>
+                          </div>
+                          <div style={{ display:"flex",flexWrap:"wrap",gap:3,marginBottom:4 }}>
+                            {features.map((f,i) => (
+                              <span key={i} style={{ fontSize:10,color:"#888",display:"flex",alignItems:"center",gap:2 }}>
+                                <span style={{ color:p.color }}>✓</span> {f}
+                              </span>
+                            ))}
+                          </div>
+                          <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+                            <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
+                              👥 {isAr?"المرضى:":"Patients:"} {limitLabel}
+                            </div>
+                            <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
+                              👨‍⚕️ {isAr?"افتراضي:":"Default:"} {p.defaultDoctors} {isAr?"أطباء":"doctors"}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* حقل تعديل عدد الأطباء — يظهر فقط عند اختيار خطة مشتركة */}
+                {["shared_basic","shared_pro","shared_enterprise"].includes(form.plan) && (
+                  <div style={{ background:"rgba(14,124,106,.04)",border:"1.5px solid rgba(14,124,106,.15)",borderRadius:10,padding:"12px 14px",marginTop:12 }}>
+                    <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#0e7c6a",marginBottom:8,textTransform:"uppercase" as const }}>
+                      ✏️ {sm.maxDoctors} ({sm.maxDoctorsNote})
+                    </label>
+                    <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                      <input type="number" min={1} max={50} value={form.max_doctors}
+                        onChange={e => setForm(prev=>({...prev,max_doctors:parseInt(e.target.value)||1}))}
+                        style={{ width:80,padding:"8px 12px",border:"1.5px solid rgba(14,124,106,.3)",borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:16,fontWeight:800,color:"#0e7c6a",textAlign:"center",outline:"none",background:"#fff" }}
+                      />
+                      <span style={{ fontSize:12,color:"#666" }}>{isAr?"طبيب كحد أقصى في الاشتراك":"doctors maximum in subscription"}</span>
+                    </div>
+                    <p style={{ fontSize:11,color:"#aaa",marginTop:6,lineHeight:1.5 }}>
+                      ⚙️ {isAr?"هذا الرقم مخصص ويتم الاتفاق عليه مع العميل — يتحكم في الحد الأقصى للأطباء المضافين في العيادة":"This is a custom number agreed with the client — it controls the maximum doctors allowed in the clinic"}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Expiry */}
@@ -2003,16 +2228,18 @@ export default function AdminPage() {
       const data = await res.json();
 
       const clinicsData: ClinicData[] = (data || []).map((row: Record<string, unknown>, index: number) => ({
-        id:          (row.id as number) || index + 1,
-        user_id:     row.user_id as string,
-        name:        (row.name as string)   || `عيادة ${index + 1}`,
-        owner:       (row.owner as string)  || "—",
-        email:       (row.email as string)  || "",
-        phone:       (row.phone as string)  || "",
-        plan:        (row.plan as "basic"|"pro"|"enterprise") || "basic",
-        expiry:      (row.expiry as string) || "",
-        status:      (row.status as "active"|"inactive"|"expired") || "active",
-        clinic_type: (row.clinic_type as ClinicType) || "general",
+        id:           (row.id as number) || index + 1,
+        user_id:      row.user_id as string,
+        name:         (row.name as string)   || `عيادة ${index + 1}`,
+        owner:        (row.owner as string)  || "—",
+        email:        (row.email as string)  || "",
+        phone:        (row.phone as string)  || "",
+        plan:         (row.plan as PlanType) || "basic",
+        expiry:       (row.expiry as string) || "",
+        status:       (row.status as "active"|"inactive"|"expired") || "active",
+        clinic_type:  (row.clinic_type as ClinicType) || "general",
+        max_doctors:  (row.max_doctors as number) || undefined,
+        doctors_count:(row.doctors_count as number) || undefined,
       }));
 
       setClinics(clinicsData);
@@ -2331,6 +2558,11 @@ export default function AdminPage() {
                               <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:`${pc}20`,color:pc }}>
                                 {tr.clinics.plans[c.plan]}
                               </span>
+                              {["shared_basic","shared_pro","shared_enterprise"].includes(c.plan) && (
+                                <div style={{ fontSize:9,color:pc,fontWeight:600,marginTop:3 }}>
+                                  👥 {c.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[c.plan] ?? 2} {isAr?"أطباء":"doctors"}
+                                </div>
+                              )}
                             </div>
                             <div style={{ paddingLeft:8 }}>
                               <div style={{ fontSize:11,color:exp?"#c0392b":expSoon?"#e67e22":"#aaa",fontWeight:exp||expSoon?700:400 }}>{fmtDate(c.expiry)}</div>
@@ -2427,4 +2659,5 @@ export default function AdminPage() {
 }
 
 // ─── Exports for use in other pages ──────────────────────────
-export { PLAN_PRICING, PLAN_PATIENT_LIMITS, PLAN_FEATURES };
+export { PLAN_PRICING, PLAN_PATIENT_LIMITS, PLAN_FEATURES, SHARED_PLAN_DEFAULT_DOCTORS };
+export type { PlanType };
