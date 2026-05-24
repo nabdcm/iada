@@ -56,6 +56,16 @@ const t = {
     noData: "لا توجد بيانات",
     collapseMenu: "طي القائمة",
     expandMenu: "توسيع القائمة",
+    sharedClinicPlan: "خطة عيادة مشتركة",
+    doctorsCount: "عدد الأطباء",
+    maxDoctors: "الحد الأقصى للأطباء",
+    activeDoctors: "الأطباء النشطون",
+    filterByDoctor: "تصفية حسب الطبيب",
+    allDoctors: "كل الأطباء",
+    doctorLabel: "الطبيب",
+    sharedBadge: "مشتركة",
+    todayByDoctor: "مواعيد اليوم حسب الطبيب",
+    patientsAssigned: "المرضى المخصصون",
   },
   en: {
     appName: "NABD", appSub: "Clinic Manager",
@@ -105,6 +115,16 @@ const t = {
     noData: "No data yet",
     collapseMenu: "Collapse",
     expandMenu: "Expand",
+    sharedClinicPlan: "Shared Clinic Plan",
+    doctorsCount: "Doctors Count",
+    maxDoctors: "Max Doctors",
+    activeDoctors: "Active Doctors",
+    filterByDoctor: "Filter by Doctor",
+    allDoctors: "All Doctors",
+    doctorLabel: "Doctor",
+    sharedBadge: "Shared",
+    todayByDoctor: "Today's Appointments by Doctor",
+    patientsAssigned: "Assigned Patients",
   },
 } as const;
 
@@ -128,23 +148,43 @@ function getGreetingKey(): "greeting_morning" | "greeting_afternoon" | "greeting
 
 // ─── Plan access rules ────────────────────────────────────
 const PLAN_ACCESS: Record<string, string[]> = {
-  payments:      ["pro", "enterprise"],
-  prescriptions: ["enterprise"],
-  tracking:      ["enterprise"],
+  payments:      ["pro", "enterprise", "clinic_basic", "clinic_pro", "clinic_enterprise"],
+  prescriptions: ["enterprise", "clinic_enterprise"],
+  tracking:      ["enterprise", "clinic_enterprise"],
 };
-type PlanType = "basic" | "pro" | "enterprise";
+
+// Individual plans
+// clinic_basic      → up to 2 doctors  | $7.99/mo  | $79/yr
+// clinic_pro        → up to 3 doctors  | $13.99/mo | $139/yr
+// clinic_enterprise → up to 5 doctors+ | custom pricing
+type PlanType = "basic" | "pro" | "enterprise" | "clinic_basic" | "clinic_pro" | "clinic_enterprise";
+
+const isClinicPlan = (plan: PlanType) =>
+  ["clinic_basic", "clinic_pro", "clinic_enterprise"].includes(plan);
+
+// Max doctors per shared plan (admin can override in admin panel)
+const CLINIC_PLAN_MAX_DOCTORS: Record<string, number> = {
+  clinic_basic:      2,
+  clinic_pro:        3,
+  clinic_enterprise: 5,
+};
+
 const canAccess = (feature: string, plan: PlanType) =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 
-const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string }> = {
-  basic:      { label:{ ar:"الأساسية",    en:"Basic"        }, color:"#0863ba" },
-  pro:        { label:{ ar:"الاحترافية",  en:"Professional" }, color:"#7b2d8b" },
-  enterprise: { label:{ ar:"الشاملة",    en:"Comprehensive"}, color:"#e67e22" },
+const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string; isShared?: boolean }> = {
+  basic:             { label:{ ar:"الأساسية",              en:"Basic"              }, color:"#0863ba" },
+  pro:               { label:{ ar:"الاحترافية",            en:"Professional"       }, color:"#7b2d8b" },
+  enterprise:        { label:{ ar:"الشاملة",               en:"Comprehensive"      }, color:"#e67e22" },
+  clinic_basic:      { label:{ ar:"عيادة - أساسية",        en:"Clinic Basic"       }, color:"#0891b2", isShared:true },
+  clinic_pro:        { label:{ ar:"عيادة - احترافية",      en:"Clinic Pro"         }, color:"#7c3aed", isShared:true },
+  clinic_enterprise: { label:{ ar:"عيادة - شاملة",         en:"Clinic Enterprise"  }, color:"#d97706", isShared:true },
 };
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, activePage = "dashboard", plan = "basic" }: {
+function Sidebar({ lang, setLang, activePage = "dashboard", plan = "basic", doctorCount, maxDoctorCount }: {
   lang: Lang; setLang: (l: Lang) => void; activePage?: string; plan?: PlanType;
+  doctorCount?: number; maxDoctorCount?: number;
 }) {
   const tr = t[lang];
   const isAr = lang === "ar";
@@ -424,12 +464,30 @@ function Sidebar({ lang, setLang, activePage = "dashboard", plan = "basic" }: {
               }}>
                 <div style={{ width:8, height:8, borderRadius:"50%", background:PLAN_BADGE[plan].color, flexShrink:0 }} />
                 <span style={{ fontSize:11, color:"rgba(255,255,255,0.7)", flex:1 }}>
-                  {isAr ? "خطة" : "Plan"}
+                  {isAr ? (PLAN_BADGE[plan].isShared ? "عيادة" : "خطة") : (PLAN_BADGE[plan].isShared ? "Clinic" : "Plan")}
                 </span>
                 <span style={{ fontSize:11, fontWeight:700, color:PLAN_BADGE[plan].color }}>
                   {PLAN_BADGE[plan].label[lang]}
                 </span>
               </div>
+              {/* Doctor count badge for shared clinic plans */}
+              {PLAN_BADGE[plan].isShared && doctorCount !== undefined && maxDoctorCount !== undefined && (
+                <div style={{
+                  display:"flex", alignItems:"center", gap:6,
+                  padding:"6px 12px", marginBottom:8,
+                  background:"rgba(255,255,255,0.06)",
+                  border:"1px solid rgba(255,255,255,0.12)",
+                  borderRadius:8,
+                }}>
+                  <span style={{ fontSize:13 }}>👨‍⚕️</span>
+                  <span style={{ fontSize:11, color:"rgba(255,255,255,0.6)", flex:1 }}>
+                    {isAr ? tr.activeDoctors : tr.activeDoctors}
+                  </span>
+                  <span style={{ fontSize:11, fontWeight:700, color:PLAN_BADGE[plan].color }}>
+                    {toWestern(doctorCount)} / {toWestern(maxDoctorCount)}
+                  </span>
+                </div>
+              )}
               {/* Language toggle */}
               <button
                 onClick={() => setLang(lang === "ar" ? "en" : "ar")}
@@ -574,6 +632,12 @@ export default function DashboardPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [plan, setPlan] = useState<PlanType>("basic");
 
+  // Clinic plan: doctors
+  const [doctors, setDoctors] = useState<{ id: number; name: string }[]>([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(null);
+  const [activeDoctorCount, setActiveDoctorCount] = useState(0);
+  const maxDoctorCount = CLINIC_PLAN_MAX_DOCTORS[plan] ?? 0;
+
   // Patients
   const [totalPatients, setTotalPatients] = useState(0);
   const [newThisMonth,  setNewThisMonth]  = useState(0);
@@ -618,7 +682,21 @@ export default function DashboardPage() {
       // ── Clinic plan ──
       const { data: clinicData } = await supabase
         .from("clinics").select("plan").eq("user_id", userId).single();
-      if (clinicData?.plan) setPlan(clinicData.plan as PlanType);
+      const fetchedPlan = (clinicData?.plan ?? "basic") as PlanType;
+      if (clinicData?.plan) setPlan(fetchedPlan);
+
+      // ── Doctors (only for shared clinic plans) ──
+      let doctorList: { id: number; name: string }[] = [];
+      if (isClinicPlan(fetchedPlan)) {
+        const { data: doctorsData } = await supabase
+          .from("doctors")
+          .select("id, name")
+          .eq("user_id", userId)
+          .eq("is_active", true);
+        doctorList = doctorsData ?? [];
+        setDoctors(doctorList);
+        setActiveDoctorCount(doctorList.length);
+      }
 
       const localNow   = new Date();
       const yyyy       = localNow.getFullYear();
@@ -629,7 +707,7 @@ export default function DashboardPage() {
 
       // ── Patients ──
       const { data: patientsData } = await supabase
-        .from("patients").select("id, name, created_at")
+        .from("patients").select("id, name, created_at, doctor_id")
         .eq("user_id", userId).eq("is_hidden", false);
       const patients = patientsData ?? [];
       setTotalPatients(patients.length);
@@ -641,7 +719,7 @@ export default function DashboardPage() {
       // ── Appointments ──
       const { data: apptsData } = await supabase
         .from("appointments")
-        .select("id, patient_id, date, time, duration, type, status")
+        .select("id, patient_id, date, time, duration, type, status, doctor_id")
         .eq("user_id", userId);
       const appts = apptsData ?? [];
 
@@ -649,11 +727,15 @@ export default function DashboardPage() {
         .filter(a => a.date === todayISO)
         .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
 
+      const doctorMap: Record<number, string> = {};
+      doctorList.forEach(d => { doctorMap[d.id] = d.name; });
+
       setTodayTotal(todayAppts.length);
       setTodayCompleted(todayAppts.filter(a => a.status === "completed").length);
       setTodayAppointments(todayAppts.map(a => ({
         ...a,
         patientName: patientMap[a.patient_id] ?? (lang === "ar" ? "مريض" : "Patient"),
+        doctorName:  a.doctor_id ? (doctorMap[a.doctor_id] ?? "") : "",
       })));
 
       const weekStart = new Date(localNow);
@@ -764,7 +846,10 @@ export default function DashboardPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan} />
+        <Sidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan}
+          doctorCount={isClinicPlan(plan) ? activeDoctorCount : undefined}
+          maxDoctorCount={isClinicPlan(plan) ? maxDoctorCount : undefined}
+        />
 
         <main
           className="main-fade main-content"
@@ -858,13 +943,73 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* CLINIC PLAN: Doctor filter bar */}
+            {isClinicPlan(plan) && doctors.length > 0 && (
+              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:"16px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:6,marginInlineEnd:8 }}>
+                    <span style={{ fontSize:18 }}>👨‍⚕️</span>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{tr.filterByDoctor}</span>
+                  </div>
+                  {/* All doctors button */}
+                  <button
+                    onClick={() => setSelectedDoctorId(null)}
+                    style={{
+                      padding:"6px 16px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
+                      background: selectedDoctorId === null ? "#0863ba" : "#f0f4fa",
+                      color: selectedDoctorId === null ? "#fff" : "#555",
+                      border: selectedDoctorId === null ? "none" : "1.5px solid #eef0f3",
+                      transition:"all .18s",
+                    }}
+                  >
+                    {tr.allDoctors} ({toWestern(todayAppointments.length)})
+                  </button>
+                  {/* Per-doctor buttons */}
+                  {doctors.map(doc => {
+                    const docAppts = todayAppointments.filter(a => a.doctor_id === doc.id);
+                    const isSelected = selectedDoctorId === doc.id;
+                    return (
+                      <button
+                        key={doc.id}
+                        onClick={() => setSelectedDoctorId(doc.id)}
+                        style={{
+                          padding:"6px 16px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
+                          background: isSelected ? PLAN_BADGE[plan].color : "#f0f4fa",
+                          color: isSelected ? "#fff" : "#555",
+                          border: isSelected ? "none" : "1.5px solid #eef0f3",
+                          transition:"all .18s",
+                          display:"flex",alignItems:"center",gap:6,
+                        }}
+                      >
+                        <span>{doc.name}</span>
+                        <span style={{
+                          background: isSelected ? "rgba(255,255,255,0.25)" : "#e0e7ef",
+                          color: isSelected ? "#fff" : "#0863ba",
+                          borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:700,
+                        }}>
+                          {toWestern(docAppts.length)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* MIDDLE: Schedule + Week Chart */}
             <div className="middle-grid" style={{ display:"grid",gridTemplateColumns:"1fr 320px",gap:20,marginBottom:28 }}>
 
               {/* Today's Schedule */}
               <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20 }}>
-                  <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>{tr.todaySchedule.title}</h3>
+                  <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>
+                    {tr.todaySchedule.title}
+                    {isClinicPlan(plan) && selectedDoctorId !== null && (
+                      <span style={{ fontSize:12,color:PLAN_BADGE[plan].color,marginInlineStart:8,fontWeight:500 }}>
+                        — {doctors.find(d=>d.id===selectedDoctorId)?.name}
+                      </span>
+                    )}
+                  </h3>
                   <a href="/appointments" style={{ fontSize:12,color:"#0863ba",textDecoration:"none",fontWeight:600 }}>{tr.todaySchedule.viewAll} →</a>
                 </div>
 
@@ -873,39 +1018,52 @@ export default function DashboardPage() {
                     <div style={{ fontSize:32,marginBottom:10,animation:"pulse 1.5s ease infinite" }}>📅</div>
                     <div style={{ fontSize:13 }}>{tr.loading}</div>
                   </div>
-                ) : todayAppointments.length === 0 ? (
-                  <div style={{ textAlign:"center",padding:"40px 20px",color:"#ccc" }}>
-                    <div style={{ fontSize:36,marginBottom:10 }}>📭</div>
-                    <div style={{ fontSize:13,fontWeight:600 }}>{tr.todaySchedule.noAppointments}</div>
-                  </div>
-                ) : todayAppointments.map((appt, idx) => {
-                  const sc = statusColors[appt.status] ?? statusColors.scheduled;
-                  return (
-                    <div key={appt.id ?? idx} className="appt-row">
-                      <div style={{ width:52,textAlign:"center",flexShrink:0 }}>
-                        <div style={{ fontSize:14,fontWeight:700,color:"#0863ba",fontVariantNumeric:"tabular-nums" }}>
-                          {appt.time?.slice(0,5) ?? "—"}
-                        </div>
-                        {appt.duration && (
-                          <div style={{ fontSize:10,color:"#bbb",fontVariantNumeric:"tabular-nums" }}>
-                            {toWestern(appt.duration)}m
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ width:2,height:40,background:sc.color,borderRadius:4,flexShrink:0,opacity:.4 }} />
-                      <div style={{ width:36,height:36,borderRadius:10,flexShrink:0,background:getColor(appt.patient_id??idx+1),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700 }}>
-                        {getInitials(appt.patientName)}
-                      </div>
-                      <div style={{ flex:1,minWidth:0 }}>
-                        <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{appt.patientName}</div>
-                        {appt.type && <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{appt.type}</div>}
-                      </div>
-                      <div style={{ padding:"4px 10px",borderRadius:20,background:sc.bg,color:sc.color,fontSize:11,fontWeight:600,flexShrink:0 }}>
-                        {tr.todaySchedule.statuses[appt.status as keyof typeof tr.todaySchedule.statuses] ?? appt.status}
-                      </div>
+                ) : (() => {
+                  const filteredAppts = isClinicPlan(plan) && selectedDoctorId !== null
+                    ? todayAppointments.filter(a => a.doctor_id === selectedDoctorId)
+                    : todayAppointments;
+                  if (filteredAppts.length === 0) return (
+                    <div style={{ textAlign:"center",padding:"40px 20px",color:"#ccc" }}>
+                      <div style={{ fontSize:36,marginBottom:10 }}>📭</div>
+                      <div style={{ fontSize:13,fontWeight:600 }}>{tr.todaySchedule.noAppointments}</div>
                     </div>
                   );
-                })}
+                  return filteredAppts.map((appt, idx) => {
+                    const sc = statusColors[appt.status] ?? statusColors.scheduled;
+                    return (
+                      <div key={appt.id ?? idx} className="appt-row">
+                        <div style={{ width:52,textAlign:"center",flexShrink:0 }}>
+                          <div style={{ fontSize:14,fontWeight:700,color:"#0863ba",fontVariantNumeric:"tabular-nums" }}>
+                            {appt.time?.slice(0,5) ?? "—"}
+                          </div>
+                          {appt.duration && (
+                            <div style={{ fontSize:10,color:"#bbb",fontVariantNumeric:"tabular-nums" }}>
+                              {toWestern(appt.duration)}m
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ width:2,height:40,background:sc.color,borderRadius:4,flexShrink:0,opacity:.4 }} />
+                        <div style={{ width:36,height:36,borderRadius:10,flexShrink:0,background:getColor(appt.patient_id??idx+1),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700 }}>
+                          {getInitials(appt.patientName)}
+                        </div>
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{appt.patientName}</div>
+                          {/* Show doctor name only in clinic plans when viewing all doctors */}
+                          {isClinicPlan(plan) && selectedDoctorId === null && appt.doctorName ? (
+                            <div style={{ fontSize:11,color:PLAN_BADGE[plan].color,marginTop:2,fontWeight:500 }}>
+                              👨‍⚕️ {appt.doctorName}
+                            </div>
+                          ) : appt.type ? (
+                            <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{appt.type}</div>
+                          ) : null}
+                        </div>
+                        <div style={{ padding:"4px 10px",borderRadius:20,background:sc.bg,color:sc.color,fontSize:11,fontWeight:600,flexShrink:0 }}>
+                          {tr.todaySchedule.statuses[appt.status as keyof typeof tr.todaySchedule.statuses] ?? appt.status}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
 
               {/* Week Chart */}
@@ -1019,6 +1177,54 @@ export default function DashboardPage() {
               </div>
 
             </div>
+
+            {/* CLINIC PLAN: Today's appointments breakdown by doctor */}
+            {isClinicPlan(plan) && doctors.length > 0 && !loadingStats && (
+              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginTop:20 }}>
+                <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",marginBottom:20 }}>{tr.todayByDoctor}</h3>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12 }}>
+                  {doctors.map((doc, di) => {
+                    const docAppts   = todayAppointments.filter(a => a.doctor_id === doc.id);
+                    const docDone    = docAppts.filter(a => a.status === "completed").length;
+                    const docColor   = AVATAR_COLORS[di % AVATAR_COLORS.length];
+                    const pct        = docAppts.length > 0 ? Math.round((docDone / docAppts.length) * 100) : 0;
+                    return (
+                      <div
+                        key={doc.id}
+                        onClick={() => setSelectedDoctorId(selectedDoctorId === doc.id ? null : doc.id)}
+                        style={{
+                          padding:16,borderRadius:12,cursor:"pointer",
+                          border: selectedDoctorId === doc.id ? `2px solid ${docColor}` : "1.5px solid #eef0f3",
+                          background: selectedDoctorId === doc.id ? `${docColor}08` : "#fafbfc",
+                          transition:"all .18s",
+                        }}
+                      >
+                        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:12 }}>
+                          <div style={{ width:36,height:36,borderRadius:10,background:docColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0 }}>
+                            {getInitials(doc.name)}
+                          </div>
+                          <div style={{ flex:1,minWidth:0 }}>
+                            <div style={{ fontSize:12,fontWeight:700,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{doc.name}</div>
+                            <div style={{ fontSize:11,color:"#aaa" }}>{tr.doctorLabel}</div>
+                          </div>
+                        </div>
+                        <div style={{ display:"flex",justifyContent:"space-between",marginBottom:6 }}>
+                          <span style={{ fontSize:11,color:"#888" }}>{tr.stats.todayAppointments}</span>
+                          <span style={{ fontSize:13,fontWeight:800,color:docColor,fontVariantNumeric:"tabular-nums" }}>{toWestern(docAppts.length)}</span>
+                        </div>
+                        <div style={{ height:5,background:"#eef0f3",borderRadius:10,overflow:"hidden" }}>
+                          <div style={{ height:"100%",width:`${pct}%`,background:docColor,borderRadius:10,transition:"width .8s ease" }} />
+                        </div>
+                        <div style={{ fontSize:10,color:"#aaa",marginTop:4,textAlign:"end",fontVariantNumeric:"tabular-nums" }}>
+                          {toWestern(docDone)} / {toWestern(docAppts.length)} {tr.stats.completed}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
           </div>
         </main>
       </div>
