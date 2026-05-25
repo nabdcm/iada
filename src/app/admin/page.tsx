@@ -987,8 +987,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
   // ── Doctors state ─────────────────────────────────────────
   const DOCTOR_COLORS = ["#0863ba","#7b2d8b","#0e7c6a","#b5451b","#e67e22","#4a1480","#c0392b","#2e7d32"];
-  const isSharedPlan  = ["shared_basic","shared_pro","shared_enterprise"].includes(clinic.plan);
-  const maxDoctors    = clinic.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[clinic.plan] ?? 2;
+  const isSharedPlan  = ["shared_basic","shared_pro","shared_enterprise"].includes(form.plan);
+  const maxDoctors    = form.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[form.plan] ?? 2;
 
   const [doctors,        setDoctors]        = useState<Doctor[]>([]);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
@@ -1369,7 +1369,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                     const limitLabel = limit === Infinity ? (isAr?"غير محدود":"Unlimited") : `${limit}`;
                     const features   = PLAN_FEATURES[p.key][isAr ? "ar" : "en"];
                     return (
-                      <button key={p.key} onClick={() => setForm(prev=>({...prev,plan:p.key,max_doctors:SHARED_PLAN_DEFAULT_DOCTORS[p.key]??p.defaultDoctors??2}))}
+                      <button key={p.key} onClick={() => setForm(prev=>({...prev,plan:p.key,max_doctors:prev.plan===p.key?prev.max_doctors:(SHARED_PLAN_DEFAULT_DOCTORS[p.key]??p.defaultDoctors??2)}))}
                         style={{ display:"flex",alignItems:"flex-start",gap:12,padding:"12px 16px",border:`1.5px solid ${isSelected?p.color:"#eef0f3"}`,borderRadius:12,background:isSelected?`${p.color}08`:"#fafbfc",cursor:"pointer",textAlign:"start",transition:"all .18s",fontFamily:"Rubik,sans-serif",width:"100%" }}>
                         <div style={{ width:10,height:10,borderRadius:"50%",background:isSelected?p.color:"#ddd",border:`2px solid ${isSelected?p.color:"#ccc"}`,flexShrink:0,marginTop:4,boxShadow:isSelected?`0 0 0 3px ${p.color}20`:"none",transition:"all .15s" }} />
                         <div style={{ flex:1,minWidth:0 }}>
