@@ -926,21 +926,32 @@ type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" |
 const isSharedPlan = (plan: PlanType): boolean =>
   plan === "shared_basic" || plan === "shared_pro" || plan === "shared_enterprise";
 
-// الحد الأقصى لعدد الأطباء في كل خطة مشتركة (قابل للتوسع من لوحة الأدمن)
+// الحد الافتراضي للأطباء في كل خطة (قابل للتخصيص من الأدمن)
 const SHARED_PLAN_MAX_DOCTORS: Record<PlanType, number> = {
-  basic: 1, pro: 1, enterprise: 1,
-  shared_basic: 2, shared_pro: 3, shared_enterprise: 5,
+  // الخطط الفردية: كل خطة تدعم عدداً محدداً من الأطباء
+  basic: 2,           // أساسية فردية: حتى طبيبين
+  pro: 3,             // احترافية فردية: حتى 3 أطباء
+  enterprise: 5,      // شاملة فردية: حتى 5 أطباء
+  // الخطط المشتركة: نفس الحدود
+  shared_basic: 2,    // أساسية مشتركة: حتى طبيبين
+  shared_pro: 3,      // احترافية مشتركة: حتى 3 أطباء
+  shared_enterprise: 5, // شاملة مشتركة: حتى 5 أطباء
 };
 
 const PLAN_ACCESS: Record<string, string[]> = {
-  payments:      ["pro", "enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
-  prescriptions: ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
-  tracking:      ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+  payments:      ["pro", "enterprise", "shared_pro", "shared_enterprise"],
+  prescriptions: ["enterprise", "shared_enterprise"],
+  tracking:      ["enterprise", "shared_enterprise"],
 };
 const PLAN_LIMITS: Record<PlanType, number> = {
-  basic: 300, pro: 1000, enterprise: Infinity,
-  // للخطط المشتركة: الحد الكلي للمرضى في العيادة (موزّع على جميع الأطباء)
-  shared_basic: 300, shared_pro: 1000, shared_enterprise: Infinity,
+  // الخطط الفردية
+  basic: 100,        // أساسية فردية: حتى 100 مريض
+  pro: 400,          // احترافية فردية: حتى 400 مريض
+  enterprise: Infinity, // شاملة فردية: غير محدود
+  // الخطط المشتركة (نفس الحدود ولكن موزّعة على جميع أطباء العيادة)
+  shared_basic: 100,        // أساسية مشتركة: حتى 100 مريض
+  shared_pro: 400,          // احترافية مشتركة: حتى 400 مريض
+  shared_enterprise: Infinity, // شاملة مشتركة: غير محدود
 };
 const canAccess = (feature: string, plan: PlanType) =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
@@ -1037,7 +1048,7 @@ function Sidebar({ lang, setLang, activePage="patients", plan="basic", maxDoctor
                 <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }}/>
                 <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
                 <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2 }}>
-                  <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color }}>{PLAN_BADGE[plan].label[lang]}</span>
+                  <span style={{ fontSize:11,fontWeight:700,color:"#ffffff" }}>{PLAN_BADGE[plan].label[lang]}</span>
                   {isSharedPlan(plan)&&<span style={{ fontSize:9,color:"rgba(255,255,255,0.5)" }}>{isAr?`👨‍⚕️ حتى ${maxDoctors} أطباء`:`👨‍⚕️ up to ${maxDoctors} drs`}</span>}
                 </div>
               </div>
@@ -1354,7 +1365,7 @@ export default function PatientsPage() {
       if (data?.plan) {
         const p = data.plan as PlanType;
         setPlan(p);
-        // تحميل الحد المخصص من الأدمن (مع fallback للافتراضي)
+        // تحميل الحد المخصص من الأدمن (مع fallback للافتراضي) — ينطبق على جميع الخطط
         const customMax = data.max_doctors ?? SHARED_PLAN_MAX_DOCTORS[p] ?? 2;
         setMaxDoctors(customMax);
         // تحميل قائمة الأطباء للخطط المشتركة (النشطون فقط)
@@ -1593,26 +1604,41 @@ export default function PatientsPage() {
 
           <div className="content-padding" style={{ padding:"28px 0 0" }}>
 
-            {/* ── بانر العيادة المشتركة ── */}
-            {isSharedPlan(plan) && (
-              <div style={{ background:"rgba(14,138,110,.06)", border:"1.5px solid rgba(14,138,110,.2)", borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ fontSize:28, flexShrink:0 }}>🏥</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#0e8a6e", marginBottom:2 }}>
-                    {isAr ? "عيادة مشتركة متعددة الأطباء" : "Multi-Doctor Shared Clinic"}
+            {/* ── بانر عدد الأطباء — يظهر للجميع ── */}
+            {(() => {
+              const shared = isSharedPlan(plan);
+              const bgColor  = shared ? "rgba(14,138,110,.06)"  : "rgba(8,99,186,.05)";
+              const brdColor = shared ? "rgba(14,138,110,.2)"   : "rgba(8,99,186,.15)";
+              const txtColor = shared ? "#0e8a6e"               : "#0863ba";
+              const icon     = shared ? "🏥" : "🏨";
+              const titleAr  = shared ? "عيادة مشتركة متعددة الأطباء" : "عيادة فردية";
+              const titleEn  = shared ? "Multi-Doctor Shared Clinic"    : "Individual Clinic";
+              const subAr    = `خطتك تدعم حتى ${maxDoctors} ${maxDoctors === 1 ? "طبيب" : "أطباء"}`;
+              const subEn    = `Your plan supports up to ${maxDoctors} doctor${maxDoctors !== 1 ? "s" : ""}`;
+              return (
+                <div style={{ background: bgColor, border: `1.5px solid ${brdColor}`, borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ fontSize:28, flexShrink:0 }}>{icon}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color: txtColor, marginBottom:2 }}>
+                      {isAr ? titleAr : titleEn}
+                    </div>
+                    <div style={{ fontSize:11, color:"#888" }}>
+                      {isAr ? subAr : subEn}
+                    </div>
                   </div>
-                  <div style={{ fontSize:11, color:"#888" }}>
-                    {isAr
-                      ? `خطتك تدعم حتى ${maxDoctors} أطباء`
-                      : `Your plan supports up to ${maxDoctors} doctors`}
+                  {shared && (
+                    <div style={{ textAlign:"center", flexShrink:0 }}>
+                      <div style={{ fontSize:18, fontWeight:800, color: txtColor }}>{doctors.length}</div>
+                      <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"طبيب نشط":"active drs"}</div>
+                    </div>
+                  )}
+                  <div style={{ textAlign:"center", flexShrink:0, paddingLeft: shared ? 12 : 0, borderLeft: shared ? "1px solid rgba(0,0,0,0.08)" : "none" }}>
+                    <div style={{ fontSize:18, fontWeight:800, color: txtColor }}>{maxDoctors}</div>
+                    <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"الحد الأقصى":"max drs"}</div>
                   </div>
                 </div>
-                <div style={{ textAlign:"center", flexShrink:0 }}>
-                  <div style={{ fontSize:18, fontWeight:800, color:"#0e8a6e" }}>{doctors.length}</div>
-                  <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"طبيب":"doctors"}</div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* ── شريط حد المرضى ── */}
             {(() => {
