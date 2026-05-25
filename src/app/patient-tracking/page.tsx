@@ -115,18 +115,25 @@ const fmtV=(v:string|number|boolean,l:Lang):string=>{ if(typeof v==="boolean")re
 const SB="#0558a8";const SH="#044d96";const SABG="rgba(255,255,255,0.15)";const SAT="#fff";const SIT="rgba(255,255,255,0.62)";const SBD="rgba(255,255,255,0.1)";const SIND="#7dd3fc";
 
 // ─── Plan access rules ────────────────────────────────────
-type PlanType = "basic" | "pro" | "enterprise";
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
+
+const isSharedPlan = (plan: PlanType): boolean =>
+  plan === "shared_basic" || plan === "shared_pro" || plan === "shared_enterprise";
+
 const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise"],
-  prescriptions: ["enterprise"],
-  tracking:      ["enterprise"],
+  payments:      ["pro","enterprise","shared_basic","shared_pro","shared_enterprise"],
+  prescriptions: ["enterprise","shared_basic","shared_pro","shared_enterprise"],
+  tracking:      ["enterprise","shared_basic","shared_pro","shared_enterprise"],
 };
 const canAccess = (feature:string, plan:PlanType) =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
-  basic:      {label:{ar:"الأساسية",   en:"Basic"},         color:"#0863ba"},
-  pro:        {label:{ar:"الاحترافية", en:"Professional"},  color:"#7b2d8b"},
-  enterprise: {label:{ar:"الشاملة",   en:"Comprehensive"}, color:"#e67e22"},
+  basic:             {label:{ar:"الأساسية",           en:"Basic"},           color:"#0863ba"},
+  pro:               {label:{ar:"الاحترافية",         en:"Professional"},    color:"#7b2d8b"},
+  enterprise:        {label:{ar:"الشاملة",            en:"Comprehensive"},   color:"#e67e22"},
+  shared_basic:      {label:{ar:"مشتركة - أساسية",   en:"Shared - Basic"},  color:"#0e7c6a"},
+  shared_pro:        {label:{ar:"مشتركة - احترافية", en:"Shared - Pro"},    color:"#b5451b"},
+  shared_enterprise: {label:{ar:"مشتركة - شاملة",   en:"Shared - Full"},   color:"#4a1480"},
 };
 
 function Sidebar({lang,setLang,plan="basic"}:{lang:Lang;setLang:(l:Lang)=>void;plan?:PlanType}) {
@@ -179,7 +186,10 @@ function Sidebar({lang,setLang,plan="basic"}:{lang:Lang;setLang:(l:Lang)=>void;p
               <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8}}>
                 <div style={{width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0}}/>
                 <span style={{fontSize:11,color:"rgba(255,255,255,0.7)",flex:1}}>{isAr?"خطة":"Plan"}</span>
-                <span style={{fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color}}>{PLAN_BADGE[plan].label[lang]}</span>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
+                  <span style={{fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color}}>{PLAN_BADGE[plan].label[lang]}</span>
+                  {isSharedPlan(plan)&&<span style={{fontSize:9,color:"rgba(255,255,255,0.5)"}}>{isAr?"👥 عيادة مشتركة":"👥 Shared clinic"}</span>}
+                </div>
               </div>
               <button onClick={()=>setLang(lang==="ar"?"en":"ar")} style={{width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:"1px solid "+SBD,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600}}>🌐 {lang==="ar"?"English":"العربية"}</button>
             </>
