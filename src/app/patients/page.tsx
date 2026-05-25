@@ -1604,41 +1604,28 @@ export default function PatientsPage() {
 
           <div className="content-padding" style={{ padding:"28px 0 0" }}>
 
-            {/* ── بانر عدد الأطباء — يظهر للجميع ── */}
-            {(() => {
-              const shared = isSharedPlan(plan);
-              const bgColor  = shared ? "rgba(14,138,110,.06)"  : "rgba(8,99,186,.05)";
-              const brdColor = shared ? "rgba(14,138,110,.2)"   : "rgba(8,99,186,.15)";
-              const txtColor = shared ? "#0e8a6e"               : "#0863ba";
-              const icon     = shared ? "🏥" : "🏨";
-              const titleAr  = shared ? "عيادة مشتركة متعددة الأطباء" : "عيادة فردية";
-              const titleEn  = shared ? "Multi-Doctor Shared Clinic"    : "Individual Clinic";
-              const subAr    = `خطتك تدعم حتى ${maxDoctors} ${maxDoctors === 1 ? "طبيب" : "أطباء"}`;
-              const subEn    = `Your plan supports up to ${maxDoctors} doctor${maxDoctors !== 1 ? "s" : ""}`;
-              return (
-                <div style={{ background: bgColor, border: `1.5px solid ${brdColor}`, borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:12 }}>
-                  <div style={{ fontSize:28, flexShrink:0 }}>{icon}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color: txtColor, marginBottom:2 }}>
-                      {isAr ? titleAr : titleEn}
-                    </div>
-                    <div style={{ fontSize:11, color:"#888" }}>
-                      {isAr ? subAr : subEn}
-                    </div>
+            {/* ── بانر العيادة المشتركة — يظهر فقط للخطط المشتركة ── */}
+            {isSharedPlan(plan) && (
+              <div style={{ background:"rgba(14,138,110,.06)", border:"1.5px solid rgba(14,138,110,.2)", borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ fontSize:28, flexShrink:0 }}>🏥</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0e8a6e", marginBottom:2 }}>
+                    {isAr ? "عيادة مشتركة متعددة الأطباء" : "Multi-Doctor Shared Clinic"}
                   </div>
-                  {shared && (
-                    <div style={{ textAlign:"center", flexShrink:0 }}>
-                      <div style={{ fontSize:18, fontWeight:800, color: txtColor }}>{doctors.length}</div>
-                      <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"طبيب نشط":"active drs"}</div>
-                    </div>
-                  )}
-                  <div style={{ textAlign:"center", flexShrink:0, paddingLeft: shared ? 12 : 0, borderLeft: shared ? "1px solid rgba(0,0,0,0.08)" : "none" }}>
-                    <div style={{ fontSize:18, fontWeight:800, color: txtColor }}>{maxDoctors}</div>
-                    <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"الحد الأقصى":"max drs"}</div>
+                  <div style={{ fontSize:11, color:"#888" }}>
+                    {isAr ? `خطتك تدعم حتى ${maxDoctors} أطباء` : `Your plan supports up to ${maxDoctors} doctors`}
                   </div>
                 </div>
-              );
-            })()}
+                <div style={{ textAlign:"center", flexShrink:0 }}>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#0e8a6e" }}>{doctors.length}</div>
+                  <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"طبيب نشط":"active drs"}</div>
+                </div>
+                <div style={{ textAlign:"center", flexShrink:0, paddingLeft:12, borderLeft:"1px solid rgba(0,0,0,0.08)" }}>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#0e8a6e" }}>{maxDoctors}</div>
+                  <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"الحد الأقصى":"max drs"}</div>
+                </div>
+              </div>
+            )}
 
             {/* ── شريط حد المرضى ── */}
             {(() => {
