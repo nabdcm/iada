@@ -1477,19 +1477,48 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
           {activeTab === "doctors" && (
             <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
 
-              {/* شريط الطاقة الاستيعابية */}
-              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(14,124,106,.05)",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:12,padding:"12px 16px" }}>
-                <div>
-                  <div style={{ fontSize:12,fontWeight:700,color:"#0e7c6a" }}>👨‍⚕️ {sm.doctors.capacity}</div>
-                  <div style={{ fontSize:11,color:"#888",marginTop:2 }}>
-                    {doctors.filter(d=>d.is_active).length} {isAr?"نشط /":"active /"} {doctors.length} {isAr?"مضاف /":"added /"} {maxDoctors} {isAr?"حد أقصى":"max"}
+              {/* شريط الطاقة الاستيعابية + تعديل الحد الأقصى مباشرة */}
+              <div style={{ background:"rgba(14,124,106,.05)",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:12,padding:"12px 16px" }}>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
+                  <div>
+                    <div style={{ fontSize:12,fontWeight:700,color:"#0e7c6a" }}>👨‍⚕️ {sm.doctors.capacity}</div>
+                    <div style={{ fontSize:11,color:"#888",marginTop:2 }}>
+                      {doctors.filter(d=>d.is_active).length} {isAr?"نشط /":"active /"} {doctors.length} {isAr?"مضاف /":"added /"} {maxDoctors} {isAr?"حد أقصى":"max"}
+                    </div>
+                  </div>
+                  <div style={{ width:80 }}>
+                    <div style={{ height:6,background:"#e8eaed",borderRadius:20,overflow:"hidden" }}>
+                      <div style={{ height:"100%",width:`${Math.min((doctors.length/maxDoctors)*100,100)}%`,background:doctors.length>=maxDoctors?"#c0392b":"#0e7c6a",borderRadius:20,transition:"width .3s" }} />
+                    </div>
+                    <div style={{ fontSize:10,color:"#aaa",textAlign:"center",marginTop:3 }}>{doctors.length}/{maxDoctors}</div>
                   </div>
                 </div>
-                <div style={{ width:80 }}>
-                  <div style={{ height:6,background:"#e8eaed",borderRadius:20,overflow:"hidden" }}>
-                    <div style={{ height:"100%",width:`${Math.min((doctors.length/maxDoctors)*100,100)}%`,background:doctors.length>=maxDoctors?"#c0392b":"#0e7c6a",borderRadius:20,transition:"width .3s" }} />
-                  </div>
-                  <div style={{ fontSize:10,color:"#aaa",textAlign:"center",marginTop:3 }}>{doctors.length}/{maxDoctors}</div>
+                {/* تعديل الحد الأقصى مباشرة من تاب الأطباء */}
+                <div style={{ borderTop:"1px solid rgba(14,124,106,.15)",paddingTop:10,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+                  <span style={{ fontSize:11,fontWeight:700,color:"#0e7c6a",whiteSpace:"nowrap" }}>
+                    ✏️ {sm.maxDoctors}:
+                  </span>
+                  <input
+                    type="number" min={1} max={50}
+                    value={form.max_doctors}
+                    onChange={e => setForm(prev => ({ ...prev, max_doctors: parseInt(e.target.value) || 1 }))}
+                    style={{ width:60,padding:"5px 8px",border:"1.5px solid rgba(14,124,106,.4)",borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:800,color:"#0e7c6a",textAlign:"center" as const,outline:"none",background:"#fff" }}
+                  />
+                  <button
+                    onClick={async () => {
+                      setSaving(true); setError(""); setSuccessMsg("");
+                      const result = await callAPI(buildBody());
+                      setSaving(false);
+                      if (!result.ok) { setError(result.error!); return; }
+                      setSuccessMsg(isAr ? "✓ تم حفظ الحد الأقصى" : "✓ Max doctors saved");
+                      onSave();
+                      setTimeout(() => setSuccessMsg(""), 2500);
+                    }}
+                    disabled={saving}
+                    style={{ padding:"5px 14px",background:"#0e7c6a",color:"#fff",border:"none",borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:saving?"not-allowed":"pointer",whiteSpace:"nowrap" as const }}>
+                    {saving ? "..." : (isAr ? "💾 حفظ" : "💾 Save")}
+                  </button>
+                  <span style={{ fontSize:10,color:"#aaa" }}>{sm.maxDoctorsNote}</span>
                 </div>
               </div>
 
