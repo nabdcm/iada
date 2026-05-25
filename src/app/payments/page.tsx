@@ -92,14 +92,14 @@ const T = {
       doctor:"الطبيب",
       doctorRevenue:"إيرادات حسب الطبيب",
       planLimits:{
-        clinic_basic:     "حتى طبيبين",
-        clinic_pro:       "حتى 3 أطباء",
-        clinic_enterprise:"حتى 5 أطباء",
+        shared_basic:     "حتى طبيبين",
+        shared_pro:       "حتى 3 أطباء",
+        shared_enterprise:"حتى 5 أطباء",
       },
       planPricing:{
-        clinic_basic:     "٧.٩٩ $ / شهر · ٧٩ $ / سنة",
-        clinic_pro:       "١٣.٩٩ $ / شهر · ١٣٩ $ / سنة",
-        clinic_enterprise:"تسعير مخصص",
+        shared_basic:     "٧.٩٩ $ / شهر · ٧٩ $ / سنة",
+        shared_pro:       "١٣.٩٩ $ / شهر · ١٣٩ $ / سنة",
+        shared_enterprise:"٢١.٩٩ $ / شهر · ٢١٩ $ / سنة",
       },
     },
   },
@@ -185,14 +185,14 @@ const T = {
       doctor:"Doctor",
       doctorRevenue:"Revenue by Doctor",
       planLimits:{
-        clinic_basic:     "Up to 2 doctors",
-        clinic_pro:       "Up to 3 doctors",
-        clinic_enterprise:"Up to 5 doctors",
+        shared_basic:     "Up to 2 doctors",
+        shared_pro:       "Up to 3 doctors",
+        shared_enterprise:"Up to 5 doctors",
       },
       planPricing:{
-        clinic_basic:     "$7.99/mo · $79/yr",
-        clinic_pro:       "$13.99/mo · $139/yr",
-        clinic_enterprise:"Custom pricing",
+        shared_basic:     "$7.99/mo · $79/yr",
+        shared_pro:       "$13.99/mo · $139/yr",
+        shared_enterprise:"$21.99/mo · $219/yr",
       },
     },
   },
@@ -228,39 +228,41 @@ const TrackingIcon = () => (
 );
 
 // ─── Plan access rules ────────────────────────────────────
-type PlanType = "basic" | "pro" | "enterprise" | "clinic_basic" | "clinic_pro" | "clinic_enterprise";
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
+
 // الخطط المشتركة للعيادات
-const SHARED_CLINIC_PLANS: PlanType[] = ["clinic_basic", "clinic_pro", "clinic_enterprise"];
+const SHARED_CLINIC_PLANS: PlanType[] = ["shared_basic", "shared_pro", "shared_enterprise"];
 const isSharedClinicPlan = (plan: PlanType) => SHARED_CLINIC_PLANS.includes(plan);
 
 // حدود الأطباء لكل خطة مشتركة
 const CLINIC_PLAN_DOCTOR_LIMITS: Record<string, number> = {
-  clinic_basic:      2,
-  clinic_pro:        3,
-  clinic_enterprise: 5,
+  shared_basic:      2,
+  shared_pro:        3,
+  shared_enterprise: 5,
 };
 
 // أسعار الخطط المشتركة (دولار)
 const CLINIC_PLAN_PRICING = {
-  clinic_basic:      { monthly: 7.99,  yearly: 79  },
-  clinic_pro:        { monthly: 13.99, yearly: 139 },
-  clinic_enterprise: { monthly: null,  yearly: null }, // مخصص
+  shared_basic:      { monthly: 7.99,  yearly: 79  },
+  shared_pro:        { monthly: 13.99, yearly: 139 },
+  shared_enterprise: { monthly: 21.99, yearly: 219 },
 };
 
 const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise","clinic_basic","clinic_pro","clinic_enterprise"],
-  prescriptions: ["enterprise","clinic_basic","clinic_pro","clinic_enterprise"],
-  tracking:      ["enterprise","clinic_basic","clinic_pro","clinic_enterprise"],
+  payments:      ["pro","enterprise","shared_basic","shared_pro","shared_enterprise"],
+  prescriptions: ["enterprise","shared_basic","shared_pro","shared_enterprise"],
+  tracking:      ["enterprise","shared_basic","shared_pro","shared_enterprise"],
 };
 const canAccess = (feature:string, plan:PlanType) =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
+
 const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string;isShared?:boolean}> = {
-  basic:             {label:{ar:"الأساسية",             en:"Basic"},             color:"#0863ba"},
-  pro:               {label:{ar:"الاحترافية",           en:"Professional"},      color:"#7b2d8b"},
-  enterprise:        {label:{ar:"الشاملة",              en:"Comprehensive"},     color:"#e67e22"},
-  clinic_basic:      {label:{ar:"عيادات — أساسية",      en:"Clinics — Basic"},   color:"#0891b2", isShared:true},
-  clinic_pro:        {label:{ar:"عيادات — احترافية",    en:"Clinics — Pro"},     color:"#7c3aed", isShared:true},
-  clinic_enterprise: {label:{ar:"عيادات — شاملة",      en:"Clinics — Full"},    color:"#b45309", isShared:true},
+  basic:             {label:{ar:"الأساسية",            en:"Basic"},             color:"#0863ba"},
+  pro:               {label:{ar:"الاحترافية",          en:"Professional"},      color:"#7b2d8b"},
+  enterprise:        {label:{ar:"الشاملة",             en:"Comprehensive"},     color:"#e67e22"},
+  shared_basic:      {label:{ar:"مشتركة — أساسية",    en:"Shared — Basic"},    color:"#0e7c6a", isShared:true},
+  shared_pro:        {label:{ar:"مشتركة — احترافية",  en:"Shared — Pro"},      color:"#b5451b", isShared:true},
+  shared_enterprise: {label:{ar:"مشتركة — شاملة",    en:"Shared — Full"},     color:"#4a1480", isShared:true},
 };
 
 function Sidebar({ lang, setLang, isMobile, mobileOpen, setMobileOpen, activePage = "payments", plan = "basic" }: {
@@ -921,10 +923,11 @@ export default function PaymentsPage() {
       const activePlan = (clinicRow?.plan as PlanType) || "basic";
       if (SHARED_CLINIC_PLANS.includes(activePlan)) {
         const { data: doctorsData } = await supabase
-          .from("clinic_doctors")
+          .from("doctors")
           .select("id, name, color")
           .eq("user_id", user.id)
-          .order("name");
+          .eq("is_active", true)
+          .order("id");
         setDoctors(doctorsData || []);
       }
 
@@ -1490,23 +1493,21 @@ export default function PaymentsPage() {
 
             {/* ── شريط الخطة المشتركة ── */}
             {isSharedClinicPlan(plan) && (
-              <div style={{ marginBottom:20,padding:"14px 20px",background:"linear-gradient(135deg,rgba(8,145,178,.06),rgba(124,58,237,.06))",border:"1.5px solid rgba(8,145,178,.2)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
+              <div style={{ marginBottom:20,padding:"14px 20px",background:"linear-gradient(135deg,rgba(14,124,106,.06),rgba(181,69,27,.06))",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
                 <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                  <div style={{ width:38,height:38,background:"rgba(8,145,178,.12)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>🏥</div>
+                  <div style={{ width:38,height:38,background:"rgba(14,124,106,.12)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>🏥</div>
                   <div>
-                    <div style={{ fontSize:13,fontWeight:800,color:"#0891b2" }}>
+                    <div style={{ fontSize:13,fontWeight:800,color:PLAN_BADGE[plan].color }}>
                       {PLAN_BADGE[plan].label[lang as "ar"|"en"]}
                       {" · "}
                       <span style={{ fontSize:11,fontWeight:500,color:"#888" }}>
-                        {isAr
-                          ? (tr as any).sharedClinic.planLimits[plan]
-                          : (tr as any).sharedClinic.planLimits[plan]}
+                        {tr.sharedClinic.planLimits[plan as keyof typeof tr.sharedClinic.planLimits] ?? `${CLINIC_PLAN_DOCTOR_LIMITS[plan] ?? "?"} ${isAr?"أطباء":"doctors"}`}
                       </span>
                     </div>
                     <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>
                       {isAr
-                        ? `${doctors.length} طبيب مسجّل · ${(tr as any).sharedClinic.planPricing[plan]}`
-                        : `${doctors.length} registered doctor(s) · ${(tr as any).sharedClinic.planPricing[plan]}`}
+                        ? `${doctors.length} ${isAr?"طبيب مسجّل":"registered"} · ${tr.sharedClinic.planPricing[plan as keyof typeof tr.sharedClinic.planPricing] ?? ""}`
+                        : `${doctors.length} registered doctor(s) · ${tr.sharedClinic.planPricing[plan as keyof typeof tr.sharedClinic.planPricing] ?? ""}`}
                     </div>
                   </div>
                 </div>
@@ -1514,7 +1515,7 @@ export default function PaymentsPage() {
                 {doctors.length > 0 && (
                   <div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
                     <span style={{ fontSize:12,color:"#888",fontWeight:600 }}>
-                      {isAr ? (tr as any).sharedClinic.filterByDoctor : (tr as any).sharedClinic.filterByDoctor}:
+                      {tr.sharedClinic.filterByDoctor}:
                     </span>
                     <button
                       onClick={() => setSelectedDoctor(null)}
@@ -1523,7 +1524,7 @@ export default function PaymentsPage() {
                         background: selectedDoctor===null ? "rgba(8,145,178,.1)" : "#fff",
                         color: selectedDoctor===null ? "#0891b2" : "#888",
                       }}>
-                      {isAr ? (tr as any).sharedClinic.allDoctors : (tr as any).sharedClinic.allDoctors}
+                      {tr.sharedClinic.allDoctors}
                     </button>
                     {doctors.map(doc => (
                       <button key={doc.id}
@@ -1802,7 +1803,7 @@ export default function PaymentsPage() {
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                       <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
                         <span style={{ fontSize:16 }}>👨‍⚕️</span>
-                        {isAr ? (tr as any).sharedClinic.doctorRevenue : (tr as any).sharedClinic.doctorRevenue}
+                        {tr.sharedClinic.doctorRevenue}
                       </h3>
                       <span style={{ fontSize:11,background:"rgba(8,145,178,.08)",color:"#0891b2",padding:"3px 10px",borderRadius:20,fontWeight:600 }}>
                         {isAr ? "هذا الشهر" : "This Month"}
