@@ -670,7 +670,7 @@ export default function PrescriptionsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [plan, setPlan] = useState<PlanType>("basic");
   // للخطط المشتركة: قائمة الأطباء + الطبيب المحدد لإصدار الوصفة
-  const [doctors, setDoctors] = useState<{id:string; name:string; name_en?:string}[]>([]);
+  const [doctors, setDoctors] = useState<{id:string; name:string}[]>([]);
   const [selectedDoctorFilter, setSelectedDoctorFilter] = useState<string>("all");
 
   // Form state
@@ -725,11 +725,12 @@ export default function PrescriptionsPage() {
         // تحميل قائمة الأطباء للخطط المشتركة
         if (isSharedPlan(p)) {
           const { data: drs } = await supabase
-            .from("clinic_doctors")
-            .select("id, name, name_en")
+            .from("doctors")
+            .select("id, name")
             .eq("user_id", userId)
-            .order("created_at", { ascending: true });
-          if (drs) setDoctors(drs);
+            .eq("is_active", true)
+            .order("id", { ascending: true });
+          if (drs) setDoctors(drs.map(d => ({ id: String(d.id), name: d.name })));
         }
       }
 
@@ -1002,7 +1003,7 @@ export default function PrescriptionsPage() {
                       background:isActive?"rgba(14,138,110,.1)":"#fafbfc",
                       color:isActive?"#0e8a6e":"#888", transition:"all .15s",
                       display:"flex", alignItems:"center", gap:6 }}>
-                    {isAr ? dr.name : (dr.name_en || dr.name)}
+                    {dr.name}
                     <span style={{ fontSize:11, background:isActive?"rgba(14,138,110,.2)":"#f0f0f0", color:isActive?"#0e8a6e":"#aaa", padding:"1px 7px", borderRadius:10, fontWeight:700 }}>{count}</span>
                   </button>
                 );
@@ -1051,7 +1052,7 @@ export default function PrescriptionsPage() {
                             const dr = doctors.find(d => d.id === rx.doctor_id);
                             return dr ? (
                               <span style={{ fontSize:10, background:"rgba(14,138,110,.1)", color:"#0e8a6e", padding:"1px 7px", borderRadius:8, fontWeight:700 }}>
-                                👨‍⚕️ {isAr ? dr.name : (dr.name_en || dr.name)}
+                                👨‍⚕️ {dr.name}
                               </span>
                             ) : null;
                           })()}
@@ -1117,7 +1118,7 @@ export default function PrescriptionsPage() {
                   <div style={{ fontSize: 11, color: "#aaa" }}>
                     {clinicName}
                     {isSharedPlan(plan) && form.doctor_id
-                      ? ` — 👨‍⚕️ ${doctors.find(d=>d.id===form.doctor_id)?.[isAr?"name":"name_en"] || doctors.find(d=>d.id===form.doctor_id)?.name || doctorName}`
+                      ? ` — 👨‍⚕️ ${doctors.find(d=>d.id===form.doctor_id)?.name || doctorName}`
                       : ` — ${doctorName}`}
                   </div>
                 </div>
@@ -1174,7 +1175,7 @@ export default function PrescriptionsPage() {
                             border:`1.5px solid ${isSelected?"#0e8a6e":"#eef0f3"}`,
                             background:isSelected?"rgba(14,138,110,.1)":"#fafbfc",
                             color:isSelected?"#0e8a6e":"#888" }}>
-                          {isAr ? dr.name : (dr.name_en || dr.name)}
+                          {dr.name}
                           {isSelected && <span style={{ marginRight:isAr?6:0, marginLeft:isAr?0:6 }}>✓</span>}
                         </button>
                       );
