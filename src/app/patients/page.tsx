@@ -669,14 +669,20 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
 }
 
 // ─── Patient Profile Modal ───────────────────────────────
-function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lang; patient:Patient; clinicType:ClinicType; onClose:()=>void }) {
+function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { lang:Lang; patient:Patient; clinicType:ClinicType; plan:PlanType; onClose:()=>void }) {
   const t    = T[lang].profile;
   const isAr = lang==="ar";
   const meta = CLINIC_TYPE_META[clinicType] ?? CLINIC_TYPE_META.general;
   const medFields = MEDICAL_FIELDS_BY_TYPE[clinicType] ?? MEDICAL_FIELDS_BY_TYPE.general;
-  const isDental = clinicType==="dental";
+  const isDental  = clinicType==="dental";
+  const canXray   = canAccess("xrays", plan); // الأشعة فقط للشاملة (فردية + مشتركة)
 
   const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental">("info");
+
+  // إذا لم يكن للخطة صلاحية الأشعة وكان التبويب النشط هو الأشعة، نعيده للمعلومات
+  useEffect(() => {
+    if (activeTab === "xrays" && !canXray) setActiveTab("info");
+  }, [canXray, activeTab]);
   const [profile,   setProfile]   = useState<PatientProfile>({ medical_fields:{}, dental_chart:{}, xrays:[], extra_form_fields:{} });
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving,         setSaving]         = useState(false);
@@ -717,7 +723,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
   const tabs = [
     { key:"info"    as const, label:t.tabs.info,    icon:"👤" },
     { key:"medical" as const, label:t.tabs.medical, icon:"🏥" },
-    { key:"xrays"   as const, label:t.tabs.xrays,   icon:"🩻" },
+    ...(canXray ? [{ key:"xrays" as const, label:t.tabs.xrays, icon:"🩻" }] : []),
     ...(isDental ? [{ key:"dental" as const, label:t.tabs.dental, icon:"🦷" }] : []),
   ];
 
@@ -887,7 +893,17 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: { lang:Lan
 
                 {/* ── X-RAYS ── */}
                 {activeTab==="xrays"&&(
-                  <XRaySection lang={lang} xrays={profile.xrays} onChange={imgs=>saveProfile({...profile,xrays:imgs})}/>
+                  canXray
+                    ? <XRaySection lang={lang} xrays={profile.xrays} onChange={imgs=>saveProfile({...profile,xrays:imgs})}/>
+                    : <div style={{ textAlign:"center",padding:"48px 20px",color:"#bbb" }}>
+                        <div style={{ fontSize:48,marginBottom:12 }}>🔒</div>
+                        <div style={{ fontSize:15,fontWeight:700,color:"#888",marginBottom:8 }}>
+                          {isAr?"رفع الأشعة غير متاح في خطتك":"X-Ray upload not available in your plan"}
+                        </div>
+                        <div style={{ fontSize:13,color:"#bbb" }}>
+                          {isAr?"قم بترقية خطتك إلى الشاملة للاستفادة من هذه الميزة":"Upgrade to the Comprehensive plan to access this feature"}
+                        </div>
+                      </div>
                 )}
 
                 {/* ── DENTAL ── */}
@@ -926,31 +942,32 @@ type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" |
 const isSharedPlan = (plan: PlanType): boolean =>
   plan === "shared_basic" || plan === "shared_pro" || plan === "shared_enterprise";
 
-// الحد الافتراضي للأطباء في كل خطة (قابل للتخصيص من الأدمن)
+// الحد الافتراضي للأطباء — الفردية دائماً طبيب واحد، المشتركة حسب الخطة (قابل للزيادة من الأدمن للشاملة)
 const SHARED_PLAN_MAX_DOCTORS: Record<PlanType, number> = {
-  // الخطط الفردية: كل خطة تدعم عدداً محدداً من الأطباء
-  basic: 2,           // أساسية فردية: حتى طبيبين
-  pro: 3,             // احترافية فردية: حتى 3 أطباء
-  enterprise: 5,      // شاملة فردية: حتى 5 أطباء
-  // الخطط المشتركة: نفس الحدود
-  shared_basic: 2,    // أساسية مشتركة: حتى طبيبين
-  shared_pro: 3,      // احترافية مشتركة: حتى 3 أطباء
-  shared_enterprise: 5, // شاملة مشتركة: حتى 5 أطباء
+  basic:             1,        // أساسية فردية: طبيب واحد فقط
+  pro:               1,        // احترافية فردية: طبيب واحد فقط
+  enterprise:        1,        // شاملة فردية: طبيب واحد فقط
+  shared_basic:      2,        // أساسية مشتركة: حتى طبيبين
+  shared_pro:        3,        // احترافية مشتركة: حتى 3 أطباء
+  shared_enterprise: 5,        // شاملة مشتركة: حتى 5 أطباء (قابل للزيادة من الأدمن)
 };
 
 const PLAN_ACCESS: Record<string, string[]> = {
-  payments:      ["pro", "enterprise", "shared_pro", "shared_enterprise"],
-  prescriptions: ["enterprise", "shared_enterprise"],
-  tracking:      ["enterprise", "shared_enterprise"],
+  // المدفوعات: الاحترافية والشاملة (فردي + مشترك)
+  payments:      ["pro", "enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+  // الوصفات: الشاملة فقط (فردي + مشترك)
+  prescriptions: ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+  // المتابعة: الشاملة فقط (فردي + مشترك)
+  tracking:      ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+  // الأشعة: الشاملة فقط (فردي + مشترك) — الأساسية والاحترافية لا تدعم رفع الأشعة
+  xrays:         ["enterprise", "shared_enterprise"],
 };
 const PLAN_LIMITS: Record<PlanType, number> = {
-  // الخطط الفردية
-  basic: 100,        // أساسية فردية: حتى 100 مريض
-  pro: 400,          // احترافية فردية: حتى 400 مريض
-  enterprise: Infinity, // شاملة فردية: غير محدود
-  // الخطط المشتركة (نفس الحدود ولكن موزّعة على جميع أطباء العيادة)
-  shared_basic: 100,        // أساسية مشتركة: حتى 100 مريض
-  shared_pro: 400,          // احترافية مشتركة: حتى 400 مريض
+  basic:             100,      // أساسية فردية: حتى 100 مريض
+  pro:               400,      // احترافية فردية: حتى 400 مريض
+  enterprise:        Infinity, // شاملة فردية: غير محدود
+  shared_basic:      100,      // أساسية مشتركة: حتى 100 مريض
+  shared_pro:        400,      // احترافية مشتركة: حتى 400 مريض
   shared_enterprise: Infinity, // شاملة مشتركة: غير محدود
 };
 const canAccess = (feature: string, plan: PlanType) =>
@@ -1338,7 +1355,7 @@ export default function PatientsPage() {
   const [plan,       setPlan]            = useState<PlanType>("basic");
   const [maxDoctors, setMaxDoctors]      = useState<number>(2); // الحد المخصص من الأدمن
   // للخطط المشتركة: قائمة الأطباء + الطبيب المحدد لتصفية المرضى
-  const [doctors,        setDoctors]        = useState<{id:string; name:string; name_en?:string; color?:string; is_active?:boolean}[]>([]);
+  const [doctors,        setDoctors]        = useState<{id:string; name:string; color?:string; is_active?:boolean}[]>([]);
 
   const [patients,       setPatients]       = useState<Patient[]>([]);
   const [loading,        setLoading]        = useState(true);
@@ -1371,12 +1388,12 @@ export default function PatientsPage() {
         // تحميل قائمة الأطباء للخطط المشتركة (النشطون فقط)
         if (isSharedPlan(p)) {
           const { data: drs } = await supabase
-            .from("clinic_doctors")
-            .select("id, name, name_en, color, is_active")
+            .from("doctors")
+            .select("id, name, color, is_active")
             .eq("user_id", user.id)
             .eq("is_active", true)
-            .order("created_at", { ascending: true });
-          if (drs) setDoctors(drs);
+            .order("id", { ascending: true });
+          if (drs) setDoctors(drs.map(d => ({ id: String(d.id), name: d.name, color: d.color, is_active: d.is_active })));
         }
       }
     } catch {}
@@ -1810,7 +1827,7 @@ export default function PatientsPage() {
           <PatientModal lang={lang} patient={editPatient} clinicType={clinicType} onSave={handleSave} onClose={()=>{ setAddModal(false);setEditPatient(null); }}/>
         )}
         {deletePatient&&<DeleteModal lang={lang} patient={deletePatient} onConfirm={handleDelete} onClose={()=>setDeletePatient(null)}/>}
-        {profilePatient&&<PatientProfileDrawer lang={lang} patient={profilePatient} clinicType={clinicType} onClose={()=>setProfilePatient(null)}/>}
+        {profilePatient&&<PatientProfileDrawer lang={lang} patient={profilePatient} clinicType={clinicType} plan={plan} onClose={()=>setProfilePatient(null)}/>}
       </div>
     </>
   );
