@@ -129,17 +129,21 @@ function PatientLoginForm({ lang, tr }: { lang: Lang; tr: LoginTranslation }) {
     setLoading(true);
     setError("");
     try {
-      const { data, error: rpcErr } = await supabase.rpc("get_patient_by_phone_mrn", {
-        p_phone: phone.trim(),
-        p_mrn:   mrn.trim().toUpperCase(),
-      });
-      if (rpcErr || !data || data.length === 0) {
+      // استعلام مباشر على جدول master_patients — نفس منطق صفحة بوابة المريض الأساسية
+      const { data, error: dbErr } = await supabase
+        .from("master_patients")
+        .select("name, phone, mrn")
+        .eq("phone", phone.trim())
+        .eq("mrn", mrn.trim().toUpperCase())
+        .maybeSingle();
+
+      if (dbErr || !data) {
         setError(tr.errors.patient);
         setLoading(false);
         return;
       }
-      // store patient session and redirect to patient portal
-      try { sessionStorage.setItem("nabd_patient", JSON.stringify(data[0])); } catch { /* ignore */ }
+      // حفظ جلسة المريض والانتقال لبوابته
+      try { sessionStorage.setItem("nabd_patient", JSON.stringify(data)); } catch { /* ignore */ }
       window.location.href = "/patient-portal";
     } catch {
       setError(tr.errors.network);
