@@ -209,8 +209,9 @@ const SHARED_PLAN_MAX_DOCTORS: Record<PlanType, number> = {
 };
 
 const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise","shared_basic","shared_pro","shared_enterprise"],
-  prescriptions: ["enterprise","shared_basic","shared_pro","shared_enterprise"],
+  payments:      ["pro","enterprise","shared_pro","shared_enterprise"],
+  // الوصفات: الشاملة فقط — الأساسية والاحترافية مقفلة (فردي ومشترك)
+  prescriptions: ["enterprise","shared_enterprise"],
   tracking:      ["enterprise","shared_basic","shared_pro","shared_enterprise"],
 };
 const canAccess = (feature:string, plan:PlanType) =>
@@ -893,18 +894,28 @@ export default function PrescriptionsPage() {
 
         {/* ── شاشة "غير متاح في خطتك" ── */}
         {!loading && !canAccess("prescriptions", plan) && (
-          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",textAlign:"center",gap:16 }}>
-            <div style={{ fontSize:56 }}>🔒</div>
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:16 }}>
+            <div style={{ fontSize:64 }}>🔒</div>
             <h2 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>
-              {isAr ? "الوصفات الطبية غير متاحة في خطتك" : "Prescriptions Unavailable"}
+              {isAr ? "الوصفات الطبية غير متاحة في خطتك الحالية" : "Prescriptions Not Available in Your Plan"}
             </h2>
-            <p style={{ fontSize:14,color:"#888",maxWidth:400,lineHeight:1.7 }}>
+            <p style={{ fontSize:14,color:"#888",maxWidth:420,lineHeight:1.8 }}>
               {isAr
-                ? "هذه الميزة متاحة في الخطة الشاملة أو أي من الخطط المشتركة. قم بترقية خطتك لتتمكن من تسجيل وطباعة الوصفات الطبية."
-                : "This feature is available in the Comprehensive plan or any Shared plan. Upgrade to create and print prescriptions."}
+                ? "الخطة الأساسية والاحترافية (فردية أو مشتركة) لا تتضمن ميزة الوصفات الطبية. هذه الميزة متاحة حصراً في الخطة الشاملة."
+                : "The Basic and Professional plans (individual or shared) do not include prescriptions. This feature is exclusively available in the Comprehensive plan."}
             </p>
-            <a href="/dashboard" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#e67e22",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(230,126,34,.35)" }}>
-              {isAr ? "⬆️ ترقية الخطة" : "⬆️ Upgrade Plan"}
+            <div style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginTop:4 }}>
+              <div style={{ padding:"10px 20px",background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontSize:13,color:"#e67e22",fontWeight:600 }}>
+                ✅ {isAr?"الشاملة — فردي":"Comprehensive — Individual"}
+              </div>
+              <div style={{ padding:"10px 20px",background:"rgba(74,20,128,.08)",border:"1.5px solid rgba(74,20,128,.2)",borderRadius:12,fontSize:13,color:"#4a1480",fontWeight:600 }}>
+                ✅ {isAr?"الشاملة — مشترك":"Comprehensive — Shared"}
+              </div>
+            </div>
+            <a href="https://wa.me/963998285483" target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#25D366",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(37,211,102,.35)",marginTop:8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.535 5.847L.057 23.882l6.196-1.447A11.952 11.952 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.007-1.371l-.36-.214-3.68.859.925-3.585-.234-.369A9.818 9.818 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>
+              {isAr ? "تواصل معنا للترقية" : "Contact Us to Upgrade"}
             </a>
           </div>
         )}
