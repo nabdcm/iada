@@ -43,6 +43,9 @@ const T = {
       cancel:"إلغاء",
       required:"المريض والمبلغ والوصف مطلوبة",
       addPending:"إضافة كمستحق",
+      doctorOptional:"الطبيب (اختياري)",
+      doctorOptionalHint:"يمكنك تخصيص الدفعة لطبيب محدد أو تركها كإيراد مشترك للعيادة",
+      sharedRevenue:"إيراد مشترك",
     },
     months:["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
     noResults:"لا توجد نتائج",
@@ -136,6 +139,9 @@ const T = {
       cancel:"Cancel",
       required:"Patient, amount and description are required",
       addPending:"Add as Pending",
+      doctorOptional:"Doctor (Optional)",
+      doctorOptionalHint:"You can assign this payment to a specific doctor or leave it as shared clinic revenue",
+      sharedRevenue:"Shared Revenue",
     },
     months:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
     noResults:"No results found",
@@ -249,7 +255,8 @@ const CLINIC_PLAN_PRICING = {
 };
 
 const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise","shared_basic","shared_pro","shared_enterprise"],
+  // المدفوعات: الاحترافية والشاملة فقط — الأساسية مقفلة (فردي ومشترك)
+  payments:      ["pro","enterprise","shared_pro","shared_enterprise"],
   prescriptions: ["enterprise","shared_basic","shared_pro","shared_enterprise"],
   tracking:      ["enterprise","shared_basic","shared_pro","shared_enterprise"],
 };
@@ -463,7 +470,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
 
   const handleSave = async (asPending=false) => {
     if (!form.patientId||!form.amount||!form.description.trim()) { setError(tr.modal.required); return; }
-    if (isSharedClinic && !form.doctorId) { setError(isAr ? "يرجى اختيار الطبيب" : "Please select a doctor"); return; }
+    // تخصيص الطبيب اختياري في الخطط المشتركة — لا validation إلزامي
     setSaving(true);
     try {
       await onSave({
@@ -571,10 +578,29 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
             </div>
           </F>
 
-          {/* حقل الطبيب — للخطط المشتركة فقط */}
+          {/* حقل الطبيب — للخطط المشتركة فقط — اختياري */}
           {isSharedClinic && doctors && doctors.length > 0 && (
-            <F label={isAr ? "الطبيب المسؤول *" : "Responsible Doctor *"}>
+            <F label={tr.modal.doctorOptional}>
+              <div style={{ marginBottom:8,fontSize:12,color:"#aaa",lineHeight:1.6 }}>
+                {tr.modal.doctorOptionalHint}
+              </div>
               <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
+                {/* زر "إيراد مشترك" */}
+                <button key="none" onClick={() => setForm({...form, doctorId: ""})}
+                  style={{
+                    padding:"9px 16px", borderRadius:10, cursor:"pointer",
+                    border: form.doctorId==="" ? "1.5px solid #888" : "1.5px solid #eee",
+                    background: form.doctorId==="" ? "rgba(100,100,100,.08)" : "#fafbfc",
+                    fontFamily:"Rubik,sans-serif", fontSize:13,
+                    fontWeight: form.doctorId==="" ? 700 : 400,
+                    color: form.doctorId==="" ? "#555" : "#aaa",
+                    transition:"all .2s", display:"flex", alignItems:"center", gap:7,
+                  }}>
+                  <div style={{ width:22,height:22,borderRadius:6,background:form.doctorId===""?"#888":"#ddd",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11 }}>
+                    🏥
+                  </div>
+                  {tr.modal.sharedRevenue}
+                </button>
                 {doctors.map(doc => (
                   <button key={doc.id} onClick={() => setForm({...form, doctorId: String(doc.id)})}
                     style={{
@@ -1422,20 +1448,28 @@ export default function PaymentsPage() {
 
         <main className="page-anim main-content" style={{ padding:"0 32px 48px", transition:"margin .3s" }}>
 
-          {/* ── شاشة "غير متاح في خطتك" للأساسية ── */}
+          {/* ── شاشة "غير متاح في الخطة الأساسية" ── */}
           {!loading && !canAccess("payments", plan) && (
             <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:16 }}>
-              <div style={{ fontSize:56 }}>🔒</div>
+              <div style={{ fontSize:64 }}>🔒</div>
               <h2 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>
-                {isAr ? "إدارة المدفوعات غير متاحة في خطتك" : "Payments Unavailable"}
+                {isAr ? "إدارة المدفوعات غير متاحة في خطتك الحالية" : "Payments Not Available in Your Plan"}
               </h2>
-              <p style={{ fontSize:14,color:"#888",maxWidth:380,lineHeight:1.7 }}>
+              <p style={{ fontSize:14,color:"#888",maxWidth:420,lineHeight:1.8 }}>
                 {isAr
-                  ? "هذه الميزة متاحة في الخطة الاحترافية والشاملة. قم بترقية خطتك لتتمكن من إدارة المدفوعات والإيرادات."
-                  : "This feature is available in the Professional and Comprehensive plans. Upgrade to manage payments and revenue."}
+                  ? "الخطة الأساسية (فردية أو مشتركة) لا تتضمن ميزة إدارة المدفوعات. هذه الميزة متاحة في الخطة الاحترافية والشاملة."
+                  : "The Basic plan (individual or shared) does not include payment management. This feature is available in the Professional and Comprehensive plans."}
               </p>
-              <a href="/dashboard" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#7b2d8b",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(123,45,139,.35)" }}>
-                {isAr ? "⬆️ ترقية الخطة" : "⬆️ Upgrade Plan"}
+              <div style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginTop:4 }}>
+                <div style={{ padding:"10px 20px",background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:12,fontSize:13,color:"#7b2d8b",fontWeight:600 }}>
+                  ✅ {isAr?"الاحترافية — فردي أو مشترك":"Professional — Individual or Shared"}
+                </div>
+                <div style={{ padding:"10px 20px",background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontSize:13,color:"#e67e22",fontWeight:600 }}>
+                  ✅ {isAr?"الشاملة — فردي أو مشترك":"Comprehensive — Individual or Shared"}
+                </div>
+              </div>
+              <a href="/dashboard" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#7b2d8b",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(123,45,139,.35)",marginTop:8 }}>
+                ⬆️ {isAr?"ترقية الخطة":"Upgrade Plan"}
               </a>
             </div>
           )}
