@@ -1049,19 +1049,21 @@ function Sidebar({ lang, setLang, activePage="patients", plan="basic", maxDoctor
                 onClick={isLocked ? (e)=>e.preventDefault() : undefined}
                 onMouseEnter={e=>{if(!isActive&&!isLocked)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
                 onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
-                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.45)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:isLocked?0.7:1 }}>
+                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.45)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"background .18s, padding .3s, gap .3s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:1 }}>
                 {isActive&&<div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>}
-                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
-                {!collapsed&&<span style={{ flex:1 }}>{tr.nav[item.key]}</span>}
-                {isLocked&&!collapsed&&(
-                  <span style={{ display:"flex",alignItems:"center",gap:3,fontSize:9,fontWeight:700,color:"#f5a623",background:"rgba(245,166,35,0.18)",border:"1px solid rgba(245,166,35,0.35)",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap",flexShrink:0 }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#f5a623"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-                    {isAr?"ترقية":"Upgrade"}
-                  </span>
-                )}
+                {/* نجمة الترقية — دائماً في الزاوية العلوية عند المصغّر */}
                 {isLocked&&collapsed&&(
-                  <span style={{ position:"absolute",top:4,right:isAr?4:undefined,left:isAr?undefined:4 }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#f5a623"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                  <div style={{ position:"absolute",top:5,right:isAr?5:undefined,left:isAr?undefined:5,width:14,height:14,borderRadius:"50%",background:"rgba(245,166,35,0.22)",display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none" }}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="#f5a623"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                  </div>
+                )}
+                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
+                {!collapsed&&<span style={{ flex:1,opacity:isLocked?0.5:1 }}>{tr.nav[item.key]}</span>}
+                {/* badge الترقية — يظهر فقط عند الوضع الموسّع */}
+                {isLocked&&!collapsed&&(
+                  <span style={{ display:"flex",alignItems:"center",gap:3,fontSize:9,fontWeight:700,color:"#f5a623",background:"rgba(245,166,35,0.18)",border:"1px solid rgba(245,166,35,0.35)",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap",flexShrink:0,lineHeight:1.4 }}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="#f5a623" style={{ flexShrink:0 }}><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                    {isAr?"ترقية":"Upgrade"}
                   </span>
                 )}
               </a>
@@ -1073,7 +1075,7 @@ function Sidebar({ lang, setLang, activePage="patients", plan="basic", maxDoctor
             <>
               <div style={{ padding:"10px 12px",marginBottom:8,background:"rgba(255,255,255,0.07)",border:`1.5px solid ${PLAN_BADGE[plan].color}60`,borderRadius:10 }}>
                 {/* اسم الخطة */}
-                <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:isSharedPlan(plan)?6:0 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:6 }}>
                   <div style={{ width:9,height:9,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0,boxShadow:`0 0 6px ${PLAN_BADGE[plan].color}` }}/>
                   <span style={{ fontSize:13,fontWeight:700,color:"#ffffff",flex:1 }}>
                     {isSharedPlan(plan)
