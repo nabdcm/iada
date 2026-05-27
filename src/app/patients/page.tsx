@@ -1049,11 +1049,21 @@ function Sidebar({ lang, setLang, activePage="patients", plan="basic", maxDoctor
                 onClick={isLocked ? (e)=>e.preventDefault() : undefined}
                 onMouseEnter={e=>{if(!isActive&&!isLocked)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
                 onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
-                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.28)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:isLocked?0.5:1 }}>
+                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.45)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:isLocked?0.7:1 }}>
                 {isActive&&<div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>}
                 <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
                 {!collapsed&&<span style={{ flex:1 }}>{tr.nav[item.key]}</span>}
-                {isLocked&&!collapsed&&<span style={{ fontSize:11,opacity:0.7 }}>🔒</span>}
+                {isLocked&&!collapsed&&(
+                  <span style={{ display:"flex",alignItems:"center",gap:3,fontSize:9,fontWeight:700,color:"#f5a623",background:"rgba(245,166,35,0.18)",border:"1px solid rgba(245,166,35,0.35)",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap",flexShrink:0 }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#f5a623"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                    {isAr?"ترقية":"Upgrade"}
+                  </span>
+                )}
+                {isLocked&&collapsed&&(
+                  <span style={{ position:"absolute",top:4,right:isAr?4:undefined,left:isAr?undefined:4 }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#f5a623"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                  </span>
+                )}
               </a>
             );
           })}
@@ -1061,12 +1071,29 @@ function Sidebar({ lang, setLang, activePage="patients", plan="basic", maxDoctor
         <div style={{ padding:collapsed?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
           {!collapsed&&(
             <>
-              <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8 }}>
-                <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0 }}/>
-                <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
-                <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2 }}>
-                  <span style={{ fontSize:11,fontWeight:700,color:"#ffffff" }}>{PLAN_BADGE[plan].label[lang]}</span>
-                  {isSharedPlan(plan)&&<span style={{ fontSize:9,color:"rgba(255,255,255,0.5)" }}>{isAr?`👨‍⚕️ حتى ${maxDoctors} أطباء`:`👨‍⚕️ up to ${maxDoctors} drs`}</span>}
+              <div style={{ padding:"10px 12px",marginBottom:8,background:"rgba(255,255,255,0.07)",border:`1.5px solid ${PLAN_BADGE[plan].color}60`,borderRadius:10 }}>
+                {/* اسم الخطة */}
+                <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:isSharedPlan(plan)?6:0 }}>
+                  <div style={{ width:9,height:9,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0,boxShadow:`0 0 6px ${PLAN_BADGE[plan].color}` }}/>
+                  <span style={{ fontSize:13,fontWeight:700,color:"#ffffff",flex:1 }}>
+                    {isSharedPlan(plan)
+                      ? (isAr
+                          ? plan.replace("shared_basic","الأساسية").replace("shared_pro","الاحترافية").replace("shared_enterprise","الشاملة")
+                          : plan.replace("shared_basic","Basic").replace("shared_pro","Pro").replace("shared_enterprise","Full"))
+                      : (isAr
+                          ? plan==="basic"?"الأساسية":plan==="pro"?"الاحترافية":"الشاملة"
+                          : plan==="basic"?"Basic":plan==="pro"?"Professional":"Comprehensive")
+                    }
+                  </span>
+                </div>
+                {/* نوع الاشتراك */}
+                <div style={{ display:"flex",alignItems:"center",gap:5 }}>
+                  <span style={{ fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:isSharedPlan(plan)?"rgba(255,255,255,0.14)":"rgba(255,255,255,0.10)",color:"rgba(255,255,255,0.75)",border:"1px solid rgba(255,255,255,0.18)" }}>
+                    {isSharedPlan(plan)
+                      ? (isAr?"👥 مشترك":"👥 Shared")
+                      : (isAr?"👤 فردي":"👤 Individual")}
+                  </span>
+                  {isSharedPlan(plan)&&<span style={{ fontSize:10,color:"rgba(255,255,255,0.45)" }}>{isAr?`حتى ${maxDoctors} أطباء`:`up to ${maxDoctors} drs`}</span>}
                 </div>
               </div>
               <button onClick={()=>setLang(lang==="ar"?"en":"ar")} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}} style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>🌐 {lang==="ar"?"English":"العربية"}</button>
