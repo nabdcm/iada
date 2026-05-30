@@ -112,7 +112,7 @@ function SBadge({s,m,lang}:{s:number;m:number;lang:Lang}) {
 function BarcodeSVG({code,w=150,h=46}:{code:string;w?:number;h?:number}) {
   const bars = useMemo(()=>{ const r:number[]=[]; for(let i=0;i<code.length;i++){const d=parseInt(code[i],10)||0;r.push(1+(d%3));r.push(1);} r.push(3); return r; },[code]);
   const tot=bars.reduce((s,x)=>s+x,0), sc=(w-12)/tot; let x=6;
-  const rs:JSX.Element[]=[];
+  const rs:React.ReactElement[]=[];
   bars.forEach((bw,i)=>{ if(i%2===0) rs.push(<rect key={i} x={x} y={3} width={bw*sc} height={h-14} fill="#1a2840" rx={0.4}/>); x+=bw*sc; });
   return <svg width={w} height={h} style={{display:"block"}}>{rs}<text x={w/2} y={h-1} textAnchor="middle" fontSize={8} fill="#555" fontFamily="monospace" letterSpacing={1}>{code}</text></svg>;
 }
