@@ -131,7 +131,7 @@ function BarcodeBar({mode,isAr,onClose}:{mode:BarcodeMode;isAr:boolean;onClose:(
 }
 
 function useBarcode(onScan:(c:string)=>void, enabled=true) {
-  const buf=useRef(""), last=useRef(0), tim=useRef<any>();
+  const buf=useRef(""), last=useRef(0), tim=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
     if(!enabled) return;
     const h=(e:KeyboardEvent)=>{
@@ -963,7 +963,7 @@ export default function PharmacyPage() {
   const [barcodeMode,setBarcodeMode]=useState<BarcodeMode>(null);
   const [notif,setNotif]=useState<ScanNotif>(null);
   const [alertsRead,setAlertsRead]=useState<Set<number>>(new Set());
-  const notifT=useRef<any>();
+  const notifT=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   const showNotif=useCallback((n:ScanNotif,ms=2200)=>{setNotif(n);clearTimeout(notifT.current);notifT.current=setTimeout(()=>setNotif(null),ms);},[]);
   const addLog=useCallback((l:Omit<StockLog,"id">)=>setStockLog(prev=>[{id:Math.max(0,...prev.map(x=>x.id))+1,...l},...prev]),[]);
