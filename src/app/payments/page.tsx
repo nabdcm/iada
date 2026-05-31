@@ -53,6 +53,13 @@ const T = {
     revenueChart:"إيرادات آخر 6 أشهر",
     exportBtn:"تصدير",
     deleteConfirm:"هل تريد حذف هذه المعاملة؟",
+    paymentsLock:{
+      title:"صفحة المدفوعات محمية",
+      desc:"هذه الصفحة محمية بكلمة سر. أدخل كلمة السر للمتابعة.",
+      placeholder:"أدخل كلمة السر...",
+      submit:"دخول",
+      error:"كلمة السر غير صحيحة",
+    },
     withdrawBtn:"سحب",
     expenseBtn:"مصروف",
     withdrawModal:{
@@ -149,6 +156,13 @@ const T = {
     revenueChart:"Revenue — Last 6 Months",
     exportBtn:"Export",
     deleteConfirm:"Delete this transaction?",
+    paymentsLock:{
+      title:"Payments Page Protected",
+      desc:"This page is password protected. Enter the password to continue.",
+      placeholder:"Enter password...",
+      submit:"Enter",
+      error:"Incorrect password",
+    },
     withdrawBtn:"Withdraw",
     expenseBtn:"Expense",
     withdrawModal:{
@@ -896,6 +910,13 @@ export default function PaymentsPage() {
   const [doctors, setDoctors] = useState<{id: number; name: string; color?: string}[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<number|null>(null);
 
+  // ── قفل صفحة المدفوعات بكلمة سر ────────────────────────────
+  const [paymentsLockEnabled,  setPaymentsLockEnabled]  = useState(false);
+  const [paymentsLockPassword, setPaymentsLockPassword] = useState("");
+  const [isPaymentsUnlocked,   setIsPaymentsUnlocked]   = useState(false);
+  const [lockPasswordInput,    setLockPasswordInput]    = useState("");
+  const [lockPasswordError,    setLockPasswordError]    = useState(false);
+
   // ── جلب البيانات من Supabase ────────────────────────────────
   useEffect(() => {
     loadData();
@@ -923,9 +944,14 @@ export default function PaymentsPage() {
 
       // جلب خطة العيادة دائماً — مستقلة عن مصدر الاسم
       const { data: clinicRow } = await supabase
-        .from("clinics").select("name, plan").eq("user_id", user.id).single();
+        .from("clinics").select("name, plan, payments_lock_enabled, payments_lock_password").eq("user_id", user.id).single();
       if (clinicRow?.name && !clinicMeta) setClinicName(prev => prev || clinicRow.name);
       if (clinicRow?.plan) setPlan(clinicRow.plan as PlanType);
+      // قفل المدفوعات
+      if (clinicRow?.payments_lock_enabled) {
+        setPaymentsLockEnabled(true);
+        setPaymentsLockPassword(clinicRow.payments_lock_password || "");
+      }
 
       const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
         supabase
@@ -1475,8 +1501,65 @@ export default function PaymentsPage() {
             </div>
           )}
 
-          {/* ── المحتوى الكامل — للاحترافية والشاملة فقط ── */}
-          {canAccess("payments", plan) && (<>
+          {/* ── شاشة كلمة سر المدفوعات (قفل مفعّل + غير مفتوح بعد) ── */}
+          {!loading && canAccess("payments", plan) && paymentsLockEnabled && !isPaymentsUnlocked && (
+            <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:0 }}>
+              <div style={{ background:"#fff",borderRadius:24,border:"1.5px solid #eef0f3",boxShadow:"0 8px 40px rgba(8,99,186,.1)",padding:"40px 36px",maxWidth:380,width:"100%",animation:"modalIn .3s ease" }}>
+                <div style={{ fontSize:52,marginBottom:16 }}>🔐</div>
+                <h2 style={{ fontSize:20,fontWeight:800,color:"#353535",marginBottom:8 }}>
+                  {tr.paymentsLock.title}
+                </h2>
+                <p style={{ fontSize:13,color:"#aaa",lineHeight:1.7,marginBottom:24 }}>
+                  {tr.paymentsLock.desc}
+                </p>
+                <div style={{ position:"relative",marginBottom:12 }}>
+                  <input
+                    type="password"
+                    value={lockPasswordInput}
+                    onChange={e => { setLockPasswordInput(e.target.value); setLockPasswordError(false); }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        if (lockPasswordInput === paymentsLockPassword) {
+                          setIsPaymentsUnlocked(true);
+                        } else {
+                          setLockPasswordError(true);
+                          setLockPasswordInput("");
+                        }
+                      }
+                    }}
+                    placeholder={tr.paymentsLock.placeholder}
+                    autoFocus
+                    style={{ width:"100%",padding:"13px 16px",border:`1.5px solid ${lockPasswordError?"#c0392b":"#e8eaed"}`,borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,color:"#353535",background:lockPasswordError?"rgba(192,57,43,.04)":"#fafbfc",outline:"none",transition:"border .2s",boxSizing:"border-box",direction:isAr?"rtl":"ltr" }}
+                    onFocus={e => { if (!lockPasswordError) e.target.style.borderColor="#0863ba"; }}
+                    onBlur={e => { if (!lockPasswordError) e.target.style.borderColor="#e8eaed"; }}
+                  />
+                </div>
+                {lockPasswordError && (
+                  <div style={{ fontSize:12,color:"#c0392b",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6 }}>
+                    ⚠️ {tr.paymentsLock.error}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    if (lockPasswordInput === paymentsLockPassword) {
+                      setIsPaymentsUnlocked(true);
+                    } else {
+                      setLockPasswordError(true);
+                      setLockPasswordInput("");
+                    }
+                  }}
+                  style={{ width:"100%",padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#044d96"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#0863ba"; }}
+                >
+                  {tr.paymentsLock.submit}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── المحتوى الكامل — للاحترافية والشاملة فقط + بعد فتح القفل إن كان مفعلاً ── */}
+          {canAccess("payments", plan) && (!paymentsLockEnabled || isPaymentsUnlocked) && (<>
 
           {/* TOP BAR */}
           <div className="topbar-pad" style={{ position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>

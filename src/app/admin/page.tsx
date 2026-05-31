@@ -44,6 +44,9 @@ interface ClinicData {
   // للخطط المشتركة فقط
   max_doctors?: number;       // الحد الأقصى من الأطباء (قابل للتعديل من الأدمن)
   doctors_count?: number;     // عدد الأطباء الفعلي المضاف
+  // قفل صفحة المدفوعات بكلمة سر
+  payments_lock_enabled?: boolean;
+  payments_lock_password?: string;
 }
 
 interface Doctor {
@@ -215,6 +218,19 @@ const T = {
         confirmRemove:"هل تريد حذف هذا الطبيب؟",
         capacity:"الطاقة الاستيعابية",
       },
+      paymentsLock:{
+        sectionTitle:"قفل صفحة المدفوعات",
+        sectionDesc:"يمنع السكرتيرة من الوصول إلى صفحة المدفوعات دون كلمة سر خاصة بالطبيب",
+        enable:"تفعيل القفل بكلمة سر",
+        disable:"إلغاء تفعيل القفل",
+        passwordLabel:"كلمة سر المدفوعات",
+        passwordPh:"أدخل كلمة سر مخصصة...",
+        notAvailable:"هذه الميزة غير متاحة في الخطة الأساسية",
+        enabledBadge:"القفل مفعّل 🔒",
+        disabledBadge:"القفل غير مفعّل 🔓",
+        saveNote:"سيتم حفظ هذا الإعداد مع بيانات العيادة",
+        required:"يجب إدخال كلمة سر للمدفوعات عند تفعيل القفل",
+      },
     },
   },
   en: {
@@ -369,6 +385,19 @@ const T = {
         noName:"Please enter doctor name",
         confirmRemove:"Remove this doctor?",
         capacity:"Capacity",
+      },
+      paymentsLock:{
+        sectionTitle:"Payments Page Lock",
+        sectionDesc:"Prevents the secretary from accessing the payments page without a doctor-specific password",
+        enable:"Enable password lock",
+        disable:"Disable lock",
+        passwordLabel:"Payments Password",
+        passwordPh:"Enter a custom password...",
+        notAvailable:"This feature is not available in the Basic plan",
+        enabledBadge:"Lock enabled 🔒",
+        disabledBadge:"Lock disabled 🔓",
+        saveNote:"This setting will be saved with clinic data",
+        required:"A password is required when enabling the lock",
       },
     },
   },
@@ -976,6 +1005,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     status: clinic.status as "active"|"inactive"|"expired",
     clinic_type: (clinic.clinic_type || "general") as ClinicType,
     max_doctors: clinic.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[clinic.plan] ?? 2,
+    payments_lock_enabled:  clinic.payments_lock_enabled  ?? false,
+    payments_lock_password: clinic.payments_lock_password ?? "",
   });
   const [newPass,       setNewPass]       = useState("");
   const [copied,        setCopied]        = useState(false);
@@ -1102,6 +1133,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     status: form.status,
     clinic_type: form.clinic_type,
     max_doctors: form.max_doctors,
+    payments_lock_enabled:  form.payments_lock_enabled,
+    payments_lock_password: form.payments_lock_password,
     ...overrides,
   });
 
@@ -1122,6 +1155,11 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
   // ── حفظ التعديلات (بيانات + اشتراك + كلمة مرور) ─────────
   const handleSave = async () => {
+    // التحقق من كلمة سر المدفوعات عند تفعيل القفل
+    if (form.payments_lock_enabled && !form.payments_lock_password.trim()) {
+      setError(sm.paymentsLock.required);
+      return;
+    }
     setSaving(true); setError(""); setSuccessMsg("");
     const body = buildBody();
     if (newPass.trim()) body.newPassword = newPass.trim();
@@ -1666,6 +1704,84 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                     : "⚠️ The new password will be applied immediately. Make sure to inform the clinic owner before closing."}
                 </p>
               </div>
+
+              {/* ── قفل صفحة المدفوعات ── */}
+              {(() => {
+                const plansWithPayments = ["pro","enterprise","shared_pro","shared_enterprise"];
+                const planSupportsPayments = plansWithPayments.includes(form.plan);
+                const pl = sm.paymentsLock;
+                return (
+                  <div style={{ marginTop:6,borderTop:"1.5px solid #eef0f3",paddingTop:16 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                      <span style={{ fontSize:18 }}>🔐</span>
+                      <div>
+                        <div style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{pl.sectionTitle}</div>
+                        <div style={{ fontSize:11,color:"#aaa",marginTop:1 }}>{pl.sectionDesc}</div>
+                      </div>
+                    </div>
+
+                    {!planSupportsPayments ? (
+                      <div style={{ padding:"10px 14px",background:"rgba(192,57,43,.05)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,fontSize:12,color:"#c0392b",display:"flex",alignItems:"center",gap:8 }}>
+                        🔒 {pl.notAvailable}
+                      </div>
+                    ) : (
+                      <div style={{ background:"rgba(8,99,186,.03)",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:12 }}>
+                        {/* Toggle */}
+                        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                          <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                            <span style={{ fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                              background: form.payments_lock_enabled ? "rgba(46,125,50,.1)" : "rgba(192,57,43,.08)",
+                              color: form.payments_lock_enabled ? "#2e7d32" : "#c0392b" }}>
+                              {form.payments_lock_enabled ? pl.enabledBadge : pl.disabledBadge}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setForm(p => ({ ...p, payments_lock_enabled: !p.payments_lock_enabled }))}
+                            style={{ padding:"7px 16px",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",transition:"all .2s",
+                              background: form.payments_lock_enabled ? "rgba(192,57,43,.06)" : "rgba(46,125,50,.08)",
+                              color: form.payments_lock_enabled ? "#c0392b" : "#2e7d32",
+                              borderColor: form.payments_lock_enabled ? "rgba(192,57,43,.2)" : "rgba(46,125,50,.2)" }}>
+                            {form.payments_lock_enabled ? pl.disable : pl.enable}
+                          </button>
+                        </div>
+
+                        {/* Password input — يظهر فقط عند تفعيل القفل */}
+                        {form.payments_lock_enabled && (
+                          <div>
+                            <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6,textTransform:"uppercase" as const,letterSpacing:.4 }}>
+                              {pl.passwordLabel}
+                            </label>
+                            <div style={{ display:"flex",gap:8 }}>
+                              <input
+                                value={form.payments_lock_password}
+                                onChange={e => setForm(p => ({ ...p, payments_lock_password: e.target.value }))}
+                                placeholder={pl.passwordPh}
+                                style={{ ...inputSt, flex:1 }}
+                                onFocus={e => e.target.style.borderColor="#0863ba"}
+                                onBlur={e => e.target.style.borderColor="#e8eaed"}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                                  const p = Array.from({length:10}, ()=>chars[Math.floor(Math.random()*chars.length)]).join("");
+                                  setForm(prev => ({ ...prev, payments_lock_password: p }));
+                                }}
+                                style={{ padding:"0 12px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
+                                🎲 {isAr?"توليد":"Generate"}
+                              </button>
+                            </div>
+                            <p style={{ fontSize:11,color:"#aaa",marginTop:5,lineHeight:1.5 }}>
+                              💡 {pl.saveNote}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -2541,6 +2657,8 @@ export default function AdminPage() {
         clinic_type:  (row.clinic_type as ClinicType) || "general",
         max_doctors:  (row.max_doctors as number) || undefined,
         doctors_count:(row.doctors_count as number) || undefined,
+        payments_lock_enabled:  (row.payments_lock_enabled as boolean) ?? false,
+        payments_lock_password: (row.payments_lock_password as string) || "",
       }));
 
       setClinics(clinicsData);
