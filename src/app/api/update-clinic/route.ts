@@ -13,7 +13,10 @@ export async function POST(req: Request) {
     const {
       userId, name, owner, email, phone,
       plan, expiry, status, newPassword,
-      clinic_type,                       // ← الجديد
+      clinic_type,
+      max_doctors,
+      payments_lock_enabled,
+      payments_lock_password,
     } = await req.json();
 
     if (!userId)
@@ -24,7 +27,7 @@ export async function POST(req: Request) {
       user_metadata: {
         clinic_name: name, owner_name: owner,
         phone, plan, expiry, status,
-        ...(clinic_type ? { clinic_type } : {}),  // ← الجديد
+        ...(clinic_type ? { clinic_type } : {}),
         role: "clinic",
       },
     };
@@ -40,8 +43,15 @@ export async function POST(req: Request) {
     const clinicUpdate: Record<string, unknown> = {
       name, owner, email, phone, plan, expiry, status,
     };
-    // نحدّث clinic_type فقط إذا أُرسل (لا نمسح قيمة موجودة)
-    if (clinic_type) clinicUpdate.clinic_type = clinic_type;
+
+    if (clinic_type)   clinicUpdate.clinic_type  = clinic_type;
+    if (max_doctors)   clinicUpdate.max_doctors   = max_doctors;
+
+    // قفل المدفوعات — نحدّث دائماً (حتى عند إلغاء التفعيل)
+    if (payments_lock_enabled !== undefined) {
+      clinicUpdate.payments_lock_enabled  = payments_lock_enabled;
+      clinicUpdate.payments_lock_password = payments_lock_password ?? "";
+    }
 
     const { error: clinicError } = await supabaseAdmin
       .from("clinics")
