@@ -14,6 +14,7 @@ export async function POST(req: Request) {
       userId, name, owner, email, phone,
       plan, expiry, status, newPassword,
       clinic_type,
+      account_type,
       max_doctors,
       payments_lock_enabled,
       payments_lock_password,
@@ -27,7 +28,8 @@ export async function POST(req: Request) {
       user_metadata: {
         clinic_name: name, owner_name: owner,
         phone, plan, expiry, status,
-        ...(clinic_type ? { clinic_type } : {}),
+        ...(clinic_type   ? { clinic_type }   : {}),
+        ...(account_type  ? { account_type }  : {}),
         role: "clinic",
       },
     };
@@ -44,7 +46,8 @@ export async function POST(req: Request) {
       name, owner, email, phone, plan, expiry, status,
     };
 
-    if (clinic_type)   clinicUpdate.clinic_type  = clinic_type;
+    if (clinic_type)   clinicUpdate.clinic_type   = clinic_type;
+    if (account_type)  clinicUpdate.account_type  = account_type;
     if (max_doctors)   clinicUpdate.max_doctors   = max_doctors;
 
     // قفل المدفوعات — نحدّث دائماً (حتى عند إلغاء التفعيل)

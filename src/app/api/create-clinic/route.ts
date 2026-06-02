@@ -13,7 +13,8 @@ export async function POST(req: Request) {
     const {
       name, owner, email, phone,
       plan, expiry, status, password,
-      clinic_type = "general",   // ← الجديد
+      clinic_type = "general",
+      account_type = "clinic",   // ← عيادة أو صيدلية
     } = await req.json();
 
     // ─── 1. إنشاء المستخدم في Auth ───────────────────────
@@ -25,7 +26,8 @@ export async function POST(req: Request) {
         user_metadata: {
           clinic_name: name, owner_name: owner,
           phone, plan, expiry, status,
-          clinic_type,               // ← الجديد
+          clinic_type,
+          account_type,              // ← عيادة أو صيدلية
           role: "clinic",
         },
       });
@@ -43,7 +45,8 @@ export async function POST(req: Request) {
       .insert({
         user_id: userId, name, owner, email, phone,
         plan, expiry, status,
-        clinic_type,               // ← الجديد
+        clinic_type,
+        account_type,              // ← عيادة أو صيدلية
       });
 
     if (clinicError) console.error("❌ clinics error:", clinicError);
