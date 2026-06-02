@@ -369,6 +369,7 @@ const T = {
       successMsg: "Pharmacy created successfully!",
     },
     subModal: {
+      title:"Edit Subscription",
       tabInfo:"Info",
       tabSub:"Subscription",
       tabSecurity:"Security",
