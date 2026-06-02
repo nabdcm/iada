@@ -459,6 +459,10 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
       if (a.date !== form.date) return false;
       if (a.status === "cancelled") return false;
       if (isEdit && a.id === appt!.id) return false;
+      // في الخطط المشتركة: التعارض يكون فقط إذا كان نفس الطبيب
+      if (isShared && form.doctor_id && (a as any).doctor_id) {
+        if ((a as any).doctor_id !== Number(form.doctor_id)) return false;
+      }
       const aStart = timeToMinutes(a.time);
       const aEnd   = aStart + (a.duration || 30);
       return newStart < aEnd && newEnd > aStart;
@@ -1568,7 +1572,128 @@ export default function AppointmentsPage() {
                           ＋ {tr.addAppointment}
                         </button>
                       </div>
+                    ) : isSharedPlan(plan) ? (
+                      /* ══ عرض مُجمَّع حسب الطبيب — للخطط المشتركة فقط ══ */
+                      (() => {
+                        // تجميع المواعيد حسب الطبيب
+                        const grouped: { doctor: Doctor | null; appts: Appointment[] }[] = [];
+                        const docIds = new Set<number | null>();
+
+                        [...dayAppointments].sort((a,b)=>a.time.localeCompare(b.time)).forEach(appt => {
+                          const docId = (appt as any).doctor_id ?? null;
+                          if (!docIds.has(docId)) {
+                            docIds.add(docId);
+                            const doc = docId ? doctors.find(d => d.id === docId) ?? null : null;
+                            grouped.push({ doctor: doc, appts: [] });
+                          }
+                          const group = grouped.find(g => (g.doctor?.id ?? null) === docId);
+                          if (group) group.appts.push(appt);
+                        });
+
+                        const DOC_COLORS = ["#6d28d9","#0863ba","#2e7d32","#c0392b","#e67e22","#0891b2"];
+
+                        return (
+                          <div style={{ display:"flex",flexDirection:"column",gap:18 }}>
+                            {grouped.map((group, gi) => {
+                              const docColor = DOC_COLORS[gi % DOC_COLORS.length];
+                              return (
+                                <div key={gi} style={{ borderRadius:14,overflow:"hidden",border:`1.5px solid ${docColor}25`,boxShadow:"0 2px 10px rgba(0,0,0,.04)" }}>
+                                  {/* رأس الطبيب */}
+                                  <div style={{ background:`linear-gradient(135deg,${docColor}12,${docColor}06)`,borderBottom:`1.5px solid ${docColor}20`,padding:"11px 16px",display:"flex",alignItems:"center",gap:10 }}>
+                                    <div style={{ width:34,height:34,borderRadius:9,background:docColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0 }}>
+                                      {group.doctor ? getInitials(group.doctor.name) : "?"}
+                                    </div>
+                                    <div style={{ flex:1,minWidth:0 }}>
+                                      <div style={{ fontSize:13,fontWeight:800,color:docColor,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
+                                        👨‍⚕️ {group.doctor ? group.doctor.name : (isAr ? "غير محدد" : "Unassigned")}
+                                      </div>
+                                      {group.doctor?.specialty && (
+                                        <div style={{ fontSize:11,color:"#aaa",marginTop:1 }}>{group.doctor.specialty}</div>
+                                      )}
+                                    </div>
+                                    <div style={{ flexShrink:0,background:`${docColor}15`,border:`1px solid ${docColor}30`,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700,color:docColor }}>
+                                      {group.appts.length} {tr.appointments}
+                                    </div>
+                                  </div>
+                                  {/* مواعيد هذا الطبيب */}
+                                  <div style={{ padding:"10px 12px",display:"flex",flexDirection:"column",gap:8,background:"#fff" }}>
+                                    {group.appts.map(appt => {
+                                      const name   = getPatientName(appt.patient_id);
+                                      const ss     = statusStyle(appt.status);
+                                      const bColor = tr.statusColors[appt.status as Status];
+                                      return (
+                                        <div key={appt.id}
+                                          style={{
+                                            background:ss.bg,
+                                            border:`1.5px solid ${bColor}30`,
+                                            borderInlineStartWidth:4,
+                                            borderInlineStartColor:bColor,
+                                            borderInlineEndWidth:isAr?4:1.5,
+                                            borderInlineEndColor:isAr?bColor:`${bColor}30`,
+                                            borderRadius:12,
+                                            padding:"12px 14px",
+                                            display:"flex",
+                                            alignItems:"center",
+                                            gap:10,
+                                            boxShadow:"0 1px 4px rgba(0,0,0,.03)",
+                                            transition:"box-shadow .2s",
+                                          }}>
+                                          {/* التوقيت */}
+                                          <div style={{ flexShrink:0,textAlign:"center",minWidth:46,background:"rgba(255,255,255,.8)",borderRadius:9,padding:"5px 7px",border:`1px solid ${bColor}20` }}>
+                                            <div style={{ fontSize:14,fontWeight:800,color:bColor,lineHeight:1 }}>{appt.time.slice(0,5)}</div>
+                                            <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{appt.duration} {tr.duration.min}</div>
+                                          </div>
+                                          {/* أفاتار */}
+                                          <div style={{ width:36,height:36,borderRadius:9,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
+                                            {name!=="—"?getInitials(name):"?"}
+                                          </div>
+                                          {/* تفاصيل */}
+                                          <div style={{ flex:1,minWidth:0 }}>
+                                            <div style={{ fontSize:13,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</div>
+                                            <div style={{ fontSize:11,color:"#999",marginTop:2 }}>
+                                              {appt.type && <span>{appt.type} · </span>}
+                                              <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
+                                                {tr.statuses[appt.status as Status]}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          {/* أزرار */}
+                                          <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                                            {canAccess("payments", plan) && (
+                                              <button
+                                                title="WhatsApp"
+                                                onClick={e=>{ e.stopPropagation(); sendWhatsApp(appt); }}
+                                                style={{ width:32,height:32,borderRadius:8,background:"rgba(37,211,102,.1)",border:"1.5px solid rgba(37,211,102,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s" }}
+                                                onMouseEnter={e=>(e.currentTarget.style.background="rgba(37,211,102,.22)")}
+                                                onMouseLeave={e=>(e.currentTarget.style.background="rgba(37,211,102,.1)")}
+                                              >
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366">
+                                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                                </svg>
+                                              </button>
+                                            )}
+                                            <button
+                                              title={lang==="ar"?"تعديل الموعد":"Edit Appointment"}
+                                              onClick={()=>setEditAppt(appt)}
+                                              style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.18)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,transition:"background .15s" }}
+                                              onMouseEnter={e=>(e.currentTarget.style.background="rgba(8,99,186,.18)")}
+                                              onMouseLeave={e=>(e.currentTarget.style.background="rgba(8,99,186,.08)")}
+                                            >
+                                              ✏️
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
                     ) : (
+                      /* ══ عرض عادي — للخطط الفردية ══ */
                       <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
                         {[...dayAppointments].sort((a,b)=>a.time.localeCompare(b.time)).map(appt => {
                           const name   = getPatientName(appt.patient_id);
@@ -1608,20 +1733,10 @@ export default function AppointmentsPage() {
                                   <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
                                     {tr.statuses[appt.status as Status]}
                                   </span>
-                                  {/* اسم الطبيب — للخطط المشتركة فقط */}
-                                  {isSharedPlan(plan) && (appt as any).doctor_id && (() => {
-                                    const doc = doctors.find(d => d.id === (appt as any).doctor_id);
-                                    return doc ? (
-                                      <span style={{ marginInlineStart:6,fontSize:10,fontWeight:600,color:"#6d28d9",background:"rgba(109,40,217,.08)",border:"1px solid rgba(109,40,217,.2)",padding:"1px 7px",borderRadius:20 }}>
-                                        👨‍⚕️ {doc.name}
-                                      </span>
-                                    ) : null;
-                                  })()}
                                 </div>
                               </div>
                               {/* أزرار */}
                               <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-                                {/* زر واتساب — فقط للاحترافية والشاملة */}
                                 {canAccess("payments", plan) && (
                                 <button
                                   title="WhatsApp"
