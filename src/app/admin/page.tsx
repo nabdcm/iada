@@ -30,6 +30,8 @@ type ClinicType =
 // الخطط المشتركة: shared_basic, shared_pro, shared_enterprise
 type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
 
+type AccountType = "clinic" | "pharmacy";
+
 interface ClinicData {
   id?: number;
   name: string;
@@ -40,6 +42,7 @@ interface ClinicData {
   expiry: string;
   status: "active" | "inactive" | "expired";
   user_id?: string;
+  account_type?: AccountType;
   clinic_type?: ClinicType;
   // للخطط المشتركة فقط
   max_doctors?: number;       // الحد الأقصى من الأطباء (قابل للتعديل من الأدمن)
@@ -156,6 +159,26 @@ const T = {
       close:"إغلاق",
       noClinicSelected:"اختر عيادة أولاً",
       exportSuccess:"✓ تم التصدير",
+    },
+    accountType: {
+      label: "نوع الحساب",
+      clinic: "عيادة",
+      pharmacy: "صيدلية",
+      clinicDesc: "نظام إدارة العيادات",
+      pharmacyDesc: "نظام إدارة الصيدليات",
+    },
+    pharmacy: {
+      plan: "اشتراك صيدلية",
+      planDesc: "جميع ميزات نظام الصيدلية (المخزون، الوصفات، المبيعات، الموردين، التقارير)",
+      price: "39$",
+      period: "/شهر",
+      addTitle: "إضافة صيدلية جديدة",
+      editTitle: "تعديل بيانات الصيدلية",
+      namePh: "مثال: صيدلية الشفاء",
+      ownerPh: "اسم مدير الصيدلية",
+      filterPharmacies: "صيدليات",
+      filterClinics: "عيادات",
+      successMsg: "تم إنشاء الصيدلية بنجاح!",
     },
     subModal: {
       title:"تعديل الاشتراك",
@@ -325,8 +348,27 @@ const T = {
       noClinicSelected:"Select a clinic first",
       exportSuccess:"✓ Exported",
     },
+    accountType: {
+      label: "Account Type",
+      clinic: "Clinic",
+      pharmacy: "Pharmacy",
+      clinicDesc: "Clinic management system",
+      pharmacyDesc: "Pharmacy management system",
+    },
+    pharmacy: {
+      plan: "Pharmacy Subscription",
+      planDesc: "Full pharmacy system (inventory, prescriptions, sales, suppliers, reports)",
+      price: "$39",
+      period: "/month",
+      addTitle: "Add New Pharmacy",
+      editTitle: "Edit Pharmacy",
+      namePh: "e.g. Al-Shifa Pharmacy",
+      ownerPh: "Pharmacy manager name",
+      filterPharmacies: "Pharmacies",
+      filterClinics: "Clinics",
+      successMsg: "Pharmacy created successfully!",
+    },
     subModal: {
-      title:"Edit Subscription",
       tabInfo:"Info",
       tabSub:"Subscription",
       tabSecurity:"Security",
@@ -528,15 +570,16 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
   const isEdit = !!clinic?.id;
 
   const [form, setForm] = useState({
-    name:        clinic?.name        || "",
-    owner:       clinic?.owner       || "",
-    email:       clinic?.email       || "",
-    phone:       clinic?.phone       || "",
-    plan:        (clinic?.plan       || "basic") as PlanType,
-    expiry:      clinic?.expiry      || "",
-    status:      (clinic?.status     || "active") as "active" | "inactive" | "expired",
-    clinic_type: (clinic?.clinic_type || "general") as ClinicType,
-    max_doctors: clinic?.max_doctors ?? 2,
+    name:         clinic?.name        || "",
+    owner:        clinic?.owner       || "",
+    email:        clinic?.email       || "",
+    phone:        clinic?.phone       || "",
+    plan:         (clinic?.plan       || "basic") as PlanType,
+    expiry:       clinic?.expiry      || "",
+    status:       (clinic?.status     || "active") as "active" | "inactive" | "expired",
+    clinic_type:  (clinic?.clinic_type || "general") as ClinicType,
+    max_doctors:  clinic?.max_doctors ?? 2,
+    account_type: (clinic?.account_type || "clinic") as AccountType,
   });
 
   const [creds,    setCreds]    = useState<{ password: string } | null>(null);
@@ -589,8 +632,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ ...form, password: creds.password }),
-        });
-        const json = await res.json();
+        });        const json = await res.json();
 
         if (!res.ok) {
           setError(json.error || (isAr ? "حدث خطأ" : "An error occurred"));
@@ -640,9 +682,13 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
         {/* Header */}
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",background:"linear-gradient(135deg,rgba(8,99,186,.03),transparent)" }}>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:"rgba(8,99,186,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>🏥</div>
+            <div style={{ width:40,height:40,background:form.account_type==="pharmacy"?"rgba(39,174,96,.12)":"rgba(8,99,186,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>
+              {form.account_type === "pharmacy" ? "💊" : "🏥"}
+            </div>
             <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>
-              {isEdit ? tr.modal.editTitle : tr.modal.addTitle}
+              {isEdit
+                ? (form.account_type === "pharmacy" ? tr.pharmacy.editTitle : tr.modal.editTitle)
+                : (form.account_type === "pharmacy" ? tr.pharmacy.addTitle  : tr.modal.addTitle)}
             </h2>
           </div>
           <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
@@ -661,7 +707,9 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               <div style={{ textAlign:"center",marginBottom:24 }}>
                 <div style={{ fontSize:48,marginBottom:8 }}>🎉</div>
                 <h3 style={{ fontSize:16,fontWeight:800,color:"#2e7d32" }}>
-                  {isAr ? "تم إنشاء العيادة بنجاح!" : "Clinic Created Successfully!"}
+                  {form.account_type === "pharmacy"
+                    ? (isAr ? tr.pharmacy.successMsg : tr.pharmacy.successMsg)
+                    : (isAr ? "تم إنشاء العيادة بنجاح!" : "Clinic Created Successfully!")}
                 </h3>
               </div>
 
@@ -706,21 +754,57 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
           ) : (
             /* ─── فورم الإضافة / التعديل ─── */
             <>
-              <Field label={tr.modal.clinicName}>
+              {/* ── اختيار نوع الحساب (عيادة / صيدلية) — فقط عند الإضافة ── */}
+              {!isEdit && (
+                <div style={{ marginBottom:18 }}>
+                  <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:8,textTransform:"uppercase" as const,letterSpacing:.4 }}>
+                    {tr.accountType.label}
+                  </label>
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
+                    {(["clinic","pharmacy"] as AccountType[]).map(type => {
+                      const isSelected = form.account_type === type;
+                      const isPharmacy = type === "pharmacy";
+                      const color = isPharmacy ? "#27ae60" : "#0863ba";
+                      return (
+                        <button key={type} type="button"
+                          onClick={() => setForm(prev => ({
+                            ...prev,
+                            account_type: type,
+                            plan: isPharmacy ? "pharmacy" as PlanType : "basic",
+                          }))}
+                          style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:8,padding:"16px 12px",border:`2px solid ${isSelected?color:"#eef0f3"}`,borderRadius:14,background:isSelected?`${color}08`:"#fafbfc",cursor:"pointer",transition:"all .18s",fontFamily:"Rubik,sans-serif",boxShadow:isSelected?`0 4px 16px ${color}18`:"none" }}>
+                          <span style={{ fontSize:28 }}>{isPharmacy?"💊":"🏥"}</span>
+                          <span style={{ fontSize:13,fontWeight:isSelected?700:500,color:isSelected?color:"#666" }}>
+                            {isPharmacy ? tr.accountType.pharmacy : tr.accountType.clinic}
+                          </span>
+                          <span style={{ fontSize:10,color:"#aaa",textAlign:"center",lineHeight:1.4 }}>
+                            {isPharmacy ? tr.accountType.pharmacyDesc : tr.accountType.clinicDesc}
+                          </span>
+                          {isSelected && (
+                            <span style={{ fontSize:10,fontWeight:700,color:color,background:`${color}12`,padding:"2px 10px",borderRadius:20 }}>✓ {isAr?"محدد":"Selected"}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <Field label={form.account_type === "pharmacy" ? (isAr?"اسم الصيدلية *":"Pharmacy Name *") : tr.modal.clinicName}>
                 <input
                   value={form.name}
                   onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder={tr.modal.clinicNamePh}
+                  placeholder={form.account_type === "pharmacy" ? tr.pharmacy.namePh : tr.modal.clinicNamePh}
                   style={inputSt}
                 />
               </Field>
 
               <div style={{ display:"flex", gap:12 }}>
-                <Field label={tr.modal.ownerName} half>
+                <Field label={form.account_type === "pharmacy" ? (isAr?"اسم المدير / المالك *":"Owner / Manager *") : tr.modal.ownerName} half>
                   <input
                     value={form.owner}
                     onChange={e => setForm(prev => ({ ...prev, owner: e.target.value }))}
-                    placeholder={tr.modal.ownerPh}
+                    placeholder={form.account_type === "pharmacy" ? tr.pharmacy.ownerPh : tr.modal.ownerPh}
                     style={inputSt}
                   />
                 </Field>
@@ -744,7 +828,8 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                 />
               </Field>
 
-              {/* نوع العيادة */}
+              {/* نوع العيادة — فقط للعيادات */}
+              {form.account_type !== "pharmacy" && (
               <Field label={tr.modal.clinicType}>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
                   {([
@@ -775,7 +860,34 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   })}
                 </div>
               </Field>
+              )}
 
+              {/* الخطة — عيادة: خيارات متعددة | صيدلية: بطاقة ثابتة */}
+              {form.account_type === "pharmacy" ? (
+                <Field label={tr.pharmacy.plan}>
+                  <div style={{ padding:"16px",background:"rgba(39,174,96,.06)",border:"2px solid rgba(39,174,96,.25)",borderRadius:14 }}>
+                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
+                      <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                        <span style={{ fontSize:22 }}>💊</span>
+                        <span style={{ fontSize:14,fontWeight:700,color:"#27ae60" }}>{tr.pharmacy.plan}</span>
+                      </div>
+                      <div style={{ display:"flex",alignItems:"baseline",gap:2 }}>
+                        <span style={{ fontSize:22,fontWeight:900,color:"#27ae60" }}>{tr.pharmacy.price}</span>
+                        <span style={{ fontSize:11,color:"#aaa" }}>{tr.pharmacy.period}</span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize:12,color:"#555",lineHeight:1.6,marginBottom:10 }}>{tr.pharmacy.planDesc}</p>
+                    <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
+                      {(isAr
+                        ? ["إدارة المخزون","الوصفات الطبية","نقطة البيع","إدارة الموردين","سجل الحركة","التقارير","تنبيهات المخزون","باركود"]
+                        : ["Inventory","Prescriptions","Point of Sale","Suppliers","Stock Logs","Reports","Alerts","Barcode"]
+                      ).map((f,i) => (
+                        <span key={i} style={{ fontSize:11,color:"#27ae60",background:"rgba(39,174,96,.1)",padding:"3px 10px",borderRadius:20,fontWeight:600 }}>✓ {f}</span>
+                      ))}
+                    </div>
+                  </div>
+                </Field>
+              ) : (
               <Field label={tr.modal.plan}>
                 {/* تبويب الخطط الفردية / المشتركة */}
                 {(() => {
@@ -899,6 +1011,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   );
                 })()}
               </Field>
+              )} {/* end clinic plan conditional */}
 
               <Field label={tr.modal.expiry} half>
                   <input
@@ -1132,6 +1245,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     expiry: form.expiry,
     status: form.status,
     clinic_type: form.clinic_type,
+    account_type: clinic.account_type || "clinic",
     max_doctors: form.max_doctors,
     payments_lock_enabled:  form.payments_lock_enabled,
     payments_lock_password: form.payments_lock_password,
@@ -2632,6 +2746,7 @@ export default function AdminPage() {
   const [subClinic,    setSubClinic]    = useState<ClinicData | null>(null);
   const [openMenuId,   setOpenMenuId]   = useState<number | null>(null);
   const [dataToolsModal, setDataToolsModal] = useState(false);
+  const [accountFilter, setAccountFilter] = useState<"all"|"clinic"|"pharmacy">("all");
 
   useEffect(() => { loadClinics(); }, []);
 
@@ -2655,6 +2770,7 @@ export default function AdminPage() {
         expiry:       (row.expiry as string) || "",
         status:       (row.status as "active"|"inactive"|"expired") || "active",
         clinic_type:  (row.clinic_type as ClinicType) || "general",
+        account_type: (row.account_type as AccountType) || "clinic",
         max_doctors:  (row.max_doctors as number) || undefined,
         doctors_count:(row.doctors_count as number) || undefined,
         payments_lock_enabled:  (row.payments_lock_enabled as boolean) ?? false,
@@ -2687,14 +2803,17 @@ export default function AdminPage() {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.owner.toLowerCase().includes(search.toLowerCase())) return false;
     if (filter === "active"   && c.status !== "active")   return false;
     if (filter === "inactive" && c.status !== "inactive") return false;
+    if (accountFilter === "clinic"   && c.account_type !== "clinic"   && c.account_type !== undefined) return false;
+    if (accountFilter === "pharmacy" && c.account_type !== "pharmacy") return false;
     return true;
-  }), [clinics, search, filter]);
+  }), [clinics, search, filter, accountFilter]);
 
   const stats = useMemo(() => ({
-    total:    clinics.length,
-    active:   clinics.filter(c => c.status === "active").length,
-    users:    clinics.length,
-    expiring: clinics.filter(c => {
+    total:      clinics.length,
+    active:     clinics.filter(c => c.status === "active").length,
+    clinics:    clinics.filter(c => c.account_type !== "pharmacy").length,
+    pharmacies: clinics.filter(c => c.account_type === "pharmacy").length,
+    expiring:   clinics.filter(c => {
       const d = new Date(c.expiry);
       const n = new Date();
       return (d.getTime() - n.getTime()) < 30 * 24 * 60 * 60 * 1000 && d > n;
@@ -2872,7 +2991,7 @@ export default function AdminPage() {
                 </h1>
                 <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>
                   {activeTab === "clinics"
-                    ? `${stats.active} ${isAr?"عيادة نشطة من":"active of"} ${stats.total} ${isAr?"":"total"}`
+                    ? `${stats.active} ${isAr?"نشط من":"active of"} ${stats.total} · 🏥 ${stats.clinics} ${isAr?"عيادة":"clinics"} · 💊 ${stats.pharmacies} ${isAr?"صيدلية":"pharmacies"}`
                     : tr.comingSoon}
                 </p>
               </div>
@@ -2884,7 +3003,7 @@ export default function AdminPage() {
                   </button>
                   <button onClick={() => setAddModal(true)}
                     style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 20px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.35)",transition:"all .2s" }}>
-                    <span>＋</span> {tr.clinics.addClinic}
+                    <span>＋</span> {isAr?"إضافة حساب":"Add Account"}
                   </button>
                 </div>
               )}
@@ -2896,10 +3015,10 @@ export default function AdminPage() {
             {/* STATS */}
             <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24 }}>
               {[
-                { label:tr.stats.totalClinics,  value:stats.total,    icon:"🏥", color:"#0863ba", accent:"#0863ba" },
-                { label:tr.stats.activeClinics, value:stats.active,   icon:"✅", color:"#2e7d32", accent:"#2e7d32" },
-                { label:tr.stats.totalUsers,    value:stats.users,    icon:"👥", color:"#7b2d8b", accent:"#7b2d8b" },
-                { label:tr.stats.expiringSoon,  value:stats.expiring, icon:"⏰", color:"#e67e22", accent:"#e67e22" },
+                { label:tr.stats.totalClinics,  value:stats.total,      icon:"📊",  color:"#0863ba", accent:"#0863ba" },
+                { label:tr.stats.activeClinics, value:stats.active,     icon:"✅",  color:"#2e7d32", accent:"#2e7d32" },
+                { label:isAr?"عيادات":"Clinics", value:stats.clinics,   icon:"🏥",  color:"#0863ba", accent:"#0863ba" },
+                { label:isAr?"صيدليات":"Pharmacies", value:stats.pharmacies, icon:"💊", color:"#27ae60", accent:"#27ae60" },
               ].map((s, i) => (
                 <div key={i} className="stat-dark" style={{ animation:`fadeUp .4s ${i*60}ms ease both` }}>
                   <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:s.accent,borderRadius:"16px 16px 0 0" }} />
@@ -2925,9 +3044,15 @@ export default function AdminPage() {
                     />
                     {search && <button onClick={() => setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#aaa" }}>✕</button>}
                   </div>
-                  <div style={{ display:"flex",gap:8 }}>
+                <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
                     {[["all",tr.filterAll],["active",tr.filterActive],["inactive",tr.filterInactive]].map(([k,v]) => (
                       <button key={k} className={`filter-chip-dark${filter===k?" active":""}`} onClick={() => setFilter(k)}>{v}</button>
+                    ))}
+                    <div style={{ width:1,background:"#eef0f3",margin:"0 4px" }}/>
+                    {([["all", isAr?"الكل":"All"],["clinic","🏥 "+(isAr?tr.pharmacy.filterClinics:tr.pharmacy.filterClinics)],["pharmacy","💊 "+(isAr?tr.pharmacy.filterPharmacies:tr.pharmacy.filterPharmacies)]] as [string,string][]).map(([k,v]) => (
+                      <button key={k} className={`filter-chip-dark${accountFilter===k?" active":""}`}
+                        style={{ borderColor: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.3)" : undefined, background: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.08)" : undefined, color: accountFilter===k&&k==="pharmacy" ? "#27ae60" : undefined }}
+                        onClick={() => setAccountFilter(k as "all"|"clinic"|"pharmacy")}>{v}</button>
                     ))}
                   </div>
                 </div>
@@ -2961,8 +3086,15 @@ export default function AdminPage() {
                           <div key={c.id} className="admin-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 160px",padding:"14px 20px",alignItems:"center",gap:0 }}>
                             <div>
                               <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6 }}>
-                                <span style={{ fontSize:15 }}>{CLINIC_TYPE_ICONS[c.clinic_type||"general"]}</span>
+                                <span style={{ fontSize:15 }}>
+                                  {c.account_type === "pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]}
+                                </span>
                                 {c.name}
+                                {c.account_type === "pharmacy" && (
+                                  <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"rgba(39,174,96,.1)",color:"#27ae60",flexShrink:0 }}>
+                                    {isAr?"صيدلية":"Pharmacy"}
+                                  </span>
+                                )}
                               </div>
                               <div style={{ fontSize:11,color:"#ccc",marginTop:2 }}>ID: #{c.id}</div>
                             </div>
@@ -2974,11 +3106,17 @@ export default function AdminPage() {
                               </span>
                             </div>
                             <div style={{ paddingLeft:8 }}>
-                              <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:`${pc}20`,color:pc }}>
+                              {c.account_type === "pharmacy" ? (
+                                <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(39,174,96,.12)",color:"#27ae60" }}>
+                                  💊 {isAr?"اشتراك صيدلية":"Pharmacy"}
+                                </span>
+                              ) : (
+                              <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:`${PLAN_COLORS[c.plan]||"#0863ba"}20`,color:PLAN_COLORS[c.plan]||"#0863ba" }}>
                                 {tr.clinics.plans[c.plan]}
                               </span>
+                              )}
                               {["shared_basic","shared_pro","shared_enterprise"].includes(c.plan) && (
-                                <div style={{ fontSize:9,color:pc,fontWeight:600,marginTop:3 }}>
+                                <div style={{ fontSize:9,color:PLAN_COLORS[c.plan],fontWeight:600,marginTop:3 }}>
                                   👥 {c.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[c.plan] ?? 2} {isAr?"أطباء":"doctors"}
                                 </div>
                               )}
