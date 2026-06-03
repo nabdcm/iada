@@ -82,7 +82,7 @@ function LoginContent() {
     setError("");
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email:    email.trim(),
         password: password,
       });
@@ -102,9 +102,8 @@ function LoginContent() {
         return;
       }
 
-      // ─── التوجيه بناءً على account_type من user_metadata ────
-      const accountType = authData?.user?.user_metadata?.account_type;
-      window.location.href = accountType === "pharmacy" ? "/pharmacy" : redirectTo;
+      // نجح تسجيل الدخول — full reload لضمان قراءة الـ cookies في الـ middleware
+      window.location.href = redirectTo;
 
     } catch {
       setError(tr.errors.network);
