@@ -102,8 +102,27 @@ function LoginContent() {
         return;
       }
 
-      // نجح تسجيل الدخول — full reload لضمان قراءة الـ cookies في الـ middleware
-      window.location.href = redirectTo;
+      // نجح تسجيل الدخول — نحدد نوع الحساب ثم نوجّه للصفحة المناسبة
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: accountData } = await supabase
+          .from("clinics")
+          .select("account_type")
+          .eq("user_id", user.id)
+          .single();
+
+        const accountType = accountData?.account_type;
+
+        if (accountType === "pharmacy") {
+          window.location.href = "/pharmacy";
+        } else {
+          // clinic أو أي قيمة أخرى → لوحة العيادة
+          window.location.href = redirectTo;
+        }
+      } else {
+        window.location.href = redirectTo;
+      }
 
     } catch {
       setError(tr.errors.network);
