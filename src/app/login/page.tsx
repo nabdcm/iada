@@ -82,7 +82,7 @@ function LoginContent() {
     setError("");
 
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email:    email.trim(),
         password: password,
       });
@@ -102,25 +102,42 @@ function LoginContent() {
         return;
       }
 
-      // نجح تسجيل الدخول — نحدد نوع الحساب ثم نوجّه للصفحة المناسبة
-      const { data: { user } } = await supabase.auth.getUser();
+      // ─── تحديد نوع الحساب والتوجيه المناسب ───────────────
+      try {
+        const userId = authData?.user?.id;
 
-      if (user) {
-        const { data: accountData } = await supabase
-          .from("clinics")
-          .select("account_type")
-          .eq("user_id", user.id)
-          .single();
+        // أولاً: استعلام بـ user_id
+        let accountType: string | null = null;
 
-        const accountType = accountData?.account_type;
+        if (userId) {
+          const { data: byId } = await supabase
+            .from("clinics")
+            .select("account_type")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          accountType = byId?.account_type ?? null;
+        }
+
+        // ثانياً: إذا لم نجد بـ user_id، نحاول بالإيميل
+        if (!accountType) {
+          const { data: byEmail } = await supabase
+            .from("clinics")
+            .select("account_type")
+            .eq("email", email.trim().toLowerCase())
+            .maybeSingle();
+
+          accountType = byEmail?.account_type ?? null;
+        }
 
         if (accountType === "pharmacy") {
           window.location.href = "/pharmacy";
         } else {
-          // clinic أو أي قيمة أخرى → لوحة العيادة
+          // clinic أو أي قيمة → لوحة العيادة
           window.location.href = redirectTo;
         }
-      } else {
+      } catch {
+        // إذا فشل الاستعلام نوجّه للداشبورد الافتراضي
         window.location.href = redirectTo;
       }
 
