@@ -102,15 +102,9 @@ function LoginContent() {
         return;
       }
 
-      // ─── قراءة account_type من user_metadata مباشرةً ────────
-      // يتم تخزينها عند إنشاء الحساب في /api/create-clinic
-      const accountType = authData?.user?.user_metadata?.account_type as string | undefined;
-
-      if (accountType === "pharmacy") {
-        window.location.href = "/pharmacy";
-      } else {
-        window.location.href = redirectTo;
-      }
+      // ─── التوجيه بناءً على account_type من user_metadata ────
+      const accountType = authData?.user?.user_metadata?.account_type;
+      window.location.href = accountType === "pharmacy" ? "/pharmacy" : redirectTo;
 
     } catch {
       setError(tr.errors.network);
