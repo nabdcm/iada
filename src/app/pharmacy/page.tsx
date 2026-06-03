@@ -1,5 +1,11 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // ============================================================
 // NABD - نبض | Pharmacy v3
@@ -349,10 +355,11 @@ function AdjModal({lang,medicine,mode,onConfirm,onClose}:{lang:Lang;medicine:Med
 // ══════════════════════════════════════════════════════════════
 // 🏭 تبويب الموردين
 // ══════════════════════════════════════════════════════════════
-function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoices,setMedicines,currentUser,addLog}:{
+function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoices,setMedicines,currentUser,addLog,userId,onRefresh}:{
   lang:Lang;medicines:Medicine[];suppliers:Supplier[];setSuppliers:React.Dispatch<React.SetStateAction<Supplier[]>>;
   invoices:PurchInvoice[];setInvoices:React.Dispatch<React.SetStateAction<PurchInvoice[]>>;
   setMedicines:React.Dispatch<React.SetStateAction<Medicine[]>>;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;
+  userId:string|null;onRefresh:()=>void;
 }) {
   const isAr=lang==="ar";
   const [view,setView]=useState<"s"|"i">("s");
@@ -366,21 +373,37 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
   const [iPaid,setIPaid]=useState(0); const [iNotes,setINotes]=useState(""); const [iMedQ,setIMedQ]=useState("");
   const iMedRes=iMedQ.trim()?medicines.filter(m=>(m.name_ar+m.name_en).toLowerCase().includes(iMedQ.toLowerCase())).slice(0,5):[];
   const iTotal=iItems.reduce((s,x)=>s+x.qty*x.unit_price,0);
-  const saveSup=()=>{
+  const saveSup=async()=>{
     if(!sf.name.trim()) return;
-    if(editSup) setSuppliers(p=>p.map(s=>s.id===editSup.id?{...s,...sf}:s));
-    else { const id=Math.max(0,...suppliers.map(s=>s.id))+1; setSuppliers(p=>[...p,{id,balance:0,...sf}]); }
+    if(userId){
+      const res=await fetch("/api/pharmacy/suppliers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:editSup?"update":"add",user_id:userId,id:editSup?.id,...sf})});
+      const json=await res.json();
+      if(json.success){
+        if(editSup) setSuppliers(p=>p.map(s=>s.id===editSup.id?{...s,...sf}:s));
+        else if(json.supplier) setSuppliers(p=>[...p,json.supplier as Supplier]);
+      }
+    } else {
+      if(editSup) setSuppliers(p=>p.map(s=>s.id===editSup.id?{...s,...sf}:s));
+      else { const id=Math.max(0,...suppliers.map(s=>s.id))+1; setSuppliers(p=>[...p,{id,balance:0,...sf}]); }
+    }
     setShowSF(false); setEditSup(null); setSF({name:"",contact:"",phone:"",email:"",address:""});
   };
   const addII=(m:Medicine)=>{setIItems(p=>{const ex=p.findIndex(x=>x.medicine_id===m.id);if(ex>=0)return p.map((x,i)=>i===ex?{...x,qty:x.qty+1}:x);return[...p,{medicine_id:m.id,medicine_name:isAr?m.name_ar:m.name_en,qty:1,unit_price:m.purchase_price}];});setIMedQ("");};
-  const saveInv=()=>{
+  const saveInv=async()=>{
     if(iItems.length===0) return;
     const sup=suppliers.find(s=>s.id===iSupId);
-    const id=Math.max(0,...invoices.map(i=>i.id))+1;
     const status:PurchInvoice["status"]=iPaid>=iTotal?"paid":iPaid>0?"partial":"pending";
-    const inv:PurchInvoice={id,supplier_id:iSupId,supplier_name:sup?.name||"",date:iDate,items:iItems,total:iTotal,paid:iPaid,status,notes:iNotes||undefined,created_by:isAr?currentUser.name_ar:currentUser.name_en};
-    setInvoices(p=>[inv,...p]);
-    iItems.forEach(it=>{setMedicines(prev=>prev.map(m=>m.id===it.medicine_id?{...m,stock:m.stock+it.qty}:m));addLog({medicine_id:it.medicine_id,medicine_name:it.medicine_name,type:"purchase",qty:it.qty,date:iDate,user:isAr?currentUser.name_ar:currentUser.name_en,ref:`INV-${id}`});});
+    const created_by=isAr?currentUser.name_ar:currentUser.name_en;
+    if(userId){
+      const res=await fetch("/api/pharmacy/invoices",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,supplier_id:iSupId,supplier_name:sup?.name||"",date:iDate,items:iItems,total:iTotal,paid:iPaid,status,notes:iNotes||undefined,created_by})});
+      const json=await res.json();
+      if(json.success){ setInvoices(p=>[json.invoice,...p]); onRefresh(); }
+    } else {
+      const id=Math.max(0,...invoices.map(i=>i.id))+1;
+      const inv:PurchInvoice={id,supplier_id:iSupId,supplier_name:sup?.name||"",date:iDate,items:iItems,total:iTotal,paid:iPaid,status,notes:iNotes||undefined,created_by};
+      setInvoices(p=>[inv,...p]);
+      iItems.forEach(it=>{setMedicines(prev=>prev.map(m=>m.id===it.medicine_id?{...m,stock:m.stock+it.qty}:m));addLog({medicine_id:it.medicine_id,medicine_name:it.medicine_name,type:"purchase",qty:it.qty,date:iDate,user:created_by,ref:`INV-${id}`});});
+    }
     setShowIF(false); setIItems([]); setIPaid(0); setINotes("");
   };
   const stSt:{[k:string]:{bg:string;c:string;ar:string;en:string}}={paid:{bg:"rgba(39,174,96,.1)",c:"#27ae60",ar:"مدفوعة",en:"Paid"},partial:{bg:"rgba(230,126,34,.1)",c:"#e67e22",ar:"جزئي",en:"Partial"},pending:{bg:"rgba(231,76,60,.1)",c:"#e74c3c",ar:"معلقة",en:"Pending"}};
@@ -548,17 +571,18 @@ function AlertsTab({lang,medicines,alerts,markAll,markOne}:{lang:Lang;medicines:
 // ══════════════════════════════════════════════════════════════
 // 🗄️ تبويب المخزون
 // ══════════════════════════════════════════════════════════════
-function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser}:{
+function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId}:{
   lang:Lang;medicines:Medicine[];setMedicines:React.Dispatch<React.SetStateAction<Medicine[]>>;
   barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;
   showNotif:(n:ScanNotif,ms?:number)=>void;addLog:(l:Omit<StockLog,"id">)=>void;currentUser:User;
+  userId:string|null;
 }) {
   const isAr=lang==="ar";
   const [search,setSearch]=useState(""); const [catF,setCatF]=useState<"all"|"low"|MedCat>("all");
   const [showModal,setShowModal]=useState(false); const [editMed,setEditMed]=useState<Medicine|null>(null);
   const [delId,setDelId]=useState<number|null>(null); const [adj,setAdj]=useState<{med:Medicine;mode:"in"|"out"}|null>(null);
   const [litId,setLitId]=useState<number|null>(null); const [showLog,setShowLog]=useState(false);
-  const [log,setLog]=useState<StockLog[]>(INIT_LOG);
+  const [log,setLog]=useState<StockLog[]>([]);
 
   const handleScan=useCallback((code:string)=>{
     const med=medicines.find(m=>m.barcode===code);
@@ -579,22 +603,47 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
     return l;
   },[medicines,search,catF]);
 
-  const handleSave=(data:Partial<Medicine>)=>{
+  const handleSave=async(data:Partial<Medicine>)=>{
     if(!data.name_ar?.trim()) return;
-    if(editMed) setMedicines(prev=>prev.map(m=>m.id===editMed.id?{...m,...data} as Medicine:m));
-    else{const id=Math.max(0,...medicines.map(m=>m.id))+1;setMedicines(prev=>[...prev,{id,...data} as Medicine]);}
+    if(userId){
+      const res=await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:editMed?"update":"add",user_id:userId,id:editMed?.id,...data})});
+      const json=await res.json();
+      if(json.success){
+        if(editMed) setMedicines(prev=>prev.map(m=>m.id===editMed.id?{...m,...data} as Medicine:m));
+        else if(json.medicine) setMedicines(prev=>[...prev,json.medicine as Medicine]);
+      } else showNotif({type:"error",message:json.error||"Error"},3000);
+    } else {
+      if(editMed) setMedicines(prev=>prev.map(m=>m.id===editMed.id?{...m,...data} as Medicine:m));
+      else{const id=Math.max(0,...medicines.map(m=>m.id))+1;setMedicines(prev=>[...prev,{id,...data} as Medicine]);}
+    }
     setShowModal(false); setEditMed(null);
   };
 
-  const handleAdj=(qty:number)=>{
+  const handleAdj=async(qty:number)=>{
     if(!adj) return;
     const{med,mode}=adj;
-    setMedicines(prev=>prev.map(m=>m.id===med.id?{...m,stock:mode==="in"?m.stock+qty:Math.max(0,m.stock-qty)}:m));
+    if(userId){
+      const res=await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"adjust_stock",user_id:userId,id:med.id,delta:mode==="in"?qty:-qty})});
+      const json=await res.json();
+      if(json.success){
+        setMedicines(prev=>prev.map(m=>m.id===med.id?{...m,stock:json.newStock}:m));
+      } else { showNotif({type:"error",message:json.error||"Error"},3000); return; }
+    } else {
+      setMedicines(prev=>prev.map(m=>m.id===med.id?{...m,stock:mode==="in"?m.stock+qty:Math.max(0,m.stock-qty)}:m));
+    }
     const logEntry:Omit<StockLog,"id">={medicine_id:med.id,medicine_name:med.name_ar,type:mode,qty,date:new Date().toISOString().slice(0,10),user:isAr?currentUser.name_ar:currentUser.name_en};
     setLog(p=>[{id:Math.max(0,...p.map(x=>x.id))+1,...logEntry},...p]);
     addLog(logEntry);
     showNotif({type:"success",message:mode==="in"?(isAr?`📥 إضافة ${qty} ${med.unit}`:`📥 Added ${qty}`):(isAr?`📤 خصم ${qty} ${med.unit}`:`📤 Removed ${qty}`),sub:isAr?med.name_ar:med.name_en},2500);
     setAdj(null);
+  };
+
+  const handleDelete=async(id:number)=>{
+    if(userId){
+      await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete",user_id:userId,id})});
+    }
+    setMedicines(prev=>prev.filter(m=>m.id!==id));
+    setDelId(null);
   };
 
   const lowCount=medicines.filter(m=>m.stock<m.min_stock).length;
@@ -684,7 +733,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
             <div style={{fontSize:38,marginBottom:12}}>🗑️</div>
             <p style={{fontSize:14,fontWeight:700,color:"#353535",marginBottom:18}}>{isAr?"هل تريد حذف هذا الدواء؟":"Delete this medicine?"}</p>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>{setMedicines(p=>p.filter(m=>m.id!==delId));setDelId(null);}} style={{flex:1,padding:"11px",background:"#e74c3c",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>{isAr?"احذف":"Delete"}</button>
+              <button onClick={()=>{handleDelete(delId);}} style={{flex:1,padding:"11px",background:"#e74c3c",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>{isAr?"احذف":"Delete"}</button>
               <button onClick={()=>setDelId(null)} style={{padding:"11px 18px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
             </div>
           </div>
@@ -722,7 +771,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
 // ══════════════════════════════════════════════════════════════
 // 📋 تبويب الوصفات
 // ══════════════════════════════════════════════════════════════
-function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLog,medicines}:{lang:Lang;prescriptions:Prescription[];setPrescriptions:React.Dispatch<React.SetStateAction<Prescription[]>>;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;medicines:Medicine[]}) {
+function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLog,medicines,userId,onRefresh}:{lang:Lang;prescriptions:Prescription[];setPrescriptions:React.Dispatch<React.SetStateAction<Prescription[]>>;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;medicines:Medicine[];userId:string|null;onRefresh:()=>void}) {
   const isAr=lang==="ar";
   const [mrnQ,setMrnQ]=useState(""); const [submitted,setSubmitted]=useState(""); const [pF,setPF]=useState<"all"|"pending"|"dispensed">("all");
   const [showAdd,setShowAdd]=useState(false); const [rxForm,setRxForm]=useState({mrn:"",patient_name:"",notes:""});
@@ -730,16 +779,31 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
 
   const displayed=useMemo(()=>{let l=prescriptions;if(submitted.trim())l=l.filter(p=>p.mrn.toLowerCase()===submitted.trim().toLowerCase());if(pF==="pending")l=l.filter(p=>!p.dispensed);if(pF==="dispensed")l=l.filter(p=>p.dispensed);return l;},[prescriptions,submitted,pF]);
 
-  const dispense=(id:string)=>{
+  const dispense=async(id:string)=>{
     const rx=prescriptions.find(p=>p.id===id); if(!rx) return;
-    setPrescriptions(prev=>prev.map(p=>p.id===id?{...p,dispensed:true,dispensed_at:new Date().toISOString().slice(0,10),dispensed_by:isAr?currentUser.name_ar:currentUser.name_en}:p));
-    rx.items.forEach(it=>{const med=medicines.find(m=>m.name_ar===it.medicine_name||m.name_en===it.medicine_name);if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:1,date:new Date().toISOString().slice(0,10),user:isAr?currentUser.name_ar:currentUser.name_en,ref:id,notes:"صرف وصفة"});});
+    const dispensed_by=isAr?currentUser.name_ar:currentUser.name_en;
+    if(userId){
+      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense",user_id:userId,id,dispensed_by})});
+      const json=await res.json();
+      if(!json.success) return;
+      onRefresh();
+    }
+    setPrescriptions(prev=>prev.map(p=>p.id===id?{...p,dispensed:true,dispensed_at:new Date().toISOString().slice(0,10),dispensed_by}:p));
+    rx.items.forEach(it=>{const med=medicines.find(m=>m.name_ar===it.medicine_name||m.name_en===it.medicine_name);if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:1,date:new Date().toISOString().slice(0,10),user:dispensed_by,ref:id,notes:"صرف وصفة"});});
   };
 
-  const saveRx=()=>{
+  const saveRx=async()=>{
     if(!rxForm.mrn.trim()||!rxForm.patient_name.trim()) return;
-    const id=`RX-${new Date().getFullYear()}-${String(Math.max(0,...prescriptions.map(p=>parseInt(p.id.split("-")[2]||"0")))+1).padStart(3,"0")}`;
-    setPrescriptions(prev=>[{id,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name:isAr?currentUser.name_ar:currentUser.name_en,doctor_id:currentUser.id,created_at:new Date().toISOString().slice(0,10),items:rxItems.filter(i=>i.medicine_name.trim()),notes:rxForm.notes||undefined,dispensed:false},...prev]);
+    const rxId=`RX-${new Date().getFullYear()}-${String(Math.max(0,...prescriptions.map(p=>parseInt(p.id.split("-")[2]||"0")))+1).padStart(3,"0")}`;
+    const doctor_name=isAr?currentUser.name_ar:currentUser.name_en;
+    const filteredItems=rxItems.filter(i=>i.medicine_name.trim());
+    if(userId){
+      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,rx_id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,notes:rxForm.notes||undefined,dispensed:false,items:filteredItems})});
+      const json=await res.json();
+      if(json.success){ setPrescriptions(prev=>[json.prescription,...prev]); }
+    } else {
+      setPrescriptions(prev=>[{id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,created_at:new Date().toISOString().slice(0,10),items:filteredItems,notes:rxForm.notes||undefined,dispensed:false},...prev]);
+    }
     setShowAdd(false); setRxForm({mrn:"",patient_name:"",notes:""}); setRxItems([{medicine_name:"",dosage:"",duration:"",instructions:""}]);
   };
 
@@ -830,7 +894,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
 // ══════════════════════════════════════════════════════════════
 // 💰 تبويب المبيعات
 // ══════════════════════════════════════════════════════════════
-function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,showNotif,currentUser,addLog}:{lang:Lang;medicines:Medicine[];sales:Sale[];setSales:React.Dispatch<React.SetStateAction<Sale[]>>;barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;showNotif:(n:ScanNotif,ms?:number)=>void;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void}) {
+function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,showNotif,currentUser,addLog,userId,onRefresh}:{lang:Lang;medicines:Medicine[];sales:Sale[];setSales:React.Dispatch<React.SetStateAction<Sale[]>>;barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;showNotif:(n:ScanNotif,ms?:number)=>void;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;userId:string|null;onRefresh:()=>void}) {
   const isAr=lang==="ar";
   const [showForm,setShowForm]=useState(false); const [items,setItems]=useState<SaleItem[]>([]);
   const [mQ,setMQ]=useState(""); const [discount,setDiscount]=useState(0); const [payment,setPayment]=useState<"cash"|"card"|"insurance">("cash");
@@ -853,12 +917,26 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
 
   const subtotal=items.reduce((s,i)=>s+i.qty*i.unit_price,0); const total=Math.max(0,subtotal-discount);
 
-  const complete=()=>{
+  const complete=async()=>{
     if(items.length===0) return;
-    const ns:Sale={id:Math.max(0,...sales.map(s=>s.id))+1,date:new Date().toISOString().slice(0,10),items,total,payment_method:payment,discount,patient_name:pName||undefined,prescription_id:rxId||undefined,cashier:isAr?currentUser.name_ar:currentUser.name_en};
-    setSales(prev=>[ns,...prev]);
-    items.forEach(it=>{addLog({medicine_id:it.medicine_id,medicine_name:it.medicine_name,type:"sale",qty:it.qty,date:new Date().toISOString().slice(0,10),user:isAr?currentUser.name_ar:currentUser.name_en,ref:`SALE-${ns.id}`});});
-    setPrintSale(ns); setItems([]); setDiscount(0); setPayment("cash"); setPName(""); setRxId(""); setShowForm(false); setBarcodeMode(null);
+    const cashier=isAr?currentUser.name_ar:currentUser.name_en;
+    const date=new Date().toISOString().slice(0,10);
+    if(userId){
+      const res=await fetch("/api/pharmacy/sales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,items,total,discount,payment_method:payment,patient_name:pName||null,prescription_id:rxId||null,cashier,date})});
+      const json=await res.json();
+      if(json.success){
+        setSales(prev=>[json.sale,...prev]);
+        items.forEach(it=>addLog({medicine_id:it.medicine_id,medicine_name:it.medicine_name,type:"sale",qty:it.qty,date,user:cashier,ref:`SALE-${json.sale.id}`}));
+        setPrintSale(json.sale);
+        onRefresh();
+      } else { showNotif({type:"error",message:json.error||"Error"},3000); return; }
+    } else {
+      const ns:Sale={id:Math.max(0,...sales.map(s=>s.id))+1,date,items,total,payment_method:payment,discount,patient_name:pName||undefined,prescription_id:rxId||undefined,cashier};
+      setSales(prev=>[ns,...prev]);
+      items.forEach(it=>addLog({medicine_id:it.medicine_id,medicine_name:it.medicine_name,type:"sale",qty:it.qty,date,user:cashier,ref:`SALE-${ns.id}`}));
+      setPrintSale(ns);
+    }
+    setItems([]); setDiscount(0); setPayment("cash"); setPName(""); setRxId(""); setShowForm(false); setBarcodeMode(null);
   };
 
   const today=new Date().toISOString().slice(0,10); const todaySales=sales.filter(s=>s.date===today); const todayTotal=todaySales.reduce((s,x)=>s+x.total,0);
@@ -953,20 +1031,94 @@ function ReportsTab({lang,medicines,sales}:{lang:Lang;medicines:Medicine[];sales
 export default function PharmacyPage() {
   const [lang,setLang]=useState<Lang>("ar");
   const [currentUser,setCurrentUser]=useState<User|null>(null);
+  const [supabaseUserId,setSupabaseUserId]=useState<string|null>(null);
   const [activeTab,setActiveTab]=useState("inventory");
-  const [medicines,setMedicines]=useState<Medicine[]>(INIT_MEDS);
-  const [prescriptions,setPrescriptions]=useState<Prescription[]>(INIT_RX);
-  const [sales,setSales]=useState<Sale[]>(INIT_SALES);
-  const [suppliers,setSuppliers]=useState<Supplier[]>(INIT_SUPPLIERS);
-  const [invoices,setInvoices]=useState<PurchInvoice[]>(INIT_INVOICES);
-  const [stockLog,setStockLog]=useState<StockLog[]>(INIT_LOG);
+  const [medicines,setMedicines]=useState<Medicine[]>([]);
+  const [prescriptions,setPrescriptions]=useState<Prescription[]>([]);
+  const [sales,setSales]=useState<Sale[]>([]);
+  const [suppliers,setSuppliers]=useState<Supplier[]>([]);
+  const [invoices,setInvoices]=useState<PurchInvoice[]>([]);
+  const [stockLog,setStockLog]=useState<StockLog[]>([]);
   const [barcodeMode,setBarcodeMode]=useState<BarcodeMode>(null);
   const [notif,setNotif]=useState<ScanNotif>(null);
   const [alertsRead,setAlertsRead]=useState<Set<number>>(new Set());
+  const [loading,setLoading]=useState(false);
+  const [dataLoaded,setDataLoaded]=useState(false);
   const notifT=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   const showNotif=useCallback((n:ScanNotif,ms=2200)=>{setNotif(n);clearTimeout(notifT.current);notifT.current=setTimeout(()=>setNotif(null),ms);},[]);
-  const addLog=useCallback((l:Omit<StockLog,"id">)=>setStockLog(prev=>[{id:Math.max(0,...prev.map(x=>x.id))+1,...l},...prev]),[]);
+
+  // ── جلب البيانات من Supabase ──────────────────────────────
+  const loadData=useCallback(async(uid:string)=>{
+    setLoading(true);
+    try {
+      const res=await fetch(`/api/pharmacy/data?user_id=${uid}`);
+      if(!res.ok) throw new Error("fetch failed");
+      const d=await res.json();
+      setMedicines(d.medicines||[]);
+      setSales(d.sales||[]);
+      setSuppliers(d.suppliers||[]);
+      setInvoices(d.invoices||[]);
+      setPrescriptions(d.prescriptions||[]);
+      setStockLog(d.stockLogs||[]);
+      setDataLoaded(true);
+    } catch(e){
+      console.error("loadData error:",e);
+      showNotif({type:"error",message:lang==="ar"?"فشل تحميل البيانات":"Failed to load data"},3000);
+    } finally { setLoading(false); }
+  },[lang,showNotif]);
+
+  // ── تسجيل الدخول عبر Supabase Auth ───────────────────────
+  const handleLogin=useCallback(async(u:User)=>{
+    // ابحث عن الجلسة النشطة في Supabase
+    const {data:{session}}=await supabase.auth.getSession();
+    if(session?.user?.id){
+      setSupabaseUserId(session.user.id);
+      setCurrentUser(u);
+      setActiveTab(ROLE[u.role].tabs[0]);
+      await loadData(session.user.id);
+    } else {
+      // fallback: استخدم email/password من نظام الصيدلية
+      const {data,error}=await supabase.auth.signInWithPassword({
+        email: u.username.includes("@") ? u.username : `${u.username}@pharmacy.nabd`,
+        password: u.password,
+      });
+      if(!error && data.user){
+        setSupabaseUserId(data.user.id);
+        setCurrentUser(u);
+        setActiveTab(ROLE[u.role].tabs[0]);
+        await loadData(data.user.id);
+      } else {
+        // إذا فشل Auth، استمر بالنظام المحلي مؤقتاً
+        setCurrentUser(u);
+        setActiveTab(ROLE[u.role].tabs[0]);
+        showNotif({type:"warning",message:lang==="ar"?"تسجيل دخول محلي - البيانات غير محفوظة":"Local login - data not saved"},4000);
+      }
+    }
+  },[lang,loadData,showNotif]);
+
+  // ── تحقق من جلسة Supabase عند التحميل ───────────────────
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data:{session}})=>{
+      if(session?.user){
+        setSupabaseUserId(session.user.id);
+        // استعد user من metadata
+        const meta=session.user.user_metadata;
+        if(meta?.role==="pharmacy"||meta?.account_type==="pharmacy"){
+          const role:UserRole=(meta.pharmacy_role as UserRole)||"pharmacist";
+          const u:User={id:1,name_ar:meta.owner_name||"مستخدم",name_en:meta.owner_name||"User",role,username:session.user.email||"",password:"",avatar:"💊"};
+          setCurrentUser(u);
+          setActiveTab(ROLE[role].tabs[0]);
+          loadData(session.user.id);
+        }
+      }
+    });
+  },[loadData]);
+
+  const addLog=useCallback(async(l:Omit<StockLog,"id">)=>{
+    setStockLog(prev=>[{id:Math.max(0,...prev.map(x=>x.id))+1,...l},...prev]);
+    // الحفظ في Supabase يتم من خلال API route (sales, invoices)
+  },[]);
 
   const alerts:SysAlert[]=useMemo(()=>{
     const list:SysAlert[]=[]; const isAr=lang==="ar"; const today=new Date().toISOString().slice(0,10);
@@ -984,7 +1136,7 @@ export default function PharmacyPage() {
 
   useEffect(()=>{setBarcodeMode(null);},[activeTab]);
 
-  if(!currentUser) return <LoginScreen onLogin={u=>{setCurrentUser(u);setActiveTab(ROLE[u.role].tabs[0]);}} lang={lang}/>;
+  if(!currentUser) return <LoginScreen onLogin={handleLogin} lang={lang}/>;
 
   const isAr=lang==="ar";
   const allowedTabs=ROLE[currentUser.role].tabs;
@@ -1011,6 +1163,7 @@ export default function PharmacyPage() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
         @keyframes barcodeIn{from{opacity:0;transform:translateX(-50%) translateY(-16px) scale(.9)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes spin{to{transform:rotate(360deg)}}
         .main-anim{animation:fadeUp .35s ease both}
         .inv-row:hover{background:#fafbff!important}
         .action-icon-btn{width:30px;height:30px;border-radius:7px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
@@ -1039,18 +1192,38 @@ export default function PharmacyPage() {
       <div style={{fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc"}}>
         <BarcodeNotif n={notif}/>
         <BarcodeBar mode={barcodeMode} isAr={isAr} onClose={()=>setBarcodeMode(null)}/>
+
+        {/* شريط التحميل */}
+        {loading&&(
+          <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,height:3,background:"linear-gradient(90deg,#0863ba,#1a8fe3)",animation:"pulse 1s ease infinite"}}/>
+        )}
+
         <div className="no-print" style={{position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.97)",backdropFilter:"blur(12px)",borderBottom:"1.5px solid #eef0f3"}}>
           <div className="topbar-inner" style={{padding:"11px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:11}}>
             <div style={{display:"flex",alignItems:"center",gap:11}}>
               <div style={{width:35,height:35,borderRadius:11,background:"linear-gradient(135deg,#0863ba,#1a8fe3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,boxShadow:"0 4px 13px rgba(8,99,186,.3)",flexShrink:0}}>💊</div>
-              <div><div style={{fontSize:15,fontWeight:800,color:"#353535"}}>{isAr?"إدارة الصيدلية":"Pharmacy"}</div><div style={{fontSize:10,color:"#aaa"}}>{isAr?"نظام نبض المتكامل":"NABD Integrated System"}</div></div>
+              <div>
+                <div style={{fontSize:15,fontWeight:800,color:"#353535"}}>{isAr?"إدارة الصيدلية":"Pharmacy"}</div>
+                <div style={{fontSize:10,color:"#aaa"}}>{isAr?"نظام نبض المتكامل":"NABD Integrated System"}</div>
+              </div>
             </div>
             <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
               {barcodeMode&&<div style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:9,background:"rgba(142,68,173,.12)",color:"#8e44ad",animation:"pulse 1.2s ease infinite",display:"flex",alignItems:"center",gap:3}}>▐▌▌ {isAr?"نشط":"On"}</div>}
+              {/* مؤشر حالة الاتصال */}
+              {supabaseUserId&&(
+                <div style={{fontSize:10,padding:"3px 8px",borderRadius:9,background:"rgba(39,174,96,.1)",color:"#27ae60",fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background:"#27ae60",display:"inline-block"}}/>
+                  {isAr?"متصل":"Live"}
+                </div>
+              )}
               <div style={{display:"flex",alignItems:"center",gap:7,padding:"4px 10px",background:`${ROLE[currentUser.role].color}10`,border:`1.5px solid ${ROLE[currentUser.role].color}30`,borderRadius:9}}>
                 <span style={{fontSize:15}}>{currentUser.avatar}</span>
-                <div><div style={{fontSize:11,fontWeight:700,color:"#353535",lineHeight:1.1}}>{isAr?currentUser.name_ar:currentUser.name_en}</div><div style={{fontSize:9,color:ROLE[currentUser.role].color,fontWeight:600}}>{isAr?ROLE[currentUser.role].ar:ROLE[currentUser.role].en}</div></div>
-                <button onClick={()=>setCurrentUser(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#bbb",paddingRight:3}}>{isAr?"خروج":"Out"}</button>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#353535",lineHeight:1.1}}>{isAr?currentUser.name_ar:currentUser.name_en}</div>
+                  <div style={{fontSize:9,color:ROLE[currentUser.role].color,fontWeight:600}}>{isAr?ROLE[currentUser.role].ar:ROLE[currentUser.role].en}</div>
+                </div>
+                <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);setDataLoaded(false);setMedicines([]);setSales([]);setSuppliers([]);setInvoices([]);setPrescriptions([]);setStockLog([]);}}
+                  style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#bbb",paddingRight:3}}>{isAr?"خروج":"Out"}</button>
               </div>
               <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{padding:"6px 11px",border:"1.5px solid #d0e4f7",borderRadius:9,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
             </div>
@@ -1066,14 +1239,24 @@ export default function PharmacyPage() {
             </div>
           </div>
         </div>
+
         <main className="main-anim main-content" style={{padding:"0 22px 44px",transition:"margin .3s"}}>
           <div className="content-pad" style={{padding:"16px 0 0"}}>
-            {activeTab==="inventory"    &&<InventoryTab     lang={lang} medicines={medicines} setMedicines={setMedicines} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser}/>}
-            {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines}/>}
-            {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog}/>}
-            {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog}/>}
-            {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales}/>}
-            {activeTab==="alerts"       &&<AlertsTab        lang={lang} medicines={medicines} alerts={alerts} markAll={markAll} markOne={markOne}/>}
+            {loading&&!dataLoaded?(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:300,gap:16}}>
+                <div style={{width:40,height:40,borderRadius:"50%",border:"3px solid #eef0f3",borderTop:"3px solid #0863ba",animation:"spin 0.8s linear infinite"}}/>
+                <div style={{fontSize:13,color:"#aaa"}}>{isAr?"جاري تحميل البيانات...":"Loading data..."}</div>
+              </div>
+            ):(
+              <>
+                {activeTab==="inventory"    &&<InventoryTab     lang={lang} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId}/>}
+                {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
+                {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
+                {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
+                {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales}/>}
+                {activeTab==="alerts"       &&<AlertsTab        lang={lang} medicines={medicines} alerts={alerts} markAll={markAll} markOne={markOne}/>}
+              </>
+            )}
           </div>
         </main>
       </div>
