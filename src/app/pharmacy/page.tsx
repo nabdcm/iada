@@ -1141,7 +1141,7 @@ export default function PharmacyPage() {
   // إذا لم تكن هناك جلسة → أعد التوجيه لصفحة الـ login
   if(!currentUser && !loading) {
     if (typeof window !== 'undefined') {
-      window.location.href = '/login?redirect=/pharmacy';
+      window.location.href = '/pharmacy/login';
     }
     return (
       <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f7f9fc',fontFamily:"'Rubik',sans-serif"}}>
