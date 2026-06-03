@@ -1101,16 +1101,18 @@ export default function PharmacyPage() {
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
       if(session?.user){
-        setSupabaseUserId(session.user.id);
-        // استعد user من metadata
+        const uid=session.user.id;
+        setSupabaseUserId(uid);
         const meta=session.user.user_metadata;
-        if(meta?.role==="pharmacy"||meta?.account_type==="pharmacy"){
-          const role:UserRole=(meta.pharmacy_role as UserRole)||"pharmacist";
-          const u:User={id:1,name_ar:meta.owner_name||"مستخدم",name_en:meta.owner_name||"User",role,username:session.user.email||"",password:"",avatar:"💊"};
-          setCurrentUser(u);
-          setActiveTab(ROLE[role].tabs[0]);
-          loadData(session.user.id);
-        }
+        // اقبل أي نوع حساب — الصيدلاني يدخل من login الموحد
+        const role:UserRole=(meta?.pharmacy_role as UserRole)||"pharmacist";
+        const u:User={id:1,name_ar:meta?.owner_name||meta?.clinic_name||"مستخدم",name_en:meta?.owner_name||meta?.clinic_name||"User",role,username:session.user.email||"",password:"",avatar:"💊"};
+        setCurrentUser(u);
+        setActiveTab(ROLE[role].tabs[0]);
+        loadData(uid);
+      } else {
+        // لا جلسة — سيتم التوجيه في الـ render
+        setLoading(false);
       }
     });
   },[loadData]);
@@ -1136,7 +1138,22 @@ export default function PharmacyPage() {
 
   useEffect(()=>{setBarcodeMode(null);},[activeTab]);
 
-  if(!currentUser) return <LoginScreen onLogin={handleLogin} lang={lang}/>;
+  // إذا لم تكن هناك جلسة → أعد التوجيه لصفحة الـ login
+  if(!currentUser && !loading) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login?redirect=/pharmacy';
+    }
+    return (
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f7f9fc',fontFamily:"'Rubik',sans-serif"}}>
+        <div style={{textAlign:'center'}}>
+          <div style={{width:32,height:32,border:'3px solid #e0e0e0',borderTopColor:'#0863ba',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto 12px'}}/>
+          <div style={{fontSize:13,color:'#aaa'}}>جاري التحقق من الهوية...</div>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      </div>
+    );
+  }
+  if(!currentUser) return null;
 
   const isAr=lang==="ar";
   const allowedTabs=ROLE[currentUser.role].tabs;

@@ -13,7 +13,7 @@ type Lang = "ar" | "en";
 const T = {
   ar: {
     welcome: "مرحباً بعودتك",
-    sub: "سجّل الدخول لإدارة عيادتك",
+    sub: "سجّل الدخول لإدارة حسابك",
     emailLabel: "البريد الإلكتروني",
     emailPlaceholder: "أدخل بريدك الإلكتروني",
     passLabel: "كلمة المرور",
@@ -37,7 +37,7 @@ const T = {
   },
   en: {
     welcome: "Welcome Back",
-    sub: "Sign in to manage your clinic",
+    sub: "Sign in to manage your account",
     emailLabel: "Email Address",
     emailPlaceholder: "Enter your email",
     passLabel: "Password",
@@ -102,8 +102,15 @@ function LoginContent() {
         return;
       }
 
-      // نجح تسجيل الدخول — full reload لضمان قراءة الـ cookies في الـ middleware
-      window.location.href = redirectTo;
+      // نجح تسجيل الدخول — اقرأ account_type وحوّل حسبه
+      const { data: { user } } = await supabase.auth.getUser();
+      const accountType = user?.user_metadata?.account_type;
+
+      if (accountType === 'pharmacy') {
+        window.location.href = '/pharmacy';
+      } else {
+        window.location.href = redirectTo;
+      }
 
     } catch {
       setError(tr.errors.network);
