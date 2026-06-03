@@ -13,7 +13,7 @@ type Lang = "ar" | "en";
 const T = {
   ar: {
     welcome: "مرحباً بعودتك",
-    sub: "سجّل الدخول لإدارة حسابك",
+    sub: "سجّل الدخول لإدارة عيادتك",
     emailLabel: "البريد الإلكتروني",
     emailPlaceholder: "أدخل بريدك الإلكتروني",
     passLabel: "كلمة المرور",
@@ -37,7 +37,7 @@ const T = {
   },
   en: {
     welcome: "Welcome Back",
-    sub: "Sign in to manage your account",
+    sub: "Sign in to manage your clinic",
     emailLabel: "Email Address",
     emailPlaceholder: "Enter your email",
     passLabel: "Password",
@@ -82,7 +82,7 @@ function LoginContent() {
     setError("");
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email:    email.trim(),
         password: password,
       });
@@ -102,14 +102,8 @@ function LoginContent() {
         return;
       }
 
-      // اقرأ account_type مباشرة من نتيجة signInWithPassword
-      const accountType = authData?.user?.user_metadata?.account_type;
-
-      if (accountType === 'pharmacy') {
-        window.location.href = '/pharmacy';
-      } else {
-        window.location.href = redirectTo;
-      }
+      // نجح تسجيل الدخول — full reload لضمان قراءة الـ cookies في الـ middleware
+      window.location.href = redirectTo;
 
     } catch {
       setError(tr.errors.network);
