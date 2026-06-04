@@ -161,7 +161,7 @@ function useBarcode(onScan:(c:string)=>void, enabled=true) {
 function LoginScreen({onLogin,lang}:{onLogin:(u:User)=>void;lang:Lang}) {
   const isAr=lang==="ar";
   const [username,setUsername]=useState(""); const [password,setPassword]=useState("");
-  const [error,setError]=useState(false); const [loading,setLoading]=useState(false);
+  const [error,setError]=useState(false); const [loading,setLoading]=useState(true); // true: نمنع redirect قبل اكتمال getSession
   const doLogin=()=>{
     setLoading(true); setError(false);
     setTimeout(()=>{
@@ -1042,7 +1042,7 @@ export default function PharmacyPage() {
   const [barcodeMode,setBarcodeMode]=useState<BarcodeMode>(null);
   const [notif,setNotif]=useState<ScanNotif>(null);
   const [alertsRead,setAlertsRead]=useState<Set<number>>(new Set());
-  const [loading,setLoading]=useState(false);
+  const [loading,setLoading]=useState(true); // true: نمنع redirect قبل اكتمال getSession
   const [dataLoaded,setDataLoaded]=useState(false);
   const notifT=useRef<ReturnType<typeof setTimeout>|null>(null);
 
@@ -1109,9 +1109,10 @@ export default function PharmacyPage() {
         const u:User={id:1,name_ar:meta?.owner_name||meta?.clinic_name||"مستخدم",name_en:meta?.owner_name||meta?.clinic_name||"User",role,username:session.user.email||"",password:"",avatar:"💊"};
         setCurrentUser(u);
         setActiveTab(ROLE[role].tabs[0]);
+        // loadData تضبط loading=false في finally
         loadData(uid);
       } else {
-        // لا جلسة — سيتم التوجيه في الـ render
+        // لا جلسة → اسمح للـ render بعرض redirect
         setLoading(false);
       }
     });
