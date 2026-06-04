@@ -20,15 +20,39 @@ export default function PharmacyLogin() {
 
   const isAr = lang === "ar";
 
+  // ── التحقق من أن user_id مرتبط بصيدلية ──────────────────
+  // يبحث أولاً في user_metadata ثم في جدول clinics كـ fallback
+  const checkIsPharmacy = async (userId: string, meta: Record<string, unknown>): Promise<boolean> => {
+    // 1) التحقق من user_metadata (المفتاح الصحيح الذي يحفظه الأدمن)
+    if (
+      meta?.account_type === "pharmacy" ||
+      meta?.pharmacy_role ||
+      meta?.type === "pharmacy"
+    ) return true;
+
+    // 2) fallback: البحث في جدول clinics مباشرة
+    const { data } = await supabase
+      .from("clinics")
+      .select("account_type")
+      .eq("user_id", userId)
+      .single();
+
+    return data?.account_type === "pharmacy";
+  };
+
   // التحقق من وجود جلسة نشطة
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        // إذا كان مسجل دخول بالفعل → توجيه لصفحة الصيدلية
-        window.location.href = "/pharmacy";
-      } else {
-        setCheckingSession(false);
+        // نتأكد أن الجلسة الموجودة هي فعلاً لصيدلية قبل أي redirect
+        const isPharmacy = await checkIsPharmacy(session.user.id, session.user.user_metadata);
+        if (isPharmacy) {
+          window.location.href = "/pharmacy";
+          return;
+        }
+        // جلسة موجودة لكن ليست صيدلية → نعرض صفحة تسجيل الدخول
       }
+      setCheckingSession(false);
     });
   }, []);
 
@@ -51,14 +75,10 @@ export default function PharmacyLogin() {
       return;
     }
 
-    // التحقق أن الحساب مرتبط بصيدلية
-    const meta = data.user.user_metadata;
-    const hasPharmacyAccess =
-      meta?.pharmacy_role ||
-      meta?.type === "pharmacy" ||
-      meta?.account_type === "pharmacy";
+    // التحقق أن الحساب مرتبط بصيدلية (metadata + fallback من جدول clinics)
+    const isPharmacy = await checkIsPharmacy(data.user.id, data.user.user_metadata);
 
-    if (!hasPharmacyAccess) {
+    if (!isPharmacy) {
       await supabase.auth.signOut();
       setError(
         isAr

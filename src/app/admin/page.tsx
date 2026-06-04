@@ -28,7 +28,7 @@ type ClinicType =
 
 // الخطط الفردية: basic, pro, enterprise
 // الخطط المشتركة: shared_basic, shared_pro, shared_enterprise
-type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise" | "pharmacy";
 
 type AccountType = "clinic" | "pharmacy";
 
@@ -632,7 +632,11 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
         const res  = await fetch("/api/create-clinic", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ ...form, password: creds.password }),
+          body:    JSON.stringify({
+            ...form,
+            password:     creds.password,
+            account_type: form.account_type, // صريح لضمان الحفظ في user_metadata
+          }),
         });        const json = await res.json();
 
         if (!res.ok) {
