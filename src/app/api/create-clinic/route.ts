@@ -1,95 +1,92 @@
-// app/api/create-clinic/route.ts
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/create-clinic/route.ts
 import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
 
-// Supabase Admin client — يستخدم SERVICE_ROLE_KEY لإنشاء المستخدمين
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
     const {
-      email,
-      password,
-      name,
-      owner,
-      phone,
-      plan,
-      expiry,
-      status,
-      clinic_type,
-      account_type, // ← المفتاح الحاسم
-      max_doctors,
-    } = body;
+      name, owner, email, phone,
+      plan, expiry, status, password,
+      clinic_type = "general",
+      account_type = "clinic",   // ← عيادة أو صيدلية
+    } = await req.json();
 
-    // ── 1. التحقق من البيانات المطلوبة ──────────────────────
-    if (!email || !password || !name || !plan) {
-      return NextResponse.json(
-        { error: "email, password, name, plan are required" },
-        { status: 400 }
-      );
-    }
+    // ─── 1. إنشاء المستخدم في Auth ───────────────────────
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          clinic_name: name, owner_name: owner,
+          phone, plan, expiry, status,
+          clinic_type,
+          account_type,              // ← عيادة أو صيدلية
+          role: "clinic",
+        },
+      });
 
-    // ── 2. إنشاء المستخدم في Supabase Auth ──────────────────
-    // user_metadata يُستخدم لاحقاً للتحقق من نوع الحساب في صفحة login
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email:          email.trim().toLowerCase(),
-      password,
-      email_confirm:  true, // لا نريد تأكيد البريد
-      user_metadata: {
-        name,
-        owner,
-        phone,
-        plan,
-        account_type: account_type || "clinic", // ← يُحفظ هنا للتحقق في login
-        clinic_type:  account_type === "pharmacy" ? null : (clinic_type || "general"),
-      },
-    });
-
-    if (authError || !authData?.user) {
-      console.error("Auth create error:", authError);
-      return NextResponse.json(
-        { error: authError?.message || "Failed to create user" },
-        { status: 400 }
-      );
+    if (authError) {
+      console.error("Auth error:", authError);
+      return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
     const userId = authData.user.id;
 
-    // ── 3. إدراج السجل في جدول clinics ──────────────────────
-    const { error: dbError } = await supabaseAdmin
+    // ─── 2. إضافة في جدول clinics ────────────────────────
+    // الصيدلية لا تملك plan بالمعنى التقليدي، نخزن "basic" لتجنب
+    // CHECK constraint في DB — نعتمد على account_type للتمييز
+    const planForDb = account_type === "pharmacy" ? "basic" : plan;
+
+    const { error: clinicError } = await supabaseAdmin
       .from("clinics")
       .insert({
-        user_id:      userId,
-        name,
-        owner:        owner || "",
-        email:        email.trim().toLowerCase(),
-        phone:        phone || "",
-        plan,
-        expiry:       expiry || null,
-        status:       status || "active",
-        clinic_type:  account_type === "pharmacy" ? null : (clinic_type || "general"),
-        account_type: account_type || "clinic", // ← يُحفظ هنا للقراءة من الأدمن
-        max_doctors:  max_doctors || null,
+        user_id: userId, name, owner, email, phone,
+        plan: planForDb, expiry, status,
+        clinic_type: account_type === "pharmacy" ? null : clinic_type,
+        account_type,              // ← عيادة أو صيدلية
       });
 
-    if (dbError) {
-      console.error("DB insert error:", dbError);
+    if (clinicError) {
+      console.error("❌ clinics error:", clinicError);
       // نحذف المستخدم من Auth لو فشل الإدراج في DB
       await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
-      return NextResponse.json(
-        { error: dbError.message || "Failed to save clinic data" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: clinicError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, userId });
+    // ─── 3. إضافة في clinic_profiles (للعيادات فقط) ──────
+    if (account_type !== "pharmacy") {
+      const { error: profileError } = await supabaseAdmin
+        .from("clinic_profiles")
+        .upsert({
+          id:                   userId,
+          clinic_name:          name,
+          doctor_name:          owner,
+          phone:                phone || "",
+          address:              "",
+          working_hours_start:  "09:00",
+          working_hours_end:    "17:00",
+          working_days:         ["sun","mon","tue","wed","thu"],
+          appointment_duration: 30,
+        });
+
+      if (profileError) console.error("❌ clinic_profiles error:", profileError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      userId,
+      bookingUrl: account_type === "pharmacy" ? null : `/book/${userId}`,
+    });
+
   } catch (err) {
-    console.error("create-clinic error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("Server error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
