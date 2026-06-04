@@ -105,7 +105,7 @@ const T = {
     netBalance:"الرصيد الصافي",
     totalWithdrawals:"إجمالي السحوبات",
     totalExpenses:"مصروفات العيادة",
-    withdrawalsSection:{ title:"السحوبات الأخيرة", empty:"لا توجد سحوبات مسجّلة" },
+    withdrawalsSection:{ title:"السحوبات الأخيرة", empty:"لا توجد سحوبات مسجّلة", reverseConfirm:"هل تريد التراجع عن هذا السحب؟ سيُعاد المبلغ للرصيد.", reverseBtn:"تراجع", reversed:"مُلغى" },
     expensesSection:{ title:"مصروفات العيادة", empty:"لا توجد مصروفات مسجّلة" },
     txType:{ income:"دخل", withdrawal:"سحب", expense:"مصروف" },
     filterType:{ all:"الكل", income:"دخل", withdrawal:"سحوبات", expense:"مصروفات" },
@@ -222,7 +222,7 @@ const T = {
     netBalance:"Net Balance",
     totalWithdrawals:"Total Withdrawals",
     totalExpenses:"Clinic Expenses",
-    withdrawalsSection:{ title:"Recent Withdrawals", empty:"No withdrawals recorded" },
+    withdrawalsSection:{ title:"Recent Withdrawals", empty:"No withdrawals recorded", reverseConfirm:"Undo this withdrawal? The amount will be returned to the balance.", reverseBtn:"Undo", reversed:"Reversed" },
     expensesSection:{ title:"Clinic Expenses", empty:"No expenses recorded" },
     txType:{ income:"Income", withdrawal:"Withdrawal", expense:"Expense" },
     filterType:{ all:"All", income:"Income", withdrawal:"Withdrawals", expense:"Expenses" },
@@ -979,6 +979,7 @@ export default function PaymentsPage() {
   const [expenses,    setExpenses]    = useState<any[]>([]);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showExpenseModal,  setShowExpenseModal]  = useState(false);
+  const [reverseWithdrawalId, setReverseWithdrawalId] = useState<number|null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [plan, setPlan] = useState<PlanType>("basic");
   // خطط العيادات المشتركة: قائمة الأطباء والفلتر المحدد
@@ -1109,7 +1110,7 @@ export default function PaymentsPage() {
     const monthPayments = payments.filter(p => p.date.startsWith(thisMonth));
     const pending = payments.filter(p => p.status === "pending");
     const totalRevYear = payments.filter(p => p.status === "paid" && p.date.startsWith(String(new Date().getFullYear()))).reduce((s, p) => s + p.amount, 0);
-    const totalWithdrawYear = withdrawals.filter(w => w.date.startsWith(String(new Date().getFullYear()))).reduce((s, w) => s + w.amount, 0);
+    const totalWithdrawYear = withdrawals.filter(w => w.date.startsWith(String(new Date().getFullYear())) && !w.is_reversed).reduce((s, w) => s + w.amount, 0);
     const totalExpYear = expenses.filter(e => e.date.startsWith(String(new Date().getFullYear()))).reduce((s, e) => s + e.amount, 0);
     return {
       totalMonth:   monthPayments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0),
@@ -1232,6 +1233,18 @@ export default function PaymentsPage() {
       setWithdrawals(prev => [inserted, ...prev]);
       setShowWithdrawModal(false);
     }
+  };
+
+  // ── التراجع عن سحب ───────────────────────────────────────────
+  const reverseWithdrawal = async (id: number) => {
+    const { error } = await supabase
+      .from("clinic_withdrawals")
+      .update({ is_reversed: true })
+      .eq("id", id);
+    if (!error) {
+      setWithdrawals(prev => prev.map(w => w.id === id ? { ...w, is_reversed: true } : w));
+    }
+    setReverseWithdrawalId(null);
   };
 
   // ── تسجيل مصروف عيادة ────────────────────────────────────────
@@ -2005,6 +2018,65 @@ export default function PaymentsPage() {
                     </span>
                   </div>
                 )}
+
+                {/* ── سجل السحوبات ضمن الحركة المالية ── */}
+                {withdrawals.length > 0 && (
+                  <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.18)",boxShadow:"0 2px 16px rgba(192,57,43,.06)",overflow:"hidden",marginTop:20 }}>
+                    <div style={{ padding:"16px 20px",borderBottom:"1.5px solid rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(192,57,43,.03)" }}>
+                      <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
+                        <span style={{ fontSize:16 }}>💸</span>
+                        {tr.withdrawalsSection.title}
+                      </h3>
+                      <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                        <span style={{ fontSize:12,color:"#c0392b",fontWeight:700 }}>
+                          -{withdrawals.filter(w=>!w.is_reversed).reduce((s,w)=>s+w.amount,0).toLocaleString()} ل.س
+                        </span>
+                        <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
+                      </div>
+                    </div>
+                    {/* Header */}
+                    <div className="desktop-table-header" style={{ gridTemplateColumns:"120px 1fr 130px 90px 60px",padding:"10px 20px",background:"#fafbfc",borderBottom:"1px solid rgba(192,57,43,.08)",gap:0 }}>
+                      {[tr.table.date, isAr?"السبب":"Reason", tr.table.amount, isAr?"الحالة":"Status", ""].map((h,i)=>(
+                        <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.4,paddingLeft:i>0?8:0 }}>{h}</div>
+                      ))}
+                    </div>
+                    {withdrawals.map((w,i) => (
+                      <div key={w.id||i} style={{ display:"grid",gridTemplateColumns:"120px 1fr 130px 90px 60px",padding:"12px 20px",alignItems:"center",borderBottom:"1px solid #faf0ee",background:w.is_reversed?"rgba(200,200,200,.04)":"transparent",transition:"background .2s" }}
+                        onMouseEnter={e=>{if(!w.is_reversed)(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.03)";}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=w.is_reversed?"rgba(200,200,200,.04)":"transparent";}}>
+                        <div style={{ fontSize:12,color:"#888" }}>{fmtDate(w.date)}</div>
+                        <div style={{ fontSize:13,fontWeight:500,color:w.is_reversed?"#bbb":"#353535",paddingLeft:8,textDecoration:w.is_reversed?"line-through":"none" }}>
+                          {w.reason}
+                          {w.notes && <div style={{ fontSize:11,color:"#bbb",marginTop:2 }}>{w.notes}</div>}
+                        </div>
+                        <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:w.is_reversed?"#bbb":"#c0392b",textDecoration:w.is_reversed?"line-through":"none" }}>
+                          -{w.amount.toLocaleString()} ل.س
+                        </div>
+                        <div style={{ paddingLeft:8 }}>
+                          {w.is_reversed ? (
+                            <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(200,200,200,.15)",color:"#bbb" }}>
+                              {tr.withdrawalsSection.reversed}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(192,57,43,.1)",color:"#c0392b" }}>
+                              {isAr?"سحب":"Withdrawal"}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display:"flex",justifyContent:"center" }}>
+                          {!w.is_reversed && (
+                            <button
+                              className="icon-btn"
+                              onClick={()=>setReverseWithdrawalId(w.id)}
+                              title={tr.withdrawalsSection.reverseBtn}
+                              style={{ fontSize:14 }}
+                            >↩️</button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* RIGHT: Revenue Chart + Pending */}
@@ -2108,12 +2180,26 @@ export default function PaymentsPage() {
                     <div style={{ textAlign:"center",padding:"18px 0",color:"#ccc",fontSize:13 }}>{tr.withdrawalsSection.empty}</div>
                   ):(
                     withdrawals.slice(0,5).map((w,i)=>(
-                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa" }}>
-                        <div>
-                          <div style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{w.reason}</div>
-                          <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</div>
+                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",opacity:w.is_reversed?.5:1 }}>
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <div style={{ fontSize:12,fontWeight:600,color:w.is_reversed?"#bbb":"#353535",textDecoration:w.is_reversed?"line-through":"none",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{w.reason}</div>
+                          <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2 }}>
+                            <span style={{ fontSize:11,color:"#aaa" }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
+                            {w.is_reversed && <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"rgba(200,200,200,.15)",color:"#bbb" }}>{tr.withdrawalsSection.reversed}</span>}
+                          </div>
                         </div>
-                        <span style={{ fontSize:14,fontWeight:800,color:"#c0392b" }}>-{w.amount.toLocaleString()} ل.س</span>
+                        <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
+                          <span style={{ fontSize:14,fontWeight:800,color:w.is_reversed?"#bbb":"#c0392b",textDecoration:w.is_reversed?"line-through":"none" }}>-{w.amount.toLocaleString()} ل.س</span>
+                          {!w.is_reversed && (
+                            <button
+                              onClick={()=>setReverseWithdrawalId(w.id)}
+                              title={tr.withdrawalsSection.reverseBtn}
+                              style={{ width:28,height:28,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
+                              onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.18)";}}
+                              onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.08)";}}
+                            >↩️</button>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}
@@ -2181,7 +2267,38 @@ export default function PaymentsPage() {
             </div>
           </div>
         )}
+        {/* Reverse Withdrawal Confirm */}
+        {reverseWithdrawalId!==null&&(
+          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
+            <div onClick={()=>setReverseWithdrawalId(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
+            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.15)",animation:"modalIn .25s ease" }}>
+              <div style={{ fontSize:44,marginBottom:12 }}>↩️</div>
+              <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:10 }}>
+                {isAr?"التراجع عن السحب":"Undo Withdrawal"}
+              </h3>
+              <p style={{ fontSize:13,color:"#888",lineHeight:1.7,marginBottom:6 }}>
+                {tr.withdrawalsSection.reverseConfirm}
+              </p>
+              {(()=>{
+                const w = withdrawals.find(x=>x.id===reverseWithdrawalId);
+                return w ? (
+                  <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:12,padding:"10px 16px",marginBottom:20,display:"inline-flex",alignItems:"center",gap:8 }}>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#c0392b" }}>+{w.amount.toLocaleString()} ل.س</span>
+                    <span style={{ fontSize:12,color:"#888" }}>{w.reason}</span>
+                  </div>
+                ) : null;
+              })()}
+              <div style={{ display:"flex",gap:12,marginTop:8 }}>
+                <button onClick={()=>reverseWithdrawal(reverseWithdrawalId)}
+                  style={{ flex:1,padding:"12px",background:"#e67e22",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(230,126,34,.3)" }}>
+                  {isAr?"نعم، تراجع":"Yes, Undo"}
+                </button>
+                <button onClick={()=>setReverseWithdrawalId(null)}
+                  style={{ flex:1,padding:"12px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
+                  {isAr?"إلغاء":"Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </>
-  );
-}
