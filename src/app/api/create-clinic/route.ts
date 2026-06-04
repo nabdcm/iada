@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       name, owner, email, phone,
       plan, expiry, status, password,
       clinic_type = "general",
-      account_type = "clinic",   // ← عيادة أو صيدلية
+      account_type = "clinic",
     } = await req.json();
 
     // ─── 1. إنشاء المستخدم في Auth ───────────────────────
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
           clinic_name: name, owner_name: owner,
           phone, plan, expiry, status,
           clinic_type,
-          account_type,              // ← عيادة أو صيدلية
+          account_type,
           role: "clinic",
         },
       });
@@ -40,27 +40,33 @@ export async function POST(req: Request) {
     const userId = authData.user.id;
 
     // ─── 2. إضافة في جدول clinics ────────────────────────
-    // الصيدلية لا تملك plan بالمعنى التقليدي، نخزن "basic" لتجنب
-    // CHECK constraint في DB — نعتمد على account_type للتمييز
-    const planForDb = account_type === "pharmacy" ? "basic" : plan;
+    // plan: الصيدلية تأخذ "basic" لأن DB لا يقبل "pharmacy"
+    // clinic_type: الصيدلية تأخذ "general" لأن العمود NOT NULL
+    const planForDb        = account_type === "pharmacy" ? "basic"   : plan;
+    const clinicTypeForDb  = account_type === "pharmacy" ? "general" : (clinic_type || "general");
 
     const { error: clinicError } = await supabaseAdmin
       .from("clinics")
       .insert({
-        user_id: userId, name, owner, email, phone,
-        plan: planForDb, expiry, status,
-        clinic_type: account_type === "pharmacy" ? null : clinic_type,
-        account_type,              // ← عيادة أو صيدلية
+        user_id: userId,
+        name,
+        owner,
+        email,
+        phone,
+        plan:        planForDb,
+        expiry,
+        status,
+        clinic_type: clinicTypeForDb,
+        account_type,
       });
 
     if (clinicError) {
-      console.error("❌ clinics error:", clinicError);
-      // نحذف المستخدم من Auth لو فشل الإدراج في DB
+      console.error("❌ clinics insert error:", JSON.stringify(clinicError));
       await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
       return NextResponse.json({ error: clinicError.message }, { status: 500 });
     }
 
-    // ─── 3. إضافة في clinic_profiles (للعيادات فقط) ──────
+    // ─── 3. clinic_profiles للعيادات فقط ─────────────────
     if (account_type !== "pharmacy") {
       const { error: profileError } = await supabaseAdmin
         .from("clinic_profiles")
