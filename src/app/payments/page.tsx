@@ -60,6 +60,20 @@ const T = {
       submit:"دخول",
       error:"كلمة السر غير صحيحة",
     },
+    sessionType:{
+      label:"نوع الجلسة",
+      consultation:"معاينة",
+      session:"جلسة",
+      followup:"مراجعة",
+    },
+    prepayment:{
+      label:"دفع مسبق",
+      toggle:"دفع مسبق (عدة جلسات)",
+      sessions:"عدد الجلسات",
+      sessionsHint:"المريض دفع مسبقاً لـ",
+      sessionsUnit:"جلسة",
+      badgePrefix:"مسبق ×",
+    },
     withdrawBtn:"سحب",
     expenseBtn:"مصروف",
     withdrawModal:{
@@ -162,6 +176,20 @@ const T = {
       placeholder:"Enter password...",
       submit:"Enter",
       error:"Incorrect password",
+    },
+    sessionType:{
+      label:"Session Type",
+      consultation:"Consultation",
+      session:"Session",
+      followup:"Follow-up",
+    },
+    prepayment:{
+      label:"Prepayment",
+      toggle:"Prepayment (multiple sessions)",
+      sessions:"Number of Sessions",
+      sessionsHint:"Patient paid in advance for",
+      sessionsUnit:"session(s)",
+      badgePrefix:"Pre ×",
     },
     withdrawBtn:"Withdraw",
     expenseBtn:"Expense",
@@ -460,6 +488,9 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
     patientId:"", amount:"", description:"", method:"cash",
     date:fmt(new Date()), status:"paid", notes:"",
     doctorId:"", // للخطط المشتركة فقط
+    sessionType:"session", // معاينة | جلسة | مراجعة
+    isPrepayment:false,    // دفع مسبق
+    prepaymentSessions:1,  // عدد الجلسات المدفوعة مسبقاً
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -495,6 +526,9 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
         date: form.date,
         status: (asPending ? "pending" : "paid") as "paid"|"pending"|"cancelled",
         notes: form.notes || undefined,
+        session_type: form.sessionType,
+        is_prepayment: form.isPrepayment,
+        prepayment_sessions: form.isPrepayment ? form.prepaymentSessions : undefined,
         ...(isSharedClinic && form.doctorId ? { doctor_id: Number(form.doctorId) } : {}),
       } as any);
     } catch(e) {
@@ -646,7 +680,48 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
           <F label={tr.modal.description}>
             <input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder={tr.modal.descPh} style={inputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
           </F>
-          {/* Method */}
+
+          {/* نوع الجلسة */}
+          <F label={tr.sessionType.label}>
+            <div style={{ display:"flex",gap:8 }}>
+              {[
+                { k:"consultation", icon:"🩺", label:tr.sessionType.consultation },
+                { k:"session",      icon:"🛋️", label:tr.sessionType.session      },
+                { k:"followup",     icon:"🔄", label:tr.sessionType.followup     },
+              ].map(s=>(
+                <label key={s.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.sessionType===s.k?"1.5px solid #0863ba":"1.5px solid #eee",background:form.sessionType===s.k?"rgba(8,99,186,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.sessionType===s.k?700:400,color:form.sessionType===s.k?"#0863ba":"#888" }}>
+                  <span>{s.icon}</span>{s.label}
+                  <input type="radio" name="sessionType" value={s.k} checked={form.sessionType===s.k} onChange={e=>setForm({...form,sessionType:e.target.value})} style={{ display:"none" }}/>
+                </label>
+              ))}
+            </div>
+          </F>
+
+          {/* دفع مسبق */}
+          <F label={tr.prepayment.label}>
+            <label style={{ display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 14px",borderRadius:10,border:form.isPrepayment?"1.5px solid #7b2d8b":"1.5px solid #eee",background:form.isPrepayment?"rgba(123,45,139,.06)":"#fafbfc",transition:"all .2s" }}>
+              <div style={{ width:20,height:20,borderRadius:6,border:form.isPrepayment?"2px solid #7b2d8b":"2px solid #ddd",background:form.isPrepayment?"#7b2d8b":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",flexShrink:0 }}>
+                {form.isPrepayment&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </div>
+              <input type="checkbox" checked={form.isPrepayment} onChange={e=>setForm({...form,isPrepayment:e.target.checked,prepaymentSessions:e.target.checked?form.prepaymentSessions:1})} style={{ display:"none" }}/>
+              <span style={{ fontSize:13,fontWeight:600,color:form.isPrepayment?"#7b2d8b":"#666" }}>
+                💳 {tr.prepayment.toggle}
+              </span>
+            </label>
+            {form.isPrepayment && (
+              <div style={{ marginTop:10,display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"rgba(123,45,139,.04)",borderRadius:10,border:"1.5px solid rgba(123,45,139,.15)" }}>
+                <span style={{ fontSize:12,color:"#7b2d8b",fontWeight:600,flex:1 }}>
+                  {tr.prepayment.sessionsHint}
+                </span>
+                <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                  <button onClick={()=>setForm({...form,prepaymentSessions:Math.max(1,form.prepaymentSessions-1)})} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid rgba(123,45,139,.3)",background:"#fff",cursor:"pointer",fontSize:16,color:"#7b2d8b",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Rubik,sans-serif" }}>−</button>
+                  <span style={{ fontSize:18,fontWeight:900,color:"#7b2d8b",minWidth:28,textAlign:"center" }}>{form.prepaymentSessions}</span>
+                  <button onClick={()=>setForm({...form,prepaymentSessions:Math.min(50,form.prepaymentSessions+1)})} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid rgba(123,45,139,.3)",background:"#fff",cursor:"pointer",fontSize:16,color:"#7b2d8b",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Rubik,sans-serif" }}>+</button>
+                </div>
+                <span style={{ fontSize:12,color:"#7b2d8b",fontWeight:600 }}>{tr.prepayment.sessionsUnit}</span>
+              </div>
+            )}
+          </F>
           <F label={tr.modal.method}>
             <div style={{ display:"flex",gap:10 }}>
               {[
@@ -1875,7 +1950,31 @@ export default function PaymentsPage() {
                                   ) : <span style={{ fontSize:11,color:"#ccc" }}>—</span>}
                                 </div>
                               )}
-                              <div style={{ fontSize:12,color:"#666",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{p.description}</div>
+                              <div style={{ fontSize:12,color:"#666",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+                                {/* شارة نوع الجلسة */}
+                                {(p as any).session_type && (()=>{
+                                  const stMap: Record<string,{icon:string;color:string;bg:string}> = {
+                                    consultation:{icon:"🩺",color:"#0863ba",bg:"rgba(8,99,186,.08)"},
+                                    session:     {icon:"🛋️",color:"#2e7d32",bg:"rgba(46,125,50,.08)"},
+                                    followup:    {icon:"🔄",color:"#7b2d8b",bg:"rgba(123,45,139,.08)"},
+                                  };
+                                  const st = stMap[(p as any).session_type];
+                                  if (!st) return null;
+                                  const label = tr.sessionType[(p as any).session_type as keyof typeof tr.sessionType];
+                                  return (
+                                    <span style={{ display:"inline-flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:st.bg,color:st.color,marginInlineEnd:5 }}>
+                                      {st.icon} {label}
+                                    </span>
+                                  );
+                                })()}
+                                {/* شارة الدفع المسبق */}
+                                {(p as any).is_prepayment && (
+                                  <span style={{ display:"inline-flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"rgba(123,45,139,.1)",color:"#7b2d8b",marginInlineEnd:5 }}>
+                                    💳 {tr.prepayment.badgePrefix}{(p as any).prepayment_sessions ?? ""}
+                                  </span>
+                                )}
+                                {p.description}
+                              </div>
                               <div style={{ paddingLeft:8,fontSize:12,color:"#888",display:"flex",alignItems:"center",gap:6 }}>
                                 <span>{methodIcon[p.method]}</span>
                                 <span>{tr.methods[p.method]}</span>
