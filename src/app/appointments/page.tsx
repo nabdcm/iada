@@ -403,20 +403,21 @@ type Doctor = {
 };
 
 // ─── Modal موعد ───────────────────────────────────────────
-function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, plan, onSave, onClose, onStatusChange, onDelete, saving }: {
+function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, plan, onSave, onClose, onStatusChange, onDelete, saving, quickSlot }: {
   lang: Lang; appt: Appointment | null; defaultDate: string; patients: Patient[];
   appointments: Appointment[];
   doctors: Doctor[]; plan: PlanType;
   onSave: (form: ApptForm, id?: number) => void; onClose: () => void;
   onStatusChange: (id: number, status: Status) => void;
   onDelete: (id: number) => void; saving: boolean;
+  quickSlot?: { doctorId: number | null; time: string; date: string } | null;
 }) {
   const tr = T[lang]; const isAr = lang === "ar"; const isEdit = !!appt?.id;
   const isShared = isSharedPlan(plan);
   const [form, setForm] = useState<ApptForm>({
     patient_id: appt?.patient_id ?? "",
-    doctor_id: (appt as any)?.doctor_id ?? "",
-    date: appt?.date ?? defaultDate, time: appt?.time ?? "09:00",
+    doctor_id: (appt as any)?.doctor_id ?? (quickSlot?.doctorId ?? ""),
+    date: appt?.date ?? defaultDate, time: appt?.time ?? (quickSlot?.time ?? "09:00"),
     duration: appt?.duration ?? 30, type: appt?.type ?? "",
     notes: appt?.notes ?? "", status: appt?.status ?? "scheduled",
   });
@@ -1034,6 +1035,7 @@ export default function AppointmentsPage() {
   const [selectedKey,         setSelectedKey]         = useState(todayKey);
   const [addModal,            setAddModal]            = useState(false);
   const [editAppt,            setEditAppt]            = useState<Appointment | null>(null);
+  const [quickSlot,           setQuickSlot]           = useState<{ doctorId: number | null; time: string; date: string } | null>(null);
   const [notification,        setNotification]        = useState<Appointment | null>(null);
 
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -1778,7 +1780,42 @@ export default function AppointmentsPage() {
                                                 </div>
                                               );
                                             })() : (
-                                              <div style={{ height:20,borderRadius:6,background:`${dc}06`,border:`1px dashed ${dc}15` }}/>
+                                              <div
+                                                role="button"
+                                                title={isAr ? `إضافة موعد — ${time}` : `Add appointment — ${time}`}
+                                                onClick={() => {
+                                                  setQuickSlot({ doctorId: d.id ?? null, time, date: selectedKey });
+                                                  setAddModal(true);
+                                                }}
+                                                style={{
+                                                  height: 36,
+                                                  borderRadius: 8,
+                                                  background: `${dc}06`,
+                                                  border: `1.5px dashed ${dc}25`,
+                                                  display: "flex",
+                                                  alignItems: "center",
+                                                  justifyContent: "center",
+                                                  cursor: "pointer",
+                                                  transition: "background .15s, border-color .15s",
+                                                  color: `${dc}60`,
+                                                  fontSize: 20,
+                                                  fontWeight: 300,
+                                                  lineHeight: 1,
+                                                  userSelect: "none",
+                                                }}
+                                                onMouseEnter={e => {
+                                                  (e.currentTarget as HTMLElement).style.background = `${dc}14`;
+                                                  (e.currentTarget as HTMLElement).style.borderColor = `${dc}55`;
+                                                  (e.currentTarget as HTMLElement).style.color = dc;
+                                                }}
+                                                onMouseLeave={e => {
+                                                  (e.currentTarget as HTMLElement).style.background = `${dc}06`;
+                                                  (e.currentTarget as HTMLElement).style.borderColor = `${dc}25`;
+                                                  (e.currentTarget as HTMLElement).style.color = `${dc}60`;
+                                                }}
+                                              >
+                                                +
+                                              </div>
                                             )}
                                           </td>
                                         );
@@ -1873,10 +1910,10 @@ export default function AppointmentsPage() {
 
         {/* Modals */}
         {(addModal||editAppt)&&(
-          <AppointmentModal lang={lang} appt={editAppt} defaultDate={selectedKey} patients={patients}
+          <AppointmentModal lang={lang} appt={editAppt} defaultDate={quickSlot?.date ?? selectedKey} patients={patients}
             appointments={appointments}
             doctors={doctors} plan={plan}
-            onSave={handleSave} onClose={()=>{ setAddModal(false); setEditAppt(null); }}
+            onSave={handleSave} onClose={()=>{ setAddModal(false); setEditAppt(null); setQuickSlot(null); }} quickSlot={quickSlot}
             onStatusChange={handleStatusChange} onDelete={handleDelete} saving={saving}/>
         )}
         {shareModal&&(
