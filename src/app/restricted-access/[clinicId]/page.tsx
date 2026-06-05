@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-// ─── Types ────────────────────────────────────────────────────
 interface ClinicInfo {
   user_id: string;
   name: string;
@@ -17,9 +16,11 @@ interface Patient {
   id: number;
   name: string;
   phone?: string;
-  dob?: string;
+  date_of_birth?: string;
   gender?: string;
   notes?: string;
+  has_diabetes?: boolean;
+  has_hypertension?: boolean;
   created_at?: string;
 }
 
@@ -33,19 +34,17 @@ const CLINIC_TYPE_ICONS: Record<string, string> = {
 export default function RestrictedAccessPage() {
   const params   = useParams();
   const router   = useRouter();
-  // clinicId هنا هو user_id (UUID)
-  const clinicId = params?.clinicId as string;
+  const clinicId = params?.clinicId as string; // هو user_id للعيادة
 
-  const [stage,           setStage]           = useState<"loading"|"pin"|"patients"|"error">("loading");
-  const [clinicInfo,      setClinicInfo]       = useState<ClinicInfo | null>(null);
-  const [pinInput,        setPinInput]         = useState("");
-  const [pinError,        setPinError]         = useState("");
-  const [patients,        setPatients]         = useState<Patient[]>([]);
-  const [search,          setSearch]           = useState("");
-  const [selected,        setSelected]         = useState<Patient | null>(null);
-  const [patientsLoading, setPatientsLoading]  = useState(false);
+  const [stage,           setStage]          = useState<"loading"|"pin"|"patients"|"error">("loading");
+  const [clinicInfo,      setClinicInfo]      = useState<ClinicInfo | null>(null);
+  const [pinInput,        setPinInput]        = useState("");
+  const [pinError,        setPinError]        = useState("");
+  const [patients,        setPatients]        = useState<Patient[]>([]);
+  const [search,          setSearch]          = useState("");
+  const [selected,        setSelected]        = useState<Patient | null>(null);
+  const [patientsLoading, setPatientsLoading] = useState(false);
 
-  // ── 1. تحقق من session موجود ─────────────────────────────────
   useEffect(() => {
     const session = sessionStorage.getItem(`ra_${clinicId}`);
     if (session === "granted") {
@@ -56,7 +55,6 @@ export default function RestrictedAccessPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
 
-  // ── 2. جلب معلومات العيادة بالـ user_id ─────────────────────
   const fetchClinicInfo = async () => {
     const { data, error } = await supabase
       .from("clinics")
@@ -70,31 +68,33 @@ export default function RestrictedAccessPage() {
     setStage("pin");
   };
 
-  // ── 3. جلب العيادة + المرضى بعد المصادقة ────────────────────
   const fetchClinicAndPatients = async (skipPinCheck = false) => {
     setPatientsLoading(true);
-    const { data: clinic, error } = await supabase
+
+    const { data: clinic, error: clinicError } = await supabase
       .from("clinics")
       .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin")
       .eq("user_id", clinicId)
       .single();
 
-    if (error || !clinic) { setStage("error"); return; }
-    if (!skipPinCheck && !clinic.restricted_access_enabled) { setStage("error"); return; }
+    if (clinicError || !clinic) { setStage("error"); setPatientsLoading(false); return; }
+    if (!skipPinCheck && !clinic.restricted_access_enabled) { setStage("error"); setPatientsLoading(false); return; }
     setClinicInfo(clinic as ClinicInfo);
 
-    const { data: pts } = await supabase
+    // جلب المرضى — نفس الحقول المستخدمة في النظام الأصلي
+    const { data: pts, error: ptsError } = await supabase
       .from("patients")
-      .select("id, name, phone, dob, gender, notes, created_at")
+      .select("id, name, phone, date_of_birth, gender, notes, has_diabetes, has_hypertension, created_at")
       .eq("user_id", clinicId)
+      .eq("is_hidden", false)
       .order("name", { ascending: true });
 
+    if (ptsError) console.error("patients error:", ptsError);
     setPatients((pts as Patient[]) || []);
     setPatientsLoading(false);
     setStage("patients");
   };
 
-  // ── 4. التحقق من PIN ─────────────────────────────────────────
   const handlePinSubmit = () => {
     if (!clinicInfo) return;
     if (pinInput.trim() === String(clinicInfo.restricted_access_pin).trim()) {
@@ -111,7 +111,6 @@ export default function RestrictedAccessPage() {
     (p.phone || "").includes(search)
   );
 
-  // ════════════════════════════════════════════════════════════
   if (stage === "loading") return <LoadingScreen />;
   if (stage === "error")   return <ErrorScreen />;
 
@@ -135,7 +134,7 @@ export default function RestrictedAccessPage() {
             أدخل الـ PIN الذي أرسله لك الطبيب المسؤول للوصول إلى ملفات المرضى
           </p>
 
-          {/* PIN dots display */}
+          {/* PIN dots */}
           <div style={{ display:"flex",gap:10,justifyContent:"center",marginBottom:20 }}>
             {pinDisplay.map((ch, i) => (
               <div key={i} style={{ width:52,height:60,borderRadius:12,border:`2px solid ${ch?"#0863ba":"#e8eaed"}`,background:ch?"rgba(8,99,186,.05)":"#fafbfc",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:800,color:"#0863ba",transition:"all .15s" }}>
@@ -153,11 +152,9 @@ export default function RestrictedAccessPage() {
                   if (d === "⌫") setPinInput(p => p.slice(0,-1));
                   else if (d !== "") setPinInput(p => p.length < 8 ? p + d : p);
                 }}
-                style={{ padding:"16px",borderRadius:12,border:"1.5px solid",fontSize:d==="⌫"?18:20,fontWeight:700,cursor:d===""?"default":"pointer",transition:"all .15s",
-                  background:d===""?"transparent":"#fafbfc",
-                  borderColor:d===""?"transparent":"#e8eaed",
-                  color:"#353535",fontFamily:"Rubik,sans-serif"
-                }}>{d}</button>
+                style={{ padding:"16px",borderRadius:12,border:"1.5px solid",fontSize:d==="⌫"?18:20,fontWeight:700,cursor:d===""?"default":"pointer",transition:"all .15s",background:d===""?"transparent":"#fafbfc",borderColor:d===""?"transparent":"#e8eaed",color:"#353535",fontFamily:"Rubik,sans-serif" }}>
+                {d}
+              </button>
             ))}
           </div>
 
@@ -174,11 +171,7 @@ export default function RestrictedAccessPage() {
 
           <p style={{ fontSize:11,color:"#ccc",marginTop:18 }}>🔒 هذا الرابط يمنح صلاحية عرض المرضى فقط</p>
         </div>
-
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap');
-          @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-        `}</style>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap');`}</style>
       </div>
     );
   }
@@ -199,9 +192,7 @@ export default function RestrictedAccessPage() {
           </div>
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-          <span style={{ fontSize:11,padding:"4px 12px",borderRadius:20,background:"rgba(14,124,106,.1)",color:"#0e7c6a",fontWeight:700 }}>
-            🔗 دخول مقيّد
-          </span>
+          <span style={{ fontSize:11,padding:"4px 12px",borderRadius:20,background:"rgba(14,124,106,.1)",color:"#0e7c6a",fontWeight:700 }}>🔗 دخول مقيّد</span>
           <button onClick={() => { sessionStorage.removeItem(`ra_${clinicId}`); router.push(`/restricted-access/${clinicId}`); }}
             style={{ padding:"6px 14px",border:"1.5px solid #eef0f3",borderRadius:8,background:"#f7f9fc",fontSize:12,color:"#888",cursor:"pointer",fontFamily:"Rubik,sans-serif" }}>
             خروج
@@ -247,7 +238,7 @@ export default function RestrictedAccessPage() {
           </p>
         </div>
 
-        {/* Patients List */}
+        {/* Patients */}
         {patientsLoading ? (
           <div style={{ textAlign:"center",padding:60,color:"#aaa" }}>
             <div style={{ fontSize:32,marginBottom:12 }}>⏳</div>
@@ -263,19 +254,22 @@ export default function RestrictedAccessPage() {
             {filteredPatients.map(p => (
               <div key={p.id} onClick={() => setSelected(selected?.id===p.id ? null : p)}
                 style={{ background:"#fff",border:`1.5px solid ${selected?.id===p.id?"#0863ba":"#eef0f3"}`,borderRadius:14,padding:"14px 18px",cursor:"pointer",transition:"all .15s",boxShadow:selected?.id===p.id?"0 4px 16px rgba(8,99,186,.1)":"none" }}>
+
                 <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                  <div style={{ width:40,height:40,borderRadius:12,background:selected?.id===p.id?"rgba(8,99,186,.12)":"#f0f4f8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>
+                  <div style={{ width:42,height:42,borderRadius:12,background:selected?.id===p.id?"rgba(8,99,186,.12)":"#f0f4f8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>
                     {p.gender === "female" ? "👩" : "👨"}
                   </div>
                   <div style={{ flex:1,minWidth:0 }}>
-                    <div style={{ fontSize:14,fontWeight:700,color:"#353535",marginBottom:2 }}>{p.name}</div>
-                    <div style={{ fontSize:11,color:"#aaa",display:"flex",gap:12,flexWrap:"wrap" }}>
-                      {p.phone && <span>📞 {p.phone}</span>}
-                      {p.dob   && <span>🎂 {p.dob}</span>}
+                    <div style={{ fontSize:14,fontWeight:700,color:"#353535",marginBottom:3 }}>{p.name}</div>
+                    <div style={{ fontSize:11,color:"#aaa",display:"flex",gap:14,flexWrap:"wrap" }}>
+                      {p.phone          && <span>📞 {p.phone}</span>}
+                      {p.date_of_birth  && <span>🎂 {p.date_of_birth}</span>}
+                      {p.has_diabetes   && <span style={{ color:"#e67e22" }}>🩸 سكري</span>}
+                      {p.has_hypertension && <span style={{ color:"#c0392b" }}>❤️ ضغط</span>}
                     </div>
                   </div>
                   <div style={{ fontSize:14,color:selected?.id===p.id?"#0863ba":"#ccc",transition:"all .15s" }}>
-                    {selected?.id===p.id?"▲":"▼"}
+                    {selected?.id===p.id ? "▲" : "▼"}
                   </div>
                 </div>
 
@@ -287,7 +281,7 @@ export default function RestrictedAccessPage() {
                         <div style={{ fontSize:13,color:"#555",lineHeight:1.7,background:"#fafbfc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>{p.notes}</div>
                       </div>
                     ) : (
-                      <div style={{ fontSize:12,color:"#ccc",textAlign:"center",padding:"8px 0" }}>لا توجد ملاحظات مسجّلة</div>
+                      <div style={{ fontSize:12,color:"#ccc",textAlign:"center",padding:"6px 0" }}>لا توجد ملاحظات مسجّلة</div>
                     )}
                     {p.created_at && (
                       <div style={{ fontSize:10,color:"#ccc" }}>
