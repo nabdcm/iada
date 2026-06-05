@@ -50,6 +50,9 @@ interface ClinicData {
   // قفل صفحة المدفوعات بكلمة سر
   payments_lock_enabled?: boolean;
   payments_lock_password?: string;
+  // دخول مقيّد للأطباء (الخطط المشتركة فقط)
+  restricted_access_enabled?: boolean;
+  restricted_access_pin?: string;
 }
 
 interface Doctor {
@@ -254,6 +257,24 @@ const T = {
         saveNote:"سيتم حفظ هذا الإعداد مع بيانات العيادة",
         required:"يجب إدخال كلمة سر للمدفوعات عند تفعيل القفل",
       },
+      restrictedAccess:{
+        sectionTitle:"دخول مقيّد للأطباء",
+        sectionDesc:"يتيح لبقية الأطباء الدخول برابط خاص وPIN لعرض ملفات المرضى فقط — دون أي صلاحية أخرى",
+        onlyShared:"هذه الميزة متاحة فقط للخطط المشتركة",
+        enable:"تفعيل الدخول المقيّد",
+        disable:"إلغاء الدخول المقيّد",
+        enabledBadge:"مفعّل 🔓",
+        disabledBadge:"غير مفعّل 🔒",
+        pinLabel:"PIN الدخول (4-8 أرقام)",
+        pinPh:"مثال: 1234",
+        pinNote:"شاركه مع الأطباء فقط — لا يمنحهم صلاحية المدفوعات أو الإعدادات",
+        linkLabel:"رابط الدخول المقيّد",
+        copyLink:"نسخ الرابط",
+        copiedLink:"✓ تم النسخ",
+        generate:"توليد PIN",
+        required:"يجب إدخال PIN لتفعيل الدخول المقيّد",
+        pinInvalid:"يجب أن يكون PIN من 4 إلى 8 أرقام",
+      },
     },
   },
   en: {
@@ -441,6 +462,24 @@ const T = {
         disabledBadge:"Lock disabled 🔓",
         saveNote:"This setting will be saved with clinic data",
         required:"A password is required when enabling the lock",
+      },
+      restrictedAccess:{
+        sectionTitle:"Restricted Access for Doctors",
+        sectionDesc:"Allows other doctors to log in via a private link and PIN to view patient files only — no other permissions",
+        onlyShared:"This feature is only available for shared plans",
+        enable:"Enable Restricted Access",
+        disable:"Disable Restricted Access",
+        enabledBadge:"Enabled 🔓",
+        disabledBadge:"Disabled 🔒",
+        pinLabel:"Access PIN (4-8 digits)",
+        pinPh:"e.g. 1234",
+        pinNote:"Share only with doctors — grants no access to payments or settings",
+        linkLabel:"Restricted Access Link",
+        copyLink:"Copy Link",
+        copiedLink:"✓ Copied",
+        generate:"Generate PIN",
+        required:"A PIN is required to enable restricted access",
+        pinInvalid:"PIN must be 4 to 8 digits",
       },
     },
   },
@@ -1125,9 +1164,12 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     max_doctors: clinic.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[clinic.plan] ?? 2,
     payments_lock_enabled:  clinic.payments_lock_enabled  ?? false,
     payments_lock_password: clinic.payments_lock_password ?? "",
+    restricted_access_enabled: clinic.restricted_access_enabled ?? false,
+    restricted_access_pin:     clinic.restricted_access_pin     ?? "",
   });
   const [newPass,       setNewPass]       = useState("");
   const [copied,        setCopied]        = useState(false);
+  const [copiedLink,    setCopiedLink]    = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState("");
   const [successMsg,    setSuccessMsg]    = useState("");
@@ -1254,6 +1296,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     max_doctors: form.max_doctors,
     payments_lock_enabled:  form.payments_lock_enabled,
     payments_lock_password: form.payments_lock_password,
+    restricted_access_enabled: form.restricted_access_enabled,
+    restricted_access_pin:     form.restricted_access_pin,
     ...overrides,
   });
 
@@ -1278,6 +1322,12 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     if (form.payments_lock_enabled && !form.payments_lock_password.trim()) {
       setError(sm.paymentsLock.required);
       return;
+    }
+    // التحقق من PIN الدخول المقيّد
+    if (form.restricted_access_enabled) {
+      const pin = form.restricted_access_pin.trim();
+      if (!pin) { setError(sm.restrictedAccess.required); return; }
+      if (!/^\d{4,8}$/.test(pin)) { setError(sm.restrictedAccess.pinInvalid); return; }
     }
     setSaving(true); setError(""); setSuccessMsg("");
     const body = buildBody();
@@ -1901,11 +1951,104 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                   </div>
                 );
               })()}
-            </div>
-          )}
-        </div>
 
-        {/* Footer */}
+              {/* ── دخول مقيّد للأطباء ── */}
+              {(() => {
+                const ra = sm.restrictedAccess;
+                const restrictedLink = typeof window !== "undefined"
+                  ? `${window.location.origin}/restricted-access/${clinic.id}`
+                  : `/restricted-access/${clinic.id}`;
+                const copyRestrictedLink = async () => {
+                  await navigator.clipboard.writeText(restrictedLink).catch(()=>{});
+                  setCopiedLink(true);
+                  setTimeout(() => setCopiedLink(false), 2000);
+                };
+                const genPin = () => {
+                  const pin = String(Math.floor(1000 + Math.random() * 9000));
+                  setForm(p => ({ ...p, restricted_access_pin: pin }));
+                };
+                return (
+                  <div style={{ marginTop:6,borderTop:"1.5px solid #eef0f3",paddingTop:16 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                      <span style={{ fontSize:18 }}>🔗</span>
+                      <div>
+                        <div style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{ra.sectionTitle}</div>
+                        <div style={{ fontSize:11,color:"#aaa",marginTop:1 }}>{ra.sectionDesc}</div>
+                      </div>
+                    </div>
+
+                    {!isSharedPlan ? (
+                      <div style={{ padding:"10px 14px",background:"rgba(192,57,43,.05)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,fontSize:12,color:"#c0392b",display:"flex",alignItems:"center",gap:8 }}>
+                        🔒 {ra.onlyShared}
+                      </div>
+                    ) : (
+                      <div style={{ background:"rgba(14,124,106,.03)",border:"1.5px solid rgba(14,124,106,.15)",borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:12 }}>
+
+                        {/* Toggle */}
+                        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                          <span style={{ fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                            background: form.restricted_access_enabled ? "rgba(14,124,106,.1)" : "rgba(192,57,43,.08)",
+                            color: form.restricted_access_enabled ? "#0e7c6a" : "#c0392b" }}>
+                            {form.restricted_access_enabled ? ra.enabledBadge : ra.disabledBadge}
+                          </span>
+                          <button type="button"
+                            onClick={() => setForm(p => ({ ...p, restricted_access_enabled: !p.restricted_access_enabled }))}
+                            style={{ padding:"7px 16px",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",transition:"all .2s",
+                              background: form.restricted_access_enabled ? "rgba(192,57,43,.06)" : "rgba(14,124,106,.08)",
+                              color: form.restricted_access_enabled ? "#c0392b" : "#0e7c6a",
+                              borderColor: form.restricted_access_enabled ? "rgba(192,57,43,.2)" : "rgba(14,124,106,.25)" }}>
+                            {form.restricted_access_enabled ? ra.disable : ra.enable}
+                          </button>
+                        </div>
+
+                        {form.restricted_access_enabled && (
+                          <>
+                            {/* PIN */}
+                            <div>
+                              <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6,textTransform:"uppercase" as const,letterSpacing:.4 }}>
+                                {ra.pinLabel}
+                              </label>
+                              <div style={{ display:"flex",gap:8 }}>
+                                <input
+                                  value={form.restricted_access_pin}
+                                  onChange={e => setForm(p => ({ ...p, restricted_access_pin: e.target.value.replace(/\D/g,"").slice(0,8) }))}
+                                  placeholder={ra.pinPh}
+                                  inputMode="numeric"
+                                  maxLength={8}
+                                  style={{ ...inputSt, flex:1, fontFamily:"monospace", letterSpacing:4, fontSize:18, fontWeight:700 }}
+                                  onFocus={e => e.target.style.borderColor="#0e7c6a"}
+                                  onBlur={e => e.target.style.borderColor="#e8eaed"}
+                                />
+                                <button type="button" onClick={genPin}
+                                  style={{ padding:"0 14px",background:"rgba(14,124,106,.06)",color:"#0e7c6a",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
+                                  🎲 {ra.generate}
+                                </button>
+                              </div>
+                              <p style={{ fontSize:11,color:"#aaa",marginTop:5,lineHeight:1.5 }}>⚠️ {ra.pinNote}</p>
+                            </div>
+
+                            {/* رابط الدخول */}
+                            <div>
+                              <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6,textTransform:"uppercase" as const,letterSpacing:.4 }}>
+                                {ra.linkLabel}
+                              </label>
+                              <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+                                <code style={{ flex:1,background:"#f7f9fc",padding:"10px 12px",borderRadius:10,fontSize:11,color:"#0e7c6a",fontFamily:"monospace",wordBreak:"break-all",border:"1.5px solid rgba(14,124,106,.2)",lineHeight:1.5 }}>
+                                  {restrictedLink}
+                                </code>
+                                <button type="button" onClick={copyRestrictedLink}
+                                  style={{ padding:"10px 14px",background:copiedLink?"rgba(46,125,50,.08)":"rgba(14,124,106,.06)",color:copiedLink?"#2e7d32":"#0e7c6a",border:`1.5px solid ${copiedLink?"rgba(46,125,50,.2)":"rgba(14,124,106,.2)"}`,borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",transition:"all .2s" }}>
+                                  {copiedLink ? ra.copiedLink : ra.copyLink}
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
         <div style={{ padding:"20px 26px",display:"flex",gap:10,marginTop:8,borderTop:"1.5px solid #eef0f3" }}>
           <button onClick={handleSave} disabled={saving}
             style={{ flex:1,padding:"12px",background:saving?"#93b8dc":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}>
