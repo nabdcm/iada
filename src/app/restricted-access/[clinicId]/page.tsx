@@ -179,7 +179,7 @@ export default function RestrictedAccessPage() {
           <div style={{ width:70,height:70,borderRadius:20,background:"linear-gradient(135deg,#0863ba,#0e7c6a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px",boxShadow:"0 8px 24px rgba(8,99,186,.25)" }}>🔗</div>
           <h1 style={{ fontSize:20,fontWeight:800,color:"#353535",marginBottom:4 }}>دخول مقيّد</h1>
           <p style={{ fontSize:13,color:"#888",marginBottom:6 }}>{CLINIC_TYPE_ICONS[clinicInfo.clinic_type||"general"]} {clinicInfo.name}</p>
-          <p style={{ fontSize:12,color:"#aaa",marginBottom:28,lineHeight:1.6 }}>أدخل الـ PIN الذي أرسله لك الطبيب المسؤول للوصول إلى ملفات المرضى</p>
+          <p style={{ fontSize:12,color:"#aaa",marginBottom:28,lineHeight:1.6 }}>أدخل الـ PIN للوصول إلى ملفات المرضى</p>
           <div style={{ display:"flex",gap:10,justifyContent:"center",marginBottom:20 }}>
             {pinDisplay.map((ch, i) => (
               <div key={i} style={{ width:52,height:60,borderRadius:12,border:`2px solid ${ch?"#0863ba":"#e8eaed"}`,background:ch?"rgba(8,99,186,.05)":"#fafbfc",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:800,color:"#0863ba",transition:"all .15s" }}>
@@ -200,7 +200,7 @@ export default function RestrictedAccessPage() {
             style={{ width:"100%",padding:"14px",background:pinInput.length>=4?"#0863ba":"#e8eaed",color:pinInput.length>=4?"#fff":"#aaa",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:pinInput.length>=4?"pointer":"not-allowed",transition:"all .2s",boxShadow:pinInput.length>=4?"0 4px 16px rgba(8,99,186,.25)":"none" }}>
             دخول
           </button>
-          <p style={{ fontSize:11,color:"#ccc",marginTop:18 }}>🔒 هذا الرابط يمنح صلاحية عرض المرضى فقط</p>
+
         </div>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap');`}</style>
       </div>
@@ -219,11 +219,10 @@ export default function RestrictedAccessPage() {
           </div>
           <div>
             <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>{clinicInfo?.name}</div>
-            <div style={{ fontSize:10,color:"#aaa" }}>ملفات المرضى — وصول مقيّد</div>
           </div>
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-          <span style={{ fontSize:11,padding:"4px 12px",borderRadius:20,background:"rgba(14,124,106,.1)",color:"#0e7c6a",fontWeight:700 }}>🔗 دخول مقيّد</span>
+
           <button onClick={() => { sessionStorage.removeItem(`ra_${clinicId}`); router.push(`/restricted-access/${clinicId}`); }}
             style={{ padding:"6px 14px",border:"1.5px solid #eef0f3",borderRadius:8,background:"#f7f9fc",fontSize:12,color:"#888",cursor:"pointer",fontFamily:"Rubik,sans-serif" }}>
             خروج
@@ -253,11 +252,7 @@ export default function RestrictedAccessPage() {
           )}
         </div>
 
-        {/* Notice */}
-        <div style={{ background:"rgba(8,99,186,.04)",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:12,padding:"10px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:8 }}>
-          <span>ℹ️</span>
-          <p style={{ fontSize:12,color:"#555",margin:0,lineHeight:1.6 }}>وضع الدخول المقيّد — عرض المرضى والسجل الطبي فقط. المدفوعات والإعدادات غير متاحة.</p>
-        </div>
+
 
         {/* Patients List */}
         {patientsLoading ? (
@@ -370,11 +365,7 @@ export default function RestrictedAccessPage() {
                             <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{profilePatient.notes}</div>
                           </div>
                         )}
-                        {/* readonly notice */}
-                        <div style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 12px",background:"rgba(192,57,43,.04)",borderRadius:8,border:"1.5px solid rgba(192,57,43,.1)" }}>
-                          <span>🔒</span>
-                          <span style={{ fontSize:11,color:"#c0392b" }}>وضع عرض فقط — لا يمكن التعديل في الدخول المقيّد</span>
-                        </div>
+
                       </div>
                     )}
 
@@ -406,11 +397,7 @@ export default function RestrictedAccessPage() {
                           );
                         })}
 
-                        {/* readonly notice */}
-                        <div style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 12px",background:"rgba(192,57,43,.04)",borderRadius:8,border:"1.5px solid rgba(192,57,43,.1)",marginTop:4 }}>
-                          <span>🔒</span>
-                          <span style={{ fontSize:11,color:"#c0392b" }}>وضع عرض فقط — التعديل على السجل الطبي غير متاح في الدخول المقيّد</span>
-                        </div>
+
                       </div>
                     )}
                   </>
