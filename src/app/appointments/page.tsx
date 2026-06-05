@@ -7,6 +7,71 @@ import type { Patient, Appointment } from "@/lib/supabase";
 type Lang = "ar" | "en";
 type Status = "scheduled" | "completed" | "cancelled" | "no-show";
 
+// ─── جداول دوام الأطباء ───────────────────────────────────
+type WorkDay = {
+  enabled: boolean;
+  start: string;
+  end: string;
+  break_start?: string;
+  break_end?: string;
+};
+
+type DoctorSchedule = {
+  id?: number;
+  doctor_id: number;
+  user_id: string;
+  days: Record<number, WorkDay>;
+  vacations: string[];
+  appointment_duration: number;
+  max_daily_appointments: number;
+  notes: string;
+};
+
+function checkDoctorAvailability(
+  schedule: DoctorSchedule,
+  dateStr: string,
+  timeStr: string,
+  duration: number,
+  dailyCount: number
+): { available: boolean; reasonAr?: string; reasonEn?: string } {
+  // 1. إجازة
+  if (schedule.vacations.includes(dateStr)) {
+    return { available: false, reasonAr: "الطبيب في إجازة في هذا اليوم", reasonEn: "Doctor is on vacation on this day" };
+  }
+  // 2. يوم العطلة
+  const dayIdx  = new Date(dateStr).getDay();
+  const workDay = schedule.days[dayIdx];
+  if (!workDay || !workDay.enabled) {
+    return { available: false, reasonAr: "الطبيب لا يعمل في هذا اليوم", reasonEn: "Doctor does not work on this day" };
+  }
+  const toMin = (t: string) => { const [h, m] = t.slice(0,5).split(":").map(Number); return h*60+m; };
+  const apptStart = toMin(timeStr);
+  const apptEnd   = apptStart + duration;
+  const dayStart  = toMin(workDay.start);
+  const dayEnd    = toMin(workDay.end);
+  // 3. قبل الدوام
+  if (apptStart < dayStart) {
+    return { available: false, reasonAr: `الموعد قبل بداية دوام الطبيب (${workDay.start})`, reasonEn: `Appointment is before doctor's start time (${workDay.start})` };
+  }
+  // 4. بعد الدوام
+  if (apptEnd > dayEnd) {
+    return { available: false, reasonAr: `الموعد يتجاوز نهاية دوام الطبيب (${workDay.end})`, reasonEn: `Appointment exceeds doctor's end time (${workDay.end})` };
+  }
+  // 5. وقت الاستراحة
+  if (workDay.break_start && workDay.break_end) {
+    const bs = toMin(workDay.break_start);
+    const be = toMin(workDay.break_end);
+    if (apptStart < be && apptEnd > bs) {
+      return { available: false, reasonAr: `هذا الوقت يتزامن مع استراحة الطبيب (${workDay.break_start} - ${workDay.break_end})`, reasonEn: `This time overlaps with doctor's break (${workDay.break_start} - ${workDay.break_end})` };
+    }
+  }
+  // 6. الحد الأقصى اليومي
+  if (dailyCount >= schedule.max_daily_appointments) {
+    return { available: false, reasonAr: `الطبيب وصل للحد الأقصى من المواعيد اليومية (${schedule.max_daily_appointments})`, reasonEn: `Doctor reached daily appointment limit (${schedule.max_daily_appointments})` };
+  }
+  return { available: true };
+}
+
 const T = {
   ar: {
     appName:"نبض", appSub:"إدارة العيادة",
@@ -263,24 +328,36 @@ function Sidebar({ lang, setLang, activePage = "appointments", plan = "basic" }:
     : "translateX(0)";
 
   const NAV_ICONS: Record<string, React.ReactNode> = {
-    dashboard:     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
-    patients:      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-    appointments:  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-    payments:      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-    prescriptions: <PillIcon />,
-    tracking:      <TrackingIcon />,
+    dashboard:        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+    patients:         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    appointments:     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    clinicManagement: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+    payments:         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+    prescriptions:    <PillIcon />,
+    tracking:         <TrackingIcon />,
   };
 
-  const navItems: { key: string; href: string }[] = [
-    { key:"dashboard",     href:"/dashboard"        },
-    { key:"patients",      href:"/patients"         },
-    { key:"appointments",  href:"/appointments"     },
-    { key:"payments",      href:"/payments"         },
-    { key:"prescriptions", href:"/prescriptions"    },
-    { key:"tracking",      href:"/patient-tracking" },
+  const NAV_LABELS: Record<string, { ar: string; en: string }> = {
+    dashboard:        { ar:"لوحة المعلومات", en:"Dashboard"          },
+    patients:         { ar:"المرضى",         en:"Patients"           },
+    appointments:     { ar:"المواعيد",        en:"Appointments"       },
+    clinicManagement: { ar:"إدارة العيادة",   en:"Clinic Management"  },
+    payments:         { ar:"المدفوعات",       en:"Payments"           },
+    prescriptions:    { ar:"الوصفات الطبية", en:"Prescriptions"      },
+    tracking:         { ar:"متابعة المرضى",  en:"Patient Tracking"   },
+  };
+
+  const navItems: { key: string; href: string; sharedOnly?: boolean }[] = [
+    { key:"dashboard",         href:"/dashboard"          },
+    { key:"patients",          href:"/patients"           },
+    { key:"appointments",      href:"/appointments"       },
+    { key:"clinicManagement",  href:"/clinic-management", sharedOnly: true },
+    { key:"payments",          href:"/payments"           },
+    { key:"prescriptions",     href:"/prescriptions"      },
+    { key:"tracking",          href:"/patient-tracking"   },
   ];
 
-  const navLabel = (key: string) => (tr.nav as Record<string, string>)[key] ?? key;
+  const navLabel = (key: string) => NAV_LABELS[key]?.[lang] ?? (tr.nav as Record<string, string>)[key] ?? key;
 
   return (
     <>
@@ -328,6 +405,8 @@ function Sidebar({ lang, setLang, activePage = "appointments", plan = "basic" }:
         <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
           {navItems.map(item => {
             const isActive = item.key === activePage;
+            // sharedOnly: يظهر فقط للخطط المشتركة وإلا مخفي تماماً
+            if (item.sharedOnly && !isSharedPlan(plan)) return null;
             const isLocked = !canAccess(item.key, plan);
             const lockLabel = isAr ? "غير متاح في خطتك" : "Not available in your plan";
             return (
@@ -403,10 +482,10 @@ type Doctor = {
 };
 
 // ─── Modal موعد ───────────────────────────────────────────
-function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, plan, onSave, onClose, onStatusChange, onDelete, saving, quickSlot }: {
+function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, doctorSchedules = [], plan, onSave, onClose, onStatusChange, onDelete, saving, quickSlot }: {
   lang: Lang; appt: Appointment | null; defaultDate: string; patients: Patient[];
   appointments: Appointment[];
-  doctors: Doctor[]; plan: PlanType;
+  doctors: Doctor[]; doctorSchedules?: DoctorSchedule[]; plan: PlanType;
   onSave: (form: ApptForm, id?: number) => void; onClose: () => void;
   onStatusChange: (id: number, status: Status) => void;
   onDelete: (id: number) => void; saving: boolean;
@@ -450,6 +529,28 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
   const handleSave = () => {
     if (!form.patient_id || !form.date || !form.time) { setError(tr.modal.required); return; }
     if (isShared && !form.doctor_id) { setError(tr.modal.requiredDoctor); return; }
+
+    // ── فحص جدول دوام الطبيب (للخطط المشتركة فقط) ──────────
+    if (isShared && form.doctor_id) {
+      const schedule = doctorSchedules.find(s => s.doctor_id === Number(form.doctor_id));
+      if (schedule) {
+        const doctorDailyCount = appointments.filter(a =>
+          a.date === form.date &&
+          (a as any).doctor_id === Number(form.doctor_id) &&
+          a.status !== "cancelled" &&
+          (!isEdit || a.id !== appt?.id)
+        ).length;
+        const avail = checkDoctorAvailability(
+          schedule, form.date, form.time, form.duration || 30, doctorDailyCount
+        );
+        if (!avail.available) {
+          setError(lang === "ar" ? (avail.reasonAr ?? "") : (avail.reasonEn ?? ""));
+          return;
+        }
+      }
+    }
+    // ── نهاية فحص الجدول ─────────────────────────────────────
+
     const timeToMinutes = (t: string) => {
       const [h, m] = t.slice(0,5).split(":").map(Number);
       return h * 60 + m;
@@ -1023,6 +1124,7 @@ export default function AppointmentsPage() {
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [patients,            setPatients]            = useState<Patient[]>([]);
   const [doctors,             setDoctors]             = useState<Doctor[]>([]);
+  const [doctorSchedules,     setDoctorSchedules]     = useState<DoctorSchedule[]>([]);
   const [selectedDoctorId,    setSelectedDoctorId]    = useState<number | "all">("all");
   const [loading,             setLoading]             = useState(true);
   const [saving,              setSaving]              = useState(false);
@@ -1100,9 +1202,21 @@ export default function AppointmentsPage() {
         if (clinicData?.plan) {
           const fetchedPlan = clinicData.plan as PlanType;
           setPlan(fetchedPlan);
-          // جلب الأطباء فقط إذا كانت خطة مشتركة
+          // جلب الأطباء وجداول الدوام فقط إذا كانت خطة مشتركة
           if (isSharedPlan(fetchedPlan)) {
             await loadDoctors();
+            // جلب جداول الدوام
+            const { data: schedData } = await supabase
+              .from("doctor_schedules")
+              .select("*")
+              .eq("user_id", user.id);
+            if (schedData) {
+              setDoctorSchedules(schedData.map(row => ({
+                ...row,
+                days:      typeof row.days      === "string" ? JSON.parse(row.days)      : row.days,
+                vacations: typeof row.vacations === "string" ? JSON.parse(row.vacations) : (row.vacations ?? []),
+              })) as DoctorSchedule[]);
+            }
           }
         }
       }
@@ -1499,11 +1613,19 @@ export default function AppointmentsPage() {
                       if(!d) return <div key={i}/>;
                       const k=toKey(viewYear,viewMonth,d), cnt=countByKey[k]||0;
                       const isSel=k===selectedKey, isTod=k===todayKey;
+                      // فحص إجازة/عطلة الطبيب المحدد
+                      const isDoctorOff = isSharedPlan(plan) && selectedDoctorId !== "all" && (() => {
+                        const sch = doctorSchedules.find(s => s.doctor_id === Number(selectedDoctorId));
+                        if (!sch) return false;
+                        const dayIdx = new Date(k).getDay();
+                        return sch.vacations.includes(k) || !sch.days[dayIdx]?.enabled;
+                      })();
                       return (
                         <div key={i} className="cal-day" onClick={()=>setSelectedKey(k)}
-                          style={{ background:isSel?"#0863ba":isTod?"rgba(8,99,186,.08)":"transparent",color:isSel?"#fff":isTod?"#0863ba":"#353535",border:isTod&&!isSel?"1.5px solid rgba(8,99,186,.2)":"1.5px solid transparent" }}>
+                          style={{ background:isSel?"#0863ba":isTod?"rgba(8,99,186,.08)":isDoctorOff?"rgba(192,57,43,.07)":"transparent",color:isSel?"#fff":isTod?"#0863ba":isDoctorOff?"#c0392b":"#353535",border:isTod&&!isSel?"1.5px solid rgba(8,99,186,.2)":isDoctorOff&&!isSel?"1.5px solid rgba(192,57,43,.15)":"1.5px solid transparent" }}>
                           <span style={{ fontSize:12,fontWeight:isSel||isTod?700:400 }}>{d}</span>
-                          {cnt>0&&<div style={{ width:14,height:4,borderRadius:3,background:isSel?"rgba(255,255,255,.6)":"#0863ba" }}/>}
+                          {cnt>0&&!isDoctorOff&&<div style={{ width:14,height:4,borderRadius:3,background:isSel?"rgba(255,255,255,.6)":"#0863ba" }}/>}
+                          {isDoctorOff&&!isSel&&<div style={{ fontSize:8,color:"#c0392b",fontWeight:700,lineHeight:1,marginTop:1 }}>{isAr?"عطلة":"Off"}</div>}
                         </div>
                       );
                     })}
@@ -1912,7 +2034,7 @@ export default function AppointmentsPage() {
         {(addModal||editAppt)&&(
           <AppointmentModal lang={lang} appt={editAppt} defaultDate={quickSlot?.date ?? selectedKey} patients={patients}
             appointments={appointments}
-            doctors={doctors} plan={plan}
+            doctors={doctors} doctorSchedules={doctorSchedules} plan={plan}
             onSave={handleSave} onClose={()=>{ setAddModal(false); setEditAppt(null); setQuickSlot(null); }} quickSlot={quickSlot}
             onStatusChange={handleStatusChange} onDelete={handleDelete} saving={saving}/>
         )}
