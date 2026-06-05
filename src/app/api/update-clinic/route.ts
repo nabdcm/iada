@@ -18,6 +18,8 @@ export async function POST(req: Request) {
       max_doctors,
       payments_lock_enabled,
       payments_lock_password,
+      restricted_access_enabled,
+      restricted_access_pin,
     } = await req.json();
 
     if (!userId)
@@ -54,6 +56,12 @@ export async function POST(req: Request) {
     if (payments_lock_enabled !== undefined) {
       clinicUpdate.payments_lock_enabled  = payments_lock_enabled;
       clinicUpdate.payments_lock_password = payments_lock_password ?? "";
+    }
+
+    // الدخول المقيّد — نحدّث دائماً (حتى عند إلغاء التفعيل)
+    if (restricted_access_enabled !== undefined) {
+      clinicUpdate.restricted_access_enabled = restricted_access_enabled;
+      clinicUpdate.restricted_access_pin     = restricted_access_pin ?? "";
     }
 
     const { error: clinicError } = await supabaseAdmin
