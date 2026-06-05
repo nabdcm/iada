@@ -1956,8 +1956,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               {(() => {
                 const ra = sm.restrictedAccess;
                 const restrictedLink = typeof window !== "undefined"
-                  ? `${window.location.origin}/restricted-access/${clinic.id}`
-                  : `/restricted-access/${clinic.id}`;
+                  ? `${window.location.origin}/restricted-access/${clinic.user_id}`
+                  : `/restricted-access/${clinic.user_id}`;
                 const copyRestrictedLink = async () => {
                   await navigator.clipboard.writeText(restrictedLink).catch(()=>{});
                   setCopiedLink(true);
