@@ -169,7 +169,7 @@ const T = {
     noResults:"No results found",
     signOut:"Sign Out",
     revenueChart:"Revenue — Last 6 Months",
-    exportBtn:"Monthly PDF",
+    exportBtn:"Monthly Report",
     exportDailyBtn:"Daily Report",
     deleteConfirm:"Delete this transaction?",
     paymentsLock:{
@@ -1504,116 +1504,133 @@ export default function PaymentsPage() {
   };
 
   // ── تصدير تقرير PDF يومي ─────────────────────────────────
-  const exportDailyPDF = (targetDate?: string) => {
-    const today = targetDate || fmt(new Date());
-    const dayPayments = payments
-      .filter(p => p.date === today)
+  const exportDailyPDF = () => {
+    const now = new Date();
+    const todayStr = fmt(now);
+
+    const todayPayments = payments
+      .filter(p => p.date === todayStr)
       .sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    const dayWithdrawals = withdrawals
-      .filter(w => w.date === today && !w.is_reversed)
-      .sort((a,b) => new Date(b.created_at||b.date).getTime() - new Date(a.created_at||a.date).getTime());
+    const todayWithdrawals = withdrawals
+      .filter(w => w.date === todayStr)
+      .sort((a,b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
 
-    const dayExpenses = expenses
-      .filter(e => e.date === today)
-      .sort((a,b) => new Date(b.created_at||b.date).getTime() - new Date(a.created_at||a.date).getTime());
+    const todayExpenses = expenses
+      .filter(e => e.date === todayStr)
+      .sort((a,b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
 
-    const dayLabel = new Date(today+"T00:00:00").toLocaleDateString("ar-EG-u-ca-gregory", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
-    const totalPaid    = dayPayments.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0);
-    const totalPending = dayPayments.filter(p=>p.status==="pending").reduce((s,p)=>s+p.amount,0);
-    const totalWD      = dayWithdrawals.reduce((s,w)=>s+w.amount,0);
-    const totalEX      = dayExpenses.reduce((s,e)=>s+e.amount,0);
+    const dayLabel = now.toLocaleDateString("ar-EG-u-ca-gregory", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+    const totalPaid    = todayPayments.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0);
+    const totalPending = todayPayments.filter(p=>p.status==="pending").reduce((s,p)=>s+p.amount,0);
+    const totalWD      = todayWithdrawals.filter(w=>!w.is_reversed).reduce((s,w)=>s+w.amount,0);
+    const totalEX      = todayExpenses.reduce((s,e)=>s+e.amount,0);
     const netBalance   = totalPaid - totalWD - totalEX;
 
-    const methodMap: Record<string,string> = { cash:"نقداً", card:"بطاقة", transfer:"تحويل" };
-    const statusMap: Record<string,string> = { paid:"مدفوع", pending:"معلّق", cancelled:"ملغي" };
+    const methodMapAr:Record<string,string> = { cash:"نقداً", card:"بطاقة", transfer:"تحويل" };
+    const statusMapAr:Record<string,string> = { paid:"مدفوع", pending:"معلّق", cancelled:"ملغي" };
     const catLabelsAr: Record<string,string> = { rent:"إيجار", supplies:"مستلزمات طبية", salary:"رواتب موظفين", utilities:"فواتير كهرباء/ماء", maintenance:"صيانة", other:"أخرى" };
 
-    const paymentRows = dayPayments.length > 0
-      ? dayPayments.map(p => {
+    const paymentRows = todayPayments.length > 0
+      ? todayPayments.map(p => {
           const patient = patients.find(x=>x.id===p.patient_id);
           return `<tr>
             <td>${patient?.name || "—"}</td>
             <td>${p.description}</td>
-            <td>${methodMap[p.method]||p.method}</td>
-            <td class="status-${p.status}">${statusMap[p.status]||p.status}</td>
-            <td class="${p.status==="paid"?"amount-green":"amount-orange"}">
-              ${p.status==="paid"?"+":""}${p.amount.toLocaleString()} ل.س
-            </td>
+            <td>${methodMapAr[p.method] || p.method}</td>
+            <td class="status-${p.status}">${statusMapAr[p.status] || p.status}</td>
+            <td class="amount-green">+${p.amount.toLocaleString()} ل.س</td>
           </tr>`;
         }).join("")
-      : `<tr><td colspan="5" class="empty-row">لا توجد مدفوعات اليوم</td></tr>`;
+      : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد مدفوعات اليوم</td></tr>`;
 
-    const withdrawalRows = dayWithdrawals.length > 0
-      ? dayWithdrawals.map(w => `<tr>
-            <td colspan="2">${w.reason}</td>
-            <td>${w.notes||"—"}</td>
-            <td><span class="badge-red">سحب</span></td>
-            <td class="amount-red">-${w.amount.toLocaleString()} ل.س</td>
-          </tr>`).join("")
-      : `<tr><td colspan="5" class="empty-row">لا توجد سحوبات اليوم</td></tr>`;
+    const withdrawalRows = todayWithdrawals.length > 0
+      ? todayWithdrawals.map(w => `<tr>
+          <td colspan="3">${w.reason}${w.is_reversed ? ' <span style="color:#bbb;font-size:10px">(مُلغى)</span>' : ""}</td>
+          <td><span style="background:rgba(192,57,43,.1);color:#c0392b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">سحب</span></td>
+          <td class="${w.is_reversed?"":"amount-red"}" style="${w.is_reversed?"color:#bbb;text-decoration:line-through":""}">-${w.amount.toLocaleString()} ل.س</td>
+        </tr>`).join("")
+      : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد سحوبات اليوم</td></tr>`;
 
-    const expenseRows = dayExpenses.length > 0
-      ? dayExpenses.map(e => `<tr>
-            <td colspan="2">${e.description}</td>
-            <td>${catLabelsAr[e.category]||e.category}</td>
-            <td><span class="badge-purple">مصروف</span></td>
-            <td class="amount-purple">-${e.amount.toLocaleString()} ل.س</td>
-          </tr>`).join("")
-      : `<tr><td colspan="5" class="empty-row">لا توجد مصروفات اليوم</td></tr>`;
+    const expenseRows = todayExpenses.length > 0
+      ? todayExpenses.map(e => `<tr>
+          <td colspan="2">${e.description}</td>
+          <td>${catLabelsAr[e.category] || e.category}</td>
+          <td><span style="background:rgba(123,45,139,.1);color:#7b2d8b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">مصروف</span></td>
+          <td class="amount-purple">-${e.amount.toLocaleString()} ل.س</td>
+        </tr>`).join("")
+      : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد مصروفات اليوم</td></tr>`;
 
-    const svgLogo = `<svg viewBox="0 0 337.74 393.31" style="width:40px;height:40px" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse"><stop offset=".3" stop-color="#0863ba"/><stop offset=".69" stop-color="#5694cf"/></linearGradient><linearGradient id="g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5694cf"/><stop offset=".68" stop-color="#a4c4e4"/></linearGradient></defs><path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/><path fill="url(#g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/><path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/><path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/><path fill="url(#g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/></svg>`;
+    const svgLogo = `<svg viewBox="0 0 337.74 393.31" style="width:44px;height:44px" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
+            <stop offset=".3" stop-color="#0863ba"/><stop offset=".69" stop-color="#5694cf"/>
+          </linearGradient>
+          <linearGradient id="g2" x1="63.56" y1="273.08" x2="60.16" y2="299.2" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#5694cf"/><stop offset=".68" stop-color="#a4c4e4"/>
+          </linearGradient>
+        </defs>
+        <path fill="#0863ba" d="m322.06,369.99c-6.96,5.15-15.03,7.61-23.01,7.61-12.82,0-25.43-6.35-32.83-18.11l-78.44-124.68-39.05-62.08-47.8-75.98-15.33-40.6c-7.85-20.79,2.07-44.07,22.51-52.81,5.3-2.26,10.83-3.34,16.29-3.34,14.45,0,28.35,7.56,35.97,20.77l172.2,298.76c9.82,17.05,5.3,38.75-10.5,50.46Z"/>
+        <path fill="url(#g1)" d="m189.28,293.99l-33.2-51.2-55.14-146.04,47.8,75.98c-1.84-2.91-6.32-.67-5.08,2.56l45.63,118.7Z"/>
+        <path fill="#5694cf" d="m185.86,389.39c-5.59,2.65-11.5,3.92-17.34,3.92-13.78,0-27.13-7.06-34.68-19.55l-61.93-102.47-32.7-54.12h0s-7.83-28.09-7.83-28.09c-5-17.95,3.54-36.92,20.31-45.06,5.41-2.62,11.16-3.88,16.84-3.88,12.72,0,25.06,6.29,32.39,17.59l5.4,8.33,49.76,76.72,33.2,51.2,17.02,44.27c7.6,19.77-1.31,42.05-20.44,51.13Z"/>
+        <path fill="#a4c4e4" d="m80.71,366.11c-5.52,11.03-15.78,19.61-28.83,22.5-3.09.68-6.18,1.01-9.22,1.01-19.34,0-36.81-13.28-41.37-32.89-.87-3.75-1.29-7.49-1.29-11.19,0-22.04,14.91-42.06,37.18-47.68l22.9-5.79,20.63,74.04Z"/>
+        <path fill="url(#g2)" d="m80.71,366.11l-20.63-74.04-20.88-74.9,32.7,54.12c-1.71-2.84-6.08-.97-5.2,2.23l17,62.43c2.86,10.52,1.52,21.16-2.99,30.16Z"/>
+      </svg>`;
 
     const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
-<title>التقرير اليومي — ${dayLabel}</title>
+<title>التقرير اليومي - ${todayStr}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Rubik','Arial',sans-serif;direction:rtl;background:#fff;color:#222;padding:28px;font-size:13px}
-  .header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0863ba;padding-bottom:16px;margin-bottom:20px}
-  .logo-area{display:flex;align-items:center;gap:10px}
-  .logo-text{font-size:24px;font-weight:800;color:#0863ba}
-  .logo-sub{font-size:11px;color:#888}
-  .report-meta h1{font-size:17px;font-weight:800;color:#353535}
-  .report-meta .day-badge{display:inline-block;margin-top:5px;padding:4px 14px;background:linear-gradient(135deg,#e8f0fe,#dbeafe);border:1.5px solid #bfdbfe;border-radius:20px;font-size:12px;font-weight:700;color:#1d4ed8}
-  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-  .sum-card{border-radius:12px;padding:14px 16px;border:1.5px solid #eef0f3}
-  .sum-val{font-size:18px;font-weight:900}
-  .sum-label{font-size:10px;color:#888;margin-top:3px}
-  .card-green{background:rgba(46,125,50,.06);border-color:rgba(46,125,50,.2)}
-  .card-orange{background:rgba(230,126,34,.06);border-color:rgba(230,126,34,.2)}
-  .card-red{background:rgba(192,57,43,.06);border-color:rgba(192,57,43,.2)}
-  .card-blue{background:rgba(8,99,186,.06);border-color:rgba(8,99,186,.2)}
-  .green{color:#2e7d32}.orange{color:#e67e22}.red{color:#c0392b}.blue{color:#0863ba}.purple{color:#7b2d8b}
-  .section-title{font-size:13px;font-weight:800;color:#353535;margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid;display:flex;align-items:center;gap:6px}
-  .s-green{border-color:#2e7d32}.s-red{border-color:#c0392b}.s-purple{border-color:#7b2d8b}
-  table{width:100%;border-collapse:collapse;margin-bottom:6px}
-  thead tr{color:#fff}
-  thead.th-green tr{background:#0863ba}
-  thead.th-red tr{background:#c0392b}
-  thead.th-purple tr{background:#7b2d8b}
-  th{padding:8px 10px;text-align:right;font-size:11px;font-weight:700}
-  td{padding:7px 10px;border-bottom:1px solid #eef0f3;font-size:11px}
-  tr:nth-child(even) td{background:#fafbfc}
-  .amount-green{font-weight:700;color:#2e7d32}
-  .amount-orange{font-weight:700;color:#e67e22}
-  .amount-red{font-weight:700;color:#c0392b}
-  .amount-purple{font-weight:700;color:#7b2d8b}
-  .status-paid{color:#2e7d32;font-weight:600}
-  .status-pending{color:#e67e22;font-weight:600}
-  .status-cancelled{color:#c0392b;font-weight:600}
-  .empty-row{text-align:center;color:#ccc;font-style:italic;padding:12px}
-  .badge-red{background:rgba(192,57,43,.1);color:#c0392b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:10px}
-  .badge-purple{background:rgba(123,45,139,.1);color:#7b2d8b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:10px}
-  .total-row td{font-weight:800;background:#f0f7ff !important;color:#0863ba;border-top:2px solid #0863ba}
-  .net-box{margin-top:18px;padding:14px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center}
-  .net-positive{background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border:2px solid #2e7d32}
-  .net-negative{background:linear-gradient(135deg,#ffebee,#fce4ec);border:2px solid #c0392b}
-  .footer{margin-top:20px;padding-top:12px;border-top:1.5px solid #eef0f3;display:flex;justify-content:space-between;font-size:10px;color:#aaa}
-  @media print{body{padding:14px}}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Rubik', 'Arial', sans-serif; direction: rtl; background: #fff; color: #222; padding: 32px; font-size: 13px; }
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #0863ba; padding-bottom: 18px; margin-bottom: 24px; }
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+  .logo-text { font-size: 26px; font-weight: 800; color: #0863ba; }
+  .logo-sub { font-size: 12px; color: #888; }
+  .report-title { text-align: left; }
+  .report-title h1 { font-size: 18px; font-weight: 800; color: #353535; }
+  .report-title .day-badge { display:inline-block; margin-top:6px; padding:4px 14px; background:linear-gradient(135deg,#e8f4fd,#d0e9ff); border:1.5px solid #a4c4e4; border-radius:20px; font-size:12px; font-weight:700; color:#0863ba; }
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+  .stat { border-radius: 12px; padding: 14px 16px; border: 1.5px solid; }
+  .stat-income  { background:#f0faf0; border-color:#a5d6a7; }
+  .stat-pending { background:#fff8f0; border-color:#ffcc80; }
+  .stat-withdraw{ background:#fff0f0; border-color:#ef9a9a; }
+  .stat-expense { background:#f8f0ff; border-color:#ce93d8; }
+  .stat-val { font-size: 20px; font-weight: 800; }
+  .stat-label { font-size: 10px; color: #888; margin-top: 5px; }
+  .green { color: #2e7d32; } .orange { color: #e67e22; } .red { color: #c0392b; } .purple { color: #7b2d8b; } .blue { color: #0863ba; }
+  .section-title { font-size: 14px; font-weight: 800; color: #353535; margin: 22px 0 10px; padding-bottom: 7px; border-bottom: 2px solid; display: flex; align-items: center; gap: 8px; }
+  .section-income   { border-color: #2e7d32; }
+  .section-withdraw { border-color: #c0392b; }
+  .section-expense  { border-color: #7b2d8b; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  thead tr { color: #fff; }
+  thead.income-head tr   { background: #0863ba; }
+  thead.withdraw-head tr { background: #c0392b; }
+  thead.expense-head tr  { background: #7b2d8b; }
+  th { padding: 9px 12px; text-align: right; font-size: 11px; font-weight: 700; }
+  td { padding: 9px 12px; border-bottom: 1px solid #eef0f3; font-size: 12px; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .amount-green  { font-weight: 700; color: #2e7d32; }
+  .amount-red    { font-weight: 700; color: #c0392b; }
+  .amount-purple { font-weight: 700; color: #7b2d8b; }
+  .status-paid      { color: #2e7d32; font-weight: 600; }
+  .status-pending   { color: #e67e22; font-weight: 600; }
+  .status-cancelled { color: #c0392b; font-weight: 600; }
+  .total-row td { font-weight: 800; background: #f0f7ff !important; color: #0863ba; border-top: 2px solid #0863ba; }
+  .net-box { margin-top: 24px; padding: 20px 24px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .net-positive { background: linear-gradient(135deg,#e8f5e9,#f1f8e9); border: 2px solid #2e7d32; }
+  .net-negative { background: linear-gradient(135deg,#ffebee,#fce4ec); border: 2px solid #c0392b; }
+  .net-label { font-size: 14px; font-weight: 700; color: #555; }
+  .net-sub   { font-size: 11px; color: #888; margin-top: 3px; }
+  .net-val   { font-size: 28px; font-weight: 900; }
+  .summary-row { display:flex; gap:8px; margin-bottom:6px; font-size:12px; align-items:center; }
+  .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .footer { margin-top: 24px; padding-top: 14px; border-top: 1.5px solid #eef0f3; display: flex; justify-content: space-between; font-size: 11px; color: #aaa; }
+  @media print { body { padding: 16px; } }
 </style>
 </head>
 <body>
@@ -1622,85 +1639,86 @@ export default function PaymentsPage() {
       ${svgLogo}
       <div>
         <div class="logo-text">نبض</div>
-        <div class="logo-sub">${clinicName||"نظام إدارة العيادة"}</div>
+        <div class="logo-sub">${clinicName || "نظام إدارة العيادة"}</div>
       </div>
     </div>
-    <div class="report-meta" style="text-align:right">
-      <h1>📋 التقرير اليومي للعيادة</h1>
-      ${clinicName?`<div style="font-size:13px;font-weight:700;color:#353535;margin-top:3px">${clinicName}</div>`:""}
+    <div class="report-title">
+      <h1>التقرير اليومي للعيادة</h1>
+      ${clinicName ? `<div style="font-size:13px;font-weight:700;color:#353535;margin-top:3px">${clinicName}</div>` : ""}
       <div class="day-badge">📅 ${dayLabel}</div>
     </div>
   </div>
 
-  <div class="summary">
-    <div class="sum-card card-green">
-      <div class="sum-val green">+${totalPaid.toLocaleString()} ل.س</div>
-      <div class="sum-label">💰 إجمالي الدخل المدفوع</div>
+  <!-- إحصائيات سريعة -->
+  <div class="stats">
+    <div class="stat stat-income">
+      <div class="stat-val green">+${totalPaid.toLocaleString()} ل.س</div>
+      <div class="stat-label">💰 إجمالي الدخل اليوم</div>
     </div>
-    <div class="sum-card card-orange">
-      <div class="sum-val orange">${totalPending.toLocaleString()} ل.س</div>
-      <div class="sum-label">⏳ مستحقات معلّقة</div>
+    <div class="stat stat-pending">
+      <div class="stat-val orange">${totalPending.toLocaleString()} ل.س</div>
+      <div class="stat-label">⏳ مستحقات معلّقة</div>
     </div>
-    <div class="sum-card card-red">
-      <div class="sum-val red">-${(totalWD+totalEX).toLocaleString()} ل.س</div>
-      <div class="sum-label">📤 إجمالي الصادر (سحب+مصروف)</div>
+    <div class="stat stat-withdraw">
+      <div class="stat-val red">-${totalWD.toLocaleString()} ل.س</div>
+      <div class="stat-label">💸 سحوبات اليوم</div>
     </div>
-    <div class="sum-card card-blue">
-      <div class="sum-val ${netBalance>=0?"green":"red"}">${netBalance>=0?"+":""}${netBalance.toLocaleString()} ل.س</div>
-      <div class="sum-label">⚖️ الرصيد الصافي</div>
+    <div class="stat stat-expense">
+      <div class="stat-val purple">-${totalEX.toLocaleString()} ل.س</div>
+      <div class="stat-label">🏪 مصروفات اليوم</div>
     </div>
   </div>
 
-  <!-- المدفوعات -->
-  <div class="section-title s-green">💰 المدفوعات والمستحقات (${dayPayments.length} حركة)</div>
+  <!-- قسم المدفوعات -->
+  <div class="section-title section-income">💰 المدفوعات والمستحقات — اليوم</div>
   <table>
-    <thead class="th-green">
+    <thead class="income-head">
       <tr><th>المريض</th><th>الوصف</th><th>طريقة الدفع</th><th>الحالة</th><th>المبلغ</th></tr>
     </thead>
     <tbody>
       ${paymentRows}
-      ${dayPayments.length>0?`<tr class="total-row"><td colspan="4">إجمالي المدفوع</td><td>+${totalPaid.toLocaleString()} ل.س</td></tr>`:""}
+      ${todayPayments.length > 0 ? `<tr class="total-row"><td colspan="4">الإجمالي المدفوع</td><td>+${totalPaid.toLocaleString()} ل.س</td></tr>` : ""}
     </tbody>
   </table>
 
-  <!-- السحوبات -->
-  <div class="section-title s-red">💸 السحوبات (${dayWithdrawals.length} حركة)</div>
+  <!-- قسم السحوبات -->
+  <div class="section-title section-withdraw">💸 سحوبات اليوم</div>
   <table>
-    <thead class="th-red">
-      <tr><th colspan="2">سبب السحب</th><th>ملاحظات</th><th>النوع</th><th>المبلغ</th></tr>
+    <thead class="withdraw-head">
+      <tr><th colspan="3">سبب السحب</th><th>النوع</th><th>المبلغ</th></tr>
     </thead>
     <tbody>
       ${withdrawalRows}
-      ${dayWithdrawals.length>0?`<tr class="total-row"><td colspan="4" style="color:#c0392b">إجمالي السحوبات</td><td style="color:#c0392b">-${totalWD.toLocaleString()} ل.س</td></tr>`:""}
+      ${todayWithdrawals.filter(w=>!w.is_reversed).length > 0 ? `<tr class="total-row"><td colspan="4" style="color:#c0392b">إجمالي السحوبات</td><td style="color:#c0392b">-${totalWD.toLocaleString()} ل.س</td></tr>` : ""}
     </tbody>
   </table>
 
-  <!-- المصروفات -->
-  <div class="section-title s-purple">🏪 مصروفات العيادة (${dayExpenses.length} حركة)</div>
+  <!-- قسم المصروفات -->
+  <div class="section-title section-expense">🏪 مصروفات العيادة — اليوم</div>
   <table>
-    <thead class="th-purple">
+    <thead class="expense-head">
       <tr><th colspan="2">الوصف</th><th>التصنيف</th><th>النوع</th><th>المبلغ</th></tr>
     </thead>
     <tbody>
       ${expenseRows}
-      ${dayExpenses.length>0?`<tr class="total-row"><td colspan="4" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ل.س</td></tr>`:""}
+      ${todayExpenses.length > 0 ? `<tr class="total-row"><td colspan="4" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ل.س</td></tr>` : ""}
     </tbody>
   </table>
 
-  <!-- الرصيد الصافي -->
-  <div class="net-box ${netBalance>=0?"net-positive":"net-negative"}">
+  <!-- الرصيد اليومي الصافي -->
+  <div class="net-box ${netBalance >= 0 ? "net-positive" : "net-negative"}">
     <div>
-      <div style="font-size:13px;font-weight:700;color:#555">🧾 الرصيد الصافي لليوم</div>
-      <div style="font-size:11px;color:#888;margin-top:2px">الدخل المدفوع − السحوبات − المصروفات</div>
+      <div class="net-label">${netBalance >= 0 ? "✅" : "⚠️"} الحساب اليومي الصافي</div>
+      <div class="net-sub">الدخل المدفوع (${totalPaid.toLocaleString()}) − السحوبات (${totalWD.toLocaleString()}) − المصروفات (${totalEX.toLocaleString()})</div>
     </div>
-    <div style="font-size:26px;font-weight:900;color:${netBalance>=0?"#2e7d32":"#c0392b"}">
-      ${netBalance>=0?"+":""}${netBalance.toLocaleString()} ل.س
+    <div class="net-val" style="color:${netBalance >= 0 ? "#2e7d32" : "#c0392b"}">
+      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} ل.س
     </div>
   </div>
 
   <div class="footer">
-    <span>نبض${clinicName?" — "+clinicName:" — نظام إدارة العيادة"}</span>
-    <span>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-EG-u-ca-gregory",{year:"numeric",month:"long",day:"numeric"})}</span>
+    <span>نبض${clinicName ? " — " + clinicName : " — نظام إدارة العيادة"}</span>
+    <span>وقت الطباعة: ${now.toLocaleString("ar-EG-u-ca-gregory", { year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit" })}</span>
   </div>
 </body>
 </html>`;
@@ -1869,19 +1887,19 @@ export default function PaymentsPage() {
                 <p className="page-sub" style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>
               </div>
               <div style={{ display:"flex",gap:10 }}>
-                <button className="export-btn" onClick={()=>exportDailyPDF()} style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid rgba(46,125,50,.3)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="rgba(46,125,50,.06)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  {tr.exportDailyBtn}
-                </button>
                 <button className="export-btn" onClick={exportPDF} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0f7ff"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  {tr.exportBtn}
+                  {tr.exportBtn} PDF
+                </button>
+                <button className="export-btn" onClick={exportDailyPDF} style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0faf0"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  {tr.exportDailyBtn}
                 </button>
                 {/* زر مصروف العيادة */}
                 <button onClick={()=>setShowExpenseModal(true)}
