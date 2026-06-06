@@ -2235,10 +2235,10 @@ export default function PaymentsPage() {
             </div>
 
             {/* ── MAIN GRID ── */}
-            <div className="main-grid" style={{ display:"grid",gridTemplateColumns:"1fr 300px",gap:20 }}>
+            <div className="main-grid" style={{ display:"grid",gridTemplateColumns:"1fr 300px",gap:20,minWidth:0 }}>
 
               {/* LEFT: Table */}
-              <div>
+              <div style={{ minWidth:0,overflow:"hidden" }}>
                 {/* Search + Filter */}
                 <div style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
                   <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
@@ -2481,7 +2481,7 @@ export default function PaymentsPage() {
               </div>
 
               {/* RIGHT: Revenue Chart + Pending */}
-              <div>
+              <div style={{ minWidth:0,overflow:"hidden" }}>
                 {/* Chart */}
                 <div style={{ marginBottom:16 }}>
                   <RevenueChart lang={lang} months={tr.months} revenueData={revenueData} />
@@ -2527,7 +2527,7 @@ export default function PaymentsPage() {
                 )}
 
                 {/* Pending Dues */}
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",padding:"18px 18px",boxShadow:"0 2px 16px rgba(8,99,186,.06)" }}>
+                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",padding:"18px",boxShadow:"0 2px 16px rgba(8,99,186,.06)",minWidth:0,overflow:"hidden" }}>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
                     <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
                       <span style={{ width:8,height:8,borderRadius:"50%",background:"#e67e22",display:"inline-block",animation:"pulse 2s infinite" }}/>
@@ -2570,7 +2570,7 @@ export default function PaymentsPage() {
                 </div>
 
                 {/* Recent Withdrawals */}
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.15)",padding:"18px 18px",boxShadow:"0 2px 16px rgba(192,57,43,.06)",marginTop:16 }}>
+                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.15)",padding:"18px",boxShadow:"0 2px 16px rgba(192,57,43,.06)",marginTop:16,minWidth:0,overflow:"hidden" }}>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                     <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
                       <span style={{ fontSize:16 }}>💸</span> {tr.withdrawalsSection.title}
@@ -2581,21 +2581,21 @@ export default function PaymentsPage() {
                     <div style={{ textAlign:"center",padding:"18px 0",color:"#ccc",fontSize:13 }}>{tr.withdrawalsSection.empty}</div>
                   ):(
                     withdrawals.slice(0,5).map((w,i)=>(
-                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",opacity:w.is_reversed?.5:1 }}>
-                        <div style={{ flex:1,minWidth:0 }}>
+                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",opacity:w.is_reversed?.5:1,gap:8,minWidth:0 }}>
+                        <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
                           <div style={{ fontSize:12,fontWeight:600,color:w.is_reversed?"#bbb":"#353535",textDecoration:w.is_reversed?"line-through":"none",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{w.reason}</div>
-                          <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2 }}>
+                          <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2,flexWrap:"wrap" }}>
                             <span style={{ fontSize:11,color:"#aaa" }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
                             {w.is_reversed && <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"rgba(200,200,200,.15)",color:"#bbb" }}>{tr.withdrawalsSection.reversed}</span>}
                           </div>
                         </div>
-                        <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
-                          <span style={{ fontSize:14,fontWeight:800,color:w.is_reversed?"#bbb":"#c0392b",textDecoration:w.is_reversed?"line-through":"none" }}>-{w.amount.toLocaleString()} ل.س</span>
+                        <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                          <span style={{ fontSize:13,fontWeight:800,color:w.is_reversed?"#bbb":"#c0392b",textDecoration:w.is_reversed?"line-through":"none",whiteSpace:"nowrap" }}>-{w.amount.toLocaleString()} ل.س</span>
                           {!w.is_reversed && (
                             <button
                               onClick={()=>setReverseWithdrawalId(w.id)}
                               title={tr.withdrawalsSection.reverseBtn}
-                              style={{ width:28,height:28,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
+                              style={{ width:30,height:30,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
                               onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.18)";}}
                               onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.08)";}}
                             >↩️</button>
@@ -2607,7 +2607,7 @@ export default function PaymentsPage() {
                 </div>
 
                 {/* Clinic Expenses */}
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(123,45,139,.15)",padding:"18px 18px",boxShadow:"0 2px 16px rgba(123,45,139,.06)",marginTop:16 }}>
+                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(123,45,139,.15)",padding:"18px",boxShadow:"0 2px 16px rgba(123,45,139,.06)",marginTop:16,minWidth:0,overflow:"hidden" }}>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                     <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
                       <span style={{ fontSize:16 }}>🏪</span> {tr.expensesSection.title}
@@ -2620,15 +2620,15 @@ export default function PaymentsPage() {
                     expenses.slice(0,5).map((e,i)=>{
                       const catLabels = tr.expenseModal.categories;
                       return (
-                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa" }}>
-                          <div>
-                            <div style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{e.description}</div>
-                            <div style={{ display:"flex",gap:8,marginTop:3 }}>
-                              <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
+                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0 }}>
+                          <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
+                            <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{e.description}</div>
+                            <div style={{ display:"flex",gap:8,marginTop:3,flexWrap:"wrap" }}>
+                              <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600,flexShrink:0 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
                               <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
                             </div>
                           </div>
-                          <span style={{ fontSize:14,fontWeight:800,color:"#7b2d8b" }}>-{e.amount.toLocaleString()} ل.س</span>
+                          <span style={{ fontSize:13,fontWeight:800,color:"#7b2d8b",flexShrink:0,whiteSpace:"nowrap" }}>-{e.amount.toLocaleString()} ل.س</span>
                         </div>
                       );
                     })
