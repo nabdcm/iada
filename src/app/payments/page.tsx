@@ -1093,7 +1093,7 @@ export default function PaymentsPage() {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setLoading(false); return; }
 
       // جلب اسم العيادة من user_metadata أو clinic_profiles
       const clinicMeta = user.user_metadata?.clinic_name as string | undefined;
@@ -1176,7 +1176,7 @@ export default function PaymentsPage() {
     return payments.filter(p => {
       const patient = patients.find(x => x.id === p.patient_id);
       const q = search.toLowerCase();
-      if (q && !patient?.name.toLowerCase().includes(q) && !p.description.toLowerCase().includes(q)) return false;
+      if (q && !patient?.name.toLowerCase().includes(q) && !(p.description||"").toLowerCase().includes(q)) return false;
       if (filter === "paid"    && p.status !== "paid")    return false;
       if (filter === "pending" && p.status !== "pending") return false;
       if (filter === "cash"    && p.method !== "cash")    return false;
@@ -1825,6 +1825,7 @@ export default function PaymentsPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html,body{overflow-x:hidden;max-width:100vw}
         body{font-family:'Rubik',sans-serif;background:#f7f9fc;color:#353535}
         ::-webkit-scrollbar{width:5px}
         ::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
@@ -1868,7 +1869,6 @@ export default function PaymentsPage() {
             width:100%!important;
             max-width:100vw!important;
             box-sizing:border-box!important;
-            overflow-x:hidden!important;
           }
           .topbar-inner{
             padding-left:${isAr?"0":"52px"}!important;
@@ -2238,7 +2238,7 @@ export default function PaymentsPage() {
             <div className="main-grid" style={{ display:"grid",gridTemplateColumns:"1fr 300px",gap:20,minWidth:0 }}>
 
               {/* LEFT: Table */}
-              <div style={{ minWidth:0,overflow:"hidden" }}>
+              <div style={{ minWidth:0 }}>
                 {/* Search + Filter */}
                 <div style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
                   <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
@@ -2481,7 +2481,7 @@ export default function PaymentsPage() {
               </div>
 
               {/* RIGHT: Revenue Chart + Pending */}
-              <div style={{ minWidth:0,overflow:"hidden" }}>
+              <div style={{ minWidth:0 }}>
                 {/* Chart */}
                 <div style={{ marginBottom:16 }}>
                   <RevenueChart lang={lang} months={tr.months} revenueData={revenueData} />
