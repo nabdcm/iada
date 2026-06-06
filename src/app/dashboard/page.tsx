@@ -6,7 +6,7 @@
 // تجربة موبايل أولى — Mobile-First
 // ============================================================
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Appointment, Payment } from "@/lib/supabase";
 
@@ -226,7 +226,7 @@ function Field({ label, children }: { label:string; children:React.ReactNode }) 
 }
 
 // ─── Main Component ──────────────────────────────────────
-export default function DashboardPage({ lang: initialLang = "ar" }: { lang?: Lang }) {
+export default function SecretaryDashboard({ lang: initialLang = "ar" }: { lang?: Lang }) {
   const [lang, setLang] = useState<Lang>(initialLang);
   const isAr = lang === "ar";
   const tr = TR[lang];
@@ -867,7 +867,7 @@ export default function DashboardPage({ lang: initialLang = "ar" }: { lang?: Lan
 
         {/* ══ MODAL: APPOINTMENT ══ */}
         {(apptModal) && (
-          <ApptModal lang={lang} isAr={isAr} tr={tr} patients={patients} doctors={doctors}
+          <ApptModal lang={lang} patients={patients} doctors={doctors}
             appt={editApptData} plan={plan} isShared={isSharedPlan(plan)}
             saving={saving} error={error}
             defaultDate={selectedDate}
@@ -877,7 +877,7 @@ export default function DashboardPage({ lang: initialLang = "ar" }: { lang?: Lan
 
         {/* ══ MODAL: PATIENT ══ */}
         {(patModal) && (
-          <PatModal lang={lang} isAr={isAr} tr={tr} patient={editPatData}
+          <PatModal lang={lang} patient={editPatData}
             saving={saving} error={error}
             onSave={handleSavePat}
             onClose={() => { setPatModal(null); setEditPatData(null); setError(""); }} />
@@ -885,7 +885,7 @@ export default function DashboardPage({ lang: initialLang = "ar" }: { lang?: Lan
 
         {/* ══ MODAL: PAYMENT ══ */}
         {payModal && (
-          <PayModal lang={lang} isAr={isAr} tr={tr} patients={patients}
+          <PayModal lang={lang} patients={patients}
             saving={saving} error={error}
             onSave={handleSavePay}
             onClose={() => { setPayModal(false); setError(""); }} />
@@ -893,7 +893,7 @@ export default function DashboardPage({ lang: initialLang = "ar" }: { lang?: Lan
 
         {/* ══ MODAL: WITHDRAW/EXPENSE ══ */}
         {withdrawModal && (
-          <WithdrawModal lang={lang} isAr={isAr} tr={tr}
+          <WithdrawModal lang={lang}
             saving={saving} error={error}
             onSave={handleSaveWithdraw}
             onClose={() => { setWithdrawModal(false); setError(""); }} />
@@ -904,12 +904,14 @@ export default function DashboardPage({ lang: initialLang = "ar" }: { lang?: Lan
 }
 
 // ─── Appointment Modal ────────────────────────────────────
-function ApptModal({ lang, isAr, tr, patients, doctors, appt, plan, isShared, saving, error, defaultDate, onSave, onClose }: {
-  lang: Lang; isAr: boolean; tr: typeof TR["ar"]; patients: Patient[]; doctors: Doctor[];
+function ApptModal({ lang, patients, doctors, appt, plan, isShared, saving, error, defaultDate, onSave, onClose }: {
+  lang: Lang; patients: Patient[]; doctors: Doctor[];
   appt: Appointment | null; plan: PlanType; isShared: boolean;
   saving: boolean; error: string; defaultDate: string;
   onSave: (form: any) => void; onClose: () => void;
 }) {
+  const isAr = lang === "ar";
+  const tr = TR[lang];
   const [form, setForm] = useState({
     patient_id: appt?.patient_id ?? "" as number|"",
     doctor_id:  (appt as any)?.doctor_id ?? "" as number|"",
@@ -987,10 +989,12 @@ function ApptModal({ lang, isAr, tr, patients, doctors, appt, plan, isShared, sa
 }
 
 // ─── Patient Modal ────────────────────────────────────────
-function PatModal({ lang, isAr, tr, patient, saving, error, onSave, onClose }: {
-  lang: Lang; isAr: boolean; tr: typeof TR["ar"]; patient: Patient | null;
+function PatModal({ lang, patient, saving, error, onSave, onClose }: {
+  lang: Lang; patient: Patient | null;
   saving: boolean; error: string; onSave: (form: any) => void; onClose: () => void;
 }) {
+  const isAr = lang === "ar";
+  const tr = TR[lang];
   const [form, setForm] = useState({
     name:    patient?.name ?? "",
     phone:   patient?.phone ?? "",
@@ -1040,10 +1044,12 @@ function PatModal({ lang, isAr, tr, patient, saving, error, onSave, onClose }: {
 }
 
 // ─── Payment Modal ────────────────────────────────────────
-function PayModal({ lang, isAr, tr, patients, saving, error, onSave, onClose }: {
-  lang: Lang; isAr: boolean; tr: typeof TR["ar"]; patients: Patient[];
+function PayModal({ lang, patients, saving, error, onSave, onClose }: {
+  lang: Lang; patients: Patient[];
   saving: boolean; error: string; onSave: (form: any) => void; onClose: () => void;
 }) {
+  const isAr = lang === "ar";
+  const tr = TR[lang];
   const [form, setForm] = useState({
     patient_id:  "" as number|"",
     amount:      "" as number|"",
@@ -1109,10 +1115,12 @@ function PayModal({ lang, isAr, tr, patients, saving, error, onSave, onClose }: 
 }
 
 // ─── Withdraw/Expense Modal ───────────────────────────────
-function WithdrawModal({ lang, isAr, tr, saving, error, onSave, onClose }: {
-  lang: Lang; isAr: boolean; tr: typeof TR["ar"];
+function WithdrawModal({ lang, saving, error, onSave, onClose }: {
+  lang: Lang;
   saving: boolean; error: string; onSave: (form: any) => void; onClose: () => void;
 }) {
+  const isAr = lang === "ar";
+  const tr = TR[lang];
   const [form, setForm] = useState({
     type:   "withdrawal" as "withdrawal"|"expense",
     amount: "" as number|"",
