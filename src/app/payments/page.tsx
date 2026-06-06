@@ -1894,7 +1894,7 @@ export default function PaymentsPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   {tr.exportBtn} PDF
                 </button>
-                <button className="export-btn" onClick={exportDailyPDF} style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
+                <button onClick={exportDailyPDF} style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0faf0"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
                 >
