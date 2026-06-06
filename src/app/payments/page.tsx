@@ -1851,51 +1851,97 @@ export default function PaymentsPage() {
         .desktop-tx{display:grid}
         /* ── Stats Slider (mobile) ── */
         .stats-slider-wrap{display:none}
-        .stats-slider-track{display:flex;gap:12px;padding:4px 2px 12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+        .stats-slider-track{display:flex;gap:12px;padding:4px 2px 14px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
         .stats-slider-track::-webkit-scrollbar{display:none}
-        .stats-slider-track .stat-big{min-width:72vw;max-width:76vw;scroll-snap-align:start;flex-shrink:0}
-        .stats-slider-dots{display:flex;justify-content:center;gap:6px;margin-top:4px}
-        .stats-slider-dots span{width:6px;height:6px;border-radius:50%;background:#dce2ec;transition:all .25s}
+        .stats-slider-track .stat-big{min-width:75vw;max-width:78vw;scroll-snap-align:start;flex-shrink:0}
+        .stats-slider-dots{display:flex;justify-content:center;gap:6px;margin-top:2px;margin-bottom:16px}
+        .stats-slider-dots span{width:6px;height:6px;border-radius:50%;background:#dce2ec;transition:all .25s;display:inline-block}
         .stats-slider-dots span.active{background:#0863ba;width:18px;border-radius:3px}
-        /* ── Modal Mobile Fix ── */
+        /* ── Financial summary — stack on mobile ── */
+        .fin-summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:24px}
         @media(max-width:768px){
-          .main-content{margin-left:0!important;margin-right:0!important;padding:0 12px 100px!important}
-          .topbar-inner{padding-left:${isAr?"0":"52px"}!important;padding-right:${isAr?"52px":"0"}!important}
+          /* Fix sidebar overlap — sidebar is position:fixed so main needs no margin */
+          .main-content{
+            margin-left:0!important;
+            margin-right:0!important;
+            padding:0 14px 100px!important;
+            width:100%!important;
+            max-width:100vw!important;
+            box-sizing:border-box!important;
+            overflow-x:hidden!important;
+          }
+          .topbar-inner{
+            padding-left:${isAr?"0":"52px"}!important;
+            padding-right:${isAr?"52px":"0"}!important;
+            flex-wrap:wrap!important;
+            gap:8px!important;
+          }
+          /* Topbar buttons — icon-only on mobile */
           .page-title{font-size:18px!important}
           .page-sub{display:none!important}
           .export-btn{display:none!important}
           .add-btn-text-full{display:none!important}
           .add-btn-text-short{display:inline!important}
-          .add-btn{padding:11px 18px!important;font-size:14px!important;border-radius:14px!important;min-height:44px!important}
-          /* hide desktop stats grid, show slider */
+          .add-btn{
+            padding:11px 18px!important;
+            font-size:14px!important;
+            border-radius:14px!important;
+            min-height:46px!important;
+          }
+          /* Topbar secondary buttons — icon only */
+          .topbar-secondary-btn .btn-label{display:none!important}
+          .topbar-secondary-btn{
+            width:46px!important;
+            height:46px!important;
+            padding:0!important;
+            justify-content:center!important;
+            border-radius:14px!important;
+            flex-shrink:0!important;
+          }
+          .topbar-secondary-btn svg{margin:0!important}
+          /* Hide desktop stats grid, show slider */
           .stats-grid{display:none!important}
           .stats-slider-wrap{display:block!important}
           .stat-big{padding:18px 20px!important;border-radius:16px!important}
           .stat-big .stat-val{font-size:22px!important}
+          /* Financial summary — 1 column on mobile */
+          .fin-summary-grid{grid-template-columns:1fr!important;gap:10px!important}
+          /* Main grid */
           .main-grid{grid-template-columns:1fr!important}
+          /* Filter chips */
           .filter-chips-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important;padding-bottom:4px}
           .filter-chips-wrap::-webkit-scrollbar{display:none}
-          .filter-chip{padding:9px 18px!important;font-size:13px!important;min-height:40px!important}
+          .filter-chip{padding:9px 18px!important;font-size:13px!important;min-height:42px!important}
+          /* Table */
           .desktop-table-header{display:none!important}
           .mobile-tx{display:block!important}
           .desktop-tx{display:none!important}
+          /* Topbar padding */
           .topbar-pad{padding:12px 0!important}
-          /* Action buttons row - mobile topbar */
-          .topbar-actions-wrap{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
-          .topbar-actions-wrap::-webkit-scrollbar{display:none}
-          .topbar-action-btn{padding:10px 14px!important;font-size:13px!important;min-height:44px!important;border-radius:12px!important;white-space:nowrap;flex-shrink:0}
-          /* Modal — full screen feel on mobile */
-          .modal-sheet{position:fixed!important;inset:0!important;align-items:flex-end!important;z-index:300!important}
-          .modal-inner{border-radius:24px 24px 0 0!important;max-height:92vh!important;width:100%!important;max-width:100%!important;margin:0!important;padding-bottom:env(safe-area-inset-bottom,16px)!important}
-          .modal-inner-center{border-radius:20px!important;margin:16px!important;max-width:calc(100% - 32px)!important;width:calc(100% - 32px)!important;max-height:88vh!important}
-          /* Pending section card on mobile */
-          .pending-row{padding:14px 14px!important}
-          /* Transaction cards bigger touch targets */
+          /* Touch targets */
+          .icon-btn{width:40px!important;height:40px!important;font-size:15px!important;border-radius:10px!important}
           .tx-row{padding:16px 14px!important}
-          .icon-btn{width:38px!important;height:38px!important;font-size:15px!important}
+          .pending-row{padding:14px 14px!important}
+          /* Modal — bottom sheet on mobile */
+          .modal-sheet{align-items:flex-end!important}
+          .modal-inner{
+            border-radius:24px 24px 0 0!important;
+            max-height:93vh!important;
+            width:100%!important;
+            max-width:100%!important;
+          }
+          .modal-inner-center{
+            border-radius:20px!important;
+            margin:16px!important;
+            max-width:calc(100% - 32px)!important;
+            width:calc(100% - 32px)!important;
+            max-height:88vh!important;
+          }
+          /* Shared clinic filter bar */
+          .shared-bar{flex-direction:column!important;align-items:flex-start!important}
         }
         @media(min-width:769px){
-          .main-content{margin-${isAr?"right":"left"}:240px}
+          .main-content{margin-${isAr?"right":"left"}:240px;padding:0 32px 48px}
           .add-btn-text-short{display:none!important}
           .stats-slider-wrap{display:none!important}
           .stats-grid{display:grid!important}
@@ -1905,7 +1951,7 @@ export default function PaymentsPage() {
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
         <Sidebar lang={lang} setLang={setLang} isMobile={isMobile} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} plan={plan}/>
 
-        <main className="page-anim main-content" style={{ padding:"0 32px 48px", transition:"margin .3s" }}>
+        <main className="page-anim main-content" style={{ transition:"margin .3s" }}>
 
           {/* ── شاشة "غير متاح في الخطة الأساسية" ── */}
           {!loading && !canAccess("payments", plan) && (
@@ -2009,30 +2055,30 @@ export default function PaymentsPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   {tr.exportBtn} PDF
                 </button>
-                <button onClick={exportDailyPDF} style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
+                <button onClick={exportDailyPDF} className="topbar-secondary-btn" style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0faf0"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  {tr.exportDailyBtn}
+                  <span className="btn-label">{tr.exportDailyBtn}</span>
                 </button>
                 {/* زر مصروف العيادة */}
-                <button onClick={()=>setShowExpenseModal(true)}
+                <button onClick={()=>setShowExpenseModal(true)} className="topbar-secondary-btn"
                   style={{ display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:"rgba(123,45,139,.06)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
                   onMouseEnter={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.12)";}}
                   onMouseLeave={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.06)";}}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
-                  <span className="add-btn-text-full">{tr.expenseBtn}</span>
+                  <span className="btn-label add-btn-text-full">{tr.expenseBtn}</span>
                 </button>
                 {/* زر السحب */}
-                <button onClick={()=>setShowWithdrawModal(true)}
+                <button onClick={()=>setShowWithdrawModal(true)} className="topbar-secondary-btn"
                   style={{ display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:"rgba(192,57,43,.06)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
                   onMouseEnter={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.12)";}}
                   onMouseLeave={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.06)";}}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                  <span className="add-btn-text-full">{tr.withdrawBtn}</span>
+                  <span className="btn-label add-btn-text-full">{tr.withdrawBtn}</span>
                 </button>
                 <button className="add-btn" onClick={()=>setShowModal(true)}
                   style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
@@ -2160,7 +2206,7 @@ export default function PaymentsPage() {
             <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} />
 
             {/* ── FINANCIAL SUMMARY ROW ── */}
-            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:24 }}>
+            <div className="fin-summary-grid">
               {/* الرصيد الصافي */}
               <div style={{ background: stats.netBalance >= 0 ? "linear-gradient(135deg,#1b5e20,#2e7d32)" : "linear-gradient(135deg,#b71c1c,#c0392b)",borderRadius:16,padding:"20px 24px",color:"#fff",position:"relative",overflow:"hidden",boxShadow: stats.netBalance >= 0 ? "0 4px 24px rgba(46,125,50,.25)":"0 4px 24px rgba(192,57,43,.25)" }}>
                 <div style={{ position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)" }}/>
