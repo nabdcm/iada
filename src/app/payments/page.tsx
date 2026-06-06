@@ -34,14 +34,14 @@ const T = {
       addTitle:"تسجيل دفعة جديدة",
       patient:"المريض *", selectPatient:"اختر المريض",
       amount:"المبلغ (ل.س) *", amountPh:"0.00",
-      description:"الوصف *", descPh:"مثال: رسوم استشارة، تحاليل...",
+      description:"الوصف", descPh:"مثال: رسوم استشارة، تحاليل...",
       method:"طريقة الدفع *",
       date:"التاريخ *",
       status:"الحالة",
       notes:"ملاحظات", notesPh:"أي ملاحظات إضافية...",
       save:"حفظ الدفعة",
       cancel:"إلغاء",
-      required:"المريض والمبلغ والوصف مطلوبة",
+      required:"المريض والمبلغ مطلوبان",
       addPending:"إضافة كمستحق",
       doctorOptional:"الطبيب (اختياري)",
       doctorOptionalHint:"يمكنك تخصيص الدفعة لطبيب محدد أو تركها كإيراد مشترك للعيادة",
@@ -152,14 +152,14 @@ const T = {
       addTitle:"Record New Payment",
       patient:"Patient *", selectPatient:"Select patient",
       amount:"Amount (SYP) *", amountPh:"0.00",
-      description:"Description *", descPh:"e.g. Consultation fee, Lab tests...",
+      description:"Description", descPh:"e.g. Consultation fee, Lab tests...",
       method:"Payment Method *",
       date:"Date *",
       status:"Status",
       notes:"Notes", notesPh:"Any additional notes...",
       save:"Save Payment",
       cancel:"Cancel",
-      required:"Patient, amount and description are required",
+      required:"Patient and amount are required",
       addPending:"Add as Pending",
       doctorOptional:"Doctor (Optional)",
       doctorOptionalHint:"You can assign this payment to a specific doctor or leave it as shared clinic revenue",
@@ -516,7 +516,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
   );
 
   const handleSave = async (asPending=false) => {
-    if (!form.patientId||!form.amount||!form.description.trim()) { setError(tr.modal.required); return; }
+    if (!form.patientId||!form.amount) { setError(tr.modal.required); return; }
     // تخصيص الطبيب اختياري في الخطط المشتركة — لا validation إلزامي
     setSaving(true);
     try {
@@ -546,16 +546,18 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
   };
 
   return (
-    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+    <div className="modal-sheet" style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+      <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
         {/* Header */}
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+          {/* Drag handle — mobile only */}
+          <div style={{ position:"absolute",top:8,left:"50%",transform:"translateX(-50%)",width:40,height:4,borderRadius:4,background:"#e0e0e0" }}/>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
             <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>💳</div>
             <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.modal.addTitle}</h2>
           </div>
-          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+          <button onClick={onClose} style={{ width:36,height:36,borderRadius:10,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
         </div>
         {/* Body */}
         <div style={{ padding:"20px 26px" }}>
@@ -774,6 +776,93 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
   );
 }
 
+// ─── سلايدر البطاقات للموبايل ─────────────────────────────
+function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr }: {
+  stats: any; methodStats: any[]; methodIcon: any; tr: any; isAr: boolean;
+}) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const cards = [
+    {
+      gradient: "linear-gradient(90deg,#2e7d32,#66bb6a)",
+      icon: "💰",
+      iconBg: "rgba(46,125,50,.1)",
+      value: `${stats.totalMonth.toLocaleString()} ل.س`,
+      valueColor: "#2e7d32",
+      label: tr.stats.totalMonth,
+      sub: `↑ 12% ${tr.stats.vsLast}`,
+      subColor: "#2e7d32",
+    },
+    {
+      gradient: "linear-gradient(90deg,#0863ba,#a4c4e4)",
+      icon: "📊",
+      iconBg: "rgba(8,99,186,.08)",
+      value: `${stats.totalYear.toLocaleString()} ل.س`,
+      valueColor: "#0863ba",
+      label: tr.stats.totalYear,
+      sub: `${stats.paidCount} ${tr.stats.transactions}`,
+      subColor: "#888",
+    },
+    {
+      gradient: "linear-gradient(90deg,#e67e22,#f39c12)",
+      icon: "⏳",
+      iconBg: "rgba(230,126,34,.08)",
+      value: `${stats.pendingAmt.toLocaleString()} ل.س`,
+      valueColor: "#e67e22",
+      label: tr.stats.pending,
+      sub: `${stats.pendingCount} ${tr.stats.unpaidCount}`,
+      subColor: "#e67e22",
+    },
+  ];
+
+  const handleScroll = () => {
+    if (!trackRef.current) return;
+    const scrollLeft = trackRef.current.scrollLeft;
+    const cardWidth = trackRef.current.scrollWidth / (cards.length + 1); // +1 for method card
+    setActiveIdx(Math.round(Math.abs(scrollLeft) / cardWidth));
+  };
+
+  return (
+    <div className="stats-slider-wrap" style={{ marginBottom:20 }}>
+      <div ref={trackRef} className="stats-slider-track" onScroll={handleScroll}>
+        {cards.map((c, i) => (
+          <div key={i} className="stat-big" style={{ position:"relative",overflow:"hidden",background:"#fff",border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.08)",borderRadius:16,padding:"20px 20px" }}>
+            <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:c.gradient,borderRadius:"16px 16px 0 0" }}/>
+            <div style={{ width:40,height:40,background:c.iconBg,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:12 }}>{c.icon}</div>
+            <div style={{ fontSize:26,fontWeight:900,color:c.valueColor,lineHeight:1 }}>{c.value}</div>
+            <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{c.label}</div>
+            <div style={{ fontSize:11,color:c.subColor,marginTop:4,fontWeight:600 }}>{c.sub}</div>
+          </div>
+        ))}
+        {/* طرق الدفع */}
+        <div className="stat-big" style={{ position:"relative",overflow:"hidden",background:"#fff",border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.08)",borderRadius:16,padding:"20px 20px" }}>
+          <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#7b2d8b,#a855f7)",borderRadius:"16px 16px 0 0" }}/>
+          <div style={{ fontSize:13,fontWeight:700,color:"#353535",marginBottom:14 }}>
+            {isAr?"طرق الدفع":"Payment Methods"}
+          </div>
+          {methodStats.map((m: any) => (
+            <div key={m.k} style={{ marginBottom:10 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
+                <span style={{ fontSize:12,color:"#666" }}>{methodIcon[m.k]} {isAr ? (m.k==="cash"?"نقداً":m.k==="card"?"بطاقة":"تحويل") : (m.k==="cash"?"Cash":m.k==="card"?"Card":"Transfer")}</span>
+                <span style={{ fontSize:12,fontWeight:700,color:m.color }}>{m.pct}%</span>
+              </div>
+              <div style={{ height:6,background:"#f0f0f0",borderRadius:10,overflow:"hidden" }}>
+                <div style={{ height:"100%",width:`${m.pct}%`,background:m.color,borderRadius:10,transition:"width .8s" }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="stats-slider-dots">
+        {[...cards, null].map((_, i) => (
+          <span key={i} className={activeIdx === i ? "active" : ""}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── مخطط الإيرادات ───────────────────────────────────────
 function RevenueChart({ lang, months, revenueData }: { lang: string; months: string[]; revenueData: number[] }) {
   const tr = T[lang];
@@ -842,9 +931,9 @@ function WithdrawModal({ lang, onSave, onClose }: { lang: string; onSave: (data:
   };
 
   return (
-    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:420,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(192,57,43,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+    <div className="modal-sheet" style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+      <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:420,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(192,57,43,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
             <div style={{ width:40,height:40,background:"rgba(192,57,43,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>💸</div>
@@ -898,9 +987,9 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
   };
 
   return (
-    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(123,45,139,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
+    <div className="modal-sheet" style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+      <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(123,45,139,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
             <div style={{ width:40,height:40,background:"rgba(123,45,139,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>🏪</div>
@@ -1760,30 +1849,56 @@ export default function PaymentsPage() {
         /* mobile tx cards */
         .mobile-tx{display:none}
         .desktop-tx{display:grid}
+        /* ── Stats Slider (mobile) ── */
+        .stats-slider-wrap{display:none}
+        .stats-slider-track{display:flex;gap:12px;padding:4px 2px 12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+        .stats-slider-track::-webkit-scrollbar{display:none}
+        .stats-slider-track .stat-big{min-width:72vw;max-width:76vw;scroll-snap-align:start;flex-shrink:0}
+        .stats-slider-dots{display:flex;justify-content:center;gap:6px;margin-top:4px}
+        .stats-slider-dots span{width:6px;height:6px;border-radius:50%;background:#dce2ec;transition:all .25s}
+        .stats-slider-dots span.active{background:#0863ba;width:18px;border-radius:3px}
+        /* ── Modal Mobile Fix ── */
         @media(max-width:768px){
-          .main-content{margin-left:0!important;margin-right:0!important;padding:0 14px 80px!important}
+          .main-content{margin-left:0!important;margin-right:0!important;padding:0 12px 100px!important}
           .topbar-inner{padding-left:${isAr?"0":"52px"}!important;padding-right:${isAr?"52px":"0"}!important}
-          .page-title{font-size:17px!important}
+          .page-title{font-size:18px!important}
           .page-sub{display:none!important}
           .export-btn{display:none!important}
           .add-btn-text-full{display:none!important}
           .add-btn-text-short{display:inline!important}
-          .add-btn{padding:9px 14px!important;font-size:12px!important}
-          .stats-grid{grid-template-columns:1fr 1fr!important;gap:10px!important}
-          .stat-big{padding:14px 16px!important;border-radius:14px!important}
-          .stat-big .stat-icon{display:none!important}
-          .stat-big .stat-val{font-size:20px!important}
+          .add-btn{padding:11px 18px!important;font-size:14px!important;border-radius:14px!important;min-height:44px!important}
+          /* hide desktop stats grid, show slider */
+          .stats-grid{display:none!important}
+          .stats-slider-wrap{display:block!important}
+          .stat-big{padding:18px 20px!important;border-radius:16px!important}
+          .stat-big .stat-val{font-size:22px!important}
           .main-grid{grid-template-columns:1fr!important}
-          .filter-chips-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important}
+          .filter-chips-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important;padding-bottom:4px}
           .filter-chips-wrap::-webkit-scrollbar{display:none}
+          .filter-chip{padding:9px 18px!important;font-size:13px!important;min-height:40px!important}
           .desktop-table-header{display:none!important}
           .mobile-tx{display:block!important}
           .desktop-tx{display:none!important}
-          .topbar-pad{padding:14px 0!important}
+          .topbar-pad{padding:12px 0!important}
+          /* Action buttons row - mobile topbar */
+          .topbar-actions-wrap{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+          .topbar-actions-wrap::-webkit-scrollbar{display:none}
+          .topbar-action-btn{padding:10px 14px!important;font-size:13px!important;min-height:44px!important;border-radius:12px!important;white-space:nowrap;flex-shrink:0}
+          /* Modal — full screen feel on mobile */
+          .modal-sheet{position:fixed!important;inset:0!important;align-items:flex-end!important;z-index:300!important}
+          .modal-inner{border-radius:24px 24px 0 0!important;max-height:92vh!important;width:100%!important;max-width:100%!important;margin:0!important;padding-bottom:env(safe-area-inset-bottom,16px)!important}
+          .modal-inner-center{border-radius:20px!important;margin:16px!important;max-width:calc(100% - 32px)!important;width:calc(100% - 32px)!important;max-height:88vh!important}
+          /* Pending section card on mobile */
+          .pending-row{padding:14px 14px!important}
+          /* Transaction cards bigger touch targets */
+          .tx-row{padding:16px 14px!important}
+          .icon-btn{width:38px!important;height:38px!important;font-size:15px!important}
         }
         @media(min-width:769px){
           .main-content{margin-${isAr?"right":"left"}:240px}
           .add-btn-text-short{display:none!important}
+          .stats-slider-wrap{display:none!important}
+          .stats-grid{display:grid!important}
         }
       `}</style>
 
@@ -2040,6 +2155,9 @@ export default function PaymentsPage() {
                 ))}
               </div>
             </div>
+
+            {/* ── MOBILE STATS SLIDER ── */}
+            <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} />
 
             {/* ── FINANCIAL SUMMARY ROW ── */}
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:24 }}>
@@ -2488,16 +2606,16 @@ export default function PaymentsPage() {
 
         {/* Delete Confirm */}
         {deleteId&&(
-          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-            <div onClick={()=>setDeleteId(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
-            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.15)",animation:"modalIn .25s ease" }}>
+          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+            <div onClick={()=>setDeleteId(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+            <div className="modal-inner-center" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
               <div style={{ fontSize:40,marginBottom:16 }}>🗑️</div>
               <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{tr.deleteConfirm}</h3>
               <div style={{ display:"flex",gap:12,marginTop:24 }}>
-                <button onClick={()=>deletePayment(deleteId)} style={{ flex:1,padding:"12px",background:"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>
+                <button onClick={()=>deletePayment(deleteId)} style={{ flex:1,padding:"14px",background:"#c0392b",color:"#fff",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",minHeight:50 }}>
                   {isAr?"نعم، احذف":"Yes, Delete"}
                 </button>
-                <button onClick={()=>setDeleteId(null)} style={{ flex:1,padding:"12px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
+                <button onClick={()=>setDeleteId(null)} style={{ flex:1,padding:"14px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer",minHeight:50 }}>
                   {isAr?"إلغاء":"Cancel"}
                 </button>
               </div>
@@ -2506,9 +2624,9 @@ export default function PaymentsPage() {
         )}
         {/* Reverse Withdrawal Confirm */}
         {reverseWithdrawalId!==null&&(
-          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-            <div onClick={()=>setReverseWithdrawalId(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
-            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.15)",animation:"modalIn .25s ease" }}>
+          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+            <div onClick={()=>setReverseWithdrawalId(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+            <div className="modal-inner-center" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
               <div style={{ fontSize:44,marginBottom:12 }}>↩️</div>
               <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:10 }}>
                 {isAr?"التراجع عن السحب":"Undo Withdrawal"}
@@ -2527,11 +2645,11 @@ export default function PaymentsPage() {
               })()}
               <div style={{ display:"flex",gap:12,marginTop:8 }}>
                 <button onClick={()=>reverseWithdrawal(reverseWithdrawalId)}
-                  style={{ flex:1,padding:"12px",background:"#e67e22",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(230,126,34,.3)" }}>
+                  style={{ flex:1,padding:"14px",background:"#e67e22",color:"#fff",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(230,126,34,.3)",minHeight:50 }}>
                   {isAr?"نعم، تراجع":"Yes, Undo"}
                 </button>
                 <button onClick={()=>setReverseWithdrawalId(null)}
-                  style={{ flex:1,padding:"12px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
+                  style={{ flex:1,padding:"14px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer",minHeight:50 }}>
                   {isAr?"إلغاء":"Cancel"}
                 </button>
               </div>
