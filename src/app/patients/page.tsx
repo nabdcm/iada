@@ -597,27 +597,52 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
   const t      = T[lang].profile;
   const isAr   = lang==="ar";
   const fileRef = useRef<HTMLInputElement>(null);
-  const [dragging,  setDragging]  = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [newType,   setNewType]   = useState("panoramic");
-  const [newNote,   setNewNote]   = useState("");
-  const [preview,   setPreview]   = useState<XRayImage|null>(null);
+  const [dragging,    setDragging]    = useState(false);
+  const [newType,     setNewType]     = useState("panoramic");
+  const [newNote,     setNewNote]     = useState("");
+  const [preview,     setPreview]     = useState<XRayImage|null>(null);
+  // حالة الصورة المُعلَّقة — تنتظر تأكيد الحفظ
+  const [pendingImg,  setPendingImg]  = useState<XRayImage|null>(null);
+  const [saving,      setSaving]      = useState(false);
 
   const handleFile = (file:File) => {
     if (!file.type.startsWith("image/")) return;
-    setUploading(true);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const img:XRayImage = { id:Date.now().toString(), url:e.target?.result as string, type:newType, date:new Date().toISOString().slice(0,10), note:newNote, name:file.name };
-      onChange([img,...xrays]);
-      setNewNote("");
-      setUploading(false);
+      const img:XRayImage = {
+        id:   Date.now().toString(),
+        url:  e.target?.result as string,
+        type: newType,
+        date: new Date().toISOString().slice(0,10),
+        note: newNote,
+        name: file.name,
+      };
+      setPendingImg(img); // عرض معاينة بدلاً من الحفظ الفوري
     };
     reader.readAsDataURL(file);
+    // نعيد قيمة الـ input حتى يمكن اختيار نفس الملف مرة أخرى
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const confirmSave = async () => {
+    if (!pendingImg) return;
+    setSaving(true);
+    // نُحدِّث نوع وملاحظة الصورة بأحدث قيمة من الفورم
+    const finalImg:XRayImage = { ...pendingImg, type:newType, note:newNote };
+    onChange([finalImg, ...xrays]);
+    setPendingImg(null);
+    setNewNote("");
+    setSaving(false);
+  };
+
+  const cancelPending = () => {
+    setPendingImg(null);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
+      {/* حقول الإعداد — نوع وملاحظة */}
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
         <div>
           <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:5 }}>{t.xrayType}</label>
@@ -630,10 +655,45 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
           <input value={newNote} onChange={e=>setNewNote(e.target.value)} style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,outline:"none",background:"#fafbfc",direction:isAr?"rtl":"ltr" }}/>
         </div>
       </div>
-      <div onClick={()=>fileRef.current?.click()} onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)handleFile(f);}}
-        style={{ border:`2px dashed ${dragging?"#0863ba":"#c8d4e0"}`,borderRadius:14,padding:"24px 16px",textAlign:"center",cursor:"pointer",background:dragging?"rgba(8,99,186,.05)":"#fafbfc",transition:"all .2s" }}>
-        {uploading?<div style={{ fontSize:13,color:"#0863ba" }}>⏳ {isAr?"جاري الرفع...":"Uploading..."}</div>:<><div style={{ fontSize:32,marginBottom:8 }}>🩻</div><div style={{ fontSize:13,color:"#888",fontWeight:500 }}>{t.dropzone}</div><div style={{ fontSize:11,color:"#bbb",marginTop:4 }}>JPG, PNG, WEBP</div></>}
-      </div>
+
+      {/* منطقة الرفع أو معاينة الصورة المُعلَّقة */}
+      {pendingImg ? (
+        /* ── معاينة الصورة قبل الحفظ ── */
+        <div style={{ borderRadius:14,border:"2px solid #0863ba",background:"#f0f6ff",padding:14,display:"flex",flexDirection:"column",gap:12 }}>
+          <div style={{ fontSize:12,fontWeight:700,color:"#0863ba",marginBottom:2 }}>
+            🩻 {isAr?"معاينة الصورة — تأكد قبل الحفظ":"Preview — confirm before saving"}
+          </div>
+          <img src={pendingImg.url} alt={pendingImg.name}
+            style={{ width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,background:"#000",border:"1.5px solid #dde4f0" }}/>
+          <div style={{ fontSize:11,color:"#555" }}>
+            <span style={{ fontWeight:700 }}>{isAr?"الملف:":"File:"}</span> {pendingImg.name}
+          </div>
+          {/* أزرار الحفظ والإلغاء */}
+          <div style={{ display:"flex",gap:10 }}>
+            <button onClick={confirmSave} disabled={saving}
+              style={{ flex:1,padding:"12px 0",background:saving?"#7aabdb":"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"background .2s",minHeight:48 }}>
+              {saving
+                ? <>{isAr?"جاري الحفظ...":"Saving..."}</>
+                : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>{isAr?"حفظ الصورة":"Save Image"}</>}
+            </button>
+            <button onClick={cancelPending}
+              style={{ padding:"12px 18px",background:"#fff",color:"#e74c3c",border:"1.5px solid #f5c6cb",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",minHeight:48 }}>
+              {isAr?"إلغاء":"Cancel"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* ── منطقة السحب والإفلات ── */
+        <div onClick={()=>fileRef.current?.click()}
+          onDragOver={e=>{e.preventDefault();setDragging(true);}}
+          onDragLeave={()=>setDragging(false)}
+          onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)handleFile(f);}}
+          style={{ border:`2px dashed ${dragging?"#0863ba":"#c8d4e0"}`,borderRadius:14,padding:"28px 16px",textAlign:"center",cursor:"pointer",background:dragging?"rgba(8,99,186,.05)":"#fafbfc",transition:"all .2s" }}>
+          <div style={{ fontSize:36,marginBottom:8 }}>🩻</div>
+          <div style={{ fontSize:13,color:"#888",fontWeight:500 }}>{t.dropzone}</div>
+          <div style={{ fontSize:11,color:"#bbb",marginTop:4 }}>JPG, PNG, WEBP</div>
+        </div>
+      )}
       <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{const f=e.target.files?.[0];if(f)handleFile(f);}}/>
       {xrays.length===0?(<div style={{ textAlign:"center",padding:"32px 0",color:"#ccc" }}><div style={{ fontSize:36,marginBottom:8 }}>🩻</div><div style={{ fontSize:13 }}>{t.noXrays}</div></div>):(
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))",gap:10 }}>
@@ -689,6 +749,8 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
   const [userId,         setUserId]         = useState<string>("");
   const [expandedField,  setExpandedField]  = useState<string|null>(null);
   const [draftValues,    setDraftValues]    = useState<Record<string,string>>({});
+  const [fieldSaving,    setFieldSaving]    = useState<string|null>(null);
+  const [fieldSaved,     setFieldSaved]     = useState<string|null>(null);
 
   useEffect(()=>{
     (async()=>{
@@ -710,9 +772,22 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
   };
 
   const saveField = async (key:string) => {
-    const updated = { ...profile, medical_fields:{ ...profile.medical_fields, [key]:draftValues[key]??"" } };
-    await saveProfile(updated);
+    const value = draftValues[key] ?? "";
+    const updated:PatientProfile = {
+      ...profile,
+      medical_fields: { ...profile.medical_fields, [key]: value },
+    };
+    setFieldSaving(key);
+    // نُحدِّث الحالة المحلية فوراً حتى لا تُفقَد البيانات
+    setProfile(updated);
+    if (userId) {
+      await saveProfileToDB(patient.id, userId, updated);
+    }
+    setFieldSaving(null);
+    setFieldSaved(key);
     setExpandedField(null);
+    // نُخفي علامة "تم الحفظ" بعد ثانيتين
+    setTimeout(() => setFieldSaved(prev => prev===key ? null : prev), 2000);
   };
 
   const calcAge = (dob?:string|null) => {
@@ -841,26 +916,48 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                       <span style={{ fontSize:16 }}>{meta.icon}</span>
                       <span style={{ fontSize:12,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {t.medicalRecord}</span>
                     </div>
-                    <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                    <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
                       {medFields.map(field=>{
                         const isExpanded = expandedField===field.key;
                         const val = draftValues[field.key]??"";
                         const savedVal = profile.medical_fields?.[field.key]??"";
+                        const isSavingThis = fieldSaving===field.key;
+                        const justSaved   = fieldSaved===field.key;
                         return (
                           <div key={field.key} style={{ borderRadius:12,border:`1.5px solid ${isExpanded?"#0863ba":"#eef0f3"}`,background:isExpanded?"#fff":"#f9fafb",overflow:"hidden",transition:"border-color .2s, box-shadow .2s",boxShadow:isExpanded?"0 0 0 3px rgba(8,99,186,.08)":"none" }}>
-                            {/* رأس الحقل — قابل للنقر */}
-                            <div className="med-field-row" onClick={()=>{ if(isExpanded){setExpandedField(null);}else{setDraftValues(p=>({...p,[field.key]:savedVal}));setExpandedField(field.key);} }} style={{ padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",userSelect:"none" as const,background:isExpanded?"#f0f6ff":"transparent" }}>
+                            {/* رأس الحقل */}
+                            <div style={{ padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",background:isExpanded?"#f0f6ff":"transparent" }}>
                               <div style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0 }}>
                                 <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
                                 <div style={{ minWidth:0 }}>
                                   <div style={{ fontSize:12,fontWeight:700,color:isExpanded?"#0863ba":"#555" }}>{isAr?field.label_ar:field.label_en}</div>
-                                  {!isExpanded&&savedVal&&<div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:340 }}>{savedVal}</div>}
-                                  {!isExpanded&&!savedVal&&<div style={{ fontSize:11,color:"#ccc",fontStyle:"italic",marginTop:1 }}>{isAr?"انقر للإضافة...":"Click to add..."}</div>}
+                                  {!isExpanded&&savedVal&&<div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220 }}>{savedVal}</div>}
+                                  {!isExpanded&&!savedVal&&<div style={{ fontSize:11,color:"#ccc",fontStyle:"italic",marginTop:1 }}>{isAr?"لم تُضَف بعد":"Not added yet"}</div>}
                                 </div>
                               </div>
-                              <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0,marginRight:isAr?0:0,marginLeft:isAr?0:0 }}>
-                                {savedVal&&!isExpanded&&<span style={{ fontSize:10,background:"rgba(8,99,186,.1)",color:"#0863ba",fontWeight:700,padding:"2px 7px",borderRadius:20 }}>{isAr?"مُعبَّأ":"Filled"}</span>}
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isExpanded?"#0863ba":"#ccc"} strokeWidth="2.5" strokeLinecap="round"><polyline points={isExpanded?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+                              {/* أزرار التعديل / الإغلاق */}
+                              <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                                {justSaved&&!isExpanded&&(
+                                  <span style={{ fontSize:10,background:"rgba(39,174,96,.12)",color:"#27ae60",fontWeight:700,padding:"2px 8px",borderRadius:20 }}>
+                                    ✓ {isAr?"تم الحفظ":"Saved"}
+                                  </span>
+                                )}
+                                {savedVal&&!isExpanded&&!justSaved&&(
+                                  <span style={{ fontSize:10,background:"rgba(8,99,186,.1)",color:"#0863ba",fontWeight:700,padding:"2px 7px",borderRadius:20 }}>
+                                    {isAr?"مُعبَّأ":"Filled"}
+                                  </span>
+                                )}
+                                {!isExpanded&&(
+                                  <button
+                                    onClick={()=>{ setDraftValues(p=>({...p,[field.key]:savedVal})); setExpandedField(field.key); }}
+                                    style={{ padding:"6px 12px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.25)",background:"rgba(8,99,186,.07)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",minHeight:34 }}>
+                                    ✏️ {isAr?"تعديل":"Edit"}
+                                  </button>
+                                )}
+                                {isExpanded&&(
+                                  <button onClick={()=>setExpandedField(null)}
+                                    style={{ width:28,height:28,borderRadius:7,background:"#f0f0f0",border:"none",cursor:"pointer",fontSize:12,color:"#888",display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
+                                )}
                               </div>
                             </div>
                             {/* منطقة التحرير — تظهر عند التوسع */}
@@ -872,13 +969,19 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                                   onChange={e=>setDraftValues(p=>({...p,[field.key]:e.target.value}))}
                                   rows={5}
                                   placeholder={isAr?"اكتب هنا...":"Write here..."}
-                                  style={{ width:"100%",padding:"10px 12px",border:"1.5px solid #c8d9f0",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",resize:"vertical",direction:isAr?"rtl":"ltr",lineHeight:1.7,boxSizing:"border-box",marginBottom:10 }}
+                                  style={{ width:"100%",padding:"10px 12px",border:"1.5px solid #c8d9f0",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",resize:"vertical" as const,direction:isAr?"rtl":"ltr",lineHeight:1.7,boxSizing:"border-box" as const,marginBottom:10 }}
                                 />
                                 <div style={{ display:"flex",gap:8 }}>
-                                  <button onClick={()=>saveField(field.key)} style={{ flex:1,padding:"9px 0",background:"#0863ba",color:"#fff",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-                                    ✓ {isAr?"حفظ":"Save"}
+                                  <button
+                                    onClick={()=>saveField(field.key)}
+                                    disabled={isSavingThis}
+                                    style={{ flex:1,padding:"12px 0",background:isSavingThis?"#7aabdb":"#0863ba",color:"#fff",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:isSavingThis?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,minHeight:48,transition:"background .2s" }}>
+                                    {isSavingThis
+                                      ? <>{isAr?"جاري الحفظ...":"Saving..."}</>
+                                      : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>{isAr?"حفظ":"Save"}</>}
                                   </button>
-                                  <button onClick={()=>setExpandedField(null)} style={{ padding:"9px 16px",background:"#f0f0f0",color:"#777",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>
+                                  <button onClick={()=>setExpandedField(null)}
+                                    style={{ padding:"12px 16px",background:"#f0f0f0",color:"#777",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer",minHeight:48 }}>
                                     {isAr?"إلغاء":"Cancel"}
                                   </button>
                                 </div>
