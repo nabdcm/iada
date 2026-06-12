@@ -107,7 +107,7 @@ const T = {
     totalWithdrawals:"إجمالي السحوبات",
     totalExpenses:"مصروفات العيادة",
     withdrawalsSection:{ title:"السحوبات الأخيرة", empty:"لا توجد سحوبات مسجّلة", reverseConfirm:"هل تريد التراجع عن هذا السحب؟ سيُعاد المبلغ للرصيد.", reverseBtn:"تراجع", reversed:"مُلغى" },
-    expensesSection:{ title:"مصروفات العيادة", empty:"لا توجد مصروفات مسجّلة" },
+    expensesSection:{ title:"مصروفات العيادة", empty:"لا توجد مصروفات مسجّلة", reverseConfirm:"هل تريد التراجع عن هذا المصروف؟ سيُعاد المبلغ للرصيد.", reverseBtn:"تراجع", reversed:"مُلغى" },
     txType:{ income:"دخل", withdrawal:"سحب", expense:"مصروف" },
     filterType:{ all:"الكل", income:"دخل", withdrawal:"سحوبات", expense:"مصروفات" },
     sharedClinic:{
@@ -225,7 +225,7 @@ const T = {
     totalWithdrawals:"Total Withdrawals",
     totalExpenses:"Clinic Expenses",
     withdrawalsSection:{ title:"Recent Withdrawals", empty:"No withdrawals recorded", reverseConfirm:"Undo this withdrawal? The amount will be returned to the balance.", reverseBtn:"Undo", reversed:"Reversed" },
-    expensesSection:{ title:"Clinic Expenses", empty:"No expenses recorded" },
+    expensesSection:{ title:"Clinic Expenses", empty:"No expenses recorded", reverseConfirm:"Undo this expense? The amount will be returned to the balance.", reverseBtn:"Undo", reversed:"Reversed" },
     txType:{ income:"Income", withdrawal:"Withdrawal", expense:"Expense" },
     filterType:{ all:"All", income:"Income", withdrawal:"Withdrawals", expense:"Expenses" },
     sharedClinic:{
@@ -1071,6 +1071,7 @@ export default function PaymentsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showExpenseModal,  setShowExpenseModal]  = useState(false);
   const [reverseWithdrawalId, setReverseWithdrawalId] = useState<number|null>(null);
+  const [reverseExpenseId, setReverseExpenseId] = useState<number|null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [plan, setPlan] = useState<PlanType>("basic");
   // خطط العيادات المشتركة: قائمة الأطباء والفلتر المحدد
@@ -1336,6 +1337,18 @@ export default function PaymentsPage() {
       setWithdrawals(prev => prev.map(w => w.id === id ? { ...w, is_reversed: true } : w));
     }
     setReverseWithdrawalId(null);
+  };
+
+  // ── التراجع عن مصروف ─────────────────────────────────────────
+  const reverseExpense = async (id: number) => {
+    const { error } = await supabase
+      .from("clinic_expenses")
+      .update({ is_reversed: true })
+      .eq("id", id);
+    if (!error) {
+      setExpenses(prev => prev.map(e => e.id === id ? { ...e, is_reversed: true } : e));
+    }
+    setReverseExpenseId(null);
   };
 
   // ── تسجيل مصروف عيادة ────────────────────────────────────────
@@ -2620,15 +2633,27 @@ export default function PaymentsPage() {
                     expenses.slice(0,5).map((e,i)=>{
                       const catLabels = tr.expenseModal.categories;
                       return (
-                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0 }}>
+                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0,opacity:e.is_reversed?.5:1 }}>
                           <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
-                            <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{e.description}</div>
+                            <div style={{ fontSize:12,fontWeight:600,color:e.is_reversed?"#bbb":"#353535",textDecoration:e.is_reversed?"line-through":"none",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{e.description}</div>
                             <div style={{ display:"flex",gap:8,marginTop:3,flexWrap:"wrap" }}>
                               <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600,flexShrink:0 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
                               <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
+                              {e.is_reversed && <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"rgba(200,200,200,.15)",color:"#bbb" }}>{tr.expensesSection.reversed}</span>}
                             </div>
                           </div>
-                          <span style={{ fontSize:13,fontWeight:800,color:"#7b2d8b",flexShrink:0,whiteSpace:"nowrap" }}>-{e.amount.toLocaleString()} ل.س</span>
+                          <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                            <span style={{ fontSize:13,fontWeight:800,color:e.is_reversed?"#bbb":"#7b2d8b",textDecoration:e.is_reversed?"line-through":"none",whiteSpace:"nowrap" }}>-{e.amount.toLocaleString()} ل.س</span>
+                            {!e.is_reversed && (
+                              <button
+                                onClick={()=>setReverseExpenseId(e.id)}
+                                title={tr.expensesSection.reverseBtn}
+                                style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
+                                onMouseEnter={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.18)";}}
+                                onMouseLeave={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.08)";}}
+                              >↩️</button>
+                            )}
+                          </div>
                         </div>
                       );
                     })
@@ -2695,6 +2720,40 @@ export default function PaymentsPage() {
                   {isAr?"نعم، تراجع":"Yes, Undo"}
                 </button>
                 <button onClick={()=>setReverseWithdrawalId(null)}
+                  style={{ flex:1,padding:"14px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer",minHeight:50 }}>
+                  {isAr?"إلغاء":"Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Reverse Expense Confirm */}
+        {reverseExpenseId!==null&&(
+          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+            <div onClick={()=>setReverseExpenseId(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+            <div className="modal-inner-center" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
+              <div style={{ fontSize:44,marginBottom:12 }}>↩️</div>
+              <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:10 }}>
+                {isAr?"التراجع عن المصروف":"Undo Expense"}
+              </h3>
+              <p style={{ fontSize:13,color:"#888",lineHeight:1.7,marginBottom:6 }}>
+                {tr.expensesSection.reverseConfirm}
+              </p>
+              {(()=>{
+                const exp = expenses.find(x=>x.id===reverseExpenseId);
+                return exp ? (
+                  <div style={{ background:"rgba(123,45,139,.06)",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:12,padding:"10px 16px",marginBottom:20,display:"inline-flex",alignItems:"center",gap:8 }}>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#7b2d8b" }}>+{exp.amount.toLocaleString()} ل.س</span>
+                    <span style={{ fontSize:12,color:"#888" }}>{exp.description}</span>
+                  </div>
+                ) : null;
+              })()}
+              <div style={{ display:"flex",gap:12,marginTop:8 }}>
+                <button onClick={()=>reverseExpense(reverseExpenseId)}
+                  style={{ flex:1,padding:"14px",background:"#7b2d8b",color:"#fff",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(123,45,139,.3)",minHeight:50 }}>
+                  {isAr?"نعم، تراجع":"Yes, Undo"}
+                </button>
+                <button onClick={()=>setReverseExpenseId(null)}
                   style={{ flex:1,padding:"14px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer",minHeight:50 }}>
                   {isAr?"إلغاء":"Cancel"}
                 </button>
