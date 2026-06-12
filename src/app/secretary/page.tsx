@@ -21,6 +21,13 @@ const AVT_COLORS    = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a08
 const getColor = (id: number) => AVT_COLORS[id % AVT_COLORS.length];
 const initials  = (name: string) => name.trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
 
+// ── ثوابت التقويم (مستنسخة من صفحة الوصول المقيد) ──────────
+const APPT_MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const APPT_STATUS_LABEL: Record<string,string> = { scheduled:"محدد", completed:"مكتمل", cancelled:"ملغي", "no-show":"لم يحضر" };
+const APPT_STATUS_COLOR: Record<string,string> = { scheduled:"#0863ba", completed:"#2e7d32", cancelled:"#c0392b", "no-show":"#888" };
+const APPT_DOC_COLORS = ["#6d28d9","#0863ba","#2e7d32","#c0392b","#e67e22","#0891b2"];
+const toKeyAppt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
 const T = {
   ar: {
     appName:"نبض", title:"لوحة السكرتيرة", sub:"إدارة المواعيد والمرضى والمعاملات المالية",
@@ -626,8 +633,15 @@ export default function SecretaryPage() {
 
   // UI state
   const [activeTab, setActiveTab] = useState<Tab>("appointments");
-  const [selectedDate, setSelectedDate] = useState(today);
   const [patSearch, setPatSearch] = useState("");
+
+  // ── حالة التقويم الشهري (مستنسخة من صفحة الوصول المقيد) ──
+  const nowCal = new Date();
+  const todayKey = toKeyAppt(nowCal);
+  const [viewMonth,        setViewMonth]        = useState(nowCal.getMonth());
+  const [viewYear,         setViewYear]         = useState(nowCal.getFullYear());
+  const [selectedKey,      setSelectedKey]      = useState(todayKey);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<number | "all">("all");
 
   // modals
   const [showApptModal, setShowApptModal] = useState(false);
@@ -749,7 +763,6 @@ export default function SecretaryPage() {
   };
 
   // ── computed ─────────────────────────────────────────────
-  const dayAppts = useMemo(()=>appointments.filter(a=>a.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time)),[appointments,selectedDate]);
   const filtPats  = useMemo(()=>patients.filter(p=>p.name.includes(patSearch)||p.phone?.includes(patSearch)),[patients,patSearch]);
   const todayTx   = useMemo(()=>{
     const tp = payments.filter(p=>p.date===today);
@@ -761,15 +774,6 @@ export default function SecretaryPage() {
 
   const todayIncome = payments.filter(p=>p.date===today&&p.status==="paid").reduce((s,p)=>s+p.amount,0);
 
-  // ── date strip: 7 days ────────────────────────────────────
-  const dateStrip = useMemo(()=>{
-    return Array.from({length:7},(_,i)=>{
-      const d = new Date(); d.setDate(d.getDate()-3+i);
-      return d.toISOString().slice(0,10);
-    });
-  },[]);
-
-  const fmtTime = (t:string) => { const [h,m]=t.slice(0,5).split(":").map(Number); const ap=h>=12?"م":"ص"; return `${h>12?h-12:h||12}:${String(m).padStart(2,"0")} ${isAr?ap:(h>=12?"PM":"AM")}`; };
   const fmtDateShort = (d:string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"});
   const getAge = (dob:string) => { if (!dob) return null; const y=new Date().getFullYear()-new Date(dob).getFullYear(); return y>0?`${y} ${tr.age}`:null; };
 
@@ -788,16 +792,6 @@ export default function SecretaryPage() {
       if (dx < 0 && cur < tabOrder.length-1) setActiveTab(tabOrder[cur+1]);
       if (dx > 0 && cur > 0)                  setActiveTab(tabOrder[cur-1]);
     }
-  };
-
-  const statusBadge = (s: ApptStatus) => {
-    const colors: Record<ApptStatus,{bg:string;color:string}> = {
-      scheduled:  {bg:"rgba(8,99,186,.1)",   color:"#0863ba"},
-      completed:  {bg:"rgba(46,125,50,.1)",   color:"#2e7d32"},
-      cancelled:  {bg:"rgba(192,57,43,.1)",  color:"#c0392b"},
-      "no-show":  {bg:"rgba(136,136,136,.1)",color:"#888"},
-    };
-    return colors[s]||colors.scheduled;
   };
 
   if (loading) return (
@@ -821,6 +815,9 @@ export default function SecretaryPage() {
         @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         .tab-pane{width:100%;padding:0 16px 100px}
+        @media(max-width:640px){
+          .appt-grid{grid-template-columns:1fr!important}
+        }
         .tx-card:active{background:#f0f7ff!important}
         .pat-row:active{background:#f0f7ff!important}
         input,select,textarea{font-family:Rubik,sans-serif;}
@@ -867,74 +864,233 @@ export default function SecretaryPage() {
       {/* ── TAB CONTENT ──────────────────────────────────── */}
       <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ width:"100%" }}>
 
-        {/* ══ TAB 1: APPOINTMENTS ══════════════════════════ */}
+        {/* ══ TAB 1: APPOINTMENTS — تقويم شهري كامل ════════ */}
         <div className="tab-pane" style={{ display:activeTab==="appointments"?"block":"none" }}>
-          {/* date strip */}
-          <div style={{ display:"flex",gap:6,overflowX:"auto",padding:"14px 0 4px",scrollbarWidth:"none",msOverflowStyle:"none" }}>
-            {dateStrip.map(d=>{
-              const isSelected = d===selectedDate;
-              const isToday    = d===today;
-              const dayObj     = new Date(d+"T00:00:00");
-              const dayName    = tr.weekDaysFull[dayObj.getDay()].slice(0,3);
-              const count      = appointments.filter(a=>a.date===d).length;
-              return (
-                <button key={d} onClick={()=>setSelectedDate(d)}
-                  style={{ minWidth:56,padding:"8px 6px",borderRadius:12,border:isSelected?"2px solid "+PRIMARY:"1.5px solid #e8edf3",background:isSelected?PRIMARY:"#fff",cursor:"pointer",flexShrink:0,textAlign:"center",transition:"all .2s",boxShadow:isSelected?"0 4px 12px rgba(8,99,186,.2)":"none" }}>
-                  <div style={{ fontSize:10,fontWeight:600,color:isSelected?"rgba(255,255,255,.8)":(isToday?PRIMARY:"#999"),marginBottom:2 }}>{dayName}</div>
-                  <div style={{ fontSize:17,fontWeight:800,color:isSelected?"#fff":(isToday?PRIMARY:"#353535") }}>{dayObj.getDate()}</div>
-                  {count>0&&<div style={{ marginTop:4,width:16,height:16,borderRadius:"50%",background:isSelected?"rgba(255,255,255,.3)":"rgba(8,99,186,.1)",color:isSelected?"#fff":PRIMARY,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",margin:"4px auto 0" }}>{count}</div>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* selected date label */}
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",margin:"12px 0 10px" }}>
-            <div style={{ fontSize:13,fontWeight:600,color:"#555" }}>{fmtDateShort(selectedDate)} — {dayAppts.length} {isAr?"مواعيد":"appointments"}</div>
+          {/* زر إضافة موعد */}
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 0 10px" }}>
+            <div style={{ fontSize:13,fontWeight:600,color:"#555" }}>
+              {(() => { const s=selectedKey.split("-"); return s.length===3?`${parseInt(s[2])} ${APPT_MONTHS_AR[parseInt(s[1])-1]} ${s[0]}`:selectedKey; })()}
+            </div>
             <button onClick={()=>{setEditAppt(null);setShowApptModal(true);}}
               style={{ padding:"7px 14px",background:PRIMARY,color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:5,boxShadow:"0 3px 10px rgba(8,99,186,.25)" }}>
               + {tr.addAppointment}
             </button>
           </div>
 
-          {/* appointments list */}
-          {dayAppts.length===0?(
-            <div style={{ textAlign:"center",padding:"48px 0",color:"#aaa" }}>
-              <div style={{ fontSize:36,marginBottom:10 }}>📭</div>
-              <div style={{ fontSize:14 }}>{tr.noAppointments}</div>
-            </div>
-          ):dayAppts.map(appt=>{
-            const patient = patients.find(p=>p.id===appt.patient_id);
-            const doctor  = doctors.find(d=>d.id===(appt as any).doctor_id);
-            const sb      = statusBadge(appt.status as ApptStatus);
+          {/* شبكة التقويم + مواعيد اليوم */}
+          {(() => {
+            const countByKey: Record<string,number> = {};
+            appointments.forEach(a => { countByKey[a.date]=(countByKey[a.date]||0)+1; });
+            const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+            const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+            const calDays: (number|null)[] = [];
+            for (let i=0;i<firstDay;i++) calDays.push(null);
+            for (let d=1;d<=daysInMonth;d++) calDays.push(d);
+            const weekDaysSh = ["أحد","إثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
+
+            const isShared = ["shared_basic","shared_pro","shared_enterprise"].includes((doctors as any)._plan||"") || doctors.length > 0;
+
+            const dayAppointments = appointments
+              .filter(a => a.date === selectedKey)
+              .filter(a => {
+                if (!isShared || doctors.length === 0) return true;
+                if (selectedDoctorId === "all") return true;
+                return (a as any).doctor_id === selectedDoctorId;
+              })
+              .sort((a,b) => a.time.localeCompare(b.time));
+
             return (
-              <div key={appt.id} onClick={()=>{setEditAppt(appt);setShowApptModal(true);}}
-                style={{ background:"#fff",borderRadius:14,padding:"14px",marginBottom:10,display:"flex",alignItems:"center",gap:12,border:"1.5px solid #eef0f3",cursor:"pointer",transition:"all .15s",boxShadow:"0 2px 8px rgba(0,0,0,.04)",animation:"fadeIn .25s ease" }}>
-                {/* time */}
-                <div style={{ textAlign:"center",minWidth:44,flexShrink:0 }}>
-                  <div style={{ fontSize:14,fontWeight:800,color:PRIMARY }}>{fmtTime(appt.time)}</div>
-                  {appt.duration&&<div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{appt.duration}د</div>}
-                </div>
-                {/* divider */}
-                <div style={{ width:2,alignSelf:"stretch",background:sb.bg,borderRadius:2,flexShrink:0 }}/>
-                {/* info */}
-                <div style={{ flex:1,minWidth:0 }}>
-                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:4 }}>
-                    <div style={{ width:28,height:28,borderRadius:8,background:patient?getColor(patient.id):"#ccc",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0 }}>
-                      {patient?initials(patient.name):"?"}
+              <div className="appt-grid" style={{ display:"grid",gridTemplateColumns:"260px 1fr",gap:16 }}>
+
+                {/* ── التقويم الشهري ── */}
+                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)",height:"fit-content" }}>
+                  <div style={{ padding:"14px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                    <button onClick={()=>{ let m=viewMonth-1,y=viewYear; if(m<0){m=11;y--;} setViewMonth(m);setViewYear(y); }}
+                      style={{ width:28,height:28,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>‹</button>
+                    <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>{APPT_MONTHS_AR[viewMonth]} {viewYear}</div>
+                    <button onClick={()=>{ let m=viewMonth+1,y=viewYear; if(m>11){m=0;y++;} setViewMonth(m);setViewYear(y); }}
+                      style={{ width:28,height:28,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>›</button>
+                  </div>
+                  <div style={{ padding:"10px 12px" }}>
+                    <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4 }}>
+                      {weekDaysSh.map(d=><div key={d} style={{ textAlign:"center",fontSize:9,fontWeight:700,color:"#bbb",padding:"3px 0" }}>{d}</div>)}
                     </div>
-                    <span style={{ fontWeight:600,fontSize:14,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{patient?.name||"—"}</span>
-                  </div>
-                  <div style={{ display:"flex",gap:6,flexWrap:"wrap",alignItems:"center" }}>
-                    <span style={{ padding:"2px 8px",borderRadius:20,background:sb.bg,color:sb.color,fontSize:11,fontWeight:600 }}>{tr.statuses[appt.status as ApptStatus]||appt.status}</span>
-                    {appt.type&&<span style={{ fontSize:11,color:"#888" }}>{appt.type}</span>}
-                    {doctor&&<span style={{ fontSize:11,color:doctor.color||PRIMARY }}>• {doctor.name}</span>}
+                    <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2 }}>
+                      {calDays.map((d,i)=>{
+                        if (!d) return <div key={i}/>;
+                        const k = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                        const cnt = countByKey[k]||0;
+                        const isSel=k===selectedKey, isTod=k===todayKey;
+                        return (
+                          <div key={i} onClick={()=>setSelectedKey(k)}
+                            style={{ borderRadius:8,cursor:"pointer",transition:"all .15s",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,background:isSel?"#0863ba":isTod?"rgba(8,99,186,.08)":"transparent",color:isSel?"#fff":isTod?"#0863ba":"#353535",border:isTod&&!isSel?"1.5px solid rgba(8,99,186,.2)":"1.5px solid transparent" }}>
+                            <span style={{ fontSize:12,fontWeight:isSel||isTod?700:400 }}>{d}</span>
+                            {cnt>0&&<div style={{ width:14,height:4,borderRadius:3,background:isSel?"rgba(255,255,255,.6)":"#0863ba" }}/>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button onClick={()=>setSelectedKey(todayKey)}
+                      style={{ width:"100%",marginTop:10,padding:"7px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer" }}>
+                      📅 اليوم
+                    </button>
                   </div>
                 </div>
-                <div style={{ fontSize:18,color:"#ddd",flexShrink:0 }}>{isAr?"‹":"›"}</div>
+
+                {/* ── مواعيد اليوم المحدد ── */}
+                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
+                  <div style={{ padding:"16px 20px 12px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10 }}>
+                    <div>
+                      <div style={{ fontSize:15,fontWeight:800,color:"#353535" }}>
+                        {(() => { const s=selectedKey.split("-"); return s.length===3?`${parseInt(s[2])} ${APPT_MONTHS_AR[parseInt(s[1])-1]} ${s[0]}`:selectedKey; })()}
+                      </div>
+                      <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{dayAppointments.length} مواعيد</div>
+                    </div>
+                    {doctors.length > 0 && (
+                      <select value={selectedDoctorId} onChange={e=>setSelectedDoctorId(e.target.value==="all"?"all":Number(e.target.value))}
+                        style={{ padding:"6px 10px",border:"1.5px solid rgba(8,99,186,.18)",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,color:"#0863ba",background:"rgba(8,99,186,.05)",cursor:"pointer",outline:"none" }}>
+                        <option value="all">جميع الأطباء</option>
+                        {doctors.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+
+                  <div style={{ padding:"12px 16px 16px" }}>
+                    {dayAppointments.length === 0 ? (
+                      <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
+                        <div style={{ fontSize:44,marginBottom:14 }}>📅</div>
+                        <div style={{ fontSize:15,fontWeight:600 }}>لا توجد مواعيد في هذا اليوم</div>
+                      </div>
+                    ) : doctors.length > 0 ? (
+                      /* ══ جدول مشترك — حسب الطبيب ══ */
+                      (() => {
+                        const docIdsOrdered: (number|null)[] = [];
+                        [...dayAppointments].sort((a,b)=>a.time.localeCompare(b.time)).forEach(appt=>{
+                          const docId=(appt as any).doctor_id??null;
+                          if (!docIdsOrdered.includes(docId)) docIdsOrdered.push(docId);
+                        });
+                        const tableDocList = docIdsOrdered.map(docId=>({
+                          id: docId,
+                          doc: docId?doctors.find(d=>d.id===docId)??null:null,
+                        }));
+                        const uniqueTimes=[...new Set(dayAppointments.map(a=>a.time.slice(0,5)))].sort();
+                        const apptMap: Record<string,Record<string,Appointment>> = {};
+                        dayAppointments.forEach(appt=>{
+                          const t=appt.time.slice(0,5);
+                          const d=String((appt as any).doctor_id??"null");
+                          if (!apptMap[t]) apptMap[t]={};
+                          apptMap[t][d]=appt;
+                        });
+                        const colW=Math.max(140,Math.floor(420/tableDocList.length));
+                        return (
+                          <div style={{ overflowX:"auto",borderRadius:16,border:"1.5px solid #e8edf5",boxShadow:"0 4px 20px rgba(8,99,186,.07)" }}>
+                            <table style={{ width:"100%",borderCollapse:"collapse",minWidth:60+tableDocList.length*colW }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ width:64,minWidth:64,background:"linear-gradient(135deg,#0863ba,#054a8c)",padding:"14px 10px",textAlign:"center",color:"#fff",fontSize:11,fontWeight:700,letterSpacing:.5,borderInlineEnd:"2px solid rgba(255,255,255,.15)",position:"sticky",right:0,zIndex:2 }}>الساعة</th>
+                                  {tableDocList.map((d,i)=>{
+                                    const dc=APPT_DOC_COLORS[i%APPT_DOC_COLORS.length];
+                                    return (
+                                      <th key={i} style={{ background:`linear-gradient(135deg,${dc}18,${dc}08)`,borderBottom:`3px solid ${dc}`,borderInlineEnd:i<tableDocList.length-1?`1.5px solid ${dc}18`:"none",padding:"12px 10px",textAlign:"center",minWidth:colW }}>
+                                        <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:5 }}>
+                                          <div style={{ width:38,height:38,borderRadius:10,background:dc,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,boxShadow:`0 3px 10px ${dc}50` }}>
+                                            {d.doc?initials(d.doc.name):"?"}
+                                          </div>
+                                          <div style={{ fontSize:12,fontWeight:800,color:dc,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:colW-16 }}>{d.doc?d.doc.name:"غير محدد"}</div>
+                                          {d.doc?.specialty&&<div style={{ fontSize:10,color:"#aaa",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:colW-16 }}>{d.doc.specialty}</div>}
+                                          <div style={{ background:`${dc}15`,border:`1px solid ${dc}30`,borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,color:dc }}>
+                                            {dayAppointments.filter(a=>(a as any).doctor_id===d.id).length} مواعيد
+                                          </div>
+                                        </div>
+                                      </th>
+                                    );
+                                  })}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {uniqueTimes.map((time,ri)=>{
+                                  const isEven=ri%2===0;
+                                  const rowHasMultiple=Object.keys(apptMap[time]??{}).length>1;
+                                  return (
+                                    <tr key={time} style={{ background:rowHasMultiple?"rgba(8,99,186,.03)":(isEven?"#fff":"#fafbfc") }}>
+                                      <td style={{ padding:"10px 8px",textAlign:"center",background:"linear-gradient(135deg,#f0f6ff,#e8f0fb)",borderInlineEnd:"2px solid #e0eaf6",borderBottom:"1px solid #eef0f3",position:"sticky",right:0,zIndex:1,verticalAlign:"middle" }}>
+                                        <div style={{ fontSize:15,fontWeight:900,color:"#0863ba",lineHeight:1 }}>{time}</div>
+                                        {rowHasMultiple&&<div style={{ fontSize:9,color:"#0863ba",opacity:.6,marginTop:2,fontWeight:600 }}>تعارض</div>}
+                                      </td>
+                                      {tableDocList.map((d,ci)=>{
+                                        const dc=APPT_DOC_COLORS[ci%APPT_DOC_COLORS.length];
+                                        const appt=apptMap[time]?.[String(d.id??"null")];
+                                        return (
+                                          <td key={ci} style={{ padding:"7px 8px",borderInlineEnd:ci<tableDocList.length-1?`1.5px solid ${dc}15`:"none",borderBottom:"1px solid #eef0f3",verticalAlign:"middle" }}>
+                                            {appt?(()=>{
+                                              const patient=patients.find(p=>p.id===appt.patient_id);
+                                              const pName=patient?.name??"—";
+                                              const bColor=APPT_STATUS_COLOR[appt.status]??"#888";
+                                              return (
+                                                <div onClick={()=>{setEditAppt(appt);setShowApptModal(true);}} style={{ background:`linear-gradient(135deg,${bColor}10,${bColor}05)`,border:`1.5px solid ${bColor}35`,borderRadius:10,padding:"8px 10px",display:"flex",flexDirection:"column",gap:5,boxShadow:`0 2px 8px ${bColor}15`,cursor:"pointer" }}>
+                                                  <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                                                    <div style={{ width:26,height:26,borderRadius:7,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0 }}>
+                                                      {pName!=="—"?initials(pName):"?"}
+                                                    </div>
+                                                    <div style={{ fontSize:11,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1 }}>{pName}</div>
+                                                  </div>
+                                                  <div style={{ display:"flex",alignItems:"center",gap:4,flexWrap:"wrap" }}>
+                                                    <span style={{ fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:20,background:bColor,color:"#fff" }}>{APPT_STATUS_LABEL[appt.status]??appt.status}</span>
+                                                    <span style={{ fontSize:9,color:"#aaa" }}>{appt.duration??30}د</span>
+                                                    {appt.type&&<span style={{ fontSize:9,color:"#999",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:70 }}>{appt.type}</span>}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })():(
+                                              <div style={{ height:36,borderRadius:8,background:`${dc}06`,border:`1.5px dashed ${dc}25` }}/>
+                                            )}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      /* ══ عرض عادي — للخطط الفردية ══ */
+                      <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                        {dayAppointments.map(appt=>{
+                          const patient=patients.find(p=>p.id===appt.patient_id);
+                          const bColor=APPT_STATUS_COLOR[appt.status]??"#888";
+                          return (
+                            <div key={appt.id} onClick={()=>{setEditAppt(appt);setShowApptModal(true);}}
+                              style={{ background:`${bColor}08`,border:`1.5px solid ${bColor}30`,borderInlineStartWidth:4,borderInlineStartColor:bColor,borderRadius:14,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 2px 8px rgba(0,0,0,.04)",cursor:"pointer",transition:"all .15s" }}>
+                              <div style={{ flexShrink:0,textAlign:"center",minWidth:48,background:"rgba(255,255,255,.7)",borderRadius:10,padding:"6px 8px",border:`1px solid ${bColor}20` }}>
+                                <div style={{ fontSize:15,fontWeight:800,color:bColor,lineHeight:1 }}>{appt.time.slice(0,5)}</div>
+                                <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{appt.duration??30} دقيقة</div>
+                              </div>
+                              <div style={{ width:38,height:38,borderRadius:10,background:patient?getColor(patient.id):"#ccc",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
+                                {patient?initials(patient.name):"?"}
+                              </div>
+                              <div style={{ flex:1,minWidth:0 }}>
+                                <div style={{ fontSize:14,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{patient?.name??"—"}</div>
+                                <div style={{ fontSize:11,color:"#999",marginTop:2 }}>
+                                  {appt.type&&<span>{appt.type} · </span>}
+                                  <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
+                                    {APPT_STATUS_LABEL[appt.status]??appt.status}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               </div>
             );
-          })}
+          })()}
         </div>
 
         {/* ══ TAB 2: PATIENTS ══════════════════════════════ */}
