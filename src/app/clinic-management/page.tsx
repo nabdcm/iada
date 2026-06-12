@@ -450,27 +450,57 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
   };
 
   const saveSchedule = async (doctorId: number) => {
-    // نقرأ أحدث نسخة من الجدول مباشرة من schedules state
+    // نقرأ أحدث نسخة من الجدول من schedules state بشكل آمن
     const currentSchedules = await new Promise<Record<number, DoctorSchedule>>(resolve => {
       setSchedules(prev => { resolve(prev); return prev; });
     });
     const sch = currentSchedules[doctorId] ?? defaultSchedule(doctorId, userId);
     setSaveStatus(p => ({ ...p, [doctorId]: "saving" }));
-    const payload = {
-      doctor_id: doctorId,
-      user_id: userId,
-      days: sch.days,
-      vacations: sch.vacations,
-      appointment_duration: sch.appointment_duration,
-      max_daily_appointments: sch.max_daily_appointments,
-      notes: sch.notes,
-    };
+
+    // نحوّل days وvacations لـ JSON string صراحةً لتجنب مشاكل Supabase JSONB
+    const daysJson = JSON.parse(JSON.stringify(sch.days));
+    const vacationsJson = Array.isArray(sch.vacations) ? sch.vacations : [];
+
     if (sch.id) {
-      const { error } = await supabase.from("doctor_schedules").update(payload).eq("id", sch.id);
-      if (error) { console.error("Save error:", error); setSaveStatus(p => ({ ...p, [doctorId]: "idle" })); return; }
+      // عند التحديث: لا نرسل user_id أو doctor_id (immutable / RLS protected)
+      const updatePayload = {
+        days: daysJson,
+        vacations: vacationsJson,
+        appointment_duration: sch.appointment_duration,
+        max_daily_appointments: sch.max_daily_appointments,
+        notes: sch.notes ?? "",
+      };
+      const { error } = await supabase
+        .from("doctor_schedules")
+        .update(updatePayload)
+        .eq("id", sch.id)
+        .eq("user_id", userId); // ضمان الأمان عبر user_id في الـ filter
+      if (error) {
+        console.error("Save error:", error.message, error.details, error.hint);
+        setSaveStatus(p => ({ ...p, [doctorId]: "idle" }));
+        return;
+      }
     } else {
-      const { data, error } = await supabase.from("doctor_schedules").insert(payload).select().single();
-      if (error) { console.error("Insert error:", error); setSaveStatus(p => ({ ...p, [doctorId]: "idle" })); return; }
+      // عند الإنشاء: نرسل كل الحقول
+      const insertPayload = {
+        doctor_id: doctorId,
+        user_id: userId,
+        days: daysJson,
+        vacations: vacationsJson,
+        appointment_duration: sch.appointment_duration,
+        max_daily_appointments: sch.max_daily_appointments,
+        notes: sch.notes ?? "",
+      };
+      const { data, error } = await supabase
+        .from("doctor_schedules")
+        .insert(insertPayload)
+        .select()
+        .single();
+      if (error) {
+        console.error("Insert error:", error.message, error.details, error.hint);
+        setSaveStatus(p => ({ ...p, [doctorId]: "idle" }));
+        return;
+      }
       if (data) setSchedules(prev => ({ ...prev, [doctorId]: { ...sch, id: data.id } }));
     }
     setSaveStatus(p => ({ ...p, [doctorId]: "saved" }));
@@ -1096,8 +1126,10 @@ export default function ClinicManagementPage() {
     : 30;
 
   const mainStyle: React.CSSProperties = {
-    flex: 1, minWidth: 0, padding: isMobile ? "60px 16px 24px" : "24px 28px",
-    background: "#f7f9fc", minHeight: "100vh",
+    flex: 1, minWidth: 0, padding: isMobile ? "60px 16px 32px" : "24px 28px 40px",
+    background: "#f7f9fc",
+    overflowY: "auto",
+    height: "100vh",
     direction: isAr ? "rtl" : "ltr", fontFamily: "Rubik, sans-serif",
   };
 
@@ -1177,7 +1209,7 @@ export default function ClinicManagementPage() {
           </div>
 
           {/* التبويبات */}
-          <div style={{ background:"#fff",borderRadius:20,border:"1.5px solid #f0f2f5",boxShadow:"0 2px 16px rgba(0,0,0,.05)",overflow:"hidden",animation:"fadeUp .45s ease" }}>
+          <div style={{ background:"#fff",borderRadius:20,border:"1.5px solid #f0f2f5",boxShadow:"0 2px 16px rgba(0,0,0,.05)",animation:"fadeUp .45s ease" }}>
             {/* رأس التبويبات */}
             <div style={{ display:"flex",borderBottom:"2px solid #f5f5f5",padding:"0 8px",overflowX:"auto",background:"#fafbfc" }}>
               {tabs.map(tab => (
@@ -1191,7 +1223,7 @@ export default function ClinicManagementPage() {
             </div>
 
             {/* محتوى التبويب */}
-            <div style={{ padding:isMobile?"16px":"24px" }}>
+            <div style={{ padding:isMobile?"16px":"24px", paddingBottom:"32px", borderRadius:"0 0 20px 20px" }}>
               {activeTab === "schedules" && (
                 <ScheduleTab lang={lang} doctors={doctors} userId={userId} isMobile={isMobile}/>
               )}
