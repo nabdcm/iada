@@ -558,7 +558,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
             <button
               onClick={() => saveSchedule(doc.id)}
               disabled={saveStatus[doc.id]==="saving"}
-              style={{ padding:"10px 22px",background:saveStatus[doc.id]==="saved"?"#2e7d32":"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",transition:"background .3s",display:"flex",alignItems:"center",gap:6 }}
+              style={{ padding:"10px 22px",background:saveStatus[doc.id]==="saved"?"#2e7d32":"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",transition:"background .3s",display:"flex",alignItems:"center",gap:6, width: isMobile ? "100%" : undefined, justifyContent: isMobile ? "center" : undefined }}
             >
               {saveStatus[doc.id]==="saving" ? s.saving : saveStatus[doc.id]==="saved" ? s.saved : s.save}
             </button>
@@ -582,7 +582,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
                         onClick={() => updateDay(doc.id, dayIdx, { enabled: !enabled })}
                         style={{ width:44,height:24,borderRadius:12,background:enabled?color:"#ddd",border:"none",cursor:"pointer",position:"relative",flexShrink:0,transition:"background .2s" }}
                       >
-                        <div style={{ position:"absolute",top:3,left:enabled?22:3,right:"auto",width:18,height:18,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
+                        <div style={{ position:"absolute",top:3,left:isAr?(enabled?3:22):(enabled?22:3),right:"auto",width:18,height:18,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
                       </button>
                       <div style={{ fontSize:13,fontWeight:700,color:enabled?color:"#bbb",flex:1 }}>
                         {tr.weekDays[dayIdx]}
@@ -626,7 +626,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
           </div>
 
           {/* إعدادات إضافية */}
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16 }}>
+          <div style={{ display:"grid",gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",gap:12,marginBottom:16 }}>
             {/* مدة الموعد */}
             <div style={{ background:"#fff",borderRadius:14,border:"1.5px solid #f0f2f5",padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.03)" }}>
               <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>⏱ {s.duration}</div>
@@ -777,7 +777,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
         <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10,textTransform:"uppercase",letterSpacing:.5 }}>
           {v.selectDoctor}
         </div>
-        <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+        <div style={{ display:"flex",flexDirection: isMobile ? "row" : "column",gap:6,overflowX: isMobile ? "auto" : "visible",paddingBottom: isMobile ? 4 : 0 }}>
           {doctors.map((d, idx) => {
             const color = d.color ?? getDoctorColor(idx);
             const isSelected = d.id === selectedDoctorId;
@@ -786,7 +786,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
             return (
               <button key={d.id}
                 onClick={() => setSelectedDoctorId(d.id)}
-                style={{ display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:12,background:isSelected?`${color}12`:"#f9fafb",border:`1.5px solid ${isSelected?color:"#eee"}`,cursor:"pointer",textAlign:isAr?"right":"left",direction:isAr?"rtl":"ltr",transition:"all .15s" }}
+                style={{ display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:12,background:isSelected?`${color}12`:"#f9fafb",border:`1.5px solid ${isSelected?color:"#eee"}`,cursor:"pointer",textAlign:isAr?"right":"left",direction:isAr?"rtl":"ltr",transition:"all .15s",flexShrink: isMobile ? 0 : undefined,minWidth: isMobile ? 140 : undefined }}
               >
                 <div style={{ width:36,height:36,borderRadius:10,background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0 }}>
                   {d.name.split(" ").slice(0,2).map((w:string)=>w[0]).join("").toUpperCase()}
@@ -940,7 +940,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
   };
 
   return (
-    <div style={{ maxWidth:600 }}>
+    <div style={{ maxWidth: isMobile ? "100%" : 600 }}>
       {/* اسم العيادة */}
       <div style={cardSt}>
         <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>🏥 {s.clinicName}</div>
@@ -990,7 +990,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
           </div>
           <button onClick={() => setAllowOnline(v => !v)}
             style={{ width:48,height:26,borderRadius:13,background:allowOnline?"#0863ba":"#ddd",border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0 }}>
-            <div style={{ position:"absolute",top:3,left:allowOnline?26:3,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
+            <div style={{ position:"absolute",top:3,left:isAr ? (allowOnline?3:26) : (allowOnline?26:3),width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
           </button>
         </div>
         {allowOnline && (
@@ -1003,7 +1003,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
             </div>
             <button onClick={() => setRequireApproval(v => !v)}
               style={{ width:48,height:26,borderRadius:13,background:requireApproval?"#2e7d32":"#ddd",border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0 }}>
-              <div style={{ position:"absolute",top:3,left:requireApproval?26:3,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
+              <div style={{ position:"absolute",top:3,left:isAr ? (requireApproval?3:26) : (requireApproval?26:3),width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
             </button>
           </div>
         )}
@@ -1066,11 +1066,18 @@ export default function ClinicManagementPage() {
 
   useEffect(() => {
     if (!userId || !doctors.length) return;
+    const normalizeStDays = (rawDays: any): Record<number, WorkDay> => {
+      const parsed = typeof rawDays === "string" ? JSON.parse(rawDays) : (rawDays ?? {});
+      const result: Record<number, WorkDay> = {};
+      for (const key of Object.keys(parsed)) result[parseInt(key, 10)] = parsed[key];
+      for (let i = 0; i < 7; i++) if (!(i in result)) result[i] = defaultWorkDay(i >= 1 && i <= 4);
+      return result;
+    };
     supabase.from("doctor_schedules").select("*").eq("user_id", userId).then(({ data }) => {
       if (data) {
         setSchedulesForStats(data.map(row => ({
           ...row,
-          days: typeof row.days === "string" ? JSON.parse(row.days) : row.days,
+          days: normalizeStDays(row.days),
           vacations: typeof row.vacations === "string" ? JSON.parse(row.vacations) : (row.vacations ?? []),
         })) as DoctorSchedule[]);
       }
@@ -1152,7 +1159,7 @@ export default function ClinicManagementPage() {
           </div>
 
           {/* إحصائيات سريعة */}
-          <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:24,animation:"fadeUp .4s ease" }}>
+          <div style={{ display:"grid",gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:24,animation:"fadeUp .4s ease" }}>
             {[
               { icon:"👨‍⚕️", label:tr.stats.totalDoctors,   value:doctors.length,   color:"#0863ba" },
               { icon:"✅", label:tr.stats.workingToday,  value:workingToday,     color:"#2e7d32" },
