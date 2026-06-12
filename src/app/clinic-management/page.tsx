@@ -469,6 +469,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
         appointment_duration: sch.appointment_duration,
         max_daily_appointments: sch.max_daily_appointments,
         notes: sch.notes ?? "",
+        updated_at: new Date().toISOString(),
       };
       const { error } = await supabase
         .from("doctor_schedules")
