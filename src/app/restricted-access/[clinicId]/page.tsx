@@ -11,6 +11,7 @@ interface ClinicInfo {
   clinic_type: string;
   restricted_access_enabled: boolean;
   restricted_access_pin: string;
+  plan?: PlanType;
 }
 
 interface Patient {
@@ -29,6 +30,37 @@ interface PatientProfile {
   medical_fields: Record<string, string>;
   extra_form_fields: Record<string, string | boolean>;
 }
+
+interface Appointment {
+  id: number;
+  user_id: string;
+  patient_id: number;
+  doctor_id?: number | null;
+  date: string;
+  time: string;
+  duration?: number;
+  type?: string;
+  notes?: string;
+  status: "scheduled" | "completed" | "cancelled" | "no-show" | "pending_approval";
+}
+
+interface Doctor {
+  id: number;
+  name: string;
+  specialty?: string;
+  user_id: string;
+}
+
+// ─── الخطط المشتركة ────────────────────────────────────────
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
+const isSharedPlan = (plan?: string) => !!plan && plan.startsWith("shared_");
+
+const APPT_MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const APPT_STATUS_LABEL: Record<string,string> = { scheduled:"محدد", completed:"مكتمل", cancelled:"ملغي", "no-show":"لم يحضر" };
+const APPT_STATUS_COLOR: Record<string,string> = { scheduled:"#0863ba", completed:"#2e7d32", cancelled:"#c0392b", "no-show":"#888" };
+const APPT_DOC_COLORS = ["#6d28d9","#0863ba","#2e7d32","#c0392b","#e67e22","#0891b2"];
+
+const toKeyAppt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
 // ─── نفس حقول السجل الطبي الموجودة في النظام الأصلي ──────────
 type ClinicType = "general"|"dental"|"dermatology"|"cosmetic"|"pediatrics"|"physical_therapy"|"mental_health"|"nutrition"|"ophthalmology"|"orthopedic"|"cardiology"|"gynecology"|"ent"|"urology"|"other";
@@ -89,6 +121,26 @@ export default function RestrictedAccessPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientsLoading, setPatientsLoading] = useState(false);
 
+  // ── تبويب القسم: المرضى / المواعيد ────────────────────────
+  const [activeTab,       setActiveTab]       = useState<"patients"|"appointments">("patients");
+  const [isMobile,        setIsMobile]        = useState(false);
+  const [appointments,    setAppointments]    = useState<Appointment[]>([]);
+  const [doctors,         setDoctors]         = useState<Doctor[]>([]);
+  const [apptLoading,     setApptLoading]     = useState(false);
+  const [selectedDoctorId,setSelectedDoctorId]= useState<number | "all">("all");
+  const now = new Date();
+  const [viewMonth,       setViewMonth]       = useState(now.getMonth());
+  const [viewYear,        setViewYear]        = useState(now.getFullYear());
+  const todayKey = toKeyAppt(now);
+  const [selectedKey,     setSelectedKey]     = useState(todayKey);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   // ── Profile drawer state ──────────────────────────────────
   const [profilePatient,  setProfilePatient]  = useState<Patient | null>(null);
   const [profile,         setProfile]         = useState<PatientProfile | null>(null);
@@ -105,7 +157,7 @@ export default function RestrictedAccessPage() {
   const fetchClinicInfo = async () => {
     const { data, error } = await supabase
       .from("clinics")
-      .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin")
+      .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin, plan")
       .eq("user_id", clinicId)
       .single();
     if (error || !data || !data.restricted_access_enabled) { setStage("error"); return; }
@@ -117,7 +169,7 @@ export default function RestrictedAccessPage() {
     setPatientsLoading(true);
     const { data: clinic, error } = await supabase
       .from("clinics")
-      .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin")
+      .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin, plan")
       .eq("user_id", clinicId)
       .single();
     if (error || !clinic) { setStage("error"); setPatientsLoading(false); return; }
@@ -132,7 +184,40 @@ export default function RestrictedAccessPage() {
     setPatients((pts as Patient[]) || []);
     setPatientsLoading(false);
     setStage("patients");
+
+    // ── جلب الأطباء (للخطط المشتركة) ──
+    if (isSharedPlan((clinic as ClinicInfo).plan)) {
+      const { data: docs } = await supabase
+        .from("doctors")
+        .select("id, name, specialty, user_id")
+        .eq("user_id", clinicId)
+        .order("name");
+      setDoctors((docs as Doctor[]) || []);
+    }
   };
+
+  // ── جلب مواعيد العيادة ─────────────────────────────────────
+  const loadAppointments = async () => {
+    setApptLoading(true);
+    try {
+      const { data } = await supabase
+        .from("appointments")
+        .select("*")
+        .eq("user_id", clinicId)
+        .neq("status", "pending_approval")
+        .order("date", { ascending: true })
+        .order("time", { ascending: true });
+      setAppointments((data as Appointment[]) || []);
+    } catch (err) { console.error(err); }
+    finally { setApptLoading(false); }
+  };
+
+  useEffect(() => {
+    if (activeTab === "appointments" && stage === "patients" && appointments.length === 0 && !apptLoading) {
+      loadAppointments();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, stage]);
 
   const handlePinSubmit = () => {
     if (!clinicInfo) return;
@@ -230,6 +315,22 @@ export default function RestrictedAccessPage() {
         </div>
       </div>
 
+      {/* ── تبويبات: المرضى / المواعيد ── */}
+      <div style={{ background:"#fff",borderBottom:"1.5px solid #eef0f3",position:"sticky",top:60,zIndex:9 }}>
+        <div style={{ maxWidth:isMobile?"100%":(activeTab==="appointments"?1100:700),margin:"0 auto",padding:"0 16px",display:"flex",gap:4 }}>
+          {([
+            { key:"patients" as const,     label:"👥 المرضى" },
+            { key:"appointments" as const, label:"📅 المواعيد" },
+          ]).map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              style={{ padding:"12px 18px",border:"none",background:"transparent",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,color:activeTab===tab.key?clinicColor:"#aaa",borderBottom:activeTab===tab.key?`2.5px solid ${clinicColor}`:"2.5px solid transparent",transition:"all .18s" }}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === "patients" && (
       <div style={{ maxWidth:700,margin:"0 auto",padding:"24px 16px" }}>
         {/* Search */}
         <div style={{ position:"relative",marginBottom:16 }}>
@@ -288,6 +389,25 @@ export default function RestrictedAccessPage() {
           </div>
         )}
       </div>
+      )}
+
+      {activeTab === "appointments" && (
+        <AppointmentsTab
+          clinicColor={clinicColor}
+          isMobile={isMobile}
+          appointments={appointments}
+          doctors={doctors}
+          isShared={isSharedPlan(clinicInfo?.plan)}
+          loading={apptLoading}
+          patients={patients}
+          selectedDoctorId={selectedDoctorId}
+          setSelectedDoctorId={setSelectedDoctorId}
+          viewMonth={viewMonth} setViewMonth={setViewMonth}
+          viewYear={viewYear} setViewYear={setViewYear}
+          selectedKey={selectedKey} setSelectedKey={setSelectedKey}
+          todayKey={todayKey}
+        />
+      )}
 
       {/* ── Profile Drawer ────────────────────────────────────── */}
       {profilePatient && (
@@ -433,6 +553,277 @@ function ErrorScreen() {
         <h2 style={{ fontSize:20,fontWeight:800,color:"#353535",marginBottom:8 }}>رابط غير صالح</h2>
         <p style={{ fontSize:13,color:"#888",lineHeight:1.7 }}>هذا الرابط غير موجود أو لم يتم تفعيل الدخول المقيّد لهذه العيادة. تواصل مع الطبيب المسؤول للحصول على رابط صحيح.</p>
       </div>
+    </div>
+  );
+}
+// ════════════════════════════════════════════════════════════
+// ─── تبويب المواعيد ──────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+function AppointmentsTab({
+  clinicColor, isMobile, appointments, doctors, isShared, loading, patients,
+  selectedDoctorId, setSelectedDoctorId,
+  viewMonth, setViewMonth, viewYear, setViewYear,
+  selectedKey, setSelectedKey, todayKey,
+}: {
+  clinicColor: string; isMobile: boolean; appointments: Appointment[]; doctors: Doctor[];
+  isShared: boolean; loading: boolean; patients: Patient[];
+  selectedDoctorId: number | "all"; setSelectedDoctorId: (v: number | "all") => void;
+  viewMonth: number; setViewMonth: (n: number) => void;
+  viewYear: number; setViewYear: (n: number) => void;
+  selectedKey: string; setSelectedKey: (k: string) => void; todayKey: string;
+}) {
+  const getPatientName = (pid: number) => patients.find(p => p.id === pid)?.name ?? "—";
+
+  const countByKey: Record<string,number> = {};
+  appointments.forEach(a => { countByKey[a.date] = (countByKey[a.date]||0)+1; });
+
+  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const calDays: (number|null)[] = [];
+  for (let i=0;i<firstDay;i++) calDays.push(null);
+  for (let d=1;d<=daysInMonth;d++) calDays.push(d);
+
+  const weekDays = ["أحد","إثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
+
+  const dayAppointments = appointments
+    .filter(a => a.date === selectedKey)
+    .filter(a => {
+      if (!isShared) return true;
+      if (selectedDoctorId === "all") return true;
+      return (a as any).doctor_id === selectedDoctorId;
+    })
+    .sort((a,b)=>a.time.localeCompare(b.time));
+
+  const selDate  = selectedKey.split("-");
+  const selLabel = selDate.length===3 ? `${parseInt(selDate[2])} ${APPT_MONTHS_AR[parseInt(selDate[1])-1]} ${selDate[0]}` : selectedKey;
+
+  return (
+    <div style={{ maxWidth:isMobile?"100%":1100,margin:"0 auto",padding:isMobile?"16px 12px 40px":"24px 16px 40px" }}>
+      <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"280px 1fr",gap:18 }}>
+
+        {/* ── التقويم ── */}
+        <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
+          <div style={{ padding:"14px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+            <button onClick={()=>{ let m=viewMonth-1,y=viewYear; if(m<0){m=11;y--;} setViewMonth(m);setViewYear(y); }} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>‹</button>
+            <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>{APPT_MONTHS_AR[viewMonth]} {viewYear}</div>
+            <button onClick={()=>{ let m=viewMonth+1,y=viewYear; if(m>11){m=0;y++;} setViewMonth(m);setViewYear(y); }} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>›</button>
+          </div>
+          <div style={{ padding:"10px 12px" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4 }}>
+              {weekDays.map(d=><div key={d} style={{ textAlign:"center",fontSize:9,fontWeight:700,color:"#bbb",padding:"3px 0" }}>{d}</div>)}
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2 }}>
+              {calDays.map((d,i)=>{
+                if(!d) return <div key={i}/>;
+                const k = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                const cnt = countByKey[k]||0;
+                const isSel=k===selectedKey, isTod=k===todayKey;
+                return (
+                  <div key={i} onClick={()=>setSelectedKey(k)}
+                    style={{ borderRadius:8,cursor:"pointer",transition:"all .15s",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,background:isSel?"#0863ba":isTod?"rgba(8,99,186,.08)":"transparent",color:isSel?"#fff":isTod?"#0863ba":"#353535",border:isTod&&!isSel?"1.5px solid rgba(8,99,186,.2)":"1.5px solid transparent" }}>
+                    <span style={{ fontSize:12,fontWeight:isSel||isTod?700:400 }}>{d}</span>
+                    {cnt>0&&<div style={{ width:14,height:4,borderRadius:3,background:isSel?"rgba(255,255,255,.6)":"#0863ba" }}/>}
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={()=>setSelectedKey(todayKey)} style={{ width:"100%",marginTop:10,padding:"7px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer" }}>
+              📅 اليوم
+            </button>
+          </div>
+        </div>
+
+        {/* ── مواعيد اليوم المحدد ── */}
+        <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
+          <div style={{ padding:"16px 20px 12px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10 }}>
+            <div>
+              <h3 style={{ fontSize:15,fontWeight:800,color:"#353535" }}>{selLabel}</h3>
+              <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{dayAppointments.length} مواعيد</p>
+            </div>
+            {isShared && doctors.length > 0 && (
+              <select
+                value={selectedDoctorId}
+                onChange={e => setSelectedDoctorId(e.target.value === "all" ? "all" : Number(e.target.value))}
+                style={{ padding:"6px 10px",border:"1.5px solid rgba(8,99,186,.18)",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,color:"#0863ba",background:"rgba(8,99,186,.05)",cursor:"pointer",outline:"none",maxWidth:isMobile?140:200 }}
+              >
+                <option value="all">جميع الأطباء</option>
+                {doctors.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            )}
+          </div>
+
+          <div style={{ padding:"12px 16px 16px" }}>
+            {loading ? (
+              <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
+                <div style={{ width:36,height:36,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px" }}/>
+                <div style={{ fontSize:14,fontWeight:600 }}>جاري التحميل...</div>
+              </div>
+            ) : dayAppointments.length === 0 ? (
+              <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
+                <div style={{ fontSize:44,marginBottom:14 }}>📅</div>
+                <div style={{ fontSize:15,fontWeight:600 }}>لا توجد مواعيد في هذا اليوم</div>
+              </div>
+            ) : isShared ? (
+              /* ══ جدول مشترك — حسب الطبيب (كما في صفحة المواعيد) ══ */
+              (() => {
+                const docIdsOrdered: (number | null)[] = [];
+                [...dayAppointments].sort((a,b)=>a.time.localeCompare(b.time)).forEach(appt => {
+                  const docId = (appt as any).doctor_id ?? null;
+                  if (!docIdsOrdered.includes(docId)) docIdsOrdered.push(docId);
+                });
+                const tableDocList = docIdsOrdered.map(docId => ({
+                  id: docId,
+                  doc: docId ? doctors.find(d => d.id === docId) ?? null : null,
+                }));
+
+                const uniqueTimes = [...new Set(dayAppointments.map(a => a.time.slice(0,5)))].sort();
+
+                const apptMap: Record<string, Record<string, Appointment>> = {};
+                dayAppointments.forEach(appt => {
+                  const t = appt.time.slice(0,5);
+                  const d = String((appt as any).doctor_id ?? "null");
+                  if (!apptMap[t]) apptMap[t] = {};
+                  apptMap[t][d] = appt;
+                });
+
+                const colW = Math.max(140, Math.floor(420 / tableDocList.length));
+
+                return (
+                  <div style={{ overflowX:"auto", borderRadius:16, border:"1.5px solid #e8edf5", boxShadow:"0 4px 20px rgba(8,99,186,.07)" }}>
+                    <table style={{ width:"100%", borderCollapse:"collapse", minWidth: 60 + tableDocList.length * colW }}>
+                      <thead>
+                        <tr>
+                          <th style={{
+                            width:64, minWidth:64,
+                            background:"linear-gradient(135deg,#0863ba,#054a8c)",
+                            padding:"14px 10px", textAlign:"center", color:"#fff",
+                            fontSize:11, fontWeight:700, letterSpacing:.5,
+                            borderInlineEnd:"2px solid rgba(255,255,255,.15)",
+                            position:"sticky", right:0, zIndex:2,
+                          }}>
+                            الساعة
+                          </th>
+                          {tableDocList.map((d, i) => {
+                            const dc = APPT_DOC_COLORS[i % APPT_DOC_COLORS.length];
+                            return (
+                              <th key={i} style={{
+                                background:`linear-gradient(135deg,${dc}18,${dc}08)`,
+                                borderBottom:`3px solid ${dc}`,
+                                borderInlineEnd: i < tableDocList.length-1 ? `1.5px solid ${dc}18` : "none",
+                                padding:"12px 10px", textAlign:"center", minWidth:colW,
+                              }}>
+                                <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:5 }}>
+                                  <div style={{ width:38,height:38,borderRadius:10,background:dc,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,boxShadow:`0 3px 10px ${dc}50` }}>
+                                    {d.doc ? getInitials(d.doc.name) : "?"}
+                                  </div>
+                                  <div style={{ fontSize:12,fontWeight:800,color:dc,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:colW-16 }}>
+                                    {d.doc ? d.doc.name : "غير محدد"}
+                                  </div>
+                                  {d.doc?.specialty && (
+                                    <div style={{ fontSize:10,color:"#aaa",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:colW-16 }}>
+                                      {d.doc.specialty}
+                                    </div>
+                                  )}
+                                  <div style={{ background:`${dc}15`,border:`1px solid ${dc}30`,borderRadius:20,padding:"2px 8px",fontSize:10,fontWeight:700,color:dc }}>
+                                    {dayAppointments.filter(a=>(a as any).doctor_id===d.id).length} مواعيد
+                                  </div>
+                                </div>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {uniqueTimes.map((time, ri) => {
+                          const isEven = ri % 2 === 0;
+                          const rowHasMultiple = Object.keys(apptMap[time] ?? {}).length > 1;
+                          return (
+                            <tr key={time} style={{ background: rowHasMultiple ? "rgba(8,99,186,.03)" : (isEven ? "#fff" : "#fafbfc") }}>
+                              <td style={{
+                                padding:"10px 8px", textAlign:"center",
+                                background:"linear-gradient(135deg,#f0f6ff,#e8f0fb)",
+                                borderInlineEnd:"2px solid #e0eaf6",
+                                borderBottom:"1px solid #eef0f3",
+                                position:"sticky", right:0, zIndex:1, verticalAlign:"middle",
+                              }}>
+                                <div style={{ fontSize:15,fontWeight:900,color:"#0863ba",lineHeight:1 }}>{time}</div>
+                                {rowHasMultiple && <div style={{ fontSize:9,color:"#0863ba",opacity:.6,marginTop:2,fontWeight:600 }}>تعارض</div>}
+                              </td>
+                              {tableDocList.map((d, ci) => {
+                                const dc = APPT_DOC_COLORS[ci % APPT_DOC_COLORS.length];
+                                const appt = apptMap[time]?.[String(d.id ?? "null")];
+                                return (
+                                  <td key={ci} style={{ padding:"7px 8px", borderInlineEnd: ci < tableDocList.length-1 ? `1.5px solid ${dc}15` : "none", borderBottom:"1px solid #eef0f3", verticalAlign:"middle" }}>
+                                    {appt ? (() => {
+                                      const pName = getPatientName(appt.patient_id);
+                                      const bColor = APPT_STATUS_COLOR[appt.status] ?? "#888";
+                                      return (
+                                        <div style={{ background:`linear-gradient(135deg,${bColor}10,${bColor}05)`, border:`1.5px solid ${bColor}35`, borderRadius:10, padding:"8px 10px", display:"flex", flexDirection:"column", gap:5, boxShadow:`0 2px 8px ${bColor}15` }}>
+                                          <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                                            <div style={{ width:26,height:26,borderRadius:7,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0 }}>
+                                              {pName!=="—"?getInitials(pName):"?"}
+                                            </div>
+                                            <div style={{ fontSize:11,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1 }}>
+                                              {pName}
+                                            </div>
+                                          </div>
+                                          <div style={{ display:"flex",alignItems:"center",gap:4,flexWrap:"wrap" }}>
+                                            <span style={{ fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:20,background:bColor,color:"#fff" }}>
+                                              {APPT_STATUS_LABEL[appt.status] ?? appt.status}
+                                            </span>
+                                            <span style={{ fontSize:9,color:"#aaa" }}>{appt.duration ?? 30}د</span>
+                                            {appt.type && <span style={{ fontSize:9,color:"#999",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:70 }}>{appt.type}</span>}
+                                          </div>
+                                        </div>
+                                      );
+                                    })() : (
+                                      <div style={{ height:36,borderRadius:8,background:`${dc}06`,border:`1.5px dashed ${dc}25` }}/>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()
+            ) : (
+              /* ══ عرض عادي — للخطط الفردية ══ */
+              <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                {dayAppointments.map(appt => {
+                  const name = getPatientName(appt.patient_id);
+                  const bColor = APPT_STATUS_COLOR[appt.status] ?? "#888";
+                  return (
+                    <div key={appt.id} style={{ background:`${bColor}08`, border:`1.5px solid ${bColor}30`, borderInlineStartWidth:4, borderInlineStartColor:bColor, borderRadius:14, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:"0 2px 8px rgba(0,0,0,.04)" }}>
+                      <div style={{ flexShrink:0,textAlign:"center",minWidth:48,background:"rgba(255,255,255,.7)",borderRadius:10,padding:"6px 8px",border:`1px solid ${bColor}20` }}>
+                        <div style={{ fontSize:15,fontWeight:800,color:bColor,lineHeight:1 }}>{appt.time.slice(0,5)}</div>
+                        <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{appt.duration ?? 30} دقيقة</div>
+                      </div>
+                      <div style={{ width:38,height:38,borderRadius:10,background:getColor(appt.patient_id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
+                        {name!=="—"?getInitials(name):"?"}
+                      </div>
+                      <div style={{ flex:1,minWidth:0 }}>
+                        <div style={{ fontSize:14,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</div>
+                        <div style={{ fontSize:11,color:"#999",marginTop:2 }}>
+                          {appt.type && <span>{appt.type} · </span>}
+                          <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
+                            {APPT_STATUS_LABEL[appt.status] ?? appt.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
