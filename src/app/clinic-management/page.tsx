@@ -384,7 +384,7 @@ function Sidebar({ lang, setLang, plan }: { lang: Lang; setLang: (l: Lang) => vo
 }
 
 // ─── تبويب جدول الدوام ────────────────────────────────────────
-function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[]; userId: string }) {
+function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors: Doctor[]; userId: string; isMobile: boolean }) {
   const tr = T[lang];
   const isAr = lang === "ar";
   const s = tr.schedule;
@@ -392,6 +392,20 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
   const [selectedDoctorId, setSelectedDoctorId] = useState<number | null>(doctors[0]?.id ?? null);
   const [schedules, setSchedules] = useState<Record<number, DoctorSchedule>>({});
   const [saveStatus, setSaveStatus] = useState<Record<number, "idle"|"saving"|"saved">>({});
+
+  // تحويل مفاتيح days من strings إلى numbers (Supabase JSONB يعيد strings)
+  const normalizeDays = (rawDays: any): Record<number, WorkDay> => {
+    const parsed = typeof rawDays === "string" ? JSON.parse(rawDays) : (rawDays ?? {});
+    const result: Record<number, WorkDay> = {};
+    for (const key of Object.keys(parsed)) {
+      result[parseInt(key, 10)] = parsed[key];
+    }
+    // تأكد أن كل أيام الأسبوع موجودة
+    for (let i = 0; i < 7; i++) {
+      if (!(i in result)) result[i] = defaultWorkDay(i >= 1 && i <= 4);
+    }
+    return result;
+  };
 
   // جلب الجداول من Supabase
   useEffect(() => {
@@ -408,7 +422,7 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
             id: row.id,
             doctor_id: row.doctor_id,
             user_id: row.user_id,
-            days: typeof row.days === "string" ? JSON.parse(row.days) : row.days,
+            days: normalizeDays(row.days),
             vacations: typeof row.vacations === "string" ? JSON.parse(row.vacations) : (row.vacations ?? []),
             appointment_duration: row.appointment_duration ?? 30,
             max_daily_appointments: row.max_daily_appointments ?? 20,
@@ -436,8 +450,12 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
   };
 
   const saveSchedule = async (doctorId: number) => {
+    // نقرأ أحدث نسخة من الجدول مباشرة من schedules state
+    const currentSchedules = await new Promise<Record<number, DoctorSchedule>>(resolve => {
+      setSchedules(prev => { resolve(prev); return prev; });
+    });
+    const sch = currentSchedules[doctorId] ?? defaultSchedule(doctorId, userId);
     setSaveStatus(p => ({ ...p, [doctorId]: "saving" }));
-    const sch = getSchedule(doctorId);
     const payload = {
       doctor_id: doctorId,
       user_id: userId,
@@ -448,12 +466,12 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
       notes: sch.notes,
     };
     if (sch.id) {
-      await supabase.from("doctor_schedules").update(payload).eq("id", sch.id);
+      const { error } = await supabase.from("doctor_schedules").update(payload).eq("id", sch.id);
+      if (error) { console.error("Save error:", error); setSaveStatus(p => ({ ...p, [doctorId]: "idle" })); return; }
     } else {
-      const { data } = await supabase.from("doctor_schedules").insert(payload).select().single();
-      if (data) {
-        setSchedules(prev => ({ ...prev, [doctorId]: { ...sch, id: data.id } }));
-      }
+      const { data, error } = await supabase.from("doctor_schedules").insert(payload).select().single();
+      if (error) { console.error("Insert error:", error); setSaveStatus(p => ({ ...p, [doctorId]: "idle" })); return; }
+      if (data) setSchedules(prev => ({ ...prev, [doctorId]: { ...sch, id: data.id } }));
     }
     setSaveStatus(p => ({ ...p, [doctorId]: "saved" }));
     setTimeout(() => setSaveStatus(p => ({ ...p, [doctorId]: "idle" })), 2500);
@@ -480,13 +498,13 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
   };
 
   return (
-    <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+    <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 20 }}>
       {/* قائمة الأطباء */}
-      <div style={{ width:200, flexShrink:0 }}>
+      <div style={{ width: isMobile ? "100%" : 200, flexShrink:0 }}>
         <div style={{ fontSize:12, fontWeight:700, color:"#888", marginBottom:10, textTransform:"uppercase", letterSpacing:.5 }}>
           {s.selectDoctor}
         </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        <div style={{ display:"flex", flexDirection: isMobile ? "row" : "column", gap:6, overflowX: isMobile ? "auto" : "visible", paddingBottom: isMobile ? 4 : 0 }}>
           {doctors.map((d, idx) => {
             const color = d.color ?? getDoctorColor(idx);
             const isSelected = d.id === selectedDoctorId;
@@ -503,6 +521,8 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
                   cursor:"pointer", textAlign:isAr?"right":"left",
                   transition:"all .15s",
                   direction: isAr ? "rtl" : "ltr",
+                  flexShrink: isMobile ? 0 : undefined,
+                  minWidth: isMobile ? 140 : undefined,
                 }}
               >
                 <div style={{ width:36,height:36,borderRadius:10,background:color,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0 }}>
@@ -555,33 +575,41 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
                 const enabled = day?.enabled ?? false;
                 const color = doc.color ?? getDoctorColor(doctors.indexOf(doc));
                 return (
-                  <div key={dayIdx} style={{ display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:enabled?`${color}07`:"#fafafa",border:`1.5px solid ${enabled?color+"25":"#f0f2f5"}`,transition:"all .2s",flexWrap:"wrap" }}>
-                    {/* Toggle */}
-                    <button
-                      onClick={() => updateDay(doc.id, dayIdx, { enabled: !enabled })}
-                      style={{ width:44,height:24,borderRadius:12,background:enabled?color:"#ddd",border:"none",cursor:"pointer",position:"relative",flexShrink:0,transition:"background .2s" }}
-                    >
-                      <div style={{ position:"absolute",top:3,left:enabled?22:3,right:"auto",width:18,height:18,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
-                    </button>
-                    {/* اسم اليوم */}
-                    <div style={{ width:70,fontSize:13,fontWeight:700,color:enabled?color:"#bbb",flexShrink:0 }}>
-                      {tr.weekDays[dayIdx]}
+                  <div key={dayIdx} style={{ display:"flex",flexDirection:"column",gap:8,padding:"12px 14px",borderRadius:12,background:enabled?`${color}07`:"#fafafa",border:`1.5px solid ${enabled?color+"25":"#f0f2f5"}`,transition:"all .2s" }}>
+                    {/* الصف الأول: toggle + اسم اليوم */}
+                    <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                      <button
+                        onClick={() => updateDay(doc.id, dayIdx, { enabled: !enabled })}
+                        style={{ width:44,height:24,borderRadius:12,background:enabled?color:"#ddd",border:"none",cursor:"pointer",position:"relative",flexShrink:0,transition:"background .2s" }}
+                      >
+                        <div style={{ position:"absolute",top:3,left:enabled?22:3,right:"auto",width:18,height:18,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
+                      </button>
+                      <div style={{ fontSize:13,fontWeight:700,color:enabled?color:"#bbb",flex:1 }}>
+                        {tr.weekDays[dayIdx]}
+                      </div>
+                      {!enabled && (
+                        <span style={{ fontSize:12,color:"#ccc",fontStyle:"italic" }}>{s.disabled}</span>
+                      )}
                     </div>
-                    {/* ساعات العمل */}
+                    {/* الصف الثاني: ساعات العمل */}
                     {enabled && (
-                      <div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+                      <div style={{ display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,paddingInlineStart:54 }}>
                         <span style={{ fontSize:12,color:"#888" }}>{s.from}</span>
                         <input type="time" value={day.start} onChange={e => updateDay(doc.id,dayIdx,{start:e.target.value})} style={timeInputSt}/>
                         <span style={{ fontSize:12,color:"#888" }}>{s.to}</span>
                         <input type="time" value={day.end} onChange={e => updateDay(doc.id,dayIdx,{end:e.target.value})} style={timeInputSt}/>
-                        {/* استراحة */}
+                      </div>
+                    )}
+                    {/* الصف الثالث: الاستراحة */}
+                    {enabled && (
+                      <div style={{ display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,paddingInlineStart:54 }}>
                         {day.break_start ? (
                           <>
-                            <span style={{ fontSize:12,color:"#aaa",marginInlineStart:8 }}>☕ {s.breakTime}</span>
+                            <span style={{ fontSize:12,color:"#aaa" }}>☕ {s.breakTime}</span>
                             <input type="time" value={day.break_start} onChange={e => updateDay(doc.id,dayIdx,{break_start:e.target.value})} style={timeInputSt}/>
                             <span style={{ fontSize:12,color:"#aaa" }}>-</span>
                             <input type="time" value={day.break_end??""} onChange={e => updateDay(doc.id,dayIdx,{break_end:e.target.value})} style={timeInputSt}/>
-                            <button onClick={() => updateDay(doc.id,dayIdx,{break_start:undefined,break_end:undefined})} style={{ fontSize:11,color:"#c0392b",background:"none",border:"none",cursor:"pointer",padding:0 }}>✕</button>
+                            <button onClick={() => updateDay(doc.id,dayIdx,{break_start:undefined,break_end:undefined})} style={{ fontSize:11,color:"#c0392b",background:"none",border:"none",cursor:"pointer",padding:0 }}>✕ {isAr?"إزالة الاستراحة":"remove"}</button>
                           </>
                         ) : (
                           <button onClick={() => updateDay(doc.id,dayIdx,{break_start:"13:00",break_end:"14:00"})}
@@ -590,9 +618,6 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
                           </button>
                         )}
                       </div>
-                    )}
-                    {!enabled && (
-                      <span style={{ fontSize:12,color:"#ccc",fontStyle:"italic" }}>{s.disabled}</span>
                     )}
                   </div>
                 );
@@ -646,7 +671,7 @@ function ScheduleTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[];
 }
 
 // ─── تبويب الإجازات ───────────────────────────────────────────
-function VacationsTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[]; userId: string }) {
+function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors: Doctor[]; userId: string; isMobile: boolean }) {
   const tr = T[lang];
   const isAr = lang === "ar";
   const v = tr.vacation;
@@ -657,6 +682,14 @@ function VacationsTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[]
   const [newReason, setNewReason] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const normalizeDaysV = (rawDays: any): Record<number, WorkDay> => {
+    const parsed = typeof rawDays === "string" ? JSON.parse(rawDays) : (rawDays ?? {});
+    const result: Record<number, WorkDay> = {};
+    for (const key of Object.keys(parsed)) result[parseInt(key, 10)] = parsed[key];
+    for (let i = 0; i < 7; i++) if (!(i in result)) result[i] = defaultWorkDay(i >= 1 && i <= 4);
+    return result;
+  };
+
   useEffect(() => {
     if (!doctors.length) return;
     const fetchSchedules = async () => {
@@ -666,7 +699,7 @@ function VacationsTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[]
         for (const row of data) {
           map[row.doctor_id] = {
             id: row.id, doctor_id: row.doctor_id, user_id: row.user_id,
-            days: typeof row.days === "string" ? JSON.parse(row.days) : row.days,
+            days: normalizeDaysV(row.days),
             vacations: typeof row.vacations === "string" ? JSON.parse(row.vacations) : (row.vacations ?? []),
             appointment_duration: row.appointment_duration ?? 30,
             max_daily_appointments: row.max_daily_appointments ?? 20,
@@ -738,9 +771,9 @@ function VacationsTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[]
   };
 
   return (
-    <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+    <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 20 }}>
       {/* قائمة الأطباء */}
-      <div style={{ width:200, flexShrink:0 }}>
+      <div style={{ width: isMobile ? "100%" : 200, flexShrink:0 }}>
         <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10,textTransform:"uppercase",letterSpacing:.5 }}>
           {v.selectDoctor}
         </div>
@@ -846,7 +879,7 @@ function VacationsTab({ lang, doctors, userId }: { lang: Lang; doctors: Doctor[]
 }
 
 // ─── تبويب الإعدادات ──────────────────────────────────────────
-function SettingsTab({ lang, userId }: { lang: Lang; userId: string }) {
+function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; isMobile: boolean }) {
   const tr = T[lang];
   const isAr = lang === "ar";
   const s = tr.settings;
@@ -1153,13 +1186,13 @@ export default function ClinicManagementPage() {
             {/* محتوى التبويب */}
             <div style={{ padding:isMobile?"16px":"24px" }}>
               {activeTab === "schedules" && (
-                <ScheduleTab lang={lang} doctors={doctors} userId={userId}/>
+                <ScheduleTab lang={lang} doctors={doctors} userId={userId} isMobile={isMobile}/>
               )}
               {activeTab === "vacations" && (
-                <VacationsTab lang={lang} doctors={doctors} userId={userId}/>
+                <VacationsTab lang={lang} doctors={doctors} userId={userId} isMobile={isMobile}/>
               )}
               {activeTab === "settings" && (
-                <SettingsTab lang={lang} userId={userId}/>
+                <SettingsTab lang={lang} userId={userId} isMobile={isMobile}/>
               )}
             </div>
           </div>
