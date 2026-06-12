@@ -905,7 +905,7 @@ export default function SecretaryPage() {
             </div>
           ):dayAppts.map(appt=>{
             const patient = patients.find(p=>p.id===appt.patient_id);
-            const doctor  = doctors.find(d=>d.id===appt.doctor_id);
+            const doctor  = doctors.find(d=>d.id===(appt as any).doctor_id);
             const sb      = statusBadge(appt.status as ApptStatus);
             return (
               <div key={appt.id} onClick={()=>{setEditAppt(appt);setShowApptModal(true);}}
