@@ -267,15 +267,16 @@ function AppointmentModal({ appt, patients, doctors, lang, onSave, onDelete, onC
   const isEdit = !!appt;
   const today = new Date().toISOString().slice(0,10);
 
+  const apptAny = appt as any;
   const [form, setForm] = useState({
-    patient_id: appt?.patient_id||0,
-    doctor_id:  appt?.doctor_id||null,
-    date:       appt?.date||today,
-    time:       appt?.time||"09:00",
-    duration:   appt?.duration||30,
-    type:       appt?.type||"",
-    notes:      appt?.notes||"",
-    status:     (appt?.status||"scheduled") as ApptStatus,
+    patient_id: apptAny?.patient_id||0,
+    doctor_id:  apptAny?.doctor_id||null,
+    date:       apptAny?.date||today,
+    time:       apptAny?.time||"09:00",
+    duration:   apptAny?.duration||30,
+    type:       apptAny?.type||"",
+    notes:      apptAny?.notes||"",
+    status:     (apptAny?.status||"scheduled") as ApptStatus,
   });
   const [error,setError] = useState("");
   const [saving,setSaving] = useState(false);
@@ -395,7 +396,7 @@ function AppointmentModal({ appt, patients, doctors, lang, onSave, onDelete, onC
         <div><label style={labelSt}>{tr.apptModal.notes}</label><textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.apptModal.notesPh} rows={2} style={{ ...inputSt,resize:"none" }}/></div>
 
         <div style={{ display:"flex",gap:10,marginTop:4 }}>
-          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
+          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
             {saving?tr.saving:(isEdit?tr.apptModal.update:tr.apptModal.save)}
           </button>
           <button onClick={onClose} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.apptModal.cancel}</button>
@@ -441,7 +442,7 @@ function PatientModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>vo
         <div><label style={labelSt}>{tr.patModal.dob}</label><input type="date" value={form.date_of_birth} onChange={e=>setForm({...form,date_of_birth:e.target.value})} style={inputSt}/></div>
         <div><label style={labelSt}>{tr.patModal.notes}</label><textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.patModal.notesPh} rows={2} style={{ ...inputSt,resize:"none" }}/></div>
         <div style={{ display:"flex",gap:10,marginTop:4 }}>
-          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
+          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
             {saving?tr.saving:tr.patModal.save}
           </button>
           <button onClick={onClose} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.patModal.cancel}</button>
@@ -512,7 +513,7 @@ function PaymentModal({ patients, lang, onSave, onClose }: { patients:Patient[];
           </div>
         </div>
         <div style={{ display:"flex",gap:10,marginTop:4 }}>
-          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
+          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
             {saving?tr.saving:tr.payModal.save}
           </button>
           <button onClick={onClose} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.payModal.cancel}</button>
@@ -549,7 +550,7 @@ function WithdrawModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>v
         <div><label style={labelSt}>{tr.withdrawModal.reason}</label><input value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} placeholder={tr.withdrawModal.reasonPh} style={inputSt}/></div>
         <div><label style={labelSt}>{tr.withdrawModal.notes}</label><textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.withdrawModal.notesPh} rows={2} style={{ ...inputSt,resize:"none" }}/></div>
         <div style={{ display:"flex",gap:10,marginTop:4 }}>
-          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?.7:1 }}>
+          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1 }}>
             {saving?tr.saving:tr.withdrawModal.save}
           </button>
           <button onClick={onClose} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.withdrawModal.cancel}</button>
@@ -594,7 +595,7 @@ function ExpenseModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>vo
         <div><label style={labelSt}>{tr.expenseModal.description}</label><input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder={tr.expenseModal.descPh} style={inputSt}/></div>
         <div><label style={labelSt}>{tr.expenseModal.notes}</label><textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.expenseModal.notesPh} rows={2} style={{ ...inputSt,resize:"none" }}/></div>
         <div style={{ display:"flex",gap:10,marginTop:4 }}>
-          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:"#7b2d8b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?.7:1 }}>
+          <button onClick={save} disabled={saving} style={{ flex:1,padding:"13px",background:"#7b2d8b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1 }}>
             {saving?tr.saving:tr.expenseModal.save}
           </button>
           <button onClick={onClose} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.expenseModal.cancel}</button>
