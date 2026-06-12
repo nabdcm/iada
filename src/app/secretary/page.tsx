@@ -269,7 +269,7 @@ function AppointmentModal({ appt, patients, doctors, lang, onSave, onDelete, onC
 
   const [form, setForm] = useState({
     patient_id: appt?.patient_id||0,
-    doctor_id:  (appt as any)?.doctor_id||null,
+    doctor_id:  appt?.doctor_id||null,
     date:       appt?.date||today,
     time:       appt?.time||"09:00",
     duration:   appt?.duration||30,
@@ -637,8 +637,7 @@ export default function SecretaryPage() {
   const [showExpModal,  setShowExpModal]  = useState(false);
 
   // swipe for tabs
-  const tabsRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef(0);
+    const touchStartX = useRef(0);
   const tabOrder: Tab[] = ["appointments","patients","finance"];
 
   // ── load data ────────────────────────────────────────────
@@ -773,14 +772,8 @@ export default function SecretaryPage() {
   const fmtDateShort = (d:string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"});
   const getAge = (dob:string) => { if (!dob) return null; const y=new Date().getFullYear()-new Date(dob).getFullYear(); return y>0?`${y} ${tr.age}`:null; };
 
-  // ── tab scroll handle ────────────────────────────────────
-  const scrollToTab = (tab: Tab) => {
-    const idx = tabOrder.indexOf(tab);
-    if (tabsRef.current) {
-      tabsRef.current.scrollTo({ left: idx * tabsRef.current.offsetWidth, behavior:"smooth" });
-    }
-    setActiveTab(tab);
-  };
+  // ── tab switch ───────────────────────────────────────────
+  const scrollToTab = (tab: Tab) => { setActiveTab(tab); };
 
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd   = (e: React.TouchEvent) => {
@@ -788,11 +781,11 @@ export default function SecretaryPage() {
     if (Math.abs(dx) < 60) return;
     const cur = tabOrder.indexOf(activeTab);
     if (isAr) {
-      if (dx > 0 && cur < tabOrder.length-1) scrollToTab(tabOrder[cur+1]);
-      if (dx < 0 && cur > 0)                  scrollToTab(tabOrder[cur-1]);
+      if (dx > 0 && cur < tabOrder.length-1) setActiveTab(tabOrder[cur+1]);
+      if (dx < 0 && cur > 0)                  setActiveTab(tabOrder[cur-1]);
     } else {
-      if (dx < 0 && cur < tabOrder.length-1) scrollToTab(tabOrder[cur+1]);
-      if (dx > 0 && cur > 0)                  scrollToTab(tabOrder[cur-1]);
+      if (dx < 0 && cur < tabOrder.length-1) setActiveTab(tabOrder[cur+1]);
+      if (dx > 0 && cur > 0)                  setActiveTab(tabOrder[cur-1]);
     }
   };
 
@@ -826,8 +819,7 @@ export default function SecretaryPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-        .tab-pane{min-width:100%;padding:0 16px 100px}
-        .tabs-scroll{display:flex;overflow:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+        .tab-pane{width:100%;padding:0 16px 100px}
         .tx-card:active{background:#f0f7ff!important}
         .pat-row:active{background:#f0f7ff!important}
         input,select,textarea{font-family:Rubik,sans-serif;}
@@ -872,11 +864,10 @@ export default function SecretaryPage() {
       </div>
 
       {/* ── TAB CONTENT ──────────────────────────────────── */}
-      <div ref={tabsRef} className="tabs-scroll" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
-        style={{ display:"flex",overflowX:"hidden",width:"100%" }}>
+      <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ width:"100%" }}>
 
         {/* ══ TAB 1: APPOINTMENTS ══════════════════════════ */}
-        <div className="tab-pane">
+        <div className="tab-pane" style={{ display:activeTab==="appointments"?"block":"none" }}>
           {/* date strip */}
           <div style={{ display:"flex",gap:6,overflowX:"auto",padding:"14px 0 4px",scrollbarWidth:"none",msOverflowStyle:"none" }}>
             {dateStrip.map(d=>{
@@ -913,7 +904,7 @@ export default function SecretaryPage() {
             </div>
           ):dayAppts.map(appt=>{
             const patient = patients.find(p=>p.id===appt.patient_id);
-            const doctor  = doctors.find(d=>d.id===(appt as any).doctor_id);
+            const doctor  = doctors.find(d=>d.id===appt.doctor_id);
             const sb      = statusBadge(appt.status as ApptStatus);
             return (
               <div key={appt.id} onClick={()=>{setEditAppt(appt);setShowApptModal(true);}}
@@ -946,7 +937,7 @@ export default function SecretaryPage() {
         </div>
 
         {/* ══ TAB 2: PATIENTS ══════════════════════════════ */}
-        <div className="tab-pane">
+        <div className="tab-pane" style={{ display:activeTab==="patients"?"block":"none" }}>
           {/* search + add */}
           <div style={{ position:"sticky",top:0,background:"#fafbfc",paddingTop:14,paddingBottom:10,zIndex:10 }}>
             <div style={{ display:"flex",gap:8,marginBottom:10 }}>
@@ -993,8 +984,8 @@ export default function SecretaryPage() {
           })}
         </div>
 
-        {/* ══ TAB 3: FINANCE (restricted) ══════════════════ */}
-        <div className="tab-pane">
+        {/* TAB 3: FINANCE */}
+        <div className="tab-pane" style={{ display:activeTab==="finance"?"block":"none" }}>
           {/* quick stats - today only */}
           <div style={{ paddingTop:14,paddingBottom:4 }}>
             <div style={{ background:"linear-gradient(135deg,#e8f5e9,#f1f8e9)",borderRadius:14,padding:"14px 16px",border:"1.5px solid #c8e6c9",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
