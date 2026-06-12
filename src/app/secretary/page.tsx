@@ -269,7 +269,7 @@ function AppointmentModal({ appt, patients, doctors, lang, onSave, onDelete, onC
 
   const [form, setForm] = useState({
     patient_id: appt?.patient_id||0,
-    doctor_id:  (appt as any)?.doctor_id||null,
+    doctor_id:  appt?.doctor_id||null,
     date:       appt?.date||today,
     time:       appt?.time||"09:00",
     duration:   appt?.duration||30,
@@ -913,7 +913,7 @@ export default function SecretaryPage() {
             </div>
           ):dayAppts.map(appt=>{
             const patient = patients.find(p=>p.id===appt.patient_id);
-            const doctor  = doctors.find(d=>d.id===(appt as any).doctor_id);
+            const doctor  = doctors.find(d=>d.id===appt.doctor_id);
             const sb      = statusBadge(appt.status as ApptStatus);
             return (
               <div key={appt.id} onClick={()=>{setEditAppt(appt);setShowApptModal(true);}}
