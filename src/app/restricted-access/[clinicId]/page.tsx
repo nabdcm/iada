@@ -145,6 +145,12 @@ export default function RestrictedAccessPage() {
   const [profileLoading,  setProfileLoading]  = useState(false);
   const [profileTab,      setProfileTab]      = useState<"info"|"medical">("info");
 
+  // ── Medical record editing state ──────────────────────────
+  const [expandedField,   setExpandedField]   = useState<string | null>(null);
+  const [draftValues,     setDraftValues]     = useState<Record<string, string>>({});
+  const [fieldSaving,     setFieldSaving]     = useState<string | null>(null);
+  const [fieldSaved,      setFieldSaved]      = useState<string | null>(null);
+
   const [enteredPin, setEnteredPin] = useState("");
 
   const callRA = async (action: string, extra: Record<string, unknown> = {}) => {
@@ -249,10 +255,36 @@ export default function RestrictedAccessPage() {
     setProfilePatient(p);
     setProfileTab("info");
     setProfile(null);
+    setExpandedField(null);
+    setDraftValues({});
+    setFieldSaved(null);
     setProfileLoading(true);
     const { ok, data } = await callRA("profile", { pin: enteredPin, patientId: p.id });
-    setProfile(ok && data?.profile ? data.profile : { medical_fields:{}, extra_form_fields:{} });
+    const loaded = ok && data?.profile ? data.profile : { medical_fields:{}, extra_form_fields:{} };
+    setProfile(loaded);
+    setDraftValues(loaded.medical_fields ?? {});
     setProfileLoading(false);
+  };
+
+  const saveField = async (key: string) => {
+    if (!profilePatient || !profile) return;
+    const value = draftValues[key] ?? "";
+    const updatedMedicalFields = { ...profile.medical_fields, [key]: value };
+    const updatedProfile: PatientProfile = { ...profile, medical_fields: updatedMedicalFields };
+    setFieldSaving(key);
+    setProfile(updatedProfile);
+    const { ok } = await callRA("save_medical_field", {
+      pin: enteredPin,
+      patientId: profilePatient.id,
+      key,
+      value,
+    });
+    setFieldSaving(null);
+    if (ok) {
+      setFieldSaved(key);
+      setExpandedField(null);
+      setTimeout(() => setFieldSaved(prev => prev === key ? null : prev), 2000);
+    }
   };
 
 
@@ -515,25 +547,78 @@ export default function RestrictedAccessPage() {
                         </div>
 
                         {medFields.map(field => {
-                          const val = profile?.medical_fields?.[field.key] || "";
+                          const isExpanded   = expandedField === field.key;
+                          const val          = draftValues[field.key] ?? "";
+                          const savedVal     = profile?.medical_fields?.[field.key] ?? "";
+                          const isSavingThis = fieldSaving === field.key;
+                          const justSaved    = fieldSaved === field.key;
                           return (
-                            <div key={field.key} style={{ borderRadius:12,border:`1.5px solid ${val?"#e0eaff":"#eef0f3"}`,background:val?"#f5f8ff":"#fafbfc",overflow:"hidden" }}>
-                              <div style={{ padding:"11px 14px",display:"flex",alignItems:"center",gap:8 }}>
-                                <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
-                                <div style={{ flex:1,minWidth:0 }}>
-                                  <div style={{ fontSize:11,fontWeight:700,color:"#666",marginBottom:val?4:0 }}>{field.label_ar}</div>
-                                  {val ? (
-                                    <div style={{ fontSize:13,color:"#353535",lineHeight:1.7,whiteSpace:"pre-wrap" }}>{val}</div>
-                                  ) : (
-                                    <div style={{ fontSize:11,color:"#ccc",fontStyle:"italic" }}>لم يُسجَّل بعد</div>
+                            <div key={field.key} style={{ borderRadius:12,border:`1.5px solid ${isExpanded?"#0863ba":"#eef0f3"}`,background:isExpanded?"#fff":"#f9fafb",overflow:"hidden",transition:"border-color .2s, box-shadow .2s",boxShadow:isExpanded?"0 0 0 3px rgba(8,99,186,.08)":"none" }}>
+                              {/* رأس الحقل */}
+                              <div style={{ padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",background:isExpanded?"#f0f6ff":"transparent" }}>
+                                <div style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0 }}>
+                                  <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
+                                  <div style={{ minWidth:0 }}>
+                                    <div style={{ fontSize:12,fontWeight:700,color:isExpanded?"#0863ba":"#555" }}>{field.label_ar}</div>
+                                    {!isExpanded && savedVal && <div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200 }}>{savedVal}</div>}
+                                    {!isExpanded && !savedVal && <div style={{ fontSize:11,color:"#ccc",fontStyle:"italic",marginTop:1 }}>لم يُسجَّل بعد</div>}
+                                  </div>
+                                </div>
+                                {/* أزرار التعديل / الإغلاق */}
+                                <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                                  {justSaved && !isExpanded && (
+                                    <span style={{ fontSize:10,background:"rgba(39,174,96,.12)",color:"#27ae60",fontWeight:700,padding:"2px 8px",borderRadius:20 }}>
+                                      ✓ تم الحفظ
+                                    </span>
+                                  )}
+                                  {savedVal && !isExpanded && !justSaved && (
+                                    <span style={{ fontSize:10,background:"rgba(8,99,186,.1)",color:"#0863ba",fontWeight:700,padding:"2px 7px",borderRadius:20 }}>
+                                      مُعبَّأ
+                                    </span>
+                                  )}
+                                  {!isExpanded && (
+                                    <button
+                                      onClick={() => { setDraftValues(p => ({...p, [field.key]: savedVal})); setExpandedField(field.key); }}
+                                      style={{ padding:"6px 12px",borderRadius:8,border:`1.5px solid ${clinicColor}40`,background:`${clinicColor}10`,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:clinicColor,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",minHeight:34 }}>
+                                      ✏️ تعديل
+                                    </button>
+                                  )}
+                                  {isExpanded && (
+                                    <button onClick={() => setExpandedField(null)}
+                                      style={{ width:28,height:28,borderRadius:7,background:"#f0f0f0",border:"none",cursor:"pointer",fontSize:12,color:"#888",display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
                                   )}
                                 </div>
-                                {val && <span style={{ fontSize:10,background:"rgba(8,99,186,.1)",color:"#0863ba",fontWeight:700,padding:"2px 7px",borderRadius:20,flexShrink:0 }}>مُعبَّأ</span>}
                               </div>
+                              {/* منطقة التحرير — تظهر عند التوسع */}
+                              {isExpanded && (
+                                <div style={{ padding:"0 14px 14px" }}>
+                                  <textarea
+                                    autoFocus
+                                    value={val}
+                                    onChange={e => setDraftValues(p => ({...p, [field.key]: e.target.value}))}
+                                    rows={5}
+                                    placeholder="اكتب هنا..."
+                                    style={{ width:"100%",padding:"10px 12px",border:"1.5px solid #c8d9f0",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",resize:"vertical" as const,direction:"rtl",lineHeight:1.7,boxSizing:"border-box" as const,marginBottom:10 }}
+                                  />
+                                  <div style={{ display:"flex",gap:8 }}>
+                                    <button
+                                      onClick={() => saveField(field.key)}
+                                      disabled={isSavingThis}
+                                      style={{ flex:1,padding:"12px 0",background:isSavingThis?"#7aabdb":"#0863ba",color:"#fff",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:isSavingThis?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,minHeight:48,transition:"background .2s" }}>
+                                      {isSavingThis
+                                        ? <>جاري الحفظ...</>
+                                        : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>حفظ</>}
+                                    </button>
+                                    <button onClick={() => setExpandedField(null)}
+                                      style={{ padding:"12px 16px",background:"#f0f0f0",color:"#777",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer",minHeight:48 }}>
+                                      إلغاء
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
-
 
                       </div>
                     )}
