@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useParams } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────
 interface ClinicInfo {
@@ -10,7 +9,6 @@ interface ClinicInfo {
   name: string;
   clinic_type: string;
   restricted_access_enabled: boolean;
-  restricted_access_pin: string;
   plan?: PlanType;
 }
 
@@ -109,7 +107,6 @@ const calcAge = (dob?:string|null) => {
 // ════════════════════════════════════════════════════════════
 export default function RestrictedAccessPage() {
   const params   = useParams();
-  const router   = useRouter();
   const rawClinicId = params?.clinicId;
   const clinicId = (Array.isArray(rawClinicId) ? rawClinicId[0] : rawClinicId ?? "").trim();
 
@@ -148,6 +145,18 @@ export default function RestrictedAccessPage() {
   const [profileLoading,  setProfileLoading]  = useState(false);
   const [profileTab,      setProfileTab]      = useState<"info"|"medical">("info");
 
+  const [enteredPin, setEnteredPin] = useState("");
+
+  const callRA = async (action: string, extra: Record<string, unknown> = {}) => {
+    const res = await fetch("/api/restricted-access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, clinicId, ...extra }),
+    });
+    const json = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data: json };
+  };
+
   useEffect(() => {
     if (!clinicId) {
       console.error("[restricted-access] clinicId is empty — params:", params);
@@ -155,66 +164,52 @@ export default function RestrictedAccessPage() {
       return;
     }
     const session = sessionStorage.getItem(`ra_${clinicId}`);
-    if (session === "granted") fetchClinicAndPatients(true);
-    else fetchClinicInfo();
+    if (session) {
+      setEnteredPin(session);
+      fetchClinicAndPatients(session);
+    } else {
+      fetchClinicInfo();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
 
+  // ── التحقق من أن الرابط مفعّل (بدون الحاجة لـ PIN) ──────
   const fetchClinicInfo = async () => {
-    const { data, error } = await supabase
-      .from("clinics")
-      .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin, plan")
-      .eq("user_id", clinicId)
-      .maybeSingle();
-    if (error) { console.error("[restricted-access] fetchClinicInfo error:", error, "clinicId:", clinicId); setStage("error"); return; }
-    if (!data || !data.restricted_access_enabled) { setStage("error"); return; }
-    setClinicInfo(data as ClinicInfo);
+    const { ok, data } = await callRA("check");
+    if (!ok || !data?.valid) { setStage("error"); return; }
+    setClinicInfo(data.clinic as ClinicInfo);
     setStage("pin");
   };
 
-  const fetchClinicAndPatients = async (skipPinCheck = false) => {
+  // ── التحقق من PIN وجلب المرضى/الأطباء ──────────────────
+  const fetchClinicAndPatients = async (pin: string) => {
     setPatientsLoading(true);
-    const { data: clinic, error } = await supabase
-      .from("clinics")
-      .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin, plan")
-      .eq("user_id", clinicId)
-      .maybeSingle();
-    if (error || !clinic) { console.error("[restricted-access] fetchClinicAndPatients error:", error, "clinicId:", clinicId); setStage("error"); setPatientsLoading(false); return; }
-    if (!skipPinCheck && !clinic.restricted_access_enabled) { setStage("error"); setPatientsLoading(false); return; }
-    setClinicInfo(clinic as ClinicInfo);
-    const { data: pts } = await supabase
-      .from("patients")
-      .select("id, name, phone, date_of_birth, gender, notes, has_diabetes, has_hypertension, created_at")
-      .eq("user_id", clinicId)
-      .eq("is_hidden", false)
-      .order("name", { ascending: true });
-    setPatients((pts as Patient[]) || []);
+    const { ok, status, data } = await callRA("data", { pin });
+    if (!ok) {
+      if (status === 401) {
+        sessionStorage.removeItem(`ra_${clinicId}`);
+        setEnteredPin("");
+        setPinError("PIN غير صحيح — تحقق من الرقم وأعد المحاولة");
+        setStage("pin");
+      } else {
+        setStage("error");
+      }
+      setPatientsLoading(false);
+      return;
+    }
+    setClinicInfo(data.clinic as ClinicInfo);
+    setPatients((data.patients as Patient[]) || []);
+    setDoctors((data.doctors as Doctor[]) || []);
     setPatientsLoading(false);
     setStage("patients");
-
-    // ── جلب الأطباء (للخطط المشتركة) ──
-    if (isSharedPlan((clinic as ClinicInfo).plan)) {
-      const { data: docs } = await supabase
-        .from("doctors")
-        .select("id, name, specialty, user_id")
-        .eq("user_id", clinicId)
-        .order("name");
-      setDoctors((docs as Doctor[]) || []);
-    }
   };
 
   // ── جلب مواعيد العيادة ─────────────────────────────────────
   const loadAppointments = async () => {
     setApptLoading(true);
     try {
-      const { data } = await supabase
-        .from("appointments")
-        .select("*")
-        .eq("user_id", clinicId)
-        .neq("status", "pending_approval")
-        .order("date", { ascending: true })
-        .order("time", { ascending: true });
-      setAppointments((data as Appointment[]) || []);
+      const { ok, data } = await callRA("appointments", { pin: enteredPin });
+      if (ok) setAppointments((data.appointments as Appointment[]) || []);
     } catch (err) { console.error(err); }
     finally { setApptLoading(false); }
   };
@@ -226,15 +221,28 @@ export default function RestrictedAccessPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, stage]);
 
-  const handlePinSubmit = () => {
+  const handlePinSubmit = async () => {
     if (!clinicInfo) return;
-    if (pinInput.trim() === String(clinicInfo.restricted_access_pin).trim()) {
-      sessionStorage.setItem(`ra_${clinicId}`, "granted");
-      fetchClinicAndPatients(true);
-    } else {
-      setPinError("PIN غير صحيح — تحقق من الرقم وأعد المحاولة");
-      setPinInput("");
+    const pin = pinInput.trim();
+    setPatientsLoading(true);
+    const { ok, status, data } = await callRA("data", { pin });
+    if (!ok) {
+      setPatientsLoading(false);
+      if (status === 401) {
+        setPinError("PIN غير صحيح — تحقق من الرقم وأعد المحاولة");
+        setPinInput("");
+      } else {
+        setStage("error");
+      }
+      return;
     }
+    sessionStorage.setItem(`ra_${clinicId}`, pin);
+    setEnteredPin(pin);
+    setClinicInfo(data.clinic as ClinicInfo);
+    setPatients((data.patients as Patient[]) || []);
+    setDoctors((data.doctors as Doctor[]) || []);
+    setPatientsLoading(false);
+    setStage("patients");
   };
 
   const openProfile = async (p: Patient) => {
@@ -242,14 +250,11 @@ export default function RestrictedAccessPage() {
     setProfileTab("info");
     setProfile(null);
     setProfileLoading(true);
-    const { data } = await supabase
-      .from("patient_profiles")
-      .select("medical_fields, extra_form_fields")
-      .eq("patient_id", p.id)
-      .maybeSingle();
-    setProfile(data ? { medical_fields: data.medical_fields ?? {}, extra_form_fields: data.extra_form_fields ?? {} } : { medical_fields:{}, extra_form_fields:{} });
+    const { ok, data } = await callRA("profile", { pin: enteredPin, patientId: p.id });
+    setProfile(ok && data?.profile ? data.profile : { medical_fields:{}, extra_form_fields:{} });
     setProfileLoading(false);
   };
+
 
   const filteredPatients = patients.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -315,7 +320,12 @@ export default function RestrictedAccessPage() {
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:8 }}>
 
-          <button onClick={() => { sessionStorage.removeItem(`ra_${clinicId}`); router.push(`/restricted-access/${clinicId}`); }}
+          <button onClick={() => {
+              sessionStorage.removeItem(`ra_${clinicId}`);
+              setEnteredPin("");
+              setStage("pin");
+              setPinInput("");
+            }}
             style={{ padding:"6px 14px",border:"1.5px solid #eef0f3",borderRadius:8,background:"#f7f9fc",fontSize:12,color:"#888",cursor:"pointer",fontFamily:"Rubik,sans-serif" }}>
             خروج
           </button>
