@@ -69,7 +69,10 @@ export async function POST(req: Request) {
       .update(clinicUpdate)
       .eq("user_id", userId);
 
-    if (clinicError) console.error("❌ clinics update error:", clinicError);
+    if (clinicError) {
+      console.error("❌ clinics update error:", clinicError);
+      return NextResponse.json({ error: clinicError.message }, { status: 400 });
+    }
 
     return NextResponse.json({ success: true });
 
