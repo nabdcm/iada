@@ -110,7 +110,8 @@ const calcAge = (dob?:string|null) => {
 export default function RestrictedAccessPage() {
   const params   = useParams();
   const router   = useRouter();
-  const clinicId = params?.clinicId as string;
+  const rawClinicId = params?.clinicId;
+  const clinicId = (Array.isArray(rawClinicId) ? rawClinicId[0] : rawClinicId ?? "").trim();
 
   const [stage,           setStage]          = useState<"loading"|"pin"|"patients"|"error">("loading");
   const [clinicInfo,      setClinicInfo]      = useState<ClinicInfo | null>(null);
@@ -148,6 +149,11 @@ export default function RestrictedAccessPage() {
   const [profileTab,      setProfileTab]      = useState<"info"|"medical">("info");
 
   useEffect(() => {
+    if (!clinicId) {
+      console.error("[restricted-access] clinicId is empty — params:", params);
+      setStage("error");
+      return;
+    }
     const session = sessionStorage.getItem(`ra_${clinicId}`);
     if (session === "granted") fetchClinicAndPatients(true);
     else fetchClinicInfo();
@@ -159,8 +165,9 @@ export default function RestrictedAccessPage() {
       .from("clinics")
       .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin, plan")
       .eq("user_id", clinicId)
-      .single();
-    if (error || !data || !data.restricted_access_enabled) { setStage("error"); return; }
+      .maybeSingle();
+    if (error) { console.error("[restricted-access] fetchClinicInfo error:", error, "clinicId:", clinicId); setStage("error"); return; }
+    if (!data || !data.restricted_access_enabled) { setStage("error"); return; }
     setClinicInfo(data as ClinicInfo);
     setStage("pin");
   };
@@ -171,8 +178,8 @@ export default function RestrictedAccessPage() {
       .from("clinics")
       .select("user_id, name, clinic_type, restricted_access_enabled, restricted_access_pin, plan")
       .eq("user_id", clinicId)
-      .single();
-    if (error || !clinic) { setStage("error"); setPatientsLoading(false); return; }
+      .maybeSingle();
+    if (error || !clinic) { console.error("[restricted-access] fetchClinicAndPatients error:", error, "clinicId:", clinicId); setStage("error"); setPatientsLoading(false); return; }
     if (!skipPinCheck && !clinic.restricted_access_enabled) { setStage("error"); setPatientsLoading(false); return; }
     setClinicInfo(clinic as ClinicInfo);
     const { data: pts } = await supabase
