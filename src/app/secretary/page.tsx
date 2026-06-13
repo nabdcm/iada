@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Appointment, Payment } from "@/lib/supabase";
@@ -462,7 +461,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose }: {
 }
 
 // ════════════════════════════════════════════════════════════
-// PATIENT PROFILE DRAWER (السجل الطبي)
+// PATIENT PROFILE DRAWER (السجل الطبي — مطابق لصفحة المرضى)
 // ════════════════════════════════════════════════════════════
 function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
   lang:Lang; patient:Patient; clinicType:ClinicType; onClose:()=>void;
@@ -472,101 +471,218 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
   const fields  = MEDICAL_FIELDS_BY_TYPE[clinicType]??MEDICAL_FIELDS_BY_TYPE.general;
   const calcAge = (dob?:string|null) => !dob?"—":Math.floor((Date.now()-new Date(dob).getTime())/(1000*60*60*24*365.25));
 
-  const [profile, setProfile]   = useState<PatientProfile>({medical_fields:{},dental_chart:{},xrays:[],extra_form_fields:{}});
-  const [loading, setLoading]   = useState(true);
-  const [saving,  setSaving]    = useState(false);
-  const [userId,  setUserId]    = useState("");
-  const [drafts,  setDrafts]    = useState<Record<string,string>>({});
-  const [fSaving, setFSaving]   = useState<string|null>(null);
-  const [fSaved,  setFSaved]    = useState<string|null>(null);
-  const [expanded,setExpanded]  = useState<string|null>(null);
+  const [profile,       setProfile]       = useState<PatientProfile>({medical_fields:{},dental_chart:{},xrays:[],extra_form_fields:{}});
+  const [loadingP,      setLoadingP]      = useState(true);
+  const [saving,        setSaving]        = useState(false);
+  const [userId,        setUserId]        = useState("");
+  const [expandedField, setExpandedField] = useState<string|null>(null);
+  const [draftValues,   setDraftValues]   = useState<Record<string,string>>({});
+  const [fieldSaving,   setFieldSaving]   = useState<string|null>(null);
+  const [fieldSaved,    setFieldSaved]    = useState<string|null>(null);
+  const [activeTab,     setActiveTab]     = useState<"info"|"medical">("medical");
 
   useEffect(()=>{
     (async()=>{
-      setLoading(true);
+      setLoadingP(true);
       const { data:{user} } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
       const saved = await loadProfileFromDB(patient.id);
-      if (saved) { setProfile(saved); setDrafts(saved.medical_fields??{}); }
-      setLoading(false);
+      if (saved) { setProfile(saved); setDraftValues(saved.medical_fields??{}); }
+      setLoadingP(false);
     })();
   },[patient.id]);
 
   const saveField = async (key:string) => {
-    const value = drafts[key]??"";
-    const updated:PatientProfile = { ...profile, medical_fields:{...profile.medical_fields,[key]:value} };
-    setFSaving(key); setProfile(updated);
-    if (userId) await saveProfileToDB(patient.id,userId,updated);
-    setFSaving(null); setFSaved(key); setExpanded(null);
-    setTimeout(()=>setFSaved(prev=>prev===key?null:prev),2000);
+    const value = draftValues[key]??"";
+    const updated:PatientProfile = {
+      ...profile,
+      medical_fields: { ...profile.medical_fields, [key]: value },
+    };
+    setFieldSaving(key);
+    setProfile(updated);
+    if (userId) await saveProfileToDB(patient.id, userId, updated);
+    setFieldSaving(null);
+    setFieldSaved(key);
+    setExpandedField(null);
+    setTimeout(()=>setFieldSaved(prev=>prev===key?null:prev), 2000);
   };
 
+  const tabList = [
+    { key:"info"    as const, label:isAr?"المعلومات":"Info",    icon:"👤" },
+    { key:"medical" as const, label:isAr?"السجل الطبي":"Medical", icon:"📋" },
+  ];
+
   return (
-    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"flex-start",justifyContent:"center",overflow:"auto" }}>
-      <div onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"calc(100% - 32px)",maxWidth:560,margin:"20px auto",boxShadow:"0 24px 64px rgba(8,99,186,.2)",animation:"modalIn .28s cubic-bezier(.4,0,.2,1)",direction:isAr?"rtl":"ltr" }}>
-        {/* header */}
-        <div style={{ padding:"20px 24px 16px",borderBottom:"1.5px solid #eef0f3" }}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
-            <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-              <div style={{ width:48,height:48,borderRadius:14,background:getColor(patient.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,flexShrink:0 }}>{getInitials(patient.name)}</div>
-              <div>
-                <div style={{ fontSize:16,fontWeight:800,color:"#353535" }}>{patient.name}</div>
-                <div style={{ fontSize:12,color:"#888",marginTop:2 }}>{patient.phone} {calcAge(patient.date_of_birth)!=="—"?`· ${calcAge(patient.date_of_birth)} ${isAr?"سنة":"yr"}`:""}</div>
-              </div>
+    <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+      <div onClick={onClose} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)" }}/>
+      <div onClick={e=>e.stopPropagation()} style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:560,maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 24px 64px rgba(8,99,186,.2)",animation:"modalIn .28s cubic-bezier(.4,0,.2,1)",direction:isAr?"rtl":"ltr",overflow:"hidden" }}>
+
+        {/* Header */}
+        <div style={{ padding:"18px 22px 14px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",gap:12,flexShrink:0 }}>
+          <div style={{ width:44,height:44,borderRadius:12,background:getColor(patient.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0 }}>
+            {getInitials(patient.name)}
+          </div>
+          <div style={{ flex:1,minWidth:0 }}>
+            <div style={{ fontSize:16,fontWeight:800,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{patient.name}</div>
+            <div style={{ fontSize:11,color:"#aaa",marginTop:2,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+              {patient.gender&&<span>{isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")}</span>}
+              {calcAge((patient as any).date_of_birth)!=="—"&&<span>• {calcAge((patient as any).date_of_birth)} {isAr?"سنة":"yr"}</span>}
+              <span style={{ padding:"2px 8px",borderRadius:8,fontSize:10,fontWeight:700,background:`${meta.color}15`,color:meta.color }}>{meta.icon} {isAr?meta.ar:meta.en}</span>
+              {saving&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600 }}>💾 {isAr?"جاري الحفظ...":"Saving..."}</span>}
             </div>
-            <button onClick={onClose} style={{ width:34,height:34,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16,flexShrink:0 }}>✕</button>
           </div>
-          <div style={{ display:"inline-flex",alignItems:"center",gap:6,padding:"5px 10px",background:`${meta.color}10`,borderRadius:8,border:`1px solid ${meta.color}25` }}>
-            <span>{meta.icon}</span>
-            <span style={{ fontSize:12,fontWeight:600,color:meta.color }}>{isAr?meta.ar:meta.en}</span>
-          </div>
+          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#888",fontWeight:700 }}>✕</button>
         </div>
-        {/* content */}
-        <div style={{ padding:"20px 24px 32px",maxHeight:"60vh",overflowY:"auto" }}>
-          <div style={{ fontSize:13,fontWeight:700,color:"#353535",marginBottom:14 }}>{isAr?"📋 السجل الطبي":"📋 Medical Record"}</div>
-          {loading?(
-            <div style={{ textAlign:"center",padding:"32px 0",color:"#aaa",fontSize:13 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
-          ):fields.map(f=>{
-            const isExp  = expanded===f.key;
-            const val    = profile.medical_fields[f.key]??"";
-            const draft  = drafts[f.key]??"";
-            const isSav  = fSaving===f.key;
-            const isDone = fSaved===f.key;
-            return (
-              <div key={f.key} style={{ border:"1.5px solid #eef0f3",borderRadius:12,marginBottom:10,overflow:"hidden",transition:"all .2s" }}>
-                <div onClick={()=>setExpanded(isExp?null:f.key)} style={{ padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",background:isExp?"#f7f9ff":"#fff" }}>
-                  <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                    <span style={{ fontSize:18 }}>{f.icon}</span>
-                    <div>
-                      <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{isAr?f.label_ar:f.label_en}</div>
-                      {!isExp&&val&&<div style={{ fontSize:11,color:"#888",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:220 }}>{val}</div>}
-                      {!isExp&&!val&&<div style={{ fontSize:11,color:"#ccc",marginTop:2 }}>{isAr?"لم يُسجَّل بعد":"Not recorded yet"}</div>}
-                    </div>
+
+        {/* Tabs */}
+        <div style={{ display:"flex",borderBottom:"1.5px solid #eef0f3",background:"#fafbfc",flexShrink:0 }}>
+          {tabList.map(tab=>(
+            <button key={tab.key} onClick={()=>setActiveTab(tab.key)}
+              style={{ flex:1,padding:"11px 4px",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,background:"transparent",color:activeTab===tab.key?"#0863ba":"#aaa",borderBottom:activeTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,transition:"all .18s" }}>
+              <span style={{ fontSize:15 }}>{tab.icon}</span>{tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div style={{ flex:1,overflowY:"auto",padding:"18px 22px" }}>
+          {loadingP?(
+            <div style={{ textAlign:"center",padding:"60px 0",color:"#ccc" }}>
+              <div style={{ width:36,height:36,border:"3px solid #eef0f3",borderTopColor:"#0863ba",borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 16px" }}/>
+              <div style={{ fontSize:13 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
+            </div>
+          ):(
+            <>
+              {/* ── INFO ── */}
+              {activeTab==="info"&&(
+                <div>
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14 }}>
+                    {[
+                      { label:isAr?"الاسم":"Name",  value:patient.name,  icon:"👤" },
+                      { label:isAr?"الهاتف":"Phone", value:(patient.phone||"—"), icon:"📞" },
+                      { label:isAr?"الجنس":"Gender", value:patient.gender?(isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")):"—", icon:"⚧" },
+                      { label:isAr?"تاريخ الميلاد":"DOB", value:(patient as any).date_of_birth?new Date((patient as any).date_of_birth).toLocaleDateString(isAr?"ar-SA":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
+                    ].map(f=>(
+                      <div key={f.label} style={{ background:"#f7f9fc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>
+                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:4 }}>{f.icon} {f.label}</div>
+                        <div style={{ fontSize:13,fontWeight:600,color:"#353535" }}>{f.value}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                    {isDone&&<span style={{ fontSize:11,color:"#2e7d32",fontWeight:700 }}>✓ {isAr?"تم الحفظ":"Saved"}</span>}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round" style={{ transform:isExp?"rotate(180deg)":"none",transition:"transform .2s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                  <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginBottom:14 }}>
+                    {[
+                      { label:isAr?"السكري":"Diabetes",     icon:"🩸",color:"#c0392b",active:patient.has_diabetes },
+                      { label:isAr?"ضغط الدم":"Hypertension",icon:"💊",color:"#e67e22",active:patient.has_hypertension },
+                    ].map(c=>(
+                      <span key={c.label} style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:c.active?`${c.color}15`:"#f5f5f5",color:c.active?c.color:"#bbb",border:`1.5px solid ${c.active?`${c.color}35`:"#eee"}` }}>
+                        {c.icon} {c.label}: {c.active?(isAr?"نعم":"Yes"):(isAr?"لا":"No")}
+                      </span>
+                    ))}
+                  </div>
+                  {(patient as any).notes&&(
+                    <div style={{ background:"#fffbf0",borderRadius:10,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
+                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>📝 {isAr?"ملاحظات":"Notes"}</div>
+                      <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{(patient as any).notes}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── MEDICAL ── */}
+              {activeTab==="medical"&&(
+                <div>
+                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"9px 12px",background:`${meta.color}08`,borderRadius:10,border:`1px solid ${meta.color}20` }}>
+                    <span style={{ fontSize:16 }}>{meta.icon}</span>
+                    <span style={{ fontSize:12,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {isAr?"السجل الطبي":"Medical Record"}</span>
+                  </div>
+                  <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                    {fields.map(field=>{
+                      const isExpanded    = expandedField===field.key;
+                      const val           = draftValues[field.key]??"";
+                      const savedVal      = profile.medical_fields?.[field.key]??"";
+                      const isSavingThis  = fieldSaving===field.key;
+                      const justSaved     = fieldSaved===field.key;
+                      return (
+                        <div key={field.key} style={{ borderRadius:12,border:`1.5px solid ${isExpanded?"#0863ba":"#eef0f3"}`,background:isExpanded?"#fff":"#f9fafb",overflow:"hidden",transition:"border-color .2s, box-shadow .2s",boxShadow:isExpanded?"0 0 0 3px rgba(8,99,186,.08)":"none" }}>
+                          {/* رأس الحقل */}
+                          <div style={{ padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",background:isExpanded?"#f0f6ff":"transparent" }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0 }}>
+                              <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
+                              <div style={{ minWidth:0 }}>
+                                <div style={{ fontSize:12,fontWeight:700,color:isExpanded?"#0863ba":"#555" }}>{isAr?field.label_ar:field.label_en}</div>
+                                {!isExpanded&&savedVal&&<div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220 }}>{savedVal}</div>}
+                                {!isExpanded&&!savedVal&&<div style={{ fontSize:11,color:"#ccc",fontStyle:"italic",marginTop:1 }}>{isAr?"لم تُضَف بعد":"Not added yet"}</div>}
+                              </div>
+                            </div>
+                            <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                              {justSaved&&!isExpanded&&(
+                                <span style={{ fontSize:10,background:"rgba(39,174,96,.12)",color:"#27ae60",fontWeight:700,padding:"2px 8px",borderRadius:20 }}>
+                                  ✓ {isAr?"تم الحفظ":"Saved"}
+                                </span>
+                              )}
+                              {savedVal&&!isExpanded&&!justSaved&&(
+                                <span style={{ fontSize:10,background:"rgba(8,99,186,.1)",color:"#0863ba",fontWeight:700,padding:"2px 7px",borderRadius:20 }}>
+                                  {isAr?"مُعبَّأ":"Filled"}
+                                </span>
+                              )}
+                              {!isExpanded&&(
+                                <button
+                                  onClick={()=>{ setDraftValues(p=>({...p,[field.key]:savedVal})); setExpandedField(field.key); }}
+                                  style={{ padding:"6px 12px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.25)",background:"rgba(8,99,186,.07)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",minHeight:34 }}>
+                                  ✏️ {isAr?"تعديل":"Edit"}
+                                </button>
+                              )}
+                              {isExpanded&&(
+                                <button onClick={()=>setExpandedField(null)}
+                                  style={{ width:28,height:28,borderRadius:7,background:"#f0f0f0",border:"none",cursor:"pointer",fontSize:12,color:"#888",display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
+                              )}
+                            </div>
+                          </div>
+                          {/* منطقة التحرير */}
+                          {isExpanded&&(
+                            <div style={{ padding:"0 14px 14px" }}>
+                              {field.type==="textarea"?(
+                                <textarea
+                                  autoFocus
+                                  value={val}
+                                  onChange={e=>setDraftValues(p=>({...p,[field.key]:e.target.value}))}
+                                  rows={5}
+                                  placeholder={isAr?"اكتب هنا...":"Write here..."}
+                                  style={{ width:"100%",padding:"10px 12px",border:"1.5px solid #c8d9f0",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",resize:"vertical" as const,direction:isAr?"rtl":"ltr",lineHeight:1.7,boxSizing:"border-box" as const,marginBottom:10 }}
+                                />
+                              ):(
+                                <input
+                                  autoFocus
+                                  value={val}
+                                  onChange={e=>setDraftValues(p=>({...p,[field.key]:e.target.value}))}
+                                  placeholder={isAr?"اكتب هنا...":"Write here..."}
+                                  style={{ width:"100%",padding:"10px 12px",border:"1.5px solid #c8d9f0",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",direction:isAr?"rtl":"ltr",boxSizing:"border-box" as const,marginBottom:10 }}
+                                />
+                              )}
+                              <div style={{ display:"flex",gap:8 }}>
+                                <button
+                                  onClick={()=>saveField(field.key)}
+                                  disabled={isSavingThis}
+                                  style={{ flex:1,padding:"12px 0",background:isSavingThis?"#7aabdb":"#0863ba",color:"#fff",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:isSavingThis?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,minHeight:48,transition:"background .2s" }}>
+                                  {isSavingThis
+                                    ? <>{isAr?"جاري الحفظ...":"Saving..."}</>
+                                    : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>{isAr?"حفظ":"Save"}</>}
+                                </button>
+                                <button onClick={()=>setExpandedField(null)}
+                                  style={{ padding:"12px 16px",background:"#f0f0f0",color:"#777",border:"none",borderRadius:9,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer",minHeight:48 }}>
+                                  {isAr?"إلغاء":"Cancel"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                {isExp&&(
-                  <div style={{ padding:"0 16px 16px",background:"#f7f9ff",borderTop:"1px solid #eef0f3" }}>
-                    {f.type==="textarea"?(
-                      <textarea value={draft} onChange={e=>setDrafts(d=>({...d,[f.key]:e.target.value}))} rows={4} placeholder={isAr?"اكتب هنا...":"Write here..."} style={{ ...inputSt,resize:"vertical" as const,lineHeight:1.6,marginTop:12,background:"#fff" }}/>
-                    ):(
-                      <input value={draft} onChange={e=>setDrafts(d=>({...d,[f.key]:e.target.value}))} placeholder={isAr?"اكتب هنا...":"Write here..."} style={{ ...inputSt,marginTop:12,background:"#fff" }}/>
-                    )}
-                    <div style={{ display:"flex",gap:8,marginTop:10 }}>
-                      <button onClick={()=>saveField(f.key)} disabled={isSav} style={{ flex:1,padding:"10px",background:PRIMARY,color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:isSav?"not-allowed":"pointer",opacity:isSav?0.7:1 }}>
-                        {isSav?(isAr?"جاري الحفظ...":"Saving..."):(isAr?"حفظ":"Save")}
-                      </button>
-                      <button onClick={()=>setExpanded(null)} style={{ padding:"10px 16px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -814,17 +930,40 @@ export default function SecretaryPage() {
   };
 
   // ── Appointments ────────────────────────────────────────
-  const handleSaveAppt = async (data:any, id?:number) => {
+  const handleSaveAppt = async (form:any, id?:number) => {
     setApptSaving(true);
     try {
       const { data:{user} } = await supabase.auth.getUser();
       if (!user) return;
+      // بناء الـ payload بنفس طريقة صفحة المواعيد
+      const payload: Record<string,unknown> = {
+        patient_id: form.patient_id,
+        date:       form.date,
+        time:       form.time,
+        duration:   form.duration,
+        type:       form.type || null,
+        notes:      form.notes || null,
+        status:     form.status,
+      };
+      if (form.doctor_id) payload.doctor_id = form.doctor_id;
+
       if (id) {
-        const { data:updated } = await supabase.from("appointments").update(data).eq("id",id).select().single();
-        if (updated) setAppointments(prev=>prev.map(a=>a.id===id?updated:a));
+        const { data:updated, error } = await supabase
+          .from("appointments").update(payload).eq("id",id).select().single();
+        if (error) { console.error("Update error:", error); return; }
+        if (updated) setAppointments(prev=>prev.map(a=>a.id===id?(updated as Appointment):a));
       } else {
-        const { data:inserted } = await supabase.from("appointments").insert({ ...data,user_id:user.id,status:"scheduled" }).select().single();
-        if (inserted) setAppointments(prev=>[...prev,inserted]);
+        const { data:inserted, error } = await supabase
+          .from("appointments")
+          .insert({ user_id:user.id, ...payload, status:"scheduled" })
+          .select().single();
+        if (error) { console.error("Insert error:", error); return; }
+        if (inserted) {
+          setAppointments(prev=>[...prev, inserted as Appointment]
+            .sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)));
+          // تحديث التاريخ المحدد للانتقال لليوم المحجوز
+          setSelectedDate(form.date);
+        }
       }
       setShowApptModal(false); setEditAppt(null);
     } catch(e){ console.error(e); }
@@ -848,11 +987,37 @@ export default function SecretaryPage() {
       const { data:{user} } = await supabase.auth.getUser();
       if (!user) return;
       if (id) {
-        const { data:updated } = await supabase.from("patients").update(form).eq("id",id).select().single();
-        if (updated) setPatients(prev=>prev.map(p=>p.id===id?updated as unknown as Patient:p));
+        const { data:updated, error } = await supabase
+          .from("patients")
+          .update({
+            name: form.name,
+            phone: form.phone,
+            gender: form.gender || null,
+            date_of_birth: form.date_of_birth || null,
+            has_diabetes: form.has_diabetes,
+            has_hypertension: form.has_hypertension,
+            notes: form.notes || null,
+          })
+          .eq("id",id).select().single();
+        if (error) { console.error("Update patient error:", error); return; }
+        if (updated) setPatients(prev=>prev.map(p=>p.id===id?(updated as unknown as Patient):p));
       } else {
-        const { data:inserted } = await supabase.from("patients").insert({ ...form,user_id:user.id,is_hidden:false }).select().single();
-        if (inserted) setPatients(prev=>[inserted as unknown as Patient,...prev]);
+        const { data:inserted, error } = await supabase
+          .from("patients")
+          .insert({
+            name: form.name,
+            phone: form.phone,
+            gender: form.gender || null,
+            date_of_birth: form.date_of_birth || null,
+            has_diabetes: form.has_diabetes,
+            has_hypertension: form.has_hypertension,
+            notes: form.notes || null,
+            user_id: user.id,
+            is_hidden: false,
+          })
+          .select().single();
+        if (error) { console.error("Insert patient error:", error); return; }
+        if (inserted) setPatients(prev=>[inserted as unknown as Patient, ...prev]);
       }
       setShowPatModal(false); setEditPat(null);
     } catch(e){ console.error(e); }
@@ -1028,27 +1193,56 @@ export default function SecretaryPage() {
           <div style={{ textAlign:"center",padding:"48px 0",color:"#aaa" }}>
             <div style={{ fontSize:36,marginBottom:10 }}>📭</div>
             <div style={{ fontSize:14 }}>{isAr?"لا توجد مواعيد":"No appointments"}</div>
+            <button onClick={()=>{setEditAppt(null);setShowApptModal(true);}}
+              style={{ marginTop:16,padding:"10px 24px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer" }}>
+              + {isAr?"موعد جديد":"New Appointment"}
+            </button>
           </div>
         ):dayAppts.map(appt=>{
           const patient = patients.find(p=>p.id===appt.patient_id);
           const doctor  = doctors.find(d=>d.id===(appt as any).doctor_id);
           const sb      = sBadge(appt.status);
+          const bColor  = sb.color;
           return (
-            <div key={appt.id} className="card-hover" onClick={()=>{setEditAppt(appt);setShowApptModal(true);}}
-              style={{ background:"#fff",borderRadius:14,padding:"14px",marginBottom:10,display:"flex",alignItems:"center",gap:12,border:"1.5px solid #eef0f3",cursor:"pointer",transition:"all .15s",boxShadow:"0 2px 8px rgba(0,0,0,.04)",animation:"fadeIn .25s ease" }}>
-              <div style={{ textAlign:"center",minWidth:44,flexShrink:0 }}>
-                <div style={{ fontSize:14,fontWeight:800,color:PRIMARY }}>{fmtTime(appt.time)}</div>
-                {(appt as any).duration&&<div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{(appt as any).duration}{isAr?"د":"m"}</div>}
+            <div key={appt.id}
+              onClick={()=>{setEditAppt(appt);setShowApptModal(true);}}
+              style={{
+                background:sb.bg,
+                border:`1.5px solid ${bColor}30`,
+                borderInlineStartWidth:4,
+                borderInlineStartColor:bColor,
+                borderInlineEndWidth:isAr?4:1.5,
+                borderInlineEndColor:isAr?bColor:`${bColor}30`,
+                borderRadius:14,
+                padding:"14px 16px",
+                marginBottom:10,
+                display:"flex",
+                alignItems:"center",
+                gap:12,
+                cursor:"pointer",
+                transition:"box-shadow .2s, transform .15s",
+                boxShadow:"0 2px 8px rgba(0,0,0,.04)",
+                animation:"fadeIn .25s ease",
+              }}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 16px rgba(8,99,186,.12)";(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 8px rgba(0,0,0,.04)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
+              {/* التوقيت */}
+              <div style={{ flexShrink:0,textAlign:"center",minWidth:52,background:"rgba(255,255,255,.7)",borderRadius:10,padding:"6px 8px",border:`1px solid ${bColor}20` }}>
+                <div style={{ fontSize:15,fontWeight:800,color:bColor,lineHeight:1 }}>{appt.time.slice(0,5)}</div>
+                <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{(appt as any).duration||30} {isAr?"د":"m"}</div>
               </div>
-              <div style={{ width:2,alignSelf:"stretch",background:sb.bg,borderRadius:2,flexShrink:0 }}/>
+              {/* أفاتار */}
+              <div style={{ width:38,height:38,borderRadius:10,background:patient?getColor(patient.id):"#ccc",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0 }}>
+                {patient?getInitials(patient.name):"?"}
+              </div>
+              {/* تفاصيل */}
               <div style={{ flex:1,minWidth:0 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:4 }}>
-                  <div style={{ width:28,height:28,borderRadius:8,background:patient?getColor(patient.id):"#ccc",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0 }}>{patient?getInitials(patient.name):"?"}</div>
-                  <span style={{ fontWeight:600,fontSize:14,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{patient?.name||"—"}</span>
-                </div>
-                <div style={{ display:"flex",gap:6,flexWrap:"wrap",alignItems:"center" }}>
-                  <span style={{ padding:"2px 8px",borderRadius:20,background:sb.bg,color:sb.color,fontSize:11,fontWeight:600 }}>{sLabel(appt.status)}</span>
-                  {(appt as any).type&&<span style={{ fontSize:11,color:"#888" }}>{(appt as any).type}</span>}
+                <div style={{ fontSize:14,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{patient?.name||"—"}</div>
+                <div style={{ fontSize:11,color:"#999",marginTop:3,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center" }}>
+                  {(appt as any).type&&<span>{(appt as any).type} ·</span>}
+                  <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
+                    {sLabel(appt.status)}
+                  </span>
                   {doctor&&<span style={{ fontSize:11,color:doctor.color||PRIMARY }}>• {doctor.name}</span>}
                 </div>
               </div>
