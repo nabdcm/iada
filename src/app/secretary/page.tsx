@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Appointment, Payment } from "@/lib/supabase";
