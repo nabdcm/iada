@@ -222,7 +222,7 @@ const T = {
       maxDoctors:"الحد الأقصى للأطباء",
       maxDoctorsNote:"يمكن تعديل هذا الرقم بالاتفاق مع العميل",
       doctorsCount:"عدد الأطباء الحالي",
-      planDesc:{ basic:"إدارة المرضى والمواعيد والسجلات • حتى 300 مريض", pro:"الأساسية + رابط الحجز + المدفوعات + واتساب • حتى 1000 مريض", enterprise:"جميع الميزات + متابعة المرضى + بوابة المريض • غير محدود" },
+      planDesc:{ basic:"إدارة المرضى والمواعيد والسجلات • حتى 100 مريض", pro:"الأساسية + رابط الحجز + المدفوعات + واتساب • حتى 400 مريض", enterprise:"جميع الميزات + متابعة المرضى + بوابة المريض • غير محدود" },
       plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة", shared_basic:"مشتركة أساسية", shared_pro:"مشتركة احترافية", shared_enterprise:"مشتركة شاملة" },
       deleteConfirmTitle:"تأكيد الحذف النهائي",
       deleteConfirmMsg:"هل أنت متأكد من حذف عيادة",
@@ -428,7 +428,7 @@ const T = {
       maxDoctors:"Max Doctors",
       maxDoctorsNote:"This number can be adjusted by agreement with the client",
       doctorsCount:"Current Doctors Count",
-      planDesc:{ basic:"Patients & appointments & records • Up to 300 patients", pro:"Basic + booking link + payments + WhatsApp • Up to 1000 patients", enterprise:"All features + patient follow-up + portal • Unlimited" },
+      planDesc:{ basic:"Patients & appointments & records • Up to 100 patients", pro:"Basic + booking link + payments + WhatsApp • Up to 400 patients", enterprise:"All features + patient follow-up + portal • Unlimited" },
       plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive", shared_basic:"Shared Basic", shared_pro:"Shared Pro", shared_enterprise:"Shared Comprehensive" },
       deleteConfirmTitle:"Confirm Permanent Delete",
       deleteConfirmMsg:"Are you sure you want to delete clinic",
@@ -522,12 +522,12 @@ const PLAN_PATIENT_LIMITS: Record<string, number> = {
 // Features per plan
 const PLAN_FEATURES: Record<string, { ar: string[]; en: string[] }> = {
   basic: {
-    ar: ["إدارة المرضى","السجلات الطبية","إدارة المواعيد","حتى 300 مريض"],
-    en: ["Patient management","Medical records","Appointments management","Up to 300 patients"],
+    ar: ["إدارة المرضى","السجلات الطبية","إدارة المواعيد","حتى 100 مريض"],
+    en: ["Patient management","Medical records","Appointments management","Up to 100 patients"],
   },
   pro: {
-    ar: ["جميع ميزات الأساسية","رابط حجز المواعيد","إدارة المدفوعات","مراسلة المرضى عبر واتساب","تذكير المواعيد","حتى 1000 مريض"],
-    en: ["All Basic features","Clinic booking link","Payments management","WhatsApp patient messaging","Appointment reminders","Up to 1000 patients"],
+    ar: ["جميع ميزات الأساسية","رابط حجز المواعيد","إدارة المدفوعات","مراسلة المرضى عبر واتساب","تذكير المواعيد","حتى 400 مريض"],
+    en: ["All Basic features","Clinic booking link","Payments management","WhatsApp patient messaging","Appointment reminders","Up to 400 patients"],
   },
   enterprise: {
     ar: ["جميع ميزات الاحترافية","متابعة المرضى برابط خاص","تقارير يومية للمريض","بوابة خاصة بالمريض","تسجيل الوصفات الطبية","عدد مرضى غير محدود","أولوية في الدعم الفني"],
@@ -535,12 +535,12 @@ const PLAN_FEATURES: Record<string, { ar: string[]; en: string[] }> = {
   },
   // ── الخطط المشتركة (نفس ميزات الفردية + إدارة متعددة الأطباء) ──
   shared_basic: {
-    ar: ["إدارة المرضى","السجلات الطبية","إدارة المواعيد","حتى 300 مريض","حتى طبيبين","تخصيص المرضى لكل طبيب"],
-    en: ["Patient management","Medical records","Appointments management","Up to 300 patients","Up to 2 doctors","Patients assigned per doctor"],
+    ar: ["إدارة المرضى","السجلات الطبية","إدارة المواعيد","حتى 100 مريض","حتى طبيبين","تخصيص المرضى لكل طبيب"],
+    en: ["Patient management","Medical records","Appointments management","Up to 100 patients","Up to 2 doctors","Patients assigned per doctor"],
   },
   shared_pro: {
-    ar: ["جميع ميزات الأساسية المشتركة","رابط حجز المواعيد","إدارة المدفوعات","مراسلة المرضى عبر واتساب","تذكير المواعيد","حتى 1000 مريض","حتى 3 أطباء"],
-    en: ["All Shared Basic features","Clinic booking link","Payments management","WhatsApp messaging","Appointment reminders","Up to 1000 patients","Up to 3 doctors"],
+    ar: ["جميع ميزات الأساسية المشتركة","رابط حجز المواعيد","إدارة المدفوعات","مراسلة المرضى عبر واتساب","تذكير المواعيد","حتى 400 مريض","حتى 3 أطباء"],
+    en: ["All Shared Basic features","Clinic booking link","Payments management","WhatsApp messaging","Appointment reminders","Up to 400 patients","Up to 3 doctors"],
   },
   shared_enterprise: {
     ar: ["جميع ميزات الاحترافية المشتركة","متابعة المرضى","تقارير يومية","بوابة المريض","وصفات طبية","عدد مرضى غير محدود","حتى 5 أطباء","أولوية في الدعم","عدد أطباء مخصص"],
@@ -668,7 +668,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
           return;
         }
 
-        const res  = await fetch("/api/create-clinic", {
+        const res  = await adminFetch("/api/create-clinic", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({
@@ -689,7 +689,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
         // لا نغلق — نعرض الرابط والبيانات النهائية
       } else {
         // ─── تحديث عيادة موجودة ──────────────────────────────
-        const res  = await fetch("/api/update-clinic", {
+        const res  = await adminFetch("/api/update-clinic", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ userId: clinic?.user_id, ...form }),
@@ -1195,7 +1195,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
   const loadDoctors = async () => {
     setDoctorsLoading(true);
     try {
-      const res = await fetch(`/api/doctors?user_id=${clinic.user_id}`, { cache:"no-store" });
+      const res = await adminFetch(`/api/doctors?user_id=${clinic.user_id}`, { cache:"no-store" });
       if (res.ok) {
         const data = await res.json();
         setDoctors(data as Doctor[]);
@@ -1228,7 +1228,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     if (!doctorForm?.name.trim()) { setDoctorError(sm.doctors.noName); return; }
     setDoctorSaving(true); setDoctorError("");
     const action = doctorForm.id ? "update" : "add";
-    const res = await fetch("/api/doctors", {
+    const res = await adminFetch("/api/doctors", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
@@ -1251,7 +1251,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
   };
 
   const handleToggleDoctor = async (d: Doctor) => {
-    await fetch("/api/doctors", {
+    await adminFetch("/api/doctors", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ action: "toggle", id: d.id }),
@@ -1261,7 +1261,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
   const handleRemoveDoctor = async (d: Doctor) => {
     if (!window.confirm(sm.doctors.confirmRemove)) return;
-    await fetch("/api/doctors", {
+    await adminFetch("/api/doctors", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ action: "delete", id: d.id }),
@@ -1303,7 +1303,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
   const callAPI = async (body: Record<string,unknown>): Promise<{ok:boolean; error?:string}> => {
     try {
-      const res  = await fetch("/api/update-clinic", {
+      const res  = await adminFetch("/api/update-clinic", {
         method:  "POST",
         headers: {"Content-Type":"application/json"},
         body:    JSON.stringify(body),
@@ -1346,7 +1346,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     setActionLoading("freeze"); setError("");
     const newStatus = form.status === "inactive" ? "active" : "inactive";
     try {
-      const res  = await fetch("/api/freeze-clinic", {
+      const res  = await adminFetch("/api/freeze-clinic", {
         method:  "POST",
         headers: {"Content-Type":"application/json"},
         body:    JSON.stringify({ userId: clinic.user_id, status: newStatus }),
@@ -1366,7 +1366,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
   const handleCancelSub = async () => {
     setActionLoading("cancel"); setError("");
     try {
-      const res  = await fetch("/api/cancel-clinic", {
+      const res  = await adminFetch("/api/cancel-clinic", {
         method:  "POST",
         headers: {"Content-Type":"application/json"},
         body:    JSON.stringify({ userId: clinic.user_id }),
@@ -1387,7 +1387,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
   const handleDelete = async () => {
     setActionLoading("delete"); setError("");
     try {
-      const res  = await fetch("/api/delete-clinic", {
+      const res  = await adminFetch("/api/delete-clinic", {
         method:  "POST",
         headers: {"Content-Type":"application/json"},
         body:    JSON.stringify({ userId: clinic.user_id }),
@@ -2118,7 +2118,7 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
     if (!clinic?.user_id) return;
     setSaving(true);
     try {
-      const res  = await fetch("/api/update-clinic", {
+      const res  = await adminFetch("/api/update-clinic", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
@@ -2681,6 +2681,17 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
 
 // ─── بيانات دخول المدير — مستقلة تماماً عن Supabase ────────
 // ============================================================
+// ── Admin API helper ────────────────────────────────────────
+const adminFetch = (url: string, options: RequestInit = {}) =>
+  fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-secret": process.env.NEXT_PUBLIC_NABD_ADMIN_SECRET ?? "",
+      ...(options.headers as Record<string, string> ?? {}),
+    },
+  });
+
 const ADMIN_USERNAME = "nabd";
 const ADMIN_PASSWORD = "nabd.111";
 const SESSION_KEY    = "__nabd_admin_auth__";
@@ -2692,27 +2703,46 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   const [showPass, setShowPass] = useState(false);
   const [error,    setError]    = useState("");
   const [loading,  setLoading]  = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
-    // تأخير بسيط لمنع brute-force وإعطاء تجربة أفضل
+    // ── فحص القفل المؤقت ──────────────────────────────────
+    if (lockedUntil && Date.now() < lockedUntil) {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      setError(`محاولات كثيرة. انتظر ${remaining} ثانية.`);
+      return;
+    }
+
+    setLoading(true);
     setTimeout(() => {
       if (
         username.trim().toLowerCase() === ADMIN_USERNAME &&
         password === ADMIN_PASSWORD
       ) {
-        // حفظ الجلسة في sessionStorage (تنتهي عند إغلاق التبويب)
-        sessionStorage.setItem(SESSION_KEY, "1");
+        // حفظ الجلسة مع وقت انتهاء (ساعة واحدة)
+        const expiry = Date.now() + 60 * 60 * 1000;
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ auth: "1", expiry }));
+        setAttempts(0);
         onSuccess();
       } else {
-        setError("اسم المستخدم أو كلمة المرور غير صحيحة");
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        // قفل مؤقت بعد 5 محاولات فاشلة
+        if (newAttempts >= 5) {
+          const lockDuration = Math.min(newAttempts * 30, 300) * 1000;
+          setLockedUntil(Date.now() + lockDuration);
+          setError(`تم قفل الدخول لمدة ${lockDuration / 1000} ثانية بسبب المحاولات المتعددة.`);
+        } else {
+          setError(`اسم المستخدم أو كلمة المرور غير صحيحة. (${5 - newAttempts} محاولات متبقية)`);
+        }
         setLoading(false);
         setPassword("");
       }
-    }, 600);
+    }, 800);
   };
 
   return (
@@ -2873,7 +2903,15 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const ok = sessionStorage.getItem(SESSION_KEY) === "1";
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    let ok = false;
+    if (raw) {
+      try {
+        const { auth, expiry } = JSON.parse(raw);
+        ok = auth === "1" && Date.now() < expiry;
+        if (!ok) sessionStorage.removeItem(SESSION_KEY);
+      } catch { ok = false; }
+    }
     setIsAuthenticated(ok);
   }, []);
 
@@ -2908,7 +2946,7 @@ export default function AdminPage() {
     try {
       // نستخدم API route بدلاً من Supabase مباشرة
       // لأن الأدمن ليس مسجلاً عبر Supabase Auth وRLS تمنع القراءة المباشرة
-      const res = await fetch("/api/get-clinics", { cache: "no-store" });
+      const res = await adminFetch("/api/get-clinics", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
 
@@ -2976,7 +3014,7 @@ export default function AdminPage() {
   const toggleStatus = async (clinic: ClinicData) => {
     if (!clinic.user_id) return;
     const newStatus = clinic.status === "active" ? "inactive" : "active";
-    await fetch("/api/update-clinic", {
+    await adminFetch("/api/update-clinic", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ userId: clinic.user_id, ...clinic, status: newStatus }),
@@ -2987,7 +3025,7 @@ export default function AdminPage() {
   const handleDelete = async () => {
     if (!deleteClinic?.user_id) return;
     try {
-      const res = await fetch("/api/delete-clinic", {
+      const res = await adminFetch("/api/delete-clinic", {
         method:  "POST",
         headers: {"Content-Type":"application/json"},
         body:    JSON.stringify({ userId: deleteClinic.user_id }),
