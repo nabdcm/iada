@@ -9,6 +9,12 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: Request) {
+  // ── التحقق من صلاحية الأدمن ─────────────────────────────────
+  const adminSecret = req.headers.get("x-admin-secret");
+  if (adminSecret !== process.env.NABD_ADMIN_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const {
       userId, name, owner, email, phone,
