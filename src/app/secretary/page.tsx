@@ -766,66 +766,257 @@ function DeletePatientModal({ lang, patient, onConfirm, onClose }: { lang:Lang; 
 // ════════════════════════════════════════════════════════════
 // PAYMENT MODAL
 // ════════════════════════════════════════════════════════════
-function PaymentModal({ patients, lang, onSave, onClose }: { patients:Patient[]; lang:Lang; onSave:(d:any)=>void; onClose:()=>void }) {
+function PaymentModal({ patients, lang, doctors, isSharedClinic, onSave, onClose }: {
+  patients: Patient[];
+  lang: Lang;
+  doctors?: {id:number; name:string}[];
+  isSharedClinic?: boolean;
+  onSave: (d:any) => void;
+  onClose: () => void;
+}) {
   const isAr = lang==="ar";
   const today = new Date().toISOString().slice(0,10);
-  const [form,setForm] = useState({ patient_id:0,amount:"",description:"",method:"cash" as PayMethod,date:today,status:"paid" as PayStatus,notes:"" });
-  const [error,setError] = useState("");
-  const [patQ,setPatQ] = useState("");
-  const [showDrop,setShowDrop] = useState(false);
-  const filtPat = patients.filter(p=>p.name.includes(patQ)||p.phone?.includes(patQ));
-  const selPat  = patients.find(p=>p.id===form.patient_id);
+  const [form, setForm] = useState({
+    patientId: "", amount: "", description: "", method: "cash",
+    date: today, status: "paid", notes: "",
+    doctorId: "",
+    sessionType: "session",
+    isPrepayment: false,
+    prepaymentSessions: 1,
+  });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [patientDropOpen, setPatientDropOpen] = useState(false);
+  const patientDropRef = useRef<HTMLDivElement>(null);
 
-  const save = () => {
-    if (!form.patient_id||!form.amount){setError(isAr?"المريض والمبلغ مطلوبان":"Patient and amount are required");return;}
-    onSave({ ...form, amount:parseFloat(form.amount)||0 });
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (patientDropRef.current && !patientDropRef.current.contains(e.target as Node)) {
+        setPatientDropOpen(false);
+        if (!form.patientId) setPatientSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [form.patientId]);
+
+  const filteredPatients = patients.filter(p =>
+    p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
+    (p.phone ?? "").includes(patientSearch)
+  );
+
+  const handleSave = async (asPending = false) => {
+    if (!form.patientId || !form.amount) {
+      setError(isAr ? "المريض والمبلغ مطلوبان" : "Patient and amount are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave({
+        patient_id: Number(form.patientId),
+        amount: parseFloat(form.amount),
+        description: form.description.trim(),
+        method: form.method,
+        date: form.date,
+        status: asPending ? "pending" : "paid",
+        notes: form.notes || undefined,
+        session_type: form.sessionType,
+        is_prepayment: form.isPrepayment,
+        prepayment_sessions: form.isPrepayment ? form.prepaymentSessions : undefined,
+        ...(isSharedClinic && form.doctorId ? { doctor_id: Number(form.doctorId) } : {}),
+      });
+    } catch(e) {
+      setError(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving payment");
+      setSaving(false);
+    }
+  };
+
+  const fieldInputSt: React.CSSProperties = {
+    ...inputSt,
+    border: "1.5px solid #e8eaed",
+    background: "#fafbfc",
+    direction: isAr ? "rtl" : "ltr",
   };
 
   return (
     <Sheet onClose={onClose}>
-      <div style={{ padding:"16px 24px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",direction:isAr?"rtl":"ltr" }}>
-        <h3 style={{ fontFamily:"Rubik,sans-serif",fontSize:17,fontWeight:700,margin:0 }}>{isAr?"تسجيل دفعة":"Record Payment"}</h3>
+      {/* Header */}
+      <div style={{ padding:"16px 24px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",direction:isAr?"rtl":"ltr" }}>
+        <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+          <div style={{ width:38,height:38,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💳</div>
+          <h3 style={{ fontFamily:"Rubik,sans-serif",fontSize:17,fontWeight:800,margin:0,color:"#353535" }}>{isAr?"تسجيل دفعة":"Record Payment"}</h3>
+        </div>
         <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14 }}>✕</button>
       </div>
-      {error&&<div style={{ margin:"12px 24px 0",background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b" }}>⚠️ {error}</div>}
-      <div style={{ padding:"16px 24px",display:"flex",flexDirection:"column",gap:14,direction:isAr?"rtl":"ltr" }}>
-        <div style={{ position:"relative" }}>
-          <label style={labelSt}>{isAr?"المريض *":"Patient *"}</label>
-          <input value={selPat?selPat.name:patQ} onChange={e=>{setPatQ(e.target.value);setForm({...form,patient_id:0});setShowDrop(true);}} onFocus={()=>setShowDrop(true)} placeholder={isAr?"ابحث عن مريض...":"Search patient..."} style={inputSt}/>
-          {showDrop&&filtPat.length>0&&(
-            <div style={{ position:"absolute",top:"calc(100% + 4px)",insetInlineStart:0,insetInlineEnd:0,background:"#fff",border:"1.5px solid #e0e6ef",borderRadius:12,boxShadow:"0 8px 32px rgba(8,99,186,.13)",zIndex:999,maxHeight:180,overflowY:"auto" }}>
-              {filtPat.slice(0,6).map(p=>(
-                <div key={p.id} onMouseDown={e=>{e.preventDefault();setForm({...form,patient_id:p.id});setPatQ("");setShowDrop(false);}} style={{ padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid #f5f5f5" }}>
-                  <div style={{ width:28,height:28,borderRadius:8,background:getColor(p.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700 }}>{getInitials(p.name)}</div>
-                  <span style={{ fontSize:14 }}>{p.name}</span>
-                </div>
+
+      <div style={{ padding:"16px 24px",display:"flex",flexDirection:"column",gap:0,direction:isAr?"rtl":"ltr" }}>
+        {error && <div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>⚠️ {error}</div>}
+
+        {/* المريض */}
+        <Field label={isAr?"المريض *":"Patient *"}>
+          <div ref={patientDropRef} style={{ position:"relative" }}>
+            <div style={{ position:"relative",display:"flex",alignItems:"center" }}>
+              <input
+                type="text"
+                value={patientSearch}
+                onChange={e => {
+                  setPatientSearch(e.target.value);
+                  setPatientDropOpen(true);
+                  if (!e.target.value) setForm({...form, patientId:""});
+                }}
+                onFocus={() => setPatientDropOpen(true)}
+                placeholder={isAr?"ابحث باسم المريض أو الهاتف...":"Search by name or phone..."}
+                style={{ ...fieldInputSt, paddingInlineEnd:36 }}
+                autoComplete="off"
+              />
+              <span style={{ position:"absolute",insetInlineEnd:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:"#aaa",fontSize:12 }}>▾</span>
+            </div>
+            {patientDropOpen && (
+              <div style={{ position:"absolute",top:"calc(100% + 6px)",left:0,right:0,zIndex:300,background:"#fff",border:"1.5px solid #e8eaed",borderRadius:12,boxShadow:"0 8px 32px rgba(46,125,50,.13)",maxHeight:220,overflowY:"auto" }}>
+                {filteredPatients.length === 0 ? (
+                  <div style={{ padding:"14px 16px",fontSize:13,color:"#aaa",textAlign:"center" }}>{isAr?"لا توجد نتائج":"No results found"}</div>
+                ) : filteredPatients.map(p => (
+                  <div
+                    key={p.id}
+                    onMouseDown={() => {
+                      setForm({...form, patientId: String(p.id)});
+                      setPatientSearch(p.name);
+                      setPatientDropOpen(false);
+                    }}
+                    style={{ padding:"11px 16px",fontSize:14,color:"#353535",cursor:"pointer",background:form.patientId===String(p.id)?"rgba(46,125,50,.07)":"transparent",fontWeight:form.patientId===String(p.id)?600:400,borderBottom:"1px solid #f4f6f9",display:"flex",alignItems:"center",gap:10,transition:"background .12s" }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background="rgba(46,125,50,.06)"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background=form.patientId===String(p.id)?"rgba(46,125,50,.07)":"transparent"}
+                  >
+                    <div style={{ width:28,height:28,borderRadius:8,background:getColor(p.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0 }}>
+                      {getInitials(p.name)}
+                    </div>
+                    {p.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Field>
+
+        {/* اختيار الطبيب — للخطط المشتركة فقط */}
+        {isSharedClinic && doctors && doctors.length > 0 && (
+          <Field label={isAr?"الطبيب (اختياري)":"Doctor (optional)"}>
+            <div style={{ fontSize:12,color:"#aaa",marginBottom:8,lineHeight:1.6 }}>
+              {isAr?"اتركه فارغاً لتسجيل الدفعة كإيراد مشترك للعيادة":"Leave empty to record as shared clinic revenue"}
+            </div>
+            <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
+              <button onClick={() => setForm({...form, doctorId:""})}
+                style={{ padding:"9px 16px",borderRadius:10,cursor:"pointer",border:form.doctorId===""?"1.5px solid #888":"1.5px solid #eee",background:form.doctorId===""?"rgba(100,100,100,.08)":"#fafbfc",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:form.doctorId===""?700:400,color:form.doctorId===""?"#555":"#aaa",transition:"all .2s",display:"flex",alignItems:"center",gap:7 }}>
+                <div style={{ width:22,height:22,borderRadius:6,background:form.doctorId===""?"#888":"#ddd",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11 }}>🏥</div>
+                {isAr?"إيراد مشترك":"Shared Revenue"}
+              </button>
+              {doctors.map(doc => (
+                <button key={doc.id} onClick={() => setForm({...form, doctorId:String(doc.id)})}
+                  style={{ padding:"9px 16px",borderRadius:10,cursor:"pointer",border:form.doctorId===String(doc.id)?"1.5px solid #0891b2":"1.5px solid #eee",background:form.doctorId===String(doc.id)?"rgba(8,145,178,.08)":"#fafbfc",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:form.doctorId===String(doc.id)?700:400,color:form.doctorId===String(doc.id)?"#0891b2":"#666",transition:"all .2s",display:"flex",alignItems:"center",gap:7 }}>
+                  <div style={{ width:22,height:22,borderRadius:6,background:form.doctorId===String(doc.id)?"#0891b2":"#ccc",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700 }}>
+                    {getInitials(doc.name)}
+                  </div>
+                  {isAr?"د. ":"Dr. "}{doc.name}
+                </button>
               ))}
             </div>
+          </Field>
+        )}
+
+        {/* المبلغ والتاريخ */}
+        <div style={{ display:"flex",gap:12,marginBottom:16 }}>
+          <div style={{ flex:1 }}>
+            <label style={labelSt}>{isAr?"المبلغ *":"Amount *"}</label>
+            <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={fieldInputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+          </div>
+          <div style={{ flex:1 }}>
+            <label style={labelSt}>{isAr?"التاريخ":"Date"}</label>
+            <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={fieldInputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+          </div>
+        </div>
+
+        {/* الوصف */}
+        <Field label={isAr?"الوصف":"Description"}>
+          <input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder={isAr?"مثال: رسوم معاينة...":"e.g. Consultation fee..."} style={fieldInputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+        </Field>
+
+        {/* نوع الجلسة */}
+        <Field label={isAr?"نوع الجلسة":"Session Type"}>
+          <div style={{ display:"flex",gap:8 }}>
+            {[
+              { k:"consultation", icon:"🩺", ar:"معاينة",   en:"Consultation" },
+              { k:"session",      icon:"🛋️", ar:"جلسة",     en:"Session"      },
+              { k:"followup",     icon:"🔄", ar:"مراجعة",   en:"Follow-up"    },
+            ].map(s => (
+              <label key={s.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.sessionType===s.k?"1.5px solid #0863ba":"1.5px solid #eee",background:form.sessionType===s.k?"rgba(8,99,186,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.sessionType===s.k?700:400,color:form.sessionType===s.k?"#0863ba":"#888" }}>
+                <span>{s.icon}</span>{isAr?s.ar:s.en}
+                <input type="radio" name="sessionType" value={s.k} checked={form.sessionType===s.k} onChange={e=>setForm({...form,sessionType:e.target.value})} style={{ display:"none" }}/>
+              </label>
+            ))}
+          </div>
+        </Field>
+
+        {/* دفع مسبق */}
+        <Field label={isAr?"دفع مسبق":"Prepayment"}>
+          <label style={{ display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 14px",borderRadius:10,border:form.isPrepayment?"1.5px solid #7b2d8b":"1.5px solid #eee",background:form.isPrepayment?"rgba(123,45,139,.06)":"#fafbfc",transition:"all .2s" }}>
+            <div style={{ width:20,height:20,borderRadius:6,border:form.isPrepayment?"2px solid #7b2d8b":"2px solid #ddd",background:form.isPrepayment?"#7b2d8b":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s",flexShrink:0 }}>
+              {form.isPrepayment && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+            </div>
+            <input type="checkbox" checked={form.isPrepayment} onChange={e=>setForm({...form,isPrepayment:e.target.checked,prepaymentSessions:e.target.checked?form.prepaymentSessions:1})} style={{ display:"none" }}/>
+            <span style={{ fontSize:13,fontWeight:600,color:form.isPrepayment?"#7b2d8b":"#666" }}>
+              💳 {isAr?"تسجيل كدفع مسبق لعدة جلسات":"Register as prepayment for multiple sessions"}
+            </span>
+          </label>
+          {form.isPrepayment && (
+            <div style={{ marginTop:10,display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"rgba(123,45,139,.04)",borderRadius:10,border:"1.5px solid rgba(123,45,139,.15)" }}>
+              <span style={{ fontSize:12,color:"#7b2d8b",fontWeight:600,flex:1 }}>
+                {isAr?"عدد الجلسات المشمولة:":"Number of sessions included:"}
+              </span>
+              <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                <button onClick={()=>setForm({...form,prepaymentSessions:Math.max(1,form.prepaymentSessions-1)})} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid rgba(123,45,139,.3)",background:"#fff",cursor:"pointer",fontSize:16,color:"#7b2d8b",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Rubik,sans-serif" }}>−</button>
+                <span style={{ fontSize:18,fontWeight:900,color:"#7b2d8b",minWidth:28,textAlign:"center" }}>{form.prepaymentSessions}</span>
+                <button onClick={()=>setForm({...form,prepaymentSessions:Math.min(50,form.prepaymentSessions+1)})} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid rgba(123,45,139,.3)",background:"#fff",cursor:"pointer",fontSize:16,color:"#7b2d8b",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Rubik,sans-serif" }}>+</button>
+              </div>
+              <span style={{ fontSize:12,color:"#7b2d8b",fontWeight:600 }}>{isAr?"جلسة":"sessions"}</span>
+            </div>
           )}
-        </div>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-          <div><label style={labelSt}>{isAr?"المبلغ (ل.س) *":"Amount *"}</label><input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={inputSt}/></div>
-          <div><label style={labelSt}>{isAr?"التاريخ *":"Date *"}</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt}/></div>
-        </div>
-        <div><label style={labelSt}>{isAr?"الوصف":"Description"}</label><input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder={isAr?"مثال: رسوم استشارة...":"e.g. Consultation fee..."} style={inputSt}/></div>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-          <div><label style={labelSt}>{isAr?"طريقة الدفع":"Method"}</label>
-            <select value={form.method} onChange={e=>setForm({...form,method:e.target.value as PayMethod})} style={{ ...inputSt,cursor:"pointer" }}>
-              <option value="cash">{isAr?"نقداً":"Cash"}</option>
-              <option value="card">{isAr?"بطاقة":"Card"}</option>
-              <option value="transfer">{isAr?"تحويل":"Transfer"}</option>
-            </select>
+        </Field>
+
+        {/* طريقة الدفع */}
+        <Field label={isAr?"طريقة الدفع":"Payment Method"}>
+          <div style={{ display:"flex",gap:10 }}>
+            {[
+              { k:"cash",     icon:"💵", ar:"نقداً",   en:"Cash"     },
+              { k:"card",     icon:"💳", ar:"بطاقة",   en:"Card"     },
+              { k:"transfer", icon:"🏦", ar:"تحويل",   en:"Transfer" },
+            ].map(m => (
+              <label key={m.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.method===m.k?"1.5px solid #2e7d32":"1.5px solid #eee",background:form.method===m.k?"rgba(46,125,50,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.method===m.k?700:400,color:form.method===m.k?"#2e7d32":"#888" }}>
+                <span>{m.icon}</span>{isAr?m.ar:m.en}
+                <input type="radio" name="method" value={m.k} checked={form.method===m.k} onChange={e=>setForm({...form,method:e.target.value})} style={{ display:"none" }}/>
+              </label>
+            ))}
           </div>
-          <div><label style={labelSt}>{isAr?"الحالة":"Status"}</label>
-            <select value={form.status} onChange={e=>setForm({...form,status:e.target.value as PayStatus})} style={{ ...inputSt,cursor:"pointer" }}>
-              <option value="paid">{isAr?"مدفوع":"Paid"}</option>
-              <option value="pending">{isAr?"معلّق":"Pending"}</option>
-            </select>
-          </div>
-        </div>
+        </Field>
+
+        {/* ملاحظات */}
+        <Field label={isAr?"ملاحظات":"Notes"}>
+          <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={isAr?"أي ملاحظات إضافية...":"Any additional notes..."} rows={2} style={{ ...fieldInputSt,resize:"vertical",lineHeight:1.6 }} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+        </Field>
+
+        {/* Footer */}
         <div style={{ display:"flex",gap:10,marginTop:4 }}>
-          <button onClick={save} style={{ flex:1,padding:"13px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>{isAr?"حفظ الدفعة":"Save Payment"}</button>
-          <button onClick={onClose} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
+          <button
+            onClick={() => handleSave(false)}
+            disabled={saving}
+            style={{ flex:1,padding:"13px",background:saving?"#81c784":"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
+          >
+            {saving ? (isAr?"جاري الحفظ...":"Saving...") : (isAr?"حفظ الدفعة":"Save Payment")}
+          </button>
+          <button onClick={() => handleSave(true)} disabled={saving} style={{ padding:"13px 16px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:saving?"not-allowed":"pointer",whiteSpace:"nowrap",opacity:saving?.6:1 }}>
+            {isAr?"معلّق":"Pending"}
+          </button>
+          <button onClick={onClose} style={{ padding:"13px 16px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
         </div>
       </div>
     </Sheet>
@@ -927,6 +1118,7 @@ export default function SecretaryPage() {
   const [expenses,     setExpenses]     = useState<any[]>([]);
   const [clinicName,   setClinicName]   = useState("نبض");
   const [clinicType,   setClinicType]   = useState<ClinicType>("general");
+  const [plan,         setPlan]         = useState("basic");
   const [loading,      setLoading]      = useState(true);
 
   const [activeTab,     setActiveTab]     = useState<Tab>("appointments");
@@ -973,6 +1165,7 @@ export default function SecretaryPage() {
       setExpenses(exData||[]);
 
       const plan = clinicRow?.plan||"basic";
+      setPlan(plan);
       if (["shared_basic","shared_pro","shared_enterprise"].includes(plan)) {
         const { data:drData } = await supabase.from("doctors").select("id,name,color,specialty").eq("user_id",user.id).eq("is_active",true).order("id");
         setDoctors(drData||[]);
@@ -1735,7 +1928,7 @@ export default function SecretaryPage() {
       )}
       {delPat&&<DeletePatientModal lang={lang} patient={delPat} onConfirm={handleDeletePat} onClose={()=>setDelPat(null)}/>}
       {profilePat&&<PatientProfileDrawer lang={lang} patient={profilePat} clinicType={clinicType} onClose={()=>setProfilePat(null)}/>}
-      {showPayModal&&<PaymentModal patients={patients} lang={lang} onSave={handleSavePay} onClose={()=>setShowPayModal(false)}/>}
+      {showPayModal&&<PaymentModal patients={patients} lang={lang} doctors={doctors} isSharedClinic={["shared_basic","shared_pro","shared_enterprise"].includes(plan)} onSave={handleSavePay} onClose={()=>setShowPayModal(false)}/>}
       {showWDModal &&<WithdrawModal lang={lang} onSave={handleSaveWD} onClose={()=>setShowWDModal(false)}/>}
       {showExpModal&&<ExpenseModal  lang={lang} onSave={handleSaveExp} onClose={()=>setShowExpModal(false)}/>}
     </div>
