@@ -11,7 +11,13 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export async function GET() {
+export async function GET(req: Request) {
+  // ── التحقق من صلاحية الأدمن ─────────────────────────────────
+  const adminSecret = req.headers.get("x-admin-secret");
+  if (adminSecret !== process.env.NABD_ADMIN_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { data, error } = await supabaseAdmin
       .from("clinics")
