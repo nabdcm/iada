@@ -249,24 +249,16 @@ const SHARED_PLAN_DOCTOR_LIMITS: Record<string, number> = {
 
 const isSharedPlan = (plan: PlanType) => plan.startsWith("shared_");
 
-// الخطة الفردية المقابلة للخطة المشتركة (لتطبيق نفس قواعد الوصول)
-const getBasePlan = (plan: PlanType): "basic" | "pro" | "enterprise" => {
-  if (plan === "shared_basic")      return "basic";
-  if (plan === "shared_pro")        return "pro";
-  if (plan === "shared_enterprise") return "enterprise";
-  return plan as "basic" | "pro" | "enterprise";
-};
-
 const PLAN_ACCESS: Record<string, string[]> = {
-  payments:      ["pro", "enterprise"],
-  prescriptions: ["enterprise"],
-  tracking:      ["enterprise"],
+  payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
+  prescriptions:    ["enterprise", "shared_enterprise"],
+  tracking:         ["enterprise", "shared_enterprise"],
+  xrays:            ["enterprise", "shared_enterprise"],
+  clinicManagement: ["shared_basic", "shared_pro", "shared_enterprise"],
 };
 
-const canAccess = (feature: string, plan: PlanType) => {
-  const base = getBasePlan(plan);
-  return PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(base) : true;
-};
+const canAccess = (feature: string, plan: PlanType): boolean =>
+  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 
 const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string }> = {
   basic:            { label:{ ar:"الأساسية",              en:"Basic"                 }, color:"#0863ba" },
