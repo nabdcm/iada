@@ -38,6 +38,12 @@ export async function GET(req: Request) {
 
 // ── POST: إضافة / تعديل / حذف / تبديل حالة طبيب ────────────
 export async function POST(req: Request) {
+  // ── التحقق من صلاحية الأدمن ─────────────────────────────────
+  const adminSecret = req.headers.get("x-admin-secret");
+  if (adminSecret !== process.env.NABD_ADMIN_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const { action, user_id, id, name, specialty, phone, email, color, is_active } = body;
