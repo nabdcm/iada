@@ -216,6 +216,10 @@ function CreateLinkModal({lang,patients,doctorName,clinicName,userId,clinicTrack
   const [cqs,setCqs]=useState<CustomQuestion[]>([]);
   const [showCQ,setShowCQ]=useState(false);
   const [nq,setNq]=useState({label_ar:"",type:"yesno"});
+  const [patSearch,setPatSearch]=useState("");
+  const [showPatDrop,setShowPatDrop]=useState(false);
+  const filteredPats=patients.filter(p=>p.name.includes(patSearch)||String(p.id).includes(patSearch)).slice(0,8);
+  const selectedPat=patients.find(p=>String(p.id)===pid);
   const am=ADMIN_META[adminClinicType]??ADMIN_META.general;
   const tm=CLINIC_LABELS[clinicTrackingType]??CLINIC_LABELS.general;
   const IS:React.CSSProperties={width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid #eef0f3",background:"#f7f9fc",fontFamily:"Rubik,sans-serif",fontSize:14,color:"#353535",outline:"none"};
@@ -230,8 +234,8 @@ function CreateLinkModal({lang,patients,doctorName,clinicName,userId,clinicTrack
     setCreating(false);
   }
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{background:"#fff",borderRadius:18,padding:28,width:"100%",maxWidth:460,boxShadow:"0 20px 60px rgba(0,0,0,.2)",direction:isAr?"rtl":"ltr",fontFamily:"Rubik,sans-serif",maxHeight:"90vh",overflowY:"auto"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:200,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px",overflowY:"auto"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:"#fff",borderRadius:18,padding:"20px",width:"100%",maxWidth:460,boxShadow:"0 20px 60px rgba(0,0,0,.2)",direction:isAr?"rtl":"ltr",fontFamily:"Rubik,sans-serif",marginTop:"auto",marginBottom:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
           <div style={{fontSize:17,fontWeight:800,color:"#353535"}}>🔗 {isAr?"إنشاء رابط متابعة":"Create Tracking Link"}</div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#aaa",lineHeight:1}}>×</button>
@@ -241,12 +245,50 @@ function CreateLinkModal({lang,patients,doctorName,clinicName,userId,clinicTrack
           <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:am.color}}>{isAr?am.ar:am.en}</div><div style={{fontSize:11,color:"#aaa"}}>{isAr?"نوع العيادة — محدد تلقائياً":"Clinic type — auto-set"}</div></div>
           <div style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:12,background:tm.color+"12",border:"1px solid "+tm.color+"25"}}><span style={{fontSize:14}}>{tm.icon}</span><span style={{fontSize:11,fontWeight:600,color:tm.color}}>{isAr?tm.ar:tm.en}</span></div>
         </div>
-        <div style={{marginBottom:14}}>
+        <div style={{marginBottom:14,position:"relative"}}>
           <label style={{fontSize:12,fontWeight:600,color:"#888",display:"block",marginBottom:6}}>{isAr?"المريض *":"Patient *"}</label>
-          <select value={pid} onChange={e=>setPid(e.target.value)} style={IS}>
-            <option value="">{isAr?"-- اختر مريضاً --":"-- Select patient --"}</option>
-            {patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          {selectedPat?(
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRadius:10,border:"1.5px solid #0863ba",background:"rgba(8,99,186,.04)"}}>
+              <div style={{width:30,height:30,borderRadius:8,background:"#0863ba",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
+                {selectedPat.name.split(" ").slice(0,2).map((w:string)=>w[0]).join("").toUpperCase()}
+              </div>
+              <span style={{flex:1,fontSize:14,fontWeight:600,color:"#353535"}}>{selectedPat.name}</span>
+              <button onClick={()=>{setPid("");setPatSearch("");setShowPatDrop(false);}} style={{background:"none",border:"none",cursor:"pointer",color:"#aaa",fontSize:18,lineHeight:1,padding:"0 2px"}}>×</button>
+            </div>
+          ):(
+            <>
+              <div style={{position:"relative"}}>
+                <input
+                  type="text"
+                  placeholder={isAr?"ابحث باسم المريض...":"Search patient name..."}
+                  value={patSearch}
+                  onChange={e=>{setPatSearch(e.target.value);setShowPatDrop(true);}}
+                  onFocus={()=>setShowPatDrop(true)}
+                  style={{...IS,paddingRight:isAr?"36px":"14px",paddingLeft:isAr?"14px":"36px"}}
+                  autoComplete="off"
+                />
+                <span style={{position:"absolute",top:"50%",transform:"translateY(-50%)",right:isAr?"12px":undefined,left:isAr?undefined:"12px",color:"#aaa",fontSize:15,pointerEvents:"none"}}>🔍</span>
+              </div>
+              {showPatDrop&&(
+                <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid #eef0f3",borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,.1)",zIndex:100,maxHeight:220,overflowY:"auto",marginTop:4}}>
+                  {filteredPats.length===0?(
+                    <div style={{padding:"14px",textAlign:"center",color:"#aaa",fontSize:13}}>{isAr?"لا توجد نتائج":"No results"}</div>
+                  ):filteredPats.map(p=>(
+                    <div key={p.id} onClick={()=>{setPid(String(p.id));setPatSearch("");setShowPatDrop(false);}}
+                      style={{padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,borderBottom:"0.5px solid #f0f0f0",transition:"background .12s"}}
+                      onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"}
+                      onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}
+                    >
+                      <div style={{width:28,height:28,borderRadius:7,background:"#0863ba",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0}}>
+                        {p.name.split(" ").slice(0,2).map((w:string)=>w[0]).join("").toUpperCase()}
+                      </div>
+                      <span style={{fontSize:13,color:"#353535",fontWeight:500}}>{p.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
         <div style={{marginBottom:14}}>
           <label style={{fontSize:12,fontWeight:600,color:"#888",display:"block",marginBottom:6}}>{isAr?"مدة الصلاحية":"Validity"}</label>
