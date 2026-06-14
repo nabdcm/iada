@@ -37,6 +37,25 @@ const AVT     = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2
 const getColor    = (id:number) => AVT[(id-1)%AVT.length];
 const getInitials = (name:string) => name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
 
+// ── Calendar helpers ─────────────────────────────────────────
+const toKey = (y:number, m:number, d:number) =>
+  `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+const _calNow      = new Date();
+const CAL_TODAY    = toKey(_calNow.getFullYear(), _calNow.getMonth(), _calNow.getDate());
+
+const CAL_TR = {
+  ar: {
+    weekDays: ["أحد","إثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"],
+    months:   ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
+    today:    "اليوم",
+  },
+  en: {
+    weekDays: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+    months:   ["January","February","March","April","May","June","July","August","September","October","November","December"],
+    today:    "Today",
+  },
+};
+
 const CLINIC_TYPE_META: Record<ClinicType,{icon:string;color:string;ar:string;en:string}> = {
   general:{icon:"🏥",color:"#16a085",ar:"طب عام",en:"General Medicine"},
   dental:{icon:"🦷",color:"#0863ba",ar:"أسنان",en:"Dental"},
@@ -881,6 +900,8 @@ export default function SecretaryPage() {
 
   const [activeTab,     setActiveTab]     = useState<Tab>("appointments");
   const [selectedDate,  setSelectedDate]  = useState(today);
+  const [viewMonth,     setViewMonth]     = useState(_calNow.getMonth());
+  const [viewYear,      setViewYear]      = useState(_calNow.getFullYear());
   const [patSearch,     setPatSearch]     = useState("");
 
   const [showApptModal, setShowApptModal] = useState(false);
@@ -1078,6 +1099,16 @@ export default function SecretaryPage() {
 
   // ── Computed ────────────────────────────────────────────
   const dayAppts = useMemo(()=>appointments.filter(a=>a.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time)),[appointments,selectedDate]);
+
+  // ── Calendar computed ────────────────────────────────────
+  const countByKey: Record<string,number> = {};
+  appointments.forEach(a => { countByKey[a.date] = (countByKey[a.date]||0)+1; });
+  const calFirstDay    = new Date(viewYear, viewMonth, 1).getDay();
+  const calDaysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const calDays: (number|null)[] = [];
+  for (let i=0;i<calFirstDay;i++) calDays.push(null);
+  for (let d=1;d<=calDaysInMonth;d++) calDays.push(d);
+  const calTr = CAL_TR[lang];
   const filtPats  = useMemo(()=>patients.filter(p=>p.name.includes(patSearch)||p.phone?.includes(patSearch)),[patients,patSearch]);
 
   const todayTx = useMemo(()=>{
@@ -1087,7 +1118,7 @@ export default function SecretaryPage() {
     return [...tp,...tw,...te].sort((a:any,b:any)=>(b.created_at||b.date).localeCompare(a.created_at||a.date));
   },[payments,withdrawals,expenses,today]);
 
-  const dateStrip = useMemo(()=>Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-3+i); return d.toISOString().slice(0,10); }),[]);
+
 
   const fmtTime = (t:string) => { const [h,m]=t.slice(0,5).split(":").map(Number); const ap=h>=12?"م":"ص"; return `${h>12?h-12:h||12}:${String(m).padStart(2,"0")} ${isAr?ap:(h>=12?"PM":"AM")}`; };
   const fmtShort = (d:string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"});
@@ -1131,6 +1162,8 @@ export default function SecretaryPage() {
         .card-hover:active{background:#f0f7ff!important;transform:scale(.99)}
         .date-btn:active{transform:scale(.95)}
         .act-btn:active{opacity:.75;transform:scale(.97)}
+        .cal-day{border-radius:8px;cursor:pointer;transition:all .15s;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+        .cal-day:hover{background:rgba(8,99,186,.06)}
       `}</style>
 
       {/* ══ HEADER ══════════════════════════════════════════ */}
@@ -1166,24 +1199,38 @@ export default function SecretaryPage() {
 
       {/* ══ TAB: APPOINTMENTS ═══════════════════════════════ */}
       <div className="tab-pane" style={{ display:activeTab==="appointments"?"block":"none" }}>
-        {/* date strip */}
-        <div style={{ display:"flex",gap:6,overflowX:"auto",padding:"14px 0 4px",scrollbarWidth:"none" }}>
-          {dateStrip.map(d=>{
-            const isSel   = d===selectedDate;
-            const isTdy   = d===today;
-            const cnt     = appointments.filter(a=>a.date===d).length;
-            const dayObj  = new Date(d+"T00:00:00");
-            return (
-              <button key={d} className="date-btn" onClick={()=>setSelectedDate(d)}
-                style={{ minWidth:54,padding:"8px 6px",borderRadius:12,border:isSel?"2px solid "+PRIMARY:"1.5px solid #e8edf3",background:isSel?PRIMARY:"#fff",cursor:"pointer",flexShrink:0,textAlign:"center",transition:"all .2s",boxShadow:isSel?"0 4px 12px rgba(8,99,186,.2)":"none" }}>
-                <div style={{ fontSize:10,fontWeight:600,color:isSel?"rgba(255,255,255,.8)":(isTdy?PRIMARY:"#999"),marginBottom:2 }}>{weekDay(d).slice(0,3)}</div>
-                <div style={{ fontSize:17,fontWeight:800,color:isSel?"#fff":(isTdy?PRIMARY:"#353535") }}>{dayObj.getDate()}</div>
-                {cnt>0&&<div style={{ width:16,height:16,borderRadius:"50%",background:isSel?"rgba(255,255,255,.3)":"rgba(8,99,186,.1)",color:isSel?"#fff":PRIMARY,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",margin:"4px auto 0" }}>{cnt}</div>}
-              </button>
-            );
-          })}
+        {/* ── التقويم الشهري ── */}
+        <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)",marginBottom:18,marginTop:14 }}>
+          <div style={{ padding:"14px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+            <button onClick={()=>{ let m=viewMonth-1,y=viewYear; if(m<0){m=11;y--;} setViewMonth(m);setViewYear(y); }} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>‹</button>
+            <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>{calTr.months[viewMonth]} {viewYear}</div>
+            <button onClick={()=>{ let m=viewMonth+1,y=viewYear; if(m>11){m=0;y++;} setViewMonth(m);setViewYear(y); }} style={{ width:28,height:28,borderRadius:8,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center" }}>›</button>
+          </div>
+          <div style={{ padding:"10px 12px" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4 }}>
+              {calTr.weekDays.map(d=><div key={d} style={{ textAlign:"center",fontSize:9,fontWeight:700,color:"#bbb",padding:"3px 0" }}>{d}</div>)}
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2 }}>
+              {calDays.map((d,i)=>{
+                if(!d) return <div key={i}/>;
+                const k=toKey(viewYear,viewMonth,d), cnt=countByKey[k]||0;
+                const isSel=k===selectedDate, isTod=k===CAL_TODAY;
+                return (
+                  <div key={i} className="cal-day" onClick={()=>setSelectedDate(k)}
+                    style={{ background:isSel?"#0863ba":isTod?"rgba(8,99,186,.08)":"transparent",color:isSel?"#fff":isTod?"#0863ba":"#353535",border:isTod&&!isSel?"1.5px solid rgba(8,99,186,.2)":"1.5px solid transparent" }}>
+                    <span style={{ fontSize:12,fontWeight:isSel||isTod?700:400 }}>{d}</span>
+                    {cnt>0&&<div style={{ width:14,height:4,borderRadius:3,background:isSel?"rgba(255,255,255,.6)":"#0863ba" }}/>}
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={()=>setSelectedDate(CAL_TODAY)} style={{ width:"100%",marginTop:10,padding:"7px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer" }}>
+              📅 {calTr.today}
+            </button>
+          </div>
         </div>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",margin:"12px 0 10px" }}>
+
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",margin:"0 0 10px" }}>
           <div style={{ fontSize:13,fontWeight:600,color:"#555" }}>{fmtShort(selectedDate)} — {dayAppts.length} {isAr?"مواعيد":"appts"}</div>
           <button className="act-btn" onClick={()=>{setEditAppt(null);setShowApptModal(true);}} style={{ padding:"7px 14px",background:PRIMARY,color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:5,boxShadow:"0 3px 10px rgba(8,99,186,.25)" }}>
             + {isAr?"موعد":"Appointment"}
