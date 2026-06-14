@@ -283,7 +283,7 @@ export default function RestrictedAccessPage() {
     if (ok) {
       setFieldSaved(key);
       setExpandedField(null);
-      setTimeout(() => setFieldSaved(prev => prev === key ? null : prev), 2000);
+      setTimeout(() => setFieldSaved((prev: string | null) => prev === key ? null : prev), 2000);
     }
   };
 
@@ -578,7 +578,7 @@ export default function RestrictedAccessPage() {
                                   )}
                                   {!isExpanded && (
                                     <button
-                                      onClick={() => { setDraftValues(p => ({...p, [field.key]: savedVal})); setExpandedField(field.key); }}
+                                      onClick={() => { setDraftValues((p: Record<string,string>) => ({...p, [field.key]: savedVal})); setExpandedField(field.key); }}
                                       style={{ padding:"6px 12px",borderRadius:8,border:`1.5px solid ${clinicColor}40`,background:`${clinicColor}10`,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:clinicColor,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",minHeight:34 }}>
                                       ✏️ تعديل
                                     </button>
@@ -595,7 +595,7 @@ export default function RestrictedAccessPage() {
                                   <textarea
                                     autoFocus
                                     value={val}
-                                    onChange={e => setDraftValues(p => ({...p, [field.key]: e.target.value}))}
+                                    onChange={e => setDraftValues((p: Record<string,string>) => ({...p, [field.key]: e.target.value}))}
                                     rows={5}
                                     placeholder="اكتب هنا..."
                                     style={{ width:"100%",padding:"10px 12px",border:"1.5px solid #c8d9f0",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",background:"#fff",outline:"none",resize:"vertical" as const,direction:"rtl",lineHeight:1.7,boxSizing:"border-box" as const,marginBottom:10 }}
