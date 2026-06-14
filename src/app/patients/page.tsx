@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSProperties } from "react";
+import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
 import type { Patient } from "@/lib/supabase";
 
@@ -1083,134 +1084,6 @@ const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: s
 };
 
 // ─── Sidebar ──────────────────────────────────────────────
-function Sidebar({ lang, setLang, activePage="patients", plan="basic", maxDoctors=2 }: { lang:Lang; setLang:(l:Lang)=>void; activePage?:string; plan?:PlanType; maxDoctors?:number }) {
-  const tr   = T[lang];
-  const isAr = lang==="ar";
-  const [collapsed,  setCollapsed]  = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [isMobile,   setIsMobile]   = useState(()=>typeof window!=="undefined"?window.innerWidth<=768:false);
-
-  useEffect(()=>{
-    const check=()=>setIsMobile(window.innerWidth<=768);
-    check(); window.addEventListener("resize",check);
-    return ()=>window.removeEventListener("resize",check);
-  },[]);
-  useEffect(()=>{
-    if (isMobile&&mobileOpen) document.body.style.overflow="hidden";
-    else document.body.style.overflow="";
-    return ()=>{ document.body.style.overflow=""; };
-  },[isMobile,mobileOpen]);
-
-  const NAV_ICONS: Record<string,ReactNode> = {
-    dashboard:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
-    patients:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-    appointments:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-    payments:<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-    prescriptions:<PillIcon/>,
-    tracking:<TrackingIcon/>,
-  };
-
-  const navItems:{ key:keyof typeof tr.nav; href:string }[] = [
-    { key:"dashboard",     href:"/dashboard"        },
-    { key:"patients",      href:"/patients"         },
-    { key:"appointments",  href:"/appointments"     },
-    { key:"payments",      href:"/payments"         },
-    { key:"prescriptions", href:"/prescriptions"    },
-    { key:"tracking",      href:"/patient-tracking" },
-  ];
-
-  const sidebarTransform=isMobile?(mobileOpen?"translateX(0)":isAr?"translateX(100%)":"translateX(-100%)"):"translateX(0)";
-
-  return (
-    <>
-      {isMobile&&mobileOpen&&<div onClick={()=>setMobileOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:55,WebkitTapHighlightColor:"transparent" }}/>}
-      {isMobile&&(
-        <button onClick={()=>setMobileOpen(!mobileOpen)} style={{ position:"fixed",top:14,zIndex:70,right:isAr?16:undefined,left:isAr?undefined:16,width:40,height:40,borderRadius:10,background:SB_BG,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(5,88,168,.4)" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-            {mobileOpen?<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>:<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>}
-          </svg>
-        </button>
-      )}
-      <aside style={{ width:isMobile?260:collapsed?70:240,minHeight:"100vh",background:SB_BG,display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",position:"fixed",top:0,right:isAr?0:undefined,left:isAr?undefined:0,zIndex:60,transform:sidebarTransform,boxShadow:isMobile&&mobileOpen?(isAr?"-8px 0 32px rgba(0,0,0,.15)":"8px 0 32px rgba(0,0,0,.15)"):(isAr?"-4px 0 32px rgba(5,88,168,.45)":"4px 0 32px rgba(5,88,168,.45)") }}>
-        <div style={{ padding:collapsed?"18px 0":"18px 20px",background:SB_BG_HEADER,borderBottom:`1px solid ${SB_BORDER}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",minHeight:72 }}>
-          {!collapsed&&(<div style={{ display:"flex",alignItems:"center",gap:10 }}><img src="/Logo_Nabd.svg" alt="NABD Logo" style={{ width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(0,0,0,.25)" }}/><div><div style={{ fontSize:18,fontWeight:800,color:"#ffffff",lineHeight:1.1 }}>{tr.appName}</div><div style={{ fontSize:10,color:"rgba(255,255,255,0.55)",fontWeight:400 }}>{tr.appSub}</div></div></div>)}
-          {collapsed&&<img src="/Logo_Nabd.svg" alt="NABD Logo" style={{ width:38,height:38,borderRadius:10 }}/>}
-          {!isMobile&&(<button onClick={()=>setCollapsed(!collapsed)} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.22)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}} style={{ width:28,height:28,background:"rgba(255,255,255,0.12)",border:"1.5px solid rgba(255,255,255,0.22)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.9)",fontSize:14,lineHeight:1,transition:"background .15s",flexShrink:0,marginTop:collapsed?8:0 }}>{collapsed?(isAr?"‹":"›"):(isAr?"›":"‹")}</button>)}
-        </div>
-        <nav style={{ flex:1,padding:"12px 10px",overflowY:"auto" }}>
-          {navItems.map(item=>{
-            const isActive = item.key===activePage;
-            const isLocked = !canAccess(item.key, plan);
-            const lockLabel = isAr ? "غير متاح في خطتك" : "Not available in your plan";
-            return (
-              <a key={item.key}
-                href={isLocked ? undefined : item.href}
-                title={collapsed ? (isLocked ? lockLabel : tr.nav[item.key]) : (isLocked ? lockLabel : undefined)}
-                onClick={isLocked ? (e)=>e.preventDefault() : undefined}
-                onMouseEnter={e=>{if(!isActive&&!isLocked)(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.08)";}}
-                onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background="transparent";}}
-                style={{ display:"flex",alignItems:"center",gap:collapsed?0:12,justifyContent:collapsed?"center":"flex-start",padding:collapsed?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:isActive?SB_ACTIVE_BG:"transparent",color:isLocked?"rgba(255,255,255,0.45)":(isActive?SB_ACTIVE_TEXT:SB_IDLE_TEXT),fontWeight:isActive?600:400,fontSize:14,transition:"background .18s, padding .3s, gap .3s",position:"relative",cursor:isLocked?"not-allowed":"pointer",opacity:1 }}>
-                {isActive&&<div style={{ position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SB_INDICATOR,borderRadius:10 }}/>}
-                {/* نجمة الترقية — دائماً في الزاوية العلوية عند المصغّر */}
-                {isLocked&&collapsed&&(
-                  <div style={{ position:"absolute",top:5,right:isAr?5:undefined,left:isAr?undefined:5,width:14,height:14,borderRadius:"50%",background:"rgba(245,166,35,0.22)",display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none" }}>
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="#f5a623"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-                  </div>
-                )}
-                <span style={{ display:"flex",alignItems:"center",flexShrink:0 }}>{NAV_ICONS[item.key]}</span>
-                {!collapsed&&<span style={{ flex:1,opacity:isLocked?0.5:1 }}>{tr.nav[item.key]}</span>}
-                {/* badge الترقية — يظهر فقط عند الوضع الموسّع */}
-                {isLocked&&!collapsed&&(
-                  <span style={{ display:"flex",alignItems:"center",gap:3,fontSize:9,fontWeight:700,color:"#f5a623",background:"rgba(245,166,35,0.18)",border:"1px solid rgba(245,166,35,0.35)",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap",flexShrink:0,lineHeight:1.4 }}>
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="#f5a623" style={{ flexShrink:0 }}><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-                    {isAr?"ترقية":"Upgrade"}
-                  </span>
-                )}
-              </a>
-            );
-          })}
-        </nav>
-        <div style={{ padding:collapsed?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
-          {!collapsed&&(
-            <>
-              <div style={{ padding:"10px 12px",marginBottom:8,background:"rgba(255,255,255,0.07)",border:`1.5px solid ${PLAN_BADGE[plan].color}60`,borderRadius:10 }}>
-                {/* اسم الخطة */}
-                <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:6 }}>
-                  <div style={{ width:9,height:9,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0,boxShadow:`0 0 6px ${PLAN_BADGE[plan].color}` }}/>
-                  <span style={{ fontSize:13,fontWeight:700,color:"#ffffff",flex:1 }}>
-                    {isSharedPlan(plan)
-                      ? (isAr
-                          ? plan.replace("shared_basic","الأساسية").replace("shared_pro","الاحترافية").replace("shared_enterprise","الشاملة")
-                          : plan.replace("shared_basic","Basic").replace("shared_pro","Pro").replace("shared_enterprise","Full"))
-                      : (isAr
-                          ? plan==="basic"?"الأساسية":plan==="pro"?"الاحترافية":"الشاملة"
-                          : plan==="basic"?"Basic":plan==="pro"?"Professional":"Comprehensive")
-                    }
-                  </span>
-                </div>
-                {/* نوع الاشتراك */}
-                <div style={{ display:"flex",alignItems:"center",gap:5 }}>
-                  <span style={{ fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:isSharedPlan(plan)?"rgba(255,255,255,0.14)":"rgba(255,255,255,0.10)",color:"rgba(255,255,255,0.75)",border:"1px solid rgba(255,255,255,0.18)" }}>
-                    {isSharedPlan(plan)
-                      ? (isAr?"👥 مشترك":"👥 Shared")
-                      : (isAr?"👤 فردي":"👤 Individual")}
-                  </span>
-                  {isSharedPlan(plan)&&<span style={{ fontSize:10,color:"rgba(255,255,255,0.45)" }}>{isAr?`حتى ${maxDoctors} أطباء`:`up to ${maxDoctors} drs`}</span>}
-                </div>
-              </div>
-              <button onClick={()=>setLang(lang==="ar"?"en":"ar")} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)";}} style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600,transition:"background .15s" }}>🌐 {lang==="ar"?"English":"العربية"}</button>
-            </>
-          )}
-          <button onClick={async()=>{ try { await supabase.auth.signOut(); window.location.href="/login"; } catch { window.location.href="/login"; } }} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.3)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.15)";}}
-            style={{ width:"100%",padding:collapsed?"10px 0":"10px 14px",background:"rgba(192,57,43,.15)",border:"1.5px solid rgba(192,57,43,.3)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#ffb3a7",fontWeight:600,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:8,transition:"all .2s" }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            {!collapsed&&<span style={{ fontFamily:"Rubik,sans-serif" }}>{tr.signOut}</span>}
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-}
 
 // ─── Field wrapper ────────────────────────────────────────
 function Field({ label, children }:{ label:string; children:ReactNode }) {
@@ -1712,7 +1585,7 @@ export default function PatientsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <Sidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} maxDoctors={maxDoctors}/>
+        <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} />
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 
