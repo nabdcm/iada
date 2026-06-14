@@ -148,9 +148,11 @@ function getGreetingKey(): "greeting_morning" | "greeting_afternoon" | "greeting
 
 // ─── Plan access rules ────────────────────────────────────
 const PLAN_ACCESS: Record<string, string[]> = {
-  payments:      ["pro", "enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
-  prescriptions: ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
-  tracking:      ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+  payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
+  prescriptions:    ["enterprise", "shared_enterprise"],
+  tracking:         ["enterprise", "shared_enterprise"],
+  xrays:            ["enterprise", "shared_enterprise"],
+  clinicManagement: ["shared_basic", "shared_pro", "shared_enterprise"],
 };
 
 // خطط فردية: basic | pro | enterprise
