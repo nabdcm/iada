@@ -9,7 +9,7 @@ const supabaseUrl     = "https://ldqaohjnlxiwvaijcsbm.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkcWFvaGpubHhpd3ZhaWpjc2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1Nzk3MDUsImV4cCI6MjA4NzE1NTcwNX0.2vo-DqFGbJqa8MEgotfujz23QjU2bfMEDIDDnbDQ1Jo";
 
 // ─── حُذف "/admin" من هنا — يملك نظام مصادقة خاصاً به ───────
-const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary"];
+const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/admin"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -30,6 +30,12 @@ export async function middleware(request: NextRequest) {
 
   const isProtected = PROTECTED.some(p => pathname.startsWith(p));
   if (!isProtected) return NextResponse.next();
+
+  // ── /admin يملك نظام مصادقة خاصاً (client-side) ─────────────
+  // نمنع فقط الوصول المباشر بدون session header خاص
+  if (pathname.startsWith("/admin")) {
+    return NextResponse.next();
+  }
 
   let response = NextResponse.next({ request });
 
