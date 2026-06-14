@@ -208,13 +208,15 @@ const SHARED_PLAN_MAX_DOCTORS: Record<PlanType, number> = {
   shared_basic: 2, shared_pro: 3, shared_enterprise: 5,
 };
 
-const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise","shared_pro","shared_enterprise"],
-  // الوصفات: الشاملة فقط — الأساسية والاحترافية مقفلة (فردي ومشترك)
-  prescriptions: ["enterprise","shared_enterprise"],
-  tracking:      ["enterprise","shared_basic","shared_pro","shared_enterprise"],
+const PLAN_ACCESS: Record<string, string[]> = {
+  payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
+  prescriptions:    ["enterprise", "shared_enterprise"],
+  tracking:         ["enterprise", "shared_enterprise"],
+  xrays:            ["enterprise", "shared_enterprise"],
+  clinicManagement: ["shared_basic", "shared_pro", "shared_enterprise"],
 };
-const canAccess = (feature:string, plan:PlanType) =>
+
+const canAccess = (feature: string, plan: PlanType): boolean =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
   basic:             {label:{ar:"الأساسية",          en:"Basic"},           color:"#0863ba"},
