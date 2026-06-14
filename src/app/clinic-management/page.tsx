@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -263,125 +264,6 @@ const PLAN_BADGE_COLOR: Record<string, string> = {
   shared_basic: "#0891b2", shared_pro: "#6d28d9", shared_enterprise: "#b45309",
 };
 
-function Sidebar({ lang, setLang, plan }: { lang: Lang; setLang: (l: Lang) => void; plan: PlanType }) {
-  const tr = T[lang];
-  const isAr = lang === "ar";
-  const [col, setCol] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  useEffect(() => {
-    if (isMobile && mobileOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
-    return () => { document.body.style.overflow = ""; };
-  }, [isMobile, mobileOpen]);
-
-  const navItems = [
-    { key: "dashboard",        href: "/dashboard",           icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
-    { key: "patients",         href: "/patients",            icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-    { key: "appointments",     href: "/appointments",        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
-    { key: "clinicManagement", href: "/clinic-management",   icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, locked: !isSharedPlan(plan) },
-    { key: "payments",         href: "/payments",            icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> },
-    { key: "prescriptions",    href: "/prescriptions",       icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7z"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/></svg> },
-  ];
-
-  const sidebarTransform = isMobile
-    ? (mobileOpen ? "translateX(0)" : (isAr ? "translateX(100%)" : "translateX(-100%)"))
-    : "translateX(0)";
-
-  return (
-    <>
-      {isMobile && (
-        <button
-          onClick={() => setMobileOpen(o => !o)}
-          style={{ position:"fixed",top:14,left:isAr?undefined:14,right:isAr?14:undefined,zIndex:300,width:40,height:40,borderRadius:10,background:SB_BG,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 16px rgba(5,88,168,.3)" }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-      )}
-      {isMobile && mobileOpen && <div onClick={() => setMobileOpen(false)} style={{ position:"fixed",inset:0,zIndex:250,background:"rgba(0,0,0,.4)" }}/>}
-      <aside style={{
-        position: isMobile ? "fixed" : "sticky",
-        top: 0, [isAr?"right":"left"]: 0,
-        zIndex: isMobile ? 260 : 10,
-        width: col ? 58 : 220,
-        height: "100vh",
-        background: SB_BG,
-        display: "flex", flexDirection: "column",
-        transition: "width .25s, transform .3s",
-        transform: sidebarTransform,
-        flexShrink: 0,
-        fontFamily: "Rubik, sans-serif",
-        direction: isAr ? "rtl" : "ltr",
-      }}>
-        {/* Header */}
-        <div style={{ padding: col ? "18px 10px" : "18px 16px", background: SB_BG_HEADER, borderBottom: `1px solid ${SB_BORDER}`, display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:34,height:34,borderRadius:9,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0 }}>💙</div>
-          {!col && (
-            <div>
-              <div style={{ fontSize:15,fontWeight:800,color:"#fff",lineHeight:1 }}>{tr.appName}</div>
-              <div style={{ fontSize:10,color:"rgba(255,255,255,.55)",marginTop:2 }}>{tr.appSub}</div>
-            </div>
-          )}
-          {!isMobile && (
-            <button onClick={() => setCol(c => !c)} style={{ marginInlineStart:"auto",width:24,height:24,borderRadius:6,background:"rgba(255,255,255,.1)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" strokeWidth="2.5"><polyline points={col?"9 18 15 12 9 6":"15 18 9 12 15 6"}/></svg>
-            </button>
-          )}
-        </div>
-
-        {/* Nav */}
-        <nav style={{ flex:1, overflowY:"auto", padding:"10px 0" }}>
-          {navItems.map(item => {
-            const active = item.key === "clinicManagement";
-            const locked = (item as any).locked;
-            return (
-              <a key={item.key} href={locked ? undefined : item.href}
-                style={{ display:"flex",alignItems:"center",gap:10,padding:col?"12px 0":"10px 14px",margin:"1px 8px",borderRadius:10,cursor:locked?"not-allowed":"pointer",textDecoration:"none",background:active?SB_ACTIVE_BG:"transparent",color:active?"#fff":locked?"rgba(255,255,255,.3)":SB_IDLE_TEXT,transition:"background .15s,color .15s",justifyContent:col?"center":"flex-start" }}
-                onMouseEnter={e => { if(!active&&!locked) (e.currentTarget as HTMLElement).style.background="rgba(255,255,255,.08)"; }}
-                onMouseLeave={e => { if(!active&&!locked) (e.currentTarget as HTMLElement).style.background="transparent"; }}
-              >
-                {item.icon}
-                {!col && <span style={{ fontSize:13,fontWeight:active?700:500 }}>{(tr.nav as any)[item.key]}</span>}
-                {!col && active && <div style={{ marginInlineStart:"auto",width:4,height:4,borderRadius:"50%",background:"#7dd3fc" }}/>}
-                {locked && !col && <span style={{ fontSize:11,opacity:.7 }}>🔒</span>}
-              </a>
-            );
-          })}
-        </nav>
-
-        {/* Footer */}
-        <div style={{ padding:col?"14px 10px":"14px 12px",background:SB_BG_FOOTER,borderTop:`1px solid ${SB_BORDER}` }}>
-          {!col && (
-            <>
-              <div style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,.08)",border:`1.5px solid ${(PLAN_BADGE_COLOR[plan]??"")}50`,borderRadius:8 }}>
-                <div style={{ width:8,height:8,borderRadius:"50%",background:PLAN_BADGE_COLOR[plan]??SB_BG,flexShrink:0 }}/>
-                <span style={{ fontSize:11,color:"rgba(255,255,255,.7)",flex:1 }}>{isAr?"خطة":"Plan"}</span>
-                <span style={{ fontSize:11,fontWeight:700,color:PLAN_BADGE_COLOR[plan]??SB_BG }}>{(tr.planBadge as any)[plan] ?? plan}</span>
-              </div>
-              <button onClick={() => setLang(lang==="ar"?"en":"ar")}
-                style={{ width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,.06)",border:`1px solid ${SB_BORDER}`,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,.8)",fontWeight:600 }}>
-                🌐 {lang==="ar"?"English":"العربية"}
-              </button>
-            </>
-          )}
-          <button onClick={() => { supabase.auth.signOut(); window.location.href="/login"; }}
-            style={{ width:"100%",padding:col?"10px 0":"10px 14px",background:"rgba(192,57,43,.15)",border:"1.5px solid rgba(192,57,43,.3)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#ffb3a7",fontWeight:600,display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8 }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            {!col && <span>{tr.signOut}</span>}
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-}
 
 // ─── تبويب جدول الدوام ────────────────────────────────────────
 function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors: Doctor[]; userId: string; isMobile: boolean }) {
@@ -1143,7 +1025,7 @@ export default function ClinicManagementPage() {
   // ── حراسة الخطة ──────────────────────────────────────────
   if (!isSharedPlan(plan)) return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden" }}>
-      <Sidebar lang={lang} setLang={setLang} plan={plan}/>
+      <SharedSidebar lang={lang} setLang={setLang} activePage="clinicManagement" plan={plan} />
       <main style={mainStyle}>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100%",flexDirection:"column",gap:16,textAlign:"center" }}>
           <div style={{ fontSize:64 }}>🔒</div>
@@ -1173,7 +1055,7 @@ export default function ClinicManagementPage() {
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
       `}</style>
       <div style={{ display:"flex", height:"100vh", overflow:"hidden" }}>
-        <Sidebar lang={lang} setLang={setLang} plan={plan}/>
+        <SharedSidebar lang={lang} setLang={setLang} activePage="clinicManagement" plan={plan} />
 
         <main style={mainStyle}>
           {/* رأس الصفحة */}
