@@ -1056,14 +1056,11 @@ const SHARED_PLAN_MAX_DOCTORS: Record<PlanType, number> = {
 };
 
 const PLAN_ACCESS: Record<string, string[]> = {
-  // المدفوعات: الاحترافية والشاملة (فردي + مشترك)
-  payments:      ["pro", "enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
-  // الوصفات: الشاملة فقط (فردي + مشترك)
-  prescriptions: ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
-  // المتابعة: الشاملة فقط (فردي + مشترك)
-  tracking:      ["enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
-  // الأشعة: الشاملة فقط (فردي + مشترك) — الأساسية والاحترافية لا تدعم رفع الأشعة
-  xrays:         ["enterprise", "shared_enterprise"],
+  payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
+  prescriptions:    ["enterprise", "shared_enterprise"],
+  tracking:         ["enterprise", "shared_enterprise"],
+  xrays:            ["enterprise", "shared_enterprise"],
+  clinicManagement: ["shared_basic", "shared_pro", "shared_enterprise"],
 };
 const PLAN_LIMITS: Record<PlanType, number> = {
   basic:             100,      // أساسية فردية: حتى 100 مريض
