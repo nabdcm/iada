@@ -106,6 +106,37 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType,MedicalField[]> = {
 };
 
 // ════════════════════════════════════════════════════════════
+// ─── MRN Helper — يتحقق من master_patients بالهاتف ──────────
+async function getOrCreateMRN(phone: string, name: string): Promise<string> {
+  const cleanPhone = phone.trim();
+  // هل يوجد سجل مركزي بهذا الهاتف؟
+  const { data: existing } = await supabase
+    .from("master_patients")
+    .select("mrn")
+    .eq("phone", cleanPhone)
+    .maybeSingle();
+
+  if (existing?.mrn) return existing.mrn;
+
+  // إنشاء سجل جديد
+  const { data: inserted } = await supabase
+    .from("master_patients")
+    .insert({ phone: cleanPhone, name: name.trim() })
+    .select("id, mrn")
+    .single();
+
+  if (inserted?.mrn) return inserted.mrn;
+
+  // fallback: إذا فشل الإدراج (race condition)، نحاول جلبه مجدداً
+  const { data: retry } = await supabase
+    .from("master_patients")
+    .select("mrn")
+    .eq("phone", cleanPhone)
+    .maybeSingle();
+
+  return retry?.mrn ?? `MRN-T-${Date.now()}`;
+}
+
 // DB HELPERS
 // ════════════════════════════════════════════════════════════
 async function loadProfileFromDB(patientId:number): Promise<PatientProfile|null> {
@@ -1008,6 +1039,11 @@ export default function SecretaryPage() {
       const { data:{user} } = await supabase.auth.getUser();
       if (!user) return;
       if (id) {
+        // تحديث — إذا تغير الهاتف نتحقق من MRN
+        let mrn: string | undefined;
+        if (form.phone.trim()) {
+          mrn = await getOrCreateMRN(form.phone.trim(), form.name);
+        }
         const { data:updated, error } = await supabase
           .from("patients")
           .update({
@@ -1018,11 +1054,14 @@ export default function SecretaryPage() {
             has_diabetes: form.has_diabetes,
             has_hypertension: form.has_hypertension,
             notes: form.notes || null,
+            ...(mrn ? { mrn } : {}),
           })
           .eq("id",id).select().single();
         if (error) { console.error("Update patient error:", error); return; }
         if (updated) setPatients(prev=>prev.map(p=>p.id===id?(updated as unknown as Patient):p));
       } else {
+        // إضافة جديد — نحصل على MRN أولاً
+        const mrn = await getOrCreateMRN(form.phone.trim(), form.name);
         const { data:inserted, error } = await supabase
           .from("patients")
           .insert({
@@ -1035,6 +1074,7 @@ export default function SecretaryPage() {
             notes: form.notes || null,
             user_id: user.id,
             is_hidden: false,
+            mrn,
           })
           .select().single();
         if (error) { console.error("Insert patient error:", error); return; }
