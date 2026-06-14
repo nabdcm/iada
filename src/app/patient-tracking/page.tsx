@@ -7,6 +7,7 @@
 // ============================================================
 
 import { useState, useEffect, type JSX } from "react";
+import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
 
 type Lang = "ar" | "en";
@@ -139,73 +140,6 @@ const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = 
   shared_enterprise: {label:{ar:"مشتركة - شاملة",   en:"Shared - Full"},   color:"#4a1480"},
 };
 
-function Sidebar({lang,setLang,plan="basic"}:{lang:Lang;setLang:(l:Lang)=>void;plan?:PlanType}) {
-  const isAr=lang==="ar";
-  const [col,setCol]=useState(false);
-  const [mob,setMob]=useState(false);
-  const [mO,setMO]=useState(false);
-  useEffect(()=>{const c=()=>setMob(window.innerWidth<=768);c();window.addEventListener("resize",c);return()=>window.removeEventListener("resize",c);},[]);
-  useEffect(()=>{if(mob&&mO)document.body.style.overflow="hidden";else document.body.style.overflow="";return()=>{document.body.style.overflow="";};},[mob,mO]);
-  const nav=[
-    {k:"dashboard",l:isAr?"لوحة المعلومات":"Dashboard",href:"/dashboard"},
-    {k:"patients",l:isAr?"المرضى":"Patients",href:"/patients"},
-    {k:"appointments",l:isAr?"المواعيد":"Appointments",href:"/appointments"},
-    {k:"payments",l:isAr?"المدفوعات":"Payments",href:"/payments"},
-    {k:"prescriptions",l:isAr?"الوصفات الطبية":"Prescriptions",href:"/prescriptions"},
-    {k:"tracking",l:isAr?"متابعة المرضى":"Patient Tracking",href:"/patient-tracking"},
-  ];
-  const sT=mob?(mO?"translateX(0)":isAr?"translateX(100%)":"translateX(-100%)"):"translateX(0)";
-  return (
-    <>
-      {mob&&mO&&<div onClick={()=>setMO(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:55}}/>}
-      {mob&&<button onClick={()=>setMO(!mO)} style={{position:"fixed",top:14,zIndex:70,right:isAr?16:undefined,left:isAr?undefined:16,width:40,height:40,borderRadius:10,background:SB,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(5,88,168,.4)"}}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">{mO?<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>:<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>}</svg>
-      </button>}
-      <aside style={{width:mob?260:col?70:240,minHeight:"100vh",background:SB,display:"flex",flexDirection:"column",transition:"transform .3s cubic-bezier(.4,0,.2,1),width .3s",position:"fixed",top:0,right:isAr?0:undefined,left:isAr?undefined:0,zIndex:60,transform:sT,boxShadow:isAr?"-4px 0 32px rgba(5,88,168,.45)":"4px 0 32px rgba(5,88,168,.45)"}}>
-        <div style={{padding:col?"18px 0":"18px 20px",background:SH,borderBottom:"1px solid "+SBD,display:"flex",alignItems:"center",justifyContent:col?"center":"space-between",minHeight:72}}>
-          {!col&&<div style={{display:"flex",alignItems:"center",gap:10}}><img src="/Logo_Nabd.svg" alt="NABD" style={{width:38,height:38,borderRadius:10,boxShadow:"0 4px 12px rgba(0,0,0,.25)"}}/><div><div style={{fontSize:18,fontWeight:800,color:"#fff",lineHeight:1.1}}>{isAr?"نبض":"NABD"}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.55)"}}>{isAr?"إدارة العيادة":"Clinic Manager"}</div></div></div>}
-          {col&&<img src="/Logo_Nabd.svg" alt="NABD" style={{width:38,height:38,borderRadius:10}}/>}
-          {!mob&&<button onClick={()=>setCol(!col)} style={{width:28,height:28,background:"rgba(255,255,255,0.12)",border:"1.5px solid rgba(255,255,255,0.22)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.9)",fontSize:14,flexShrink:0,marginTop:col?8:0}}>{col?(isAr?"‹":"›"):(isAr?"›":"‹")}</button>}
-        </div>
-        <nav style={{flex:1,padding:"12px 10px",overflowY:"auto"}}>
-          {nav.map(item=>{
-            const act=item.k==="tracking";
-            const locked=!canAccess(item.k,plan);
-            const lockLabel=isAr?"غير متاح في خطتك":"Not available in your plan";
-            return <a key={item.k}
-              href={locked?undefined:item.href}
-              title={col?(locked?lockLabel:item.l):(locked?lockLabel:undefined)}
-              onClick={locked?(e)=>e.preventDefault():undefined}
-              style={{display:"flex",alignItems:"center",gap:col?0:12,justifyContent:col?"center":"flex-start",padding:col?"13px 0":"11px 14px",borderRadius:10,marginBottom:4,textDecoration:"none",background:act?SABG:"transparent",color:locked?"rgba(255,255,255,0.28)":(act?SAT:SIT),fontWeight:act?600:400,fontSize:14,transition:"all .18s",position:"relative",cursor:locked?"not-allowed":"pointer",opacity:locked?0.5:1}}>
-              {act&&<div style={{position:"absolute",right:isAr?-10:undefined,left:isAr?undefined:-10,top:"50%",transform:"translateY(-50%)",width:3,height:24,background:SIND,borderRadius:10}}/>}
-              {!col&&<span style={{flex:1}}>{item.l}</span>}
-              {locked&&!col&&<span style={{fontSize:11,opacity:0.7}}>🔒</span>}
-            </a>;
-          })}
-        </nav>
-        <div style={{padding:col?"14px 10px":"14px 12px",background:SH,borderTop:"1px solid "+SBD}}>
-          {!col&&(
-            <>
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",marginBottom:8,background:"rgba(255,255,255,0.08)",border:`1.5px solid ${PLAN_BADGE[plan].color}50`,borderRadius:8}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:PLAN_BADGE[plan].color,flexShrink:0}}/>
-                <span style={{fontSize:11,color:"rgba(255,255,255,0.7)",flex:1}}>{isAr?"خطة":"Plan"}</span>
-                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
-                  <span style={{fontSize:11,fontWeight:700,color:PLAN_BADGE[plan].color}}>{PLAN_BADGE[plan].label[lang]}</span>
-                  {isSharedPlan(plan)&&<span style={{fontSize:9,color:"rgba(255,255,255,0.5)"}}>{isAr?"👥 عيادة مشتركة":"👥 Shared clinic"}</span>}
-                </div>
-              </div>
-              <button onClick={()=>setLang(lang==="ar"?"en":"ar")} style={{width:"100%",padding:"8px",marginBottom:10,background:"rgba(255,255,255,0.06)",border:"1px solid "+SBD,borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"Rubik,sans-serif",color:"rgba(255,255,255,0.8)",fontWeight:600}}>🌐 {lang==="ar"?"English":"العربية"}</button>
-            </>
-          )}
-          <button onClick={async()=>{await supabase.auth.signOut();window.location.href="/login";}} style={{width:"100%",padding:col?"10px 0":"10px 14px",background:"rgba(192,57,43,.15)",border:"1.5px solid rgba(192,57,43,.3)",borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,color:"#ffb3a7",fontWeight:600,display:"flex",alignItems:"center",justifyContent:col?"center":"flex-start",gap:8}}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            {!col&&<span style={{fontFamily:"Rubik,sans-serif"}}>{isAr?"تسجيل الخروج":"Sign Out"}</span>}
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-}
 
 function CreateLinkModal({lang,patients,doctorName,clinicName,userId,clinicTrackingType,adminClinicType,onClose,onCreated}:{lang:Lang;patients:Patient[];doctorName:string;clinicName:string;userId:string;clinicTrackingType:string;adminClinicType:string;onClose:()=>void;onCreated:(l:TrackingLink)=>void;}) {
   const isAr=lang==="ar";
@@ -421,7 +355,7 @@ export default function PatientTrackingPage() {
     <>
       <style>{"@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Rubik',sans-serif;background:#f7f9fc}.pt-root{direction:"+(isAr?"rtl":"ltr")+";min-height:100vh;background:#f7f9fc}.log-row{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .18s;box-shadow:0 2px 10px rgba(8,99,186,.04)}.log-row:hover{border-color:rgba(8,99,186,.3);box-shadow:0 4px 18px rgba(8,99,186,.1);transform:translateY(-1px)}.link-card{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;margin-bottom:10px;box-shadow:0 2px 10px rgba(8,99,186,.04)}.tb{padding:8px 20px;border-radius:20px;border:1.5px solid #eef0f3;background:#f7f9fc;font-family:'Rubik',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:#888;transition:all .18s}.tb.act{background:rgba(8,99,186,.08);border-color:rgba(8,99,186,.3);color:#0863ba}.wab{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;background:#25D366;color:#fff;font-family:'Rubik',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-radius:8px}.wab:hover{background:#1eb858}@keyframes fiu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fiu .4s cubic-bezier(.4,0,.2,1) both}@keyframes pls{0%,100%{opacity:1}50%{opacity:.5}}.pls{animation:pls 1.5s ease infinite}@media(max-width:768px){.mpt{margin-left:0!important;margin-right:0!important;padding:70px 14px 40px!important}}"}</style>
       <div className="pt-root">
-        <Sidebar lang={lang} setLang={setLang} plan={plan}/>
+        <SharedSidebar lang={lang} setLang={setLang} activePage="tracking" plan={plan} />
         <main className="mpt" style={{[isAr?"marginRight":"marginLeft"]:240,padding:"32px 28px",minHeight:"100vh"}}>
           {loading&&<div style={{textAlign:"center",padding:"80px 0"}}><div style={{fontSize:36,marginBottom:12}} className="pls">📊</div><div style={{fontSize:13,color:"#aaa"}}>{isAr?"جاري التحميل...":"Loading..."}</div></div>}
 
