@@ -1025,7 +1025,7 @@ export default function ClinicManagementPage() {
   // ── حراسة الخطة ──────────────────────────────────────────
   if (!isSharedPlan(plan)) return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden" }}>
-      <SharedSidebar lang={lang} setLang={setLang} activePage="clinicManagement" plan={plan} />
+      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="clinicManagement" plan={plan} />
       <main style={mainStyle}>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100%",flexDirection:"column",gap:16,textAlign:"center" }}>
           <div style={{ fontSize:64 }}>🔒</div>
@@ -1055,7 +1055,7 @@ export default function ClinicManagementPage() {
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
       `}</style>
       <div style={{ display:"flex", height:"100vh", overflow:"hidden" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="clinicManagement" plan={plan} />
+        <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="clinicManagement" plan={plan} />
 
         <main style={mainStyle}>
           {/* رأس الصفحة */}
