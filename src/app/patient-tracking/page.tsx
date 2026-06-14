@@ -120,13 +120,15 @@ type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" |
 const isSharedPlan = (plan: PlanType): boolean =>
   plan === "shared_basic" || plan === "shared_pro" || plan === "shared_enterprise";
 
-const PLAN_ACCESS: Record<string,string[]> = {
-  payments:      ["pro","enterprise","shared_pro","shared_enterprise"],
-  prescriptions: ["enterprise","shared_enterprise"],
-  // المتابعة: الشاملة فقط — الأساسية والاحترافية مقفلة (فردي ومشترك)
-  tracking:      ["enterprise","shared_enterprise"],
+const PLAN_ACCESS: Record<string, string[]> = {
+  payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
+  prescriptions:    ["enterprise", "shared_enterprise"],
+  tracking:         ["enterprise", "shared_enterprise"],
+  xrays:            ["enterprise", "shared_enterprise"],
+  clinicManagement: ["shared_basic", "shared_pro", "shared_enterprise"],
 };
-const canAccess = (feature:string, plan:PlanType) =>
+
+const canAccess = (feature: string, plan: PlanType): boolean =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
   basic:             {label:{ar:"الأساسية",           en:"Basic"},           color:"#0863ba"},
