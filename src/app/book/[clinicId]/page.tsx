@@ -171,6 +171,12 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
   // المواعيد المحجوزة للتاريخ المختار
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  // جدول دوام الطبيب المختار (من doctor_schedules)
+  const [doctorSchedule, setDoctorSchedule] = useState<{
+    days: Record<number, { enabled: boolean; start: string; end: string; break_start?: string; break_end?: string }>;
+    vacations: string[];
+    appointment_duration: number;
+  } | null>(null);
 
   const isSharedClinic = clinic ? SHARED_CLINIC_PLANS.includes(clinic.plan ?? "") : false;
 
@@ -248,9 +254,52 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     });
   }, [form.date, clinicId, selectedDoctor, isSharedClinic]);
 
-  const timeSlots = clinic
-    ? generateTimeSlots(clinic.working_hours_start, clinic.working_hours_end, clinic.appointment_duration)
-    : [];
+  // جلب جدول الطبيب عند اختياره
+  useEffect(() => {
+    if (!selectedDoctor && !clinic) return;
+    const fetchSchedule = async () => {
+      // للعيادات الفردية: نأخذ أول طبيب
+      const doctorId = selectedDoctor?.id;
+      if (!doctorId) { setDoctorSchedule(null); return; }
+      const { data } = await supabase
+        .from("doctor_schedules")
+        .select("*")
+        .eq("doctor_id", doctorId)
+        .single();
+      if (data) {
+        setDoctorSchedule({
+          days: typeof data.days === "string" ? JSON.parse(data.days) : (data.days ?? {}),
+          vacations: typeof data.vacations === "string" ? JSON.parse(data.vacations) : (data.vacations ?? []),
+          appointment_duration: data.appointment_duration ?? clinic?.appointment_duration ?? 30,
+        });
+      } else {
+        setDoctorSchedule(null);
+      }
+    };
+    fetchSchedule();
+  }, [selectedDoctor, clinic]);
+
+  // توليد slots: من جدول الطبيب إن وُجد، وإلا من إعدادات العيادة
+  const timeSlots = (() => {
+    if (!clinic) return [];
+    if (doctorSchedule && form.date) {
+      const dayIdx = new Date(form.date + "T00:00:00").getDay();
+      const workDay = doctorSchedule.days[dayIdx];
+      if (!workDay || !workDay.enabled) return [];
+      // 24 ساعة
+      if (workDay.start === "00:00" && workDay.end === "23:59") {
+        return generateTimeSlots("00:00", "23:30", doctorSchedule.appointment_duration);
+      }
+      // دوام عادي مع تصفية الاستراحة
+      const allSlots = generateTimeSlots(workDay.start, workDay.end, doctorSchedule.appointment_duration);
+      if (!workDay.break_start || !workDay.break_end) return allSlots;
+      const bStart = workDay.break_start;
+      const bEnd   = workDay.break_end;
+      return allSlots.filter(slot => slot < bStart || slot >= bEnd);
+    }
+    // fallback: إعدادات العيادة العامة
+    return generateTimeSlots(clinic.working_hours_start, clinic.working_hours_end, clinic.appointment_duration);
+  })();
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -643,7 +692,11 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                     <input type="date" value={form.date} min={todayStr}
                       onChange={e => setForm({...form, date:e.target.value, time:""})}
                       style={inputSt} className="book-input" required />
-                    {form.date && !isDayWorking(form.date, clinic.working_days) && (
+                    {form.date && !isDayWorking(form.date, doctorSchedule
+                        ? Object.entries(doctorSchedule.days)
+                            .filter(([,d]: [string, any]) => d.enabled)
+                            .map(([k]: [string, any]) => ["sun","mon","tue","wed","thu","fri","sat"][parseInt(k)])
+                        : clinic.working_days) && (
                       <div style={{ fontSize:12,color:"#c0392b",marginTop:6 }}>⚠️ {tr.offDay}</div>
                     )}
                   </div>
