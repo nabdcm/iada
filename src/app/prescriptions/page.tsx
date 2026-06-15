@@ -741,7 +741,7 @@ export default function PrescriptionsPage() {
         }
       `}</style>
 
-      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="prescriptions" plan={plan} />
+      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} userId={userId} activePage="prescriptions" plan={plan} />
 
       <main style={{
         marginRight: isAr ? sidebarWidth : 0,
