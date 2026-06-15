@@ -1957,65 +1957,8 @@ export default function PaymentsPage() {
             </div>
           )}
 
-          {/* ── شاشة كلمة سر المدفوعات (قفل مفعّل + غير مفتوح بعد) ── */}
-          {!loading && canAccess("payments", plan) && paymentsLockEnabled && !isPaymentsUnlocked && (
-            <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:0 }}>
-              <div style={{ background:"#fff",borderRadius:24,border:"1.5px solid #eef0f3",boxShadow:"0 8px 40px rgba(8,99,186,.1)",padding:"40px 36px",maxWidth:380,width:"100%",animation:"modalIn .3s ease" }}>
-                <div style={{ fontSize:52,marginBottom:16 }}>🔐</div>
-                <h2 style={{ fontSize:20,fontWeight:800,color:"#353535",marginBottom:8 }}>
-                  {tr.paymentsLock.title}
-                </h2>
-                <p style={{ fontSize:13,color:"#aaa",lineHeight:1.7,marginBottom:24 }}>
-                  {tr.paymentsLock.desc}
-                </p>
-                <div style={{ position:"relative",marginBottom:12 }}>
-                  <input
-                    type="password"
-                    value={lockPasswordInput}
-                    onChange={e => { setLockPasswordInput(e.target.value); setLockPasswordError(false); }}
-                    onKeyDown={e => {
-                      if (e.key === "Enter") {
-                        if (lockPasswordInput === paymentsLockPassword) {
-                          setIsPaymentsUnlocked(true);
-                        } else {
-                          setLockPasswordError(true);
-                          setLockPasswordInput("");
-                        }
-                      }
-                    }}
-                    placeholder={tr.paymentsLock.placeholder}
-                    autoFocus
-                    style={{ width:"100%",padding:"13px 16px",border:`1.5px solid ${lockPasswordError?"#c0392b":"#e8eaed"}`,borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,color:"#353535",background:lockPasswordError?"rgba(192,57,43,.04)":"#fafbfc",outline:"none",transition:"border .2s",boxSizing:"border-box",direction:isAr?"rtl":"ltr" }}
-                    onFocus={e => { if (!lockPasswordError) e.target.style.borderColor="#0863ba"; }}
-                    onBlur={e => { if (!lockPasswordError) e.target.style.borderColor="#e8eaed"; }}
-                  />
-                </div>
-                {lockPasswordError && (
-                  <div style={{ fontSize:12,color:"#c0392b",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6 }}>
-                    ⚠️ {tr.paymentsLock.error}
-                  </div>
-                )}
-                <button
-                  onClick={() => {
-                    if (lockPasswordInput === paymentsLockPassword) {
-                      setIsPaymentsUnlocked(true);
-                    } else {
-                      setLockPasswordError(true);
-                      setLockPasswordInput("");
-                    }
-                  }}
-                  style={{ width:"100%",padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)",transition:"all .2s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#044d96"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#0863ba"; }}
-                >
-                  {tr.paymentsLock.submit}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── المحتوى الكامل — للاحترافية والشاملة فقط + بعد فتح القفل إن كان مفعلاً ── */}
-          {canAccess("payments", plan) && (!paymentsLockEnabled || isPaymentsUnlocked) && (<>
+          {/* ── المحتوى الكامل ── */}
+          {canAccess("payments", plan) && (<>
 
           {/* TOP BAR */}
           <div className="topbar-pad" style={{ position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
@@ -2132,7 +2075,7 @@ export default function PaymentsPage() {
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#2e7d32,#66bb6a)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                   <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💰</div>
-                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
                     style={{ width:32,height:32,borderRadius:8,background:"rgba(46,125,50,.08)",border:"1.5px solid rgba(46,125,50,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#2e7d32",fontSize:15,flexShrink:0 }}>
                     {numbersHidden?"👁":"🙈"}
                   </button>
@@ -2148,7 +2091,7 @@ export default function PaymentsPage() {
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#0863ba,#a4c4e4)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                   <div style={{ width:40,height:40,background:"rgba(8,99,186,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>📊</div>
-                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
                     style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#0863ba",fontSize:15,flexShrink:0 }}>
                     {numbersHidden?"👁":"🙈"}
                   </button>
@@ -2164,7 +2107,7 @@ export default function PaymentsPage() {
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#e67e22,#f39c12)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                   <div style={{ width:40,height:40,background:"rgba(230,126,34,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>⏳</div>
-                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
                     style={{ width:32,height:32,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e67e22",fontSize:15,flexShrink:0 }}>
                     {numbersHidden?"👁":"🙈"}
                   </button>
@@ -2199,7 +2142,7 @@ export default function PaymentsPage() {
             </div>
 
             {/* ── MOBILE STATS SLIDER ── */}
-            <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} numbersHidden={numbersHidden} onReveal={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} />
+            <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} numbersHidden={numbersHidden} onReveal={()=>{ if(numbersHidden){setRevealPasswordInput("");setRevealPasswordError(false);setShowRevealModal(true);}else{setNumbersHidden(true);}}} />
 
             {/* ── FINANCIAL SUMMARY ROW ── */}
             <div className="fin-summary-grid">
@@ -2208,7 +2151,7 @@ export default function PaymentsPage() {
                 <div style={{ position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <div style={{ fontSize:12,fontWeight:600,opacity:.8 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
-                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)}
+                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
                     style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
                     {numbersHidden?"👁":"🙈"}
                   </button>
@@ -2221,7 +2164,7 @@ export default function PaymentsPage() {
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalWithdrawals}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                    <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)}
+                    <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
                       style={{ width:30,height:30,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
                       {numbersHidden?"👁":"🙈"}
                     </button>
@@ -2236,7 +2179,7 @@ export default function PaymentsPage() {
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalExpenses}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                    <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)}
+                    <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
                       style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
                       {numbersHidden?"👁":"🙈"}
                     </button>
