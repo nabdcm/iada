@@ -943,18 +943,7 @@ export default function DashboardPage() {
           </div>
         </main>
       </div>
-      {/* زر تفعيل الإشعارات — floating bottom right */}
-      {userId && (
-        <div style={{
-          position: "fixed",
-          bottom: 24,
-          left: isAr ? 24 : undefined,
-          right: isAr ? undefined : 24,
-          zIndex: 40,
-        }}>
-          <PushNotifications userId={userId} lang={lang as "ar"|"en"} />
-        </div>
-      )}
+
     </>
   );
 }
