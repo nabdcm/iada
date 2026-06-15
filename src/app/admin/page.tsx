@@ -2959,7 +2959,7 @@ export default function AdminPage() {
     if (!msgClinic?.user_id || !msgBody.trim()) return;
     setMsgSending(true);
     try {
-      const { error } = await supabaseAdmin.from("messages").insert({
+      const { error } = await supabase.from("messages").insert({
         from_id: ADMIN_UID, to_id: msgClinic.user_id,
         from_role: "admin", body: msgBody.trim(),
       });
@@ -3447,7 +3447,7 @@ export default function AdminPage() {
           <div style={{ background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:480,direction:"rtl",fontFamily:"Rubik,sans-serif" }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:17,fontWeight:800,color:"#1a2840",marginBottom:16 }}>
-              💬 {(tr as any).messaging?.title} — {msgClinic.name}
+              💬 مراسلة الطبيب — {msgClinic.name}
             </div>
 
             {/* قوالب */}
@@ -3459,7 +3459,7 @@ export default function AdminPage() {
                     borderColor: msgTemplate===t ? "#0863ba" : "#e0e0e0",
                     background:  msgTemplate===t ? "#0863ba" : "#f5f7fa",
                     color:       msgTemplate===t ? "#fff" : "#555" }}>
-                  {(tr as any).messaging?.templates?.[t]}
+                  {t === "welcome" ? "ترحيبية" : t === "expiry" ? "انتهاء الاشتراك" : "مخصصة"}
                 </button>
               ))}
             </div>
@@ -3468,7 +3468,7 @@ export default function AdminPage() {
             <textarea
               value={msgBody}
               onChange={e => setMsgBody(e.target.value)}
-              placeholder={(tr as any).messaging?.placeholder}
+              placeholder="اكتب رسالتك هنا..."
               rows={6}
               style={{ width:"100%",padding:12,borderRadius:12,border:"1.5px solid #e0e0e0",fontFamily:"Rubik,sans-serif",fontSize:14,resize:"vertical",outline:"none",lineHeight:1.7 }}
             />
@@ -3480,7 +3480,7 @@ export default function AdminPage() {
                 onClick={handleSendMessage}
                 disabled={msgSending || !msgBody.trim() || msgBody.length > 2000}
                 style={{ flex:1,padding:"13px 0",borderRadius:12,background:"linear-gradient(135deg,#0863ba,#0558a8)",color:"#fff",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"Rubik,sans-serif",opacity:msgSending||!msgBody.trim()?0.6:1 }}>
-                {msgSuccess ? (tr as any).messaging?.sent : msgSending ? (tr as any).messaging?.sending : (tr as any).messaging?.send}
+                {msgSuccess ? "✅ تم الإرسال" : msgSending ? "جارٍ الإرسال..." : "إرسال الرسالة"}
               </button>
               <button onClick={() => setMsgClinic(null)}
                 style={{ padding:"13px 20px",borderRadius:12,background:"#f5f7fa",color:"#888",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:14,fontFamily:"Rubik,sans-serif" }}>
