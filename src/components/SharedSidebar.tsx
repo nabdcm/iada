@@ -140,6 +140,7 @@ export interface SharedSidebarProps {
   plan?: PlanType;
   doctorCount?: number;
   maxDoctorCount?: number;
+  userId?: string;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -150,6 +151,7 @@ export default function SharedSidebar({
   plan = "basic",
   doctorCount,
   maxDoctorCount,
+  userId,
 }: SharedSidebarProps) {
   const isAr = lang === "ar";
   const tr   = NAV_LABELS[lang];
@@ -157,6 +159,8 @@ export default function SharedSidebar({
   const [collapsed,   setCollapsed]   = useState(false);
   const [isMobile,    setIsMobile]    = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [pushPerm,    setPushPerm]    = useState<"default"|"granted"|"denied"|"unsupported">("default");
+  const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
     const check = () => {
@@ -178,7 +182,48 @@ export default function SharedSidebar({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // فحص حالة إذن الإشعارات
+  useEffect(() => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      setPushPerm("unsupported"); return;
+    }
+    setPushPerm(Notification.permission as any);
+    navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
+      if (sub) setPushPerm("granted");
+    }).catch(() => {});
+  }, []);
+
   const badge = PLAN_BADGE[plan] ?? PLAN_BADGE["basic"];
+
+  const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+
+  const handlePushToggle = async () => {
+    if (!userId || !("serviceWorker" in navigator)) return;
+    setPushLoading(true);
+    try {
+      if (pushPerm === "granted") {
+        // إلغاء الاشتراك
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await sub.unsubscribe();
+          await supabase.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", sub.endpoint);
+        }
+        setPushPerm("default");
+      } else {
+        // طلب الإذن والاشتراك
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") { setPushPerm(perm as any); return; }
+        const reg = await navigator.serviceWorker.ready;
+        const b64 = (s: string) => { const p = "=".repeat((4-s.length%4)%4); const b = (s+p).replace(/-/g,"+").replace(/_/g,"/"); const r = window.atob(b); return Uint8Array.from(r,c=>c.charCodeAt(0)); };
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID_PUBLIC) });
+        const j = sub.toJSON(); const k = j.keys as {p256dh:string;auth:string};
+        await supabase.from("push_subscriptions").upsert({ user_id: userId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
+        setPushPerm("granted");
+      }
+    } catch(e) { console.warn("push:", e); }
+    finally { setPushLoading(false); }
+  };
 
   const navItems = [
     { key: "dashboard",        href: "/dashboard",        icon: Icons.dashboard        },
@@ -420,6 +465,31 @@ export default function SharedSidebar({
                 🌐 {tr.lang}
               </button>
             </>
+          )}
+
+          {/* زر الإشعارات */}
+          {!collapsed && userId && pushPerm !== "unsupported" && pushPerm !== "denied" && (
+            <button
+              onClick={handlePushToggle}
+              disabled={pushLoading}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 8,
+                padding: "9px 12px", borderRadius: 10, marginBottom: 6, cursor: "pointer",
+                fontFamily: "Rubik,sans-serif",
+                border: pushPerm === "granted" ? "1.5px solid rgba(34,197,94,.35)" : "1.5px solid rgba(255,255,255,.2)",
+                background: pushPerm === "granted" ? "rgba(34,197,94,.12)" : "rgba(255,255,255,.08)",
+                opacity: pushLoading ? 0.7 : 1,
+              }}
+            >
+              <span style={{ fontSize: 15 }}>{pushPerm === "granted" ? "🔔" : "🔕"}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: pushPerm === "granted" ? "#86efac" : "rgba(255,255,255,.7)" }}>
+                {pushLoading
+                  ? (isAr ? "جارٍ..." : "Loading...")
+                  : pushPerm === "granted"
+                    ? (isAr ? "الإشعارات مفعّلة" : "Notifications On")
+                    : (isAr ? "تفعيل الإشعارات" : "Enable Notifications")}
+              </span>
+            </button>
           )}
 
           {/* Sign out */}
