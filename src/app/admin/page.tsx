@@ -2959,7 +2959,7 @@ export default function AdminPage() {
     if (!msgClinic?.user_id || !msgBody.trim()) return;
     setMsgSending(true);
     try {
-      const { error } = await supabase.from("messages").insert({
+      const { error } = await supabase.from("clinic_messages").insert({
         from_id: ADMIN_UID, to_id: msgClinic.user_id,
         from_role: "admin", body: msgBody.trim(),
       });
