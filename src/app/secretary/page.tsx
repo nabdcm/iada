@@ -1106,6 +1106,26 @@ function ExpenseModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>vo
 // MAIN PAGE
 // ════════════════════════════════════════════════════════════
 export default function SecretaryPage() {
+  // تغيير الـ manifest لصفحة السكرتيرة
+  useEffect(() => {
+    // إزالة manifest الحالي وإضافة manifest السكرتيرة
+    const existing = document.querySelector('link[rel="manifest"]');
+    if (existing) existing.remove();
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = "/manifest-secretary.json";
+    document.head.appendChild(link);
+    // تغيير عنوان الصفحة
+    document.title = "نبض — السكرتيرة";
+    return () => {
+      // استعادة manifest الأصلي عند الخروج
+      link.remove();
+      const orig = document.createElement("link");
+      orig.rel = "manifest";
+      orig.href = "/manifest.json";
+      document.head.appendChild(orig);
+    };
+  }, []);
   const [lang, setLang] = useState<Lang>("ar");
   const isAr = lang==="ar";
   const today = new Date().toISOString().slice(0,10);
