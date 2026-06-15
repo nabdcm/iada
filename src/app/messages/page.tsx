@@ -52,7 +52,7 @@ export default function MessagesPage() {
       setLoading(false);
 
       // تعليم كل الرسائل الواردة كمقروءة
-      await supabase.from("messages")
+      await supabase.from("clinic_messages")
         .update({ is_read: true })
         .eq("to_id", user.id)
         .eq("is_read", false);
@@ -70,7 +70,7 @@ export default function MessagesPage() {
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message]);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-        supabase.from("messages").update({ is_read: true }).eq("id", (payload.new as Message).id);
+        supabase.from("clinic_messages").update({ is_read: true }).eq("id", (payload.new as Message).id);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -83,7 +83,7 @@ export default function MessagesPage() {
 
   async function loadMessages(uid: string) {
     const { data } = await supabase
-      .from("messages")
+      .from("clinic_messages")
       .select("*")
       .or(`from_id.eq.${uid},to_id.eq.${uid}`)
       .order("created_at", { ascending: true });
@@ -93,7 +93,7 @@ export default function MessagesPage() {
   async function sendMessage() {
     if (!body.trim() || !userId) return;
     setSending(true);
-    const { error } = await supabase.from("messages").insert({
+    const { error } = await supabase.from("clinic_messages").insert({
       from_id: userId, to_id: ADMIN_UID,
       from_role: "doctor", body: body.trim(),
     });
