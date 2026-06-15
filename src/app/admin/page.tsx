@@ -641,6 +641,35 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
     direction: isAr ? "rtl" : "ltr",
   }), [isAr]);
 
+  
+  // ── إرسال رسالة للطبيب ─────────────────────────────────
+  const ADMIN_UID = "admin";
+  const handleSendMessage = async () => {
+    if (!msgClinic?.user_id || !msgBody.trim()) return;
+    setMsgSending(true);
+    try {
+      const { error } = await supabaseAdmin.from("messages").insert({
+        from_id: ADMIN_UID, to_id: msgClinic.user_id,
+        from_role: "admin", body: msgBody.trim(),
+      });
+      if (!error) {
+        setMsgSuccess(true); setMsgBody("");
+        fetch("/api/push", { method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ userId: msgClinic.user_id, title:"💬 رسالة جديدة من نبض", body: msgBody.trim().slice(0,80), url:"/messages" }) });
+        setTimeout(() => { setMsgSuccess(false); setMsgClinic(null); }, 2000);
+      }
+    } catch(e) { console.error(e); }
+    setMsgSending(false);
+  };
+  const getMsgTemplate = (t: string) => {
+    const temps: Record<string,string> = {
+      welcome: "مرحباً {name}،\nنرحب بانضمامك لمنصة نبض. يسعدنا خدمتك وتوفير أفضل تجربة لإدارة عيادتك.\n\nفريق نبض 💙",
+      expiry:  "عزيزي {name}،\nاشتراكك في منصة نبض سينتهي قريباً. يرجى التواصل معنا للتجديد.\n\nفريق نبض 💙",
+      custom:  "",
+    };
+    return (temps[t] ?? "").replace(/\{name\}/g, msgClinic?.name ?? "");
+  };
+
   const handleGenCreds = useCallback(() => {
     setCreds({ password: genPass() });
   }, []);
@@ -2936,6 +2965,11 @@ export default function AdminPage() {
   const [resetClinic,  setResetClinic]  = useState<ClinicData | null>(null);
   const [subClinic,    setSubClinic]    = useState<ClinicData | null>(null);
   const [openMenuId,   setOpenMenuId]   = useState<number | null>(null);
+  const [msgClinic,   setMsgClinic]   = useState<Clinic|null>(null);
+  const [msgBody,     setMsgBody]     = useState("");
+  const [msgTemplate, setMsgTemplate] = useState("custom");
+  const [msgSending,  setMsgSending]  = useState(false);
+  const [msgSuccess,  setMsgSuccess]  = useState(false);
   const [dataToolsModal, setDataToolsModal] = useState(false);
   const [accountFilter, setAccountFilter] = useState<"all"|"clinic"|"pharmacy">("all");
 
