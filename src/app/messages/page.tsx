@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { SharedSidebar } from "@/components/SharedSidebar";
+import SharedSidebar from "@/components/SharedSidebar";
 
 type Lang = "ar" | "en";
 type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
