@@ -931,6 +931,17 @@ export default function PaymentsPage() {
   const [reverseExpenseId, setReverseExpenseId] = useState<number|null>(null);
   const [typeFilter, setTypeFilter] = useState("all");
   const [plan, setPlan] = useState<PlanType>("basic");
+
+  // إخفاء الأرقام الرئيسية (وضع الخصوصية)
+  const [numbersHidden, setNumbersHidden] = useState(true);
+  const [showRevealModal, setShowRevealModal] = useState(false);
+  const [revealPasswordInput, setRevealPasswordInput] = useState("");
+  const [revealPasswordError, setRevealPasswordError] = useState(false);
+
+  // قفل التقرير الشهري
+  const [showMonthlyReportPasswordModal, setShowMonthlyReportPasswordModal] = useState(false);
+  const [monthlyReportPasswordInput, setMonthlyReportPasswordInput] = useState("");
+  const [monthlyReportPasswordError, setMonthlyReportPasswordError] = useState(false);
   // خطط العيادات المشتركة: قائمة الأطباء والفلتر المحدد
   const [doctors, setDoctors] = useState<{id: number; name: string; color?: string}[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<number|null>(null);
@@ -1184,26 +1195,26 @@ export default function PaymentsPage() {
     }
   };
 
-  // ── التراجع عن سحب ───────────────────────────────────────────
+  // ── التراجع عن سحب (حذف نهائي) ───────────────────────────────
   const reverseWithdrawal = async (id: number) => {
     const { error } = await supabase
       .from("clinic_withdrawals")
-      .update({ is_reversed: true })
+      .delete()
       .eq("id", id);
     if (!error) {
-      setWithdrawals(prev => prev.map(w => w.id === id ? { ...w, is_reversed: true } : w));
+      setWithdrawals(prev => prev.filter(w => w.id !== id));
     }
     setReverseWithdrawalId(null);
   };
 
-  // ── التراجع عن مصروف ─────────────────────────────────────────
+  // ── التراجع عن مصروف (حذف نهائي) ────────────────────────────
   const reverseExpense = async (id: number) => {
     const { error } = await supabase
       .from("clinic_expenses")
-      .update({ is_reversed: true })
+      .delete()
       .eq("id", id);
     if (!error) {
-      setExpenses(prev => prev.map(e => e.id === id ? { ...e, is_reversed: true } : e));
+      setExpenses(prev => prev.filter(e => e.id !== id));
     }
     setReverseExpenseId(null);
   };
@@ -1230,6 +1241,42 @@ export default function PaymentsPage() {
 
   const methodIcon = { cash:"💵", card:"💳", transfer:"🏦" };
 
+  // دالة إخفاء/إظهار الأرقام
+  const maskNumber = (val: string | number) => {
+    if (numbersHidden) return "••••••";
+    return typeof val === "number" ? val.toLocaleString() : val;
+  };
+
+  // دالة الكشف عن الأرقام بكلمة السر
+  const handleRevealNumbers = () => {
+    if (paymentsLockEnabled && revealPasswordInput === paymentsLockPassword) {
+      setNumbersHidden(false);
+      setShowRevealModal(false);
+      setRevealPasswordInput("");
+      setRevealPasswordError(false);
+    } else if (!paymentsLockEnabled) {
+      setNumbersHidden(false);
+      setShowRevealModal(false);
+    } else {
+      setRevealPasswordError(true);
+    }
+  };
+
+  // دالة إصدار التقرير الشهري (محمي بكلمة السر)
+  const handleMonthlyReportPassword = () => {
+    if (paymentsLockEnabled && monthlyReportPasswordInput === paymentsLockPassword) {
+      setShowMonthlyReportPasswordModal(false);
+      setMonthlyReportPasswordInput("");
+      setMonthlyReportPasswordError(false);
+      exportPDF();
+    } else if (!paymentsLockEnabled) {
+      setShowMonthlyReportPasswordModal(false);
+      exportPDF();
+    } else {
+      setMonthlyReportPasswordError(true);
+    }
+  };
+
   const fmtDate = (d: string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{ year:"numeric",month:"short",day:"numeric",calendar:"gregory" });
 
   // ── مساعد تنسيق التاريخ الميلادي للـ PDF ─────────────────────
@@ -1245,11 +1292,11 @@ export default function PaymentsPage() {
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const monthWithdrawals = withdrawals
-      .filter(w => w.date.startsWith(thisMonth))
+      .filter(w => w.date.startsWith(thisMonth) && !w.is_reversed)
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const monthExpenses = expenses
-      .filter(e => e.date.startsWith(thisMonth))
+      .filter(e => e.date.startsWith(thisMonth) && !e.is_reversed)
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const monthName = now.toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"long" });
@@ -1918,11 +1965,12 @@ export default function PaymentsPage() {
                 <p className="page-sub" style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>
               </div>
               <div style={{ display:"flex",gap:10 }}>
-                <button className="export-btn" onClick={exportPDF} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
+                <button className="export-btn" onClick={()=>paymentsLockEnabled ? setShowMonthlyReportPasswordModal(true) : exportPDF()} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0f7ff"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {paymentsLockEnabled && <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
                   {tr.exportBtn} PDF
                 </button>
                 <button onClick={exportDailyPDF} className="topbar-secondary-btn" style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
@@ -2022,9 +2070,15 @@ export default function PaymentsPage() {
               {/* Monthly Revenue - big card */}
               <div className="stat-big" style={{ gridColumn:"span 1",animation:"fadeUp .4s 0ms ease both" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#2e7d32,#66bb6a)",borderRadius:"18px 18px 0 0" }}/>
-                <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:14 }}>💰</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
+                  <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💰</div>
+                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(46,125,50,.08)",border:"1.5px solid rgba(46,125,50,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#2e7d32",fontSize:15,flexShrink:0 }}>
+                    {numbersHidden?"👁":"🙈"}
+                  </button>
+                </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#2e7d32",lineHeight:1 }}>
-                  {stats.totalMonth.toLocaleString()} ل.س
+                  {maskNumber(stats.totalMonth)} ل.س
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.totalMonth}</div>
                 <div style={{ fontSize:11,color:"#2e7d32",marginTop:4,fontWeight:600 }}>↑ 12% {tr.stats.vsLast}</div>
@@ -2032,9 +2086,15 @@ export default function PaymentsPage() {
 
               <div className="stat-big" style={{ animation:"fadeUp .4s 60ms ease both" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#0863ba,#a4c4e4)",borderRadius:"18px 18px 0 0" }}/>
-                <div style={{ width:40,height:40,background:"rgba(8,99,186,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:14 }}>📊</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
+                  <div style={{ width:40,height:40,background:"rgba(8,99,186,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>📊</div>
+                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#0863ba",fontSize:15,flexShrink:0 }}>
+                    {numbersHidden?"👁":"🙈"}
+                  </button>
+                </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#0863ba",lineHeight:1 }}>
-                  {stats.totalYear.toLocaleString()} ل.س
+                  {maskNumber(stats.totalYear)} ل.س
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.totalYear}</div>
                 <div style={{ fontSize:11,color:"#888",marginTop:4 }}>{stats.paidCount} {tr.stats.transactions}</div>
@@ -2042,9 +2102,15 @@ export default function PaymentsPage() {
 
               <div className="stat-big" style={{ animation:"fadeUp .4s 120ms ease both" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#e67e22,#f39c12)",borderRadius:"18px 18px 0 0" }}/>
-                <div style={{ width:40,height:40,background:"rgba(230,126,34,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:14 }}>⏳</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
+                  <div style={{ width:40,height:40,background:"rgba(230,126,34,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>⏳</div>
+                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e67e22",fontSize:15,flexShrink:0 }}>
+                    {numbersHidden?"👁":"🙈"}
+                  </button>
+                </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#e67e22",lineHeight:1 }}>
-                  {stats.pendingAmt.toLocaleString()} ل.س
+                  {maskNumber(stats.pendingAmt)} ل.س
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.pending}</div>
                 <div style={{ fontSize:11,color:"#e67e22",marginTop:4,fontWeight:600 }}>{stats.pendingCount} {tr.stats.unpaidCount}</div>
@@ -2081,7 +2147,7 @@ export default function PaymentsPage() {
               <div style={{ background: stats.netBalance >= 0 ? "linear-gradient(135deg,#1b5e20,#2e7d32)" : "linear-gradient(135deg,#b71c1c,#c0392b)",borderRadius:16,padding:"20px 24px",color:"#fff",position:"relative",overflow:"hidden",boxShadow: stats.netBalance >= 0 ? "0 4px 24px rgba(46,125,50,.25)":"0 4px 24px rgba(192,57,43,.25)" }}>
                 <div style={{ position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)" }}/>
                 <div style={{ fontSize:12,fontWeight:600,opacity:.8,marginBottom:10 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
-                <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{stats.netBalance.toLocaleString()} ل.س</div>
+                <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${stats.netBalance.toLocaleString()}`} ل.س</div>
                 <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
               </div>
               {/* إجمالي السحوبات */}
@@ -2090,7 +2156,7 @@ export default function PaymentsPage() {
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalWithdrawals}</span>
                   <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
                 </div>
-                <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{stats.totalWithdrawals.toLocaleString()} ل.س</div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{numbersHidden ? "••••••" : `${stats.totalWithdrawals.toLocaleString()}`} ل.س</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{withdrawals.length} {isAr?"عملية سحب":"withdrawals"}</div>
               </div>
               {/* مصروفات العيادة */}
@@ -2099,7 +2165,7 @@ export default function PaymentsPage() {
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalExpenses}</span>
                   <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
                 </div>
-                <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{stats.totalExpenses.toLocaleString()} ل.س</div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{numbersHidden ? "••••••" : `${stats.totalExpenses.toLocaleString()}`} ل.س</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{expenses.length} {isAr?"مصروف مسجّل":"recorded expenses"}</div>
               </div>
             </div>
@@ -2312,37 +2378,29 @@ export default function PaymentsPage() {
                       ))}
                     </div>
                     {withdrawals.map((w,i) => (
-                      <div key={w.id||i} style={{ display:"grid",gridTemplateColumns:"120px 1fr 130px 90px 60px",padding:"12px 20px",alignItems:"center",borderBottom:"1px solid #faf0ee",background:w.is_reversed?"rgba(200,200,200,.04)":"transparent",transition:"background .2s" }}
-                        onMouseEnter={e=>{if(!w.is_reversed)(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.03)";}}
-                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=w.is_reversed?"rgba(200,200,200,.04)":"transparent";}}>
+                      <div key={w.id||i} style={{ display:"grid",gridTemplateColumns:"120px 1fr 130px 90px 60px",padding:"12px 20px",alignItems:"center",borderBottom:"1px solid #faf0ee",transition:"background .2s" }}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.03)";}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
                         <div style={{ fontSize:12,color:"#888" }}>{fmtDate(w.date)}</div>
-                        <div style={{ fontSize:13,fontWeight:500,color:w.is_reversed?"#bbb":"#353535",paddingLeft:8,textDecoration:w.is_reversed?"line-through":"none" }}>
+                        <div style={{ fontSize:13,fontWeight:500,color:"#353535",paddingLeft:8 }}>
                           {w.reason}
                           {w.notes && <div style={{ fontSize:11,color:"#bbb",marginTop:2 }}>{w.notes}</div>}
                         </div>
-                        <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:w.is_reversed?"#bbb":"#c0392b",textDecoration:w.is_reversed?"line-through":"none" }}>
+                        <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:"#c0392b" }}>
                           -{w.amount.toLocaleString()} ل.س
                         </div>
                         <div style={{ paddingLeft:8 }}>
-                          {w.is_reversed ? (
-                            <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(200,200,200,.15)",color:"#bbb" }}>
-                              {tr.withdrawalsSection.reversed}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(192,57,43,.1)",color:"#c0392b" }}>
-                              {isAr?"سحب":"Withdrawal"}
-                            </span>
-                          )}
+                          <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(192,57,43,.1)",color:"#c0392b" }}>
+                            {isAr?"سحب":"Withdrawal"}
+                          </span>
                         </div>
                         <div style={{ display:"flex",justifyContent:"center" }}>
-                          {!w.is_reversed && (
-                            <button
-                              className="icon-btn"
-                              onClick={()=>setReverseWithdrawalId(w.id)}
-                              title={tr.withdrawalsSection.reverseBtn}
-                              style={{ fontSize:14 }}
-                            >↩️</button>
-                          )}
+                          <button
+                            className="icon-btn"
+                            onClick={()=>setReverseWithdrawalId(w.id)}
+                            title={tr.withdrawalsSection.reverseBtn}
+                            style={{ fontSize:14 }}
+                          >↩️</button>
                         </div>
                       </div>
                     ))}
@@ -2451,25 +2509,22 @@ export default function PaymentsPage() {
                     <div style={{ textAlign:"center",padding:"18px 0",color:"#ccc",fontSize:13 }}>{tr.withdrawalsSection.empty}</div>
                   ):(
                     withdrawals.slice(0,5).map((w,i)=>(
-                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",opacity:w.is_reversed?.5:1,gap:8,minWidth:0 }}>
+                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0 }}>
                         <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
-                          <div style={{ fontSize:12,fontWeight:600,color:w.is_reversed?"#bbb":"#353535",textDecoration:w.is_reversed?"line-through":"none",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{w.reason}</div>
+                          <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{w.reason}</div>
                           <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2,flexWrap:"wrap" }}>
                             <span style={{ fontSize:11,color:"#aaa" }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
-                            {w.is_reversed && <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"rgba(200,200,200,.15)",color:"#bbb" }}>{tr.withdrawalsSection.reversed}</span>}
                           </div>
                         </div>
                         <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-                          <span style={{ fontSize:13,fontWeight:800,color:w.is_reversed?"#bbb":"#c0392b",textDecoration:w.is_reversed?"line-through":"none",whiteSpace:"nowrap" }}>-{w.amount.toLocaleString()} ل.س</span>
-                          {!w.is_reversed && (
-                            <button
-                              onClick={()=>setReverseWithdrawalId(w.id)}
-                              title={tr.withdrawalsSection.reverseBtn}
-                              style={{ width:30,height:30,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
-                              onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.18)";}}
-                              onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.08)";}}
-                            >↩️</button>
-                          )}
+                          <span style={{ fontSize:13,fontWeight:800,color:"#c0392b",whiteSpace:"nowrap" }}>-{w.amount.toLocaleString()} ل.س</span>
+                          <button
+                            onClick={()=>setReverseWithdrawalId(w.id)}
+                            title={tr.withdrawalsSection.reverseBtn}
+                            style={{ width:30,height:30,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
+                            onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.18)";}}
+                            onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.08)";}}
+                          >↩️</button>
                         </div>
                       </div>
                     ))
@@ -2490,26 +2545,23 @@ export default function PaymentsPage() {
                     expenses.slice(0,5).map((e,i)=>{
                       const catLabels = tr.expenseModal.categories;
                       return (
-                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0,opacity:e.is_reversed?.5:1 }}>
+                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0 }}>
                           <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
-                            <div style={{ fontSize:12,fontWeight:600,color:e.is_reversed?"#bbb":"#353535",textDecoration:e.is_reversed?"line-through":"none",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{e.description}</div>
+                            <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{e.description}</div>
                             <div style={{ display:"flex",gap:8,marginTop:3,flexWrap:"wrap" }}>
                               <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600,flexShrink:0 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
                               <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
-                              {e.is_reversed && <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"rgba(200,200,200,.15)",color:"#bbb" }}>{tr.expensesSection.reversed}</span>}
                             </div>
                           </div>
                           <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-                            <span style={{ fontSize:13,fontWeight:800,color:e.is_reversed?"#bbb":"#7b2d8b",textDecoration:e.is_reversed?"line-through":"none",whiteSpace:"nowrap" }}>-{e.amount.toLocaleString()} ل.س</span>
-                            {!e.is_reversed && (
-                              <button
-                                onClick={()=>setReverseExpenseId(e.id)}
-                                title={tr.expensesSection.reverseBtn}
-                                style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
-                                onMouseEnter={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.18)";}}
-                                onMouseLeave={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.08)";}}
-                              >↩️</button>
-                            )}
+                            <span style={{ fontSize:13,fontWeight:800,color:"#7b2d8b",whiteSpace:"nowrap" }}>-{e.amount.toLocaleString()} ل.س</span>
+                            <button
+                              onClick={()=>setReverseExpenseId(e.id)}
+                              title={tr.expensesSection.reverseBtn}
+                              style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
+                              onMouseEnter={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.18)";}}
+                              onMouseLeave={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.08)";}}
+                            >↩️</button>
                           </div>
                         </div>
                       );
@@ -2525,6 +2577,58 @@ export default function PaymentsPage() {
 
         {/* Add Modal */}
         {showModal&&<PaymentModal lang={lang} patients={patients} doctors={doctors} isSharedClinic={isSharedClinicPlan(plan)} onSave={handleSave} onClose={()=>setShowModal(false)}/>}
+
+        {/* Reveal Numbers Modal */}
+        {showRevealModal&&(
+          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+            <div onClick={()=>{setShowRevealModal(false);setRevealPasswordInput("");setRevealPasswordError(false);}} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
+              <div style={{ fontSize:44,marginBottom:12 }}>👁</div>
+              <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{isAr?"إظهار الأرقام":"Show Numbers"}</h3>
+              <p style={{ fontSize:13,color:"#888",marginBottom:20 }}>{isAr?"أدخل كلمة السر لرؤية الأرقام":"Enter password to view numbers"}</p>
+              <input
+                type="password"
+                value={revealPasswordInput}
+                onChange={e=>{setRevealPasswordInput(e.target.value);setRevealPasswordError(false);}}
+                onKeyDown={e=>e.key==="Enter"&&handleRevealNumbers()}
+                placeholder={isAr?"كلمة السر...":"Password..."}
+                autoFocus
+                style={{ width:"100%",padding:"12px 16px",border:revealPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:revealPasswordError?8:16,textAlign:"center",letterSpacing:4 }}
+              />
+              {revealPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
+              <div style={{ display:"flex",gap:10 }}>
+                <button onClick={handleRevealNumbers} style={{ flex:1,padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer" }}>{isAr?"عرض":"Show"}</button>
+                <button onClick={()=>{setShowRevealModal(false);setRevealPasswordInput("");setRevealPasswordError(false);}} style={{ flex:1,padding:"13px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Monthly Report Password Modal */}
+        {showMonthlyReportPasswordModal&&(
+          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+            <div onClick={()=>{setShowMonthlyReportPasswordModal(false);setMonthlyReportPasswordInput("");setMonthlyReportPasswordError(false);}} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
+              <div style={{ fontSize:44,marginBottom:12 }}>🔒</div>
+              <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{isAr?"التقرير الشهري محمي":"Monthly Report Protected"}</h3>
+              <p style={{ fontSize:13,color:"#888",marginBottom:20 }}>{isAr?"أدخل كلمة سر صفحة المدفوعات لإصدار التقرير الشهري":"Enter payments page password to export monthly report"}</p>
+              <input
+                type="password"
+                value={monthlyReportPasswordInput}
+                onChange={e=>{setMonthlyReportPasswordInput(e.target.value);setMonthlyReportPasswordError(false);}}
+                onKeyDown={e=>e.key==="Enter"&&handleMonthlyReportPassword()}
+                placeholder={isAr?"كلمة السر...":"Password..."}
+                autoFocus
+                style={{ width:"100%",padding:"12px 16px",border:monthlyReportPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:monthlyReportPasswordError?8:16,textAlign:"center",letterSpacing:4 }}
+              />
+              {monthlyReportPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
+              <div style={{ display:"flex",gap:10 }}>
+                <button onClick={handleMonthlyReportPassword} style={{ flex:1,padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer" }}>{isAr?"إصدار التقرير":"Export Report"}</button>
+                <button onClick={()=>{setShowMonthlyReportPasswordModal(false);setMonthlyReportPasswordInput("");setMonthlyReportPasswordError(false);}} style={{ flex:1,padding:"13px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Withdraw Modal */}
         {showWithdrawModal&&<WithdrawModal lang={lang} onSave={handleWithdraw} onClose={()=>setShowWithdrawModal(false)}/>}
