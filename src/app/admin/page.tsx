@@ -3326,7 +3326,8 @@ export default function AdminPage() {
                               <button className="icon-btn-dark" onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }}>⋯</button>
                               {openMenuId === c.id && (
                                 <div className="dropdown-dark">
-                                  <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
+                                  <div className="dropdown-dark-item" onClick={() => { setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setOpenMenuId(null); }}>💬 {(tr as any).messaging?.title ?? "مراسلة"}{msgUnread[c.user_id ?? ""] ? ` (${msgUnread[c.user_id ?? ""]})` : ""}</div>
+              <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
                                   <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}>🔑 {tr.clinics.actions.resetPass}</div>
                                   <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
                                     {c.status==="active"?"⏸ "+tr.clinics.actions.suspend:"▶ "+tr.clinics.actions.activate}
@@ -3402,6 +3403,57 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* ══ Modal المراسلة ══════════════════════════════════════ */}
+      {msgClinic && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
+          onClick={() => setMsgClinic(null)}>
+          <div style={{ background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:480,direction:"rtl",fontFamily:"Rubik,sans-serif" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize:17,fontWeight:800,color:"#1a2840",marginBottom:16 }}>
+              💬 {(tr as any).messaging?.title} — {msgClinic.name}
+            </div>
+
+            {/* قوالب */}
+            <div style={{ display:"flex",gap:8,marginBottom:14,flexWrap:"wrap" }}>
+              {(["welcome","expiry","custom"] as const).map(t => (
+                <button key={t}
+                  onClick={() => { setMsgTemplate(t); setMsgBody(getTemplateText(t, msgClinic.name)); }}
+                  style={{ padding:"7px 14px",borderRadius:20,border:"1.5px solid",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"Rubik,sans-serif",
+                    borderColor: msgTemplate===t ? "#0863ba" : "#e0e0e0",
+                    background:  msgTemplate===t ? "#0863ba" : "#f5f7fa",
+                    color:       msgTemplate===t ? "#fff" : "#555" }}>
+                  {(tr as any).messaging?.templates?.[t]}
+                </button>
+              ))}
+            </div>
+
+            {/* نص الرسالة */}
+            <textarea
+              value={msgBody}
+              onChange={e => setMsgBody(e.target.value)}
+              placeholder={(tr as any).messaging?.placeholder}
+              rows={6}
+              style={{ width:"100%",padding:12,borderRadius:12,border:"1.5px solid #e0e0e0",fontFamily:"Rubik,sans-serif",fontSize:14,resize:"vertical",outline:"none",lineHeight:1.7 }}
+            />
+            <div style={{ fontSize:11,color:"#aaa",marginTop:4,textAlign:"left" }}>{msgBody.length}/2000</div>
+
+            {/* أزرار */}
+            <div style={{ display:"flex",gap:10,marginTop:16 }}>
+              <button
+                onClick={handleSendMessage}
+                disabled={msgSending || !msgBody.trim() || msgBody.length > 2000}
+                style={{ flex:1,padding:"13px 0",borderRadius:12,background:"linear-gradient(135deg,#0863ba,#0558a8)",color:"#fff",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"Rubik,sans-serif",opacity:msgSending||!msgBody.trim()?0.6:1 }}>
+                {msgSuccess ? (tr as any).messaging?.sent : msgSending ? (tr as any).messaging?.sending : (tr as any).messaging?.send}
+              </button>
+              <button onClick={() => setMsgClinic(null)}
+                style={{ padding:"13px 20px",borderRadius:12,background:"#f5f7fa",color:"#888",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:14,fontFamily:"Rubik,sans-serif" }}>
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
