@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>نبض — السكرتيرة</title>
+
+  <!-- Manifest خاص بالسكرتيرة -->
+  <link rel="manifest" href="/manifest-secretary.json">
+
+  <!-- إعدادات PWA لـ iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="نبض سكرتيرة">
+  <meta name="theme-color" content="#0863ba">
+  <link rel="apple-touch-icon" href="/Logo_Nabd.svg">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Rubik", sans-serif;
+      background: linear-gradient(135deg, #0863ba, #0558a8);
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    .logo {
+      width: 72px; height: 72px;
+      background: rgba(255,255,255,.15);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    .title { font-size: 20px; font-weight: 700; }
+    .sub { font-size: 14px; opacity: .7; }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid rgba(255,255,255,.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin-top: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="logo">🏥</div>
+  <div class="title">نبض — لوحة السكرتيرة</div>
+  <div class="sub">جارٍ الفتح...</div>
+  <div class="spinner"></div>
+
+  <script>
+    // التحويل لصفحة السكرتيرة — يبقى ضمن نفس الـ domain فتُحفظ الجلسة
+    window.location.replace("/secretary");
+  </script>
+</body>
+</html>
