@@ -1,11 +1,7 @@
 /**
- * schedule-utils.ts
- * ─────────────────
+ * schedule-utils.ts — نبض
  * أدوات التحقق من توفر الطبيب بناءً على جداول الدوام والإجازات
- * مسار الملف المقترح: /lib/schedule-utils.ts
- *
- * الاستخدام في صفحة المواعيد (appointments/page.tsx):
- *   import { isDoctorAvailable, getUnavailableSlots, getDoctorSchedule } from "@/lib/schedule-utils";
+ * يدعم: العيادات 24 ساعة، والدوام عبر منتصف الليل (مثل 22:00→06:00)
  */
 
 import { supabase } from "@/lib/supabase";
@@ -13,10 +9,10 @@ import { supabase } from "@/lib/supabase";
 // ─── Types ─────────────────────────────────────────────────────
 export type WorkDay = {
   enabled: boolean;
-  start: string;        // "09:00"
-  end: string;          // "17:00"
-  break_start?: string; // "13:00" اختياري
-  break_end?: string;   // "14:00" اختياري
+  start: string;        // "09:00" أو "00:00" للـ 24 ساعة
+  end: string;          // "17:00" أو "23:59" للـ 24 ساعة
+  break_start?: string;
+  break_end?: string;
 };
 
 export type DoctorSchedule = {
@@ -24,7 +20,7 @@ export type DoctorSchedule = {
   doctor_id: number;
   user_id: string;
   days: Record<number, WorkDay>; // 0=أحد .. 6=سبت
-  vacations: string[];           // ["2025-12-25", ...]
+  vacations: string[];
   appointment_duration: number;
   max_daily_appointments: number;
   notes: string;
@@ -35,6 +31,17 @@ export type AvailabilityResult = {
   reason?: "vacation" | "day_off" | "before_hours" | "after_hours" | "break_time" | "max_reached";
   reasonText?: { ar: string; en: string };
 };
+
+// ─── هل الدوام 24 ساعة؟ ────────────────────────────────────────
+export function is24Hours(workDay: WorkDay): boolean {
+  return workDay.start === "00:00" && workDay.end === "23:59";
+}
+
+// ─── تحويل الوقت إلى دقائق ─────────────────────────────────────
+function toMin(time: string): number {
+  const [h, m] = time.slice(0, 5).split(":").map(Number);
+  return h * 60 + m;
+}
 
 // ─── جلب جدول طبيب واحد ────────────────────────────────────────
 export async function getDoctorSchedule(
@@ -52,7 +59,7 @@ export async function getDoctorSchedule(
 
   return {
     ...data,
-    days:      typeof data.days      === "string" ? JSON.parse(data.days)      : data.days,
+    days:      typeof data.days      === "string" ? JSON.parse(data.days)      : (data.days ?? {}),
     vacations: typeof data.vacations === "string" ? JSON.parse(data.vacations) : (data.vacations ?? []),
   };
 }
@@ -66,25 +73,12 @@ export async function getAllSchedules(userId: string): Promise<DoctorSchedule[]>
 
   return (data ?? []).map(row => ({
     ...row,
-    days:      typeof row.days      === "string" ? JSON.parse(row.days)      : row.days,
+    days:      typeof row.days      === "string" ? JSON.parse(row.days)      : (row.days ?? {}),
     vacations: typeof row.vacations === "string" ? JSON.parse(row.vacations) : (row.vacations ?? []),
   }));
 }
 
-// ─── تحويل الوقت إلى دقائق ─────────────────────────────────────
-function toMin(time: string): number {
-  const [h, m] = time.slice(0, 5).split(":").map(Number);
-  return h * 60 + m;
-}
-
 // ─── التحقق من توفر طبيب في وقت محدد ──────────────────────────
-/**
- * @param schedule   - جدول الطبيب (من getDoctorSchedule)
- * @param dateStr    - التاريخ بصيغة "YYYY-MM-DD"
- * @param timeStr    - الوقت بصيغة "HH:MM"
- * @param duration   - مدة الموعد بالدقائق
- * @param dailyCount - عدد المواعيد المحجوزة لهذا الطبيب في هذا اليوم
- */
 export function isDoctorAvailable(
   schedule: DoctorSchedule,
   dateStr: string,
@@ -105,8 +99,8 @@ export function isDoctorAvailable(
     };
   }
 
-  // 2. فحص اليوم (0=أحد .. 6=سبت)
-  const dayIdx = new Date(dateStr).getDay();
+  // 2. فحص اليوم
+  const dayIdx  = new Date(dateStr + "T00:00:00").getDay();
   const workDay = schedule.days[dayIdx];
 
   if (!workDay || !workDay.enabled) {
@@ -120,40 +114,70 @@ export function isDoctorAvailable(
     };
   }
 
+  // 3. دوام 24 ساعة — متاح دائماً بدون فحص الوقت
+  if (is24Hours(workDay)) {
+    if (dailyCount >= schedule.max_daily_appointments) {
+      return {
+        available: false,
+        reason: "max_reached",
+        reasonText: {
+          ar: `وصل الطبيب للحد الأقصى من المواعيد اليومية (${schedule.max_daily_appointments})`,
+          en: `Doctor reached daily appointment limit (${schedule.max_daily_appointments})`,
+        },
+      };
+    }
+    return { available: true };
+  }
+
   const apptStart = toMin(timeStr);
   const apptEnd   = apptStart + duration;
   const dayStart  = toMin(workDay.start);
   const dayEnd    = toMin(workDay.end);
 
-  // 3. فحص ما قبل الدوام
-  if (apptStart < dayStart) {
-    return {
-      available: false,
-      reason: "before_hours",
-      reasonText: {
-        ar: `الموعد قبل بداية دوام الطبيب (${workDay.start})`,
-        en: `Appointment is before doctor's start time (${workDay.start})`,
-      },
-    };
-  }
+  // 4. دعم الدوام عبر منتصف الليل (مثل 22:00 → 06:00)
+  const crossesMidnight = dayEnd < dayStart;
 
-  // 4. فحص ما بعد الدوام
-  if (apptEnd > dayEnd) {
-    return {
-      available: false,
-      reason: "after_hours",
-      reasonText: {
-        ar: `الموعد يتجاوز نهاية دوام الطبيب (${workDay.end})`,
-        en: `Appointment exceeds doctor's end time (${workDay.end})`,
-      },
-    };
+  if (crossesMidnight) {
+    // الموعد صالح إذا كان بعد بداية الدوام أو قبل نهايته
+    const withinShift = apptStart >= dayStart || apptEnd <= dayEnd;
+    if (!withinShift) {
+      return {
+        available: false,
+        reason: "after_hours",
+        reasonText: {
+          ar: `الموعد خارج ساعات الدوام (${workDay.start} - ${workDay.end})`,
+          en: `Appointment is outside working hours (${workDay.start} - ${workDay.end})`,
+        },
+      };
+    }
+  } else {
+    // دوام عادي
+    if (apptStart < dayStart) {
+      return {
+        available: false,
+        reason: "before_hours",
+        reasonText: {
+          ar: `الموعد قبل بداية دوام الطبيب (${workDay.start})`,
+          en: `Appointment is before doctor's start time (${workDay.start})`,
+        },
+      };
+    }
+    if (apptEnd > dayEnd) {
+      return {
+        available: false,
+        reason: "after_hours",
+        reasonText: {
+          ar: `الموعد يتجاوز نهاية دوام الطبيب (${workDay.end})`,
+          en: `Appointment exceeds doctor's end time (${workDay.end})`,
+        },
+      };
+    }
   }
 
   // 5. فحص وقت الاستراحة
   if (workDay.break_start && workDay.break_end) {
     const breakStart = toMin(workDay.break_start);
     const breakEnd   = toMin(workDay.break_end);
-    // تداخل بين الموعد والاستراحة
     if (apptStart < breakEnd && apptEnd > breakStart) {
       return {
         available: false,
@@ -182,27 +206,33 @@ export function isDoctorAvailable(
 }
 
 // ─── الحصول على الأوقات المتاحة لطبيب في يوم ────────────────────
-/**
- * يُرجع قائمة بالأوقات المتاحة (slots) لطبيب في يوم معين
- * مع مراعاة الدوام والاستراحة والمواعيد المحجوزة مسبقاً
- */
 export function getAvailableSlots(
   schedule: DoctorSchedule,
   dateStr: string,
-  bookedTimes: Array<{ time: string; duration: number }> // المواعيد المحجوزة مسبقاً
+  bookedTimes: Array<{ time: string; duration: number }>
 ): string[] {
-  // فحص الإجازة واليوم أولاً
   if (schedule.vacations.includes(dateStr)) return [];
 
-  const dayIdx  = new Date(dateStr).getDay();
+  const dayIdx  = new Date(dateStr + "T00:00:00").getDay();
   const workDay = schedule.days[dayIdx];
   if (!workDay || !workDay.enabled) return [];
 
   const slotDuration = schedule.appointment_duration || 30;
-  const dayStart     = toMin(workDay.start);
-  const dayEnd       = toMin(workDay.end);
   const breakStart   = workDay.break_start ? toMin(workDay.break_start) : null;
   const breakEnd     = workDay.break_end   ? toMin(workDay.break_end)   : null;
+
+  let dayStart: number;
+  let dayEnd: number;
+
+  if (is24Hours(workDay)) {
+    dayStart = 0;
+    dayEnd   = 24 * 60; // 1440 دقيقة
+  } else {
+    dayStart = toMin(workDay.start);
+    dayEnd   = toMin(workDay.end);
+    // دعم الدوام عبر منتصف الليل
+    if (dayEnd < dayStart) dayEnd += 24 * 60;
+  }
 
   const slots: string[] = [];
 
@@ -222,25 +252,34 @@ export function getAvailableSlots(
     });
     if (hasConflict) continue;
 
-    // تحويل الدقائق إلى HH:MM
-    const hh = String(Math.floor(t / 60)).padStart(2, "0");
-    const mm = String(t % 60).padStart(2, "0");
+    // تحويل إلى HH:MM (مع دعم تجاوز 24 ساعة)
+    const actualMin = t % (24 * 60);
+    const hh = String(Math.floor(actualMin / 60)).padStart(2, "0");
+    const mm = String(actualMin % 60).padStart(2, "0");
     slots.push(`${hh}:${mm}`);
   }
 
   return slots;
 }
 
-// ─── هل اليوم إجازة أو عطلة لأي طبيب ──────────────────────────
-/**
- * يُرجع قائمة doctor_ids الذين لا يعملون في يوم معين
- * (بسبب إجازة شخصية أو يوم عطلة)
- */
+// ─── هل التاريخ إجازة للطبيب ───────────────────────────────────
+export function isVacationDay(schedule: DoctorSchedule, dateStr: string): boolean {
+  return schedule.vacations.includes(dateStr);
+}
+
+// ─── هل اليوم عطلة أسبوعية للطبيب ────────────────────────────
+export function isDayOff(schedule: DoctorSchedule, dateStr: string): boolean {
+  const dayIdx  = new Date(dateStr + "T00:00:00").getDay();
+  const workDay = schedule.days[dayIdx];
+  return !workDay || !workDay.enabled;
+}
+
+// ─── الأطباء غير المتاحين في يوم معين ─────────────────────────
 export function getUnavailableDoctors(
   schedules: DoctorSchedule[],
   dateStr: string
 ): number[] {
-  const dayIdx = new Date(dateStr).getDay();
+  const dayIdx = new Date(dateStr + "T00:00:00").getDay();
   return schedules
     .filter(s => {
       if (s.vacations.includes(dateStr)) return true;
@@ -250,24 +289,13 @@ export function getUnavailableDoctors(
     .map(s => s.doctor_id);
 }
 
-// ─── عرض ساعات الدوام بشكل قابل للقراءة ──────────────────────
+// ─── تنسيق ساعات الدوام للعرض ──────────────────────────────────
 export function formatWorkHours(workDay: WorkDay): string {
   if (!workDay.enabled) return "—";
+  if (is24Hours(workDay)) return "24 ساعة / 24h";
   let result = `${workDay.start} - ${workDay.end}`;
   if (workDay.break_start && workDay.break_end) {
     result += ` (break: ${workDay.break_start}-${workDay.break_end})`;
   }
   return result;
-}
-
-// ─── التحقق السريع: هل التاريخ إجازة للطبيب ───────────────────
-export function isVacationDay(schedule: DoctorSchedule, dateStr: string): boolean {
-  return schedule.vacations.includes(dateStr);
-}
-
-// ─── التحقق السريع: هل اليوم عطلة أسبوعية للطبيب ─────────────
-export function isDayOff(schedule: DoctorSchedule, dateStr: string): boolean {
-  const dayIdx  = new Date(dateStr).getDay();
-  const workDay = schedule.days[dayIdx];
-  return !workDay || !workDay.enabled;
 }
