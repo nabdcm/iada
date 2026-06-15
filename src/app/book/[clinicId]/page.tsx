@@ -16,6 +16,7 @@ type ClinicProfile = {
   working_days: string[];
   appointment_duration: number;
   plan?: string;
+  require_approval?: boolean;
 };
 
 type ClinicDoctor = {
