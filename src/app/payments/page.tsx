@@ -1819,7 +1819,7 @@ export default function PaymentsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} userId={userId} activePage="payments" plan={plan} />
+        <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="payments" plan={plan} />
 
         <main className="page-anim main-content" style={{ transition:"margin .3s" }}>
 
