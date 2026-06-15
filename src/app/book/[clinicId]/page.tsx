@@ -397,6 +397,30 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
       if (apptError) throw apptError;
       setSuccess(true);
 
+      // ── إرسال إشعار للطبيب ──────────────────────────────
+      try {
+        const requiresApproval = clinic?.require_approval ?? false;
+        await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: clinicId,
+            title:   requiresApproval
+              ? (lang === "ar" ? "🔔 طلب حجز جديد يحتاج موافقة" : "🔔 New Booking Request — Approval Needed")
+              : (lang === "ar" ? "📅 موعد جديد تم حجزه"          : "📅 New Appointment Booked"),
+            body: lang === "ar"
+              ? `${form.name} — ${form.date} الساعة ${form.time}`
+              : `${form.name} — ${form.date} at ${form.time}`,
+            url:  "/appointments",
+            tag:  "new-booking",
+            requireInteraction: requiresApproval,
+            actions: requiresApproval ? [
+              { action:"approve", title: lang==="ar" ? "✅ موافقة" : "✅ Approve" }
+            ] : [],
+          }),
+        });
+      } catch (_) { /* لا نوقف الحجز إذا فشل الإشعار */ }
+
     } catch (err) {
       console.error(err);
       setError(tr.errorBook);
