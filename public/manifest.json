@@ -2,7 +2,8 @@
   "name": "نبض — إدارة العيادة",
   "short_name": "نبض",
   "description": "نظام إدارة العيادات الطبية",
-  "start_url": "/dashboard",
+  "start_url": ".",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0863ba",
@@ -17,19 +18,44 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["medical", "health", "productivity"],
+  "categories": [
+    "medical",
+    "health",
+    "productivity"
+  ],
   "shortcuts": [
     {
       "name": "المواعيد",
       "short_name": "مواعيد",
       "url": "/appointments",
-      "icons": [{ "src": "/Logo_Nabd.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/Logo_Nabd.svg",
+          "sizes": "any"
+        }
+      ]
     },
     {
       "name": "المرضى",
       "short_name": "مرضى",
       "url": "/patients",
-      "icons": [{ "src": "/Logo_Nabd.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/Logo_Nabd.svg",
+          "sizes": "any"
+        }
+      ]
+    },
+    {
+      "name": "السكرتيرة",
+      "short_name": "سكرتيرة",
+      "url": "/secretary",
+      "icons": [
+        {
+          "src": "/Logo_Nabd.svg",
+          "sizes": "any"
+        }
+      ]
     }
   ]
 }
