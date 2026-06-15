@@ -2206,7 +2206,13 @@ export default function PaymentsPage() {
               {/* الرصيد الصافي */}
               <div style={{ background: stats.netBalance >= 0 ? "linear-gradient(135deg,#1b5e20,#2e7d32)" : "linear-gradient(135deg,#b71c1c,#c0392b)",borderRadius:16,padding:"20px 24px",color:"#fff",position:"relative",overflow:"hidden",boxShadow: stats.netBalance >= 0 ? "0 4px 24px rgba(46,125,50,.25)":"0 4px 24px rgba(192,57,43,.25)" }}>
                 <div style={{ position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)" }}/>
-                <div style={{ fontSize:12,fontWeight:600,opacity:.8,marginBottom:10 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
+                  <div style={{ fontSize:12,fontWeight:600,opacity:.8 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
+                  <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)}
+                    style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
+                    {numbersHidden?"👁":"🙈"}
+                  </button>
+                </div>
                 <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${stats.netBalance.toLocaleString()}`} ل.س</div>
                 <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
               </div>
@@ -2214,7 +2220,13 @@ export default function PaymentsPage() {
               <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",border:"1.5px solid rgba(192,57,43,.15)",position:"relative",overflow:"hidden",boxShadow:"0 2px 12px rgba(192,57,43,.06)" }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalWithdrawals}</span>
-                  <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
+                  <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                    <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)}
+                      style={{ width:30,height:30,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
+                      {numbersHidden?"👁":"🙈"}
+                    </button>
+                    <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
+                  </div>
                 </div>
                 <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{numbersHidden ? "••••••" : `${stats.totalWithdrawals.toLocaleString()}`} ل.س</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{withdrawals.length} {isAr?"عملية سحب":"withdrawals"}</div>
@@ -2223,7 +2235,13 @@ export default function PaymentsPage() {
               <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",border:"1.5px solid rgba(123,45,139,.15)",position:"relative",overflow:"hidden",boxShadow:"0 2px 12px rgba(123,45,139,.06)" }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalExpenses}</span>
-                  <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
+                  <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                    <button onClick={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)}
+                      style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
+                      {numbersHidden?"👁":"🙈"}
+                    </button>
+                    <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
+                  </div>
                 </div>
                 <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{numbersHidden ? "••••••" : `${stats.totalExpenses.toLocaleString()}`} ل.س</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{expenses.length} {isAr?"مصروف مسجّل":"recorded expenses"}</div>
