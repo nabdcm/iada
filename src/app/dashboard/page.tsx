@@ -271,7 +271,42 @@ function WeekChart({ lang, data }: { lang: Lang; data: number[] }) {
 // ─── Main Dashboard ───────────────────────────────────────
 export default function DashboardPage() {
   const [lang, setLang] = useState<Lang>("ar");
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isAr = lang === "ar";
+
+  // ── popup الإشعارات — يظهر مرة واحدة فقط ────────────────
+  useEffect(() => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+    if (Notification.permission !== "default") return; // تم الرد مسبقاً
+    const shown = localStorage.getItem("nabd_push_prompt");
+    if (shown) return;
+    const timer = setTimeout(() => setShowPushPrompt(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handlePushPromptAccept = async () => {
+    setShowPushPrompt(false);
+    localStorage.setItem("nabd_push_prompt", "1");
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+      const reg = await navigator.serviceWorker.ready;
+      const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+      const b64 = (s: string) => { const p = "=".repeat((4-s.length%4)%4); const b = (s+p).replace(/-/g,"+").replace(/_/g,"/"); return Uint8Array.from(window.atob(b), c => c.charCodeAt(0)); };
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+      const j = sub.toJSON(); const k = j.keys as {p256dh:string;auth:string};
+      if (userId) {
+        const { createClient } = await import("@supabase/supabase-js");
+        const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+        await sb.from("push_subscriptions").upsert({ user_id: userId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
+      }
+    } catch(e) { console.warn("push:", e); }
+  };
+
+  const handlePushPromptDismiss = () => {
+    setShowPushPrompt(false);
+    localStorage.setItem("nabd_push_prompt", "1");
+  };
   const tr   = t[lang];
 
   const [loadingStats, setLoadingStats] = useState(true);
@@ -944,6 +979,87 @@ export default function DashboardPage() {
         </main>
       </div>
 
+      {/* ── Popup الإشعارات ─────────────────────────────────── */}
+      {showPushPrompt && (
+        <div style={{
+          position: "fixed", inset: 0,
+          background: "rgba(0,0,0,.45)",
+          zIndex: 200,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          padding: "0 0 32px",
+          animation: "fadeIn .25s ease",
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: 20,
+            padding: "24px 24px 20px",
+            width: "100%",
+            maxWidth: 400,
+            boxShadow: "0 -4px 40px rgba(0,0,0,.15)",
+            direction: isAr ? "rtl" : "ltr",
+            fontFamily: "Rubik, sans-serif",
+            animation: "slideUp .3s cubic-bezier(.4,0,.2,1)",
+          }}>
+            {/* أيقونة وعنوان */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 14,
+                background: "linear-gradient(135deg,#0863ba,#0558a8)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 24, flexShrink: 0,
+                boxShadow: "0 4px 12px rgba(8,99,186,.3)",
+              }}>🔔</div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#1a2840", lineHeight: 1.2 }}>
+                  {isAr ? "فعّل الإشعارات" : "Enable Notifications"}
+                </div>
+                <div style={{ fontSize: 13, color: "#888", marginTop: 3 }}>
+                  {isAr ? "نبض · إدارة العيادة" : "NABD · Clinic Manager"}
+                </div>
+              </div>
+            </div>
+
+            {/* النص */}
+            <p style={{ fontSize: 14, color: "#555", lineHeight: 1.65, margin: "0 0 20px" }}>
+              {isAr
+                ? "فعّل الإشعارات لتلقي تنبيه فوري عند كل حجز موعد جديد أو طلب يحتاج موافقتك. 📅"
+                : "Enable notifications to get instant alerts for new appointments and approval requests. 📅"}
+            </p>
+
+            {/* الأزرار */}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={handlePushPromptAccept}
+                style={{
+                  flex: 1, padding: "13px 0", borderRadius: 12,
+                  background: "linear-gradient(135deg,#0863ba,#0558a8)",
+                  color: "#fff", border: "none", cursor: "pointer",
+                  fontSize: 14, fontWeight: 700, fontFamily: "Rubik,sans-serif",
+                  boxShadow: "0 4px 14px rgba(8,99,186,.35)",
+                  transition: "transform .15s, box-shadow .15s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
+              >
+                {isAr ? "تفعيل الآن" : "Enable Now"}
+              </button>
+              <button
+                onClick={handlePushPromptDismiss}
+                style={{
+                  padding: "13px 20px", borderRadius: 12,
+                  background: "#f5f7fa", color: "#888",
+                  border: "1.5px solid #eef0f3", cursor: "pointer",
+                  fontSize: 14, fontWeight: 500, fontFamily: "Rubik,sans-serif",
+                }}
+              >
+                {isAr ? "لاحقاً" : "Later"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
