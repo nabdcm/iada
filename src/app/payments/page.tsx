@@ -2614,6 +2614,8 @@ export default function PaymentsPage() {
                 onKeyDown={e=>e.key==="Enter"&&handleRevealNumbers()}
                 placeholder={isAr?"كلمة السر...":"Password..."}
                 autoFocus
+                autoComplete="new-password"
+                name="reveal-numbers-pw"
                 style={{ width:"100%",padding:"12px 16px",border:revealPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:revealPasswordError?8:16,textAlign:"center",letterSpacing:4 }}
               />
               {revealPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
@@ -2640,6 +2642,8 @@ export default function PaymentsPage() {
                 onKeyDown={e=>e.key==="Enter"&&handleMonthlyReportPassword()}
                 placeholder={isAr?"كلمة السر...":"Password..."}
                 autoFocus
+                autoComplete="new-password"
+                name="monthly-report-pw"
                 style={{ width:"100%",padding:"12px 16px",border:monthlyReportPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:monthlyReportPasswordError?8:16,textAlign:"center",letterSpacing:4 }}
               />
               {monthlyReportPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
