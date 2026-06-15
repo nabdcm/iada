@@ -2970,6 +2970,7 @@ export default function AdminPage() {
   const [msgTemplate, setMsgTemplate] = useState("custom");
   const [msgSending,  setMsgSending]  = useState(false);
   const [msgSuccess,  setMsgSuccess]  = useState(false);
+  const [msgUnread,   setMsgUnread]   = useState<Record<string,number>>({});
   const [dataToolsModal, setDataToolsModal] = useState(false);
   const [accountFilter, setAccountFilter] = useState<"all"|"clinic"|"pharmacy">("all");
 
