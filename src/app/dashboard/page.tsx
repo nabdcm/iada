@@ -580,7 +580,7 @@ export default function DashboardPage() {
           <div style={{ paddingTop:28 }}>
 
             {/* STATS */}
-            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:`repeat(${canAccess("payments",plan)?4:2},1fr)`,gap:18,marginBottom:28 }}>
+            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:18,marginBottom:28 }}>
               <StatCard
                 icon="📅" accent="#0863ba" delay={0} loading={loadingStats}
                 label={tr.stats.todayAppointments}
@@ -595,23 +595,6 @@ export default function DashboardPage() {
                 sub={newThisMonth > 0 ? `+${newThisMonth} ${tr.stats.newThisMonth}` : undefined}
                 subColor="#2e7d32"
               />
-              {canAccess("payments", plan) && (
-                <StatCard
-                  icon="💰" accent="#e67e22" delay={160} loading={loadingStats}
-                  label={tr.stats.monthRevenue}
-                  value={fmtCurrency(monthRevenue)}
-                  subColor="#2e7d32"
-                />
-              )}
-              {canAccess("payments", plan) && (
-                <StatCard
-                  icon="⏳" accent="#ffb5b5" delay={240} loading={loadingStats}
-                  label={tr.stats.pendingPayments}
-                  value={fmtCurrency(pendingAmount)}
-                  sub={pendingCount > 0 ? `${pendingCount} ${tr.stats.unpaid}` : undefined}
-                  subColor="#c0392b"
-                />
-              )}
             </div>
 
             {/* QUICK ACTIONS */}
