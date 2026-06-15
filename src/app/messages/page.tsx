@@ -22,7 +22,7 @@ interface Message {
   expires_at: string;
 }
 
-const ADMIN_UID = "admin";
+// adminId يُجلب ديناميكياً من أول رسالة أدمن
 
 export default function MessagesPage() {
   const [lang, setLang]         = useState<Lang>("ar");
@@ -66,7 +66,7 @@ export default function MessagesPage() {
       .channel("messages-realtime")
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "messages",
-        filter: `to_id=eq.${userId}`,
+        filter: `to_id=eq.${userId}`,  // رسائل واردة للطبيب
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message]);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -81,6 +81,8 @@ export default function MessagesPage() {
     if (!loading) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 200);
   }, [loading]);
 
+  const [adminSenderId, setAdminSenderId] = useState<string>("");
+
   async function loadMessages(uid: string) {
     const { data } = await supabase
       .from("clinic_messages")
@@ -88,13 +90,16 @@ export default function MessagesPage() {
       .or(`from_id.eq.${uid},to_id.eq.${uid}`)
       .order("created_at", { ascending: true });
     setMessages(data ?? []);
+    // استخراج ID الأدمن من الرسائل الواردة
+    const adminMsg = (data ?? []).find((m: any) => m.from_role === "admin");
+    if (adminMsg) setAdminSenderId(adminMsg.from_id);
   }
 
   async function sendMessage() {
     if (!body.trim() || !userId) return;
     setSending(true);
     const { error } = await supabase.from("clinic_messages").insert({
-      from_id: userId, to_id: ADMIN_UID,
+      from_id: userId, to_id: adminSenderId,  // ID الأدمن من آخر رسالة
       from_role: "doctor", body: body.trim(),
     });
     if (!error) {
