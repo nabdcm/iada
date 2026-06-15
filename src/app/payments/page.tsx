@@ -634,42 +634,54 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
 }
 
 // ─── سلايدر البطاقات للموبايل ─────────────────────────────
-function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr }: {
+function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHidden, onReveal }: {
   stats: any; methodStats: any[]; methodIcon: any; tr: any; isAr: boolean;
+  numbersHidden: boolean; onReveal: () => void;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
+
+  const maskVal = (val: number) => numbersHidden ? "••••••" : val.toLocaleString();
 
   const cards = [
     {
       gradient: "linear-gradient(90deg,#2e7d32,#66bb6a)",
       icon: "💰",
       iconBg: "rgba(46,125,50,.1)",
-      value: `${stats.totalMonth.toLocaleString()} ل.س`,
+      value: `${maskVal(stats.totalMonth)} ل.س`,
       valueColor: "#2e7d32",
       label: tr.stats.totalMonth,
       sub: `↑ 12% ${tr.stats.vsLast}`,
       subColor: "#2e7d32",
+      eyeColor: "#2e7d32",
+      eyeBg: "rgba(46,125,50,.1)",
+      eyeBorder: "rgba(46,125,50,.2)",
     },
     {
       gradient: "linear-gradient(90deg,#0863ba,#a4c4e4)",
       icon: "📊",
       iconBg: "rgba(8,99,186,.08)",
-      value: `${stats.totalYear.toLocaleString()} ل.س`,
+      value: `${maskVal(stats.totalYear)} ل.س`,
       valueColor: "#0863ba",
       label: tr.stats.totalYear,
       sub: `${stats.paidCount} ${tr.stats.transactions}`,
       subColor: "#888",
+      eyeColor: "#0863ba",
+      eyeBg: "rgba(8,99,186,.08)",
+      eyeBorder: "rgba(8,99,186,.2)",
     },
     {
       gradient: "linear-gradient(90deg,#e67e22,#f39c12)",
       icon: "⏳",
       iconBg: "rgba(230,126,34,.08)",
-      value: `${stats.pendingAmt.toLocaleString()} ل.س`,
+      value: `${maskVal(stats.pendingAmt)} ل.س`,
       valueColor: "#e67e22",
       label: tr.stats.pending,
       sub: `${stats.pendingCount} ${tr.stats.unpaidCount}`,
       subColor: "#e67e22",
+      eyeColor: "#e67e22",
+      eyeBg: "rgba(230,126,34,.08)",
+      eyeBorder: "rgba(230,126,34,.2)",
     },
   ];
 
@@ -686,7 +698,12 @@ function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr }: {
         {cards.map((c, i) => (
           <div key={i} className="stat-big" style={{ position:"relative",overflow:"hidden",background:"#fff",border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.08)",borderRadius:16,padding:"20px 20px" }}>
             <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:c.gradient,borderRadius:"16px 16px 0 0" }}/>
-            <div style={{ width:40,height:40,background:c.iconBg,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,marginBottom:12 }}>{c.icon}</div>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
+              <div style={{ width:40,height:40,background:c.iconBg,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>{c.icon}</div>
+              <button onClick={onReveal} style={{ width:32,height:32,borderRadius:8,background:c.eyeBg,border:`1.5px solid ${c.eyeBorder}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:c.eyeColor,fontSize:15,flexShrink:0 }}>
+                {numbersHidden?"👁":"🙈"}
+              </button>
+            </div>
             <div style={{ fontSize:26,fontWeight:900,color:c.valueColor,lineHeight:1 }}>{c.value}</div>
             <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{c.label}</div>
             <div style={{ fontSize:11,color:c.subColor,marginTop:4,fontWeight:600 }}>{c.sub}</div>
@@ -1040,6 +1057,22 @@ export default function PaymentsPage() {
     }
   };
 
+  // إعادة تحميل خفيفة للسحوبات والمصروفات فقط (بدون spinner)
+  const reloadFinancials = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const [{ data: wData }, { data: eData }] = await Promise.all([
+        supabase.from("clinic_withdrawals").select("*").eq("user_id", user.id).order("date", { ascending: false }),
+        supabase.from("clinic_expenses").select("*").eq("user_id", user.id).order("date", { ascending: false }),
+      ]);
+      if (wData) setWithdrawals(wData);
+      if (eData) setExpenses(eData);
+    } catch (err) {
+      console.error("reloadFinancials error:", err);
+    }
+  };
+
   // ── فلترة وترتيب ────────────────────────────────────────────
   const filtered = useMemo(() => {
     return payments.filter(p => {
@@ -1205,6 +1238,8 @@ export default function PaymentsPage() {
       setWithdrawals(prev => prev.filter(w => w.id !== id));
     }
     setReverseWithdrawalId(null);
+    // إعادة تحميل البيانات لضمان تزامن الواجهة
+    setTimeout(() => reloadFinancials(), 300);
   };
 
   // ── التراجع عن مصروف (حذف نهائي) ────────────────────────────
@@ -1217,6 +1252,8 @@ export default function PaymentsPage() {
       setExpenses(prev => prev.filter(e => e.id !== id));
     }
     setReverseExpenseId(null);
+    // إعادة تحميل البيانات لضمان تزامن الواجهة
+    setTimeout(() => reloadFinancials(), 300);
   };
 
   // ── تسجيل مصروف عيادة ────────────────────────────────────────
@@ -1501,12 +1538,23 @@ export default function PaymentsPage() {
 </body>
 </html>`;
 
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => { win.focus(); win.print(); }, 500);
-    }
+    const openReport = (html: string) => {
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => { win.focus(); win.print(); }, 500);
+      } else {
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      }
+    };
+    openReport(html);
   };
 
   // ── تصدير تقرير PDF يومي ─────────────────────────────────
@@ -1729,12 +1777,23 @@ export default function PaymentsPage() {
 </body>
 </html>`;
 
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => { win.focus(); win.print(); }, 500);
-    }
+    const openDailyReport = (html: string) => {
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => { win.focus(); win.print(); }, 500);
+      } else {
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      }
+    };
+    openDailyReport(html);
   };
 
   return (
@@ -1796,7 +1855,8 @@ export default function PaymentsPage() {
           /* Topbar buttons — icon-only on mobile */
           .page-title{font-size:18px!important}
           .page-sub{display:none!important}
-          .export-btn{display:none!important}
+          .export-btn{display:flex!important;padding:10px 12px!important;font-size:12px!important}
+          .export-btn .export-btn-text{display:none!important}
           .add-btn-text-full{display:none!important}
           .add-btn-text-short{display:inline!important}
           .add-btn{
@@ -1971,7 +2031,7 @@ export default function PaymentsPage() {
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   {paymentsLockEnabled && <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
-                  {tr.exportBtn} PDF
+                  <span className="export-btn-text">{tr.exportBtn} PDF</span>
                 </button>
                 <button onClick={exportDailyPDF} className="topbar-secondary-btn" style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0faf0"; }}
@@ -2139,7 +2199,7 @@ export default function PaymentsPage() {
             </div>
 
             {/* ── MOBILE STATS SLIDER ── */}
-            <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} />
+            <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} numbersHidden={numbersHidden} onReveal={()=>numbersHidden ? setShowRevealModal(true) : setNumbersHidden(true)} />
 
             {/* ── FINANCIAL SUMMARY ROW ── */}
             <div className="fin-summary-grid">
@@ -2441,7 +2501,7 @@ export default function PaymentsPage() {
                               </span>
                             </div>
                             <div style={{ textAlign:"end" }}>
-                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{doc.monthlyRevenue.toLocaleString()} ل.س</span>
+                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{numbersHidden ? "••••••" : doc.monthlyRevenue.toLocaleString()} ل.س</span>
                               <span style={{ fontSize:10,color:"#aaa",marginInlineStart:6 }}>({doc.count} {isAr?"معاملة":"tx"})</span>
                             </div>
                           </div>
