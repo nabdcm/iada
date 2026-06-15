@@ -2944,9 +2944,9 @@ export default function AdminPage() {
   const [msgSending,  setMsgSending]  = useState(false);
   const [msgSuccess,  setMsgSuccess]  = useState(false);
   const [msgUnread,   setMsgUnread]   = useState<Record<string,number>>({});
+  const [adminUserId, setAdminUserId] = useState<string>("");
 
   // ── إرسال رسالة للطبيب ─────────────────────────────────
-  const ADMIN_UID = "admin";
   const getMsgTemplate = (t: string, clinicName: string) => {
     const temps: Record<string,string> = {
       welcome: `مرحباً ${clinicName}،\nنرحب بانضمامك لمنصة نبض. يسعدنا خدمتك وتوفير أفضل تجربة لإدارة عيادتك.\n\nفريق نبض 💙`,
@@ -2955,12 +2955,16 @@ export default function AdminPage() {
     };
     return temps[t] ?? "";
   };
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => { if (data.user) setAdminUserId(data.user.id); });
+  }, []);
+
   const handleSendMessage = async () => {
-    if (!msgClinic?.user_id || !msgBody.trim()) return;
+    if (!msgClinic?.user_id || !msgBody.trim() || !adminUserId) return;
     setMsgSending(true);
     try {
       const { error } = await supabase.from("clinic_messages").insert({
-        from_id: ADMIN_UID, to_id: msgClinic.user_id,
+        from_id: adminUserId, to_id: msgClinic.user_id,
         from_role: "admin", body: msgBody.trim(),
       });
       if (!error) {
