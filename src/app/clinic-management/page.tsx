@@ -507,10 +507,29 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
                     {/* الصف الثاني: ساعات العمل */}
                     {enabled && (
                       <div style={{ display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,paddingInlineStart:54 }}>
-                        <span style={{ fontSize:12,color:"#888" }}>{s.from}</span>
-                        <input type="time" value={day.start} onChange={e => updateDay(doc.id,dayIdx,{start:e.target.value})} style={timeInputSt}/>
-                        <span style={{ fontSize:12,color:"#888" }}>{s.to}</span>
-                        <input type="time" value={day.end} onChange={e => updateDay(doc.id,dayIdx,{end:e.target.value})} style={timeInputSt}/>
+                        {/* خيار 24 ساعة */}
+                        <button
+                          onClick={() => {
+                            const is24 = day.start==="00:00" && day.end==="23:59";
+                            updateDay(doc.id, dayIdx, is24
+                              ? { start:"09:00", end:"17:00", break_start:undefined, break_end:undefined }
+                              : { start:"00:00", end:"23:59", break_start:undefined, break_end:undefined }
+                            );
+                          }}
+                          style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20,
+                            background: day.start==="00:00"&&day.end==="23:59" ? color : "rgba(0,0,0,.04)",
+                            color: day.start==="00:00"&&day.end==="23:59" ? "#fff" : "#888",
+                            border: `1.5px solid ${day.start==="00:00"&&day.end==="23:59" ? color : "#e0e0e0"}`,
+                            cursor:"pointer", transition:"all .15s" }}
+                        >
+                          {isAr ? "24 ساعة" : "24h"}
+                        </button>
+                        {!(day.start==="00:00" && day.end==="23:59") && (<>
+                          <span style={{ fontSize:12,color:"#888" }}>{s.from}</span>
+                          <input type="time" value={day.start} onChange={e => updateDay(doc.id,dayIdx,{start:e.target.value})} style={timeInputSt}/>
+                          <span style={{ fontSize:12,color:"#888" }}>{s.to}</span>
+                          <input type="time" value={day.end} onChange={e => updateDay(doc.id,dayIdx,{end:e.target.value})} style={timeInputSt}/>
+                        </>)}
                       </div>
                     )}
                     {/* الصف الثالث: الاستراحة */}
@@ -836,7 +855,17 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       allow_online_booking: allowOnline,
       require_approval: requireApproval,
     };
+    // حفظ في clinics
     await supabase.from("clinics").update({ name: clinicName, settings }).eq("user_id", userId);
+    // مزامنة مع clinic_profiles لتنعكس على صفحة الحجز
+    const workingDaysCodes = ["sun","mon","tue","wed","thu","fri","sat"]
+      .filter((_,i) => !weekendDays.includes(i));
+    await supabase.from("clinic_profiles").update({
+      clinic_name: clinicName,
+      working_hours_start: defaultFrom,
+      working_hours_end:   defaultTo,
+      working_days:        workingDaysCodes,
+    }).eq("id", userId);
     setSaveStatus("saved");
     setTimeout(() => setSaveStatus("idle"), 2500);
   };
@@ -962,12 +991,23 @@ export default function ClinicManagementPage() {
       const fetchedPlan = (clinicData?.plan ?? "basic") as PlanType;
       setPlan(fetchedPlan);
 
-      if (isSharedPlan(fetchedPlan)) {
-        const { data: doctorsData } = await supabase
-          .from("doctors").select("id,name,specialty,color,user_id")
-          .eq("user_id", user.id).order("name");
-        setDoctors((doctorsData ?? []) as Doctor[]);
+      // جلب الأطباء لجميع الخطط
+      const { data: doctorsData } = await supabase
+        .from("doctors").select("id,name,specialty,color,user_id")
+        .eq("user_id", user.id).order("name");
+      let docsList = (doctorsData ?? []) as Doctor[];
+      // للخطط الفردية: إذا لم يوجد طبيب، ننشئ سجل افتراضي من بيانات العيادة
+      if (!isSharedPlan(fetchedPlan) && docsList.length === 0) {
+        const { data: clinicProfile } = await supabase
+          .from("clinic_profiles").select("doctor_name,clinic_name").eq("id", user.id).single();
+        const doctorName = clinicProfile?.doctor_name ?? clinicProfile?.clinic_name ?? "الطبيب";
+        const { data: newDoc } = await supabase
+          .from("doctors")
+          .insert({ name: doctorName, user_id: user.id, color: "#0863ba" })
+          .select().single();
+        if (newDoc) docsList = [newDoc as Doctor];
       }
+      setDoctors(docsList);
       setLoading(false);
     };
     init();
@@ -1022,22 +1062,7 @@ export default function ClinicManagementPage() {
     </div>
   );
 
-  // ── حراسة الخطة ──────────────────────────────────────────
-  if (!isSharedPlan(plan)) return (
-    <div style={{ display:"flex", height:"100vh", overflow:"hidden" }}>
-      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="clinicManagement" plan={plan} />
-      <main style={mainStyle}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100%",flexDirection:"column",gap:16,textAlign:"center" }}>
-          <div style={{ fontSize:64 }}>🔒</div>
-          <h2 style={{ fontSize:22,fontWeight:800,color:"#353535",margin:0 }}>{tr.page.sharedOnly}</h2>
-          <p style={{ fontSize:14,color:"#888",maxWidth:380,lineHeight:1.7,margin:0 }}>{tr.page.sharedOnlySub}</p>
-          <a href="/dashboard" style={{ marginTop:8,padding:"12px 28px",background:"#0863ba",color:"#fff",borderRadius:12,textDecoration:"none",fontSize:14,fontWeight:700 }}>
-            {isAr ? "العودة للرئيسية" : "Back to Dashboard"}
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  // ── متاحة لجميع الخطط ──
 
   const tabs: { key: "schedules"|"vacations"|"settings"; label: string; icon: string }[] = [
     { key:"schedules",  label:tr.tabs.schedules,  icon:"🗓" },
