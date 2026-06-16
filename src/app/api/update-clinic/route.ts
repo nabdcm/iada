@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
     if (clinic_type)   clinicUpdate.clinic_type   = clinic_type;
     if (account_type)  clinicUpdate.account_type  = account_type;
-    if (max_doctors)   clinicUpdate.max_doctors   = max_doctors;
+    if (max_doctors !== undefined && max_doctors !== null)   clinicUpdate.max_doctors   = max_doctors;
 
     // قفل المدفوعات — نحدّث دائماً (حتى عند إلغاء التفعيل)
     if (payments_lock_enabled !== undefined) {
