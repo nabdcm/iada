@@ -10,6 +10,8 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 // ─── حُذف "/admin" من هنا — يملك نظام مصادقة خاصاً به ───────
 const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/admin"];
+// ── مسارات الصيدلية محمية بشكل منفصل — تتحقق من account_type ──
+const PHARMACY_PROTECTED = ["/pharmacy"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -99,6 +101,36 @@ export async function middleware(request: NextRequest) {
         blockedUrl.searchParams.set("reason", "expired");
         return NextResponse.redirect(blockedUrl);
       }
+    }
+  }
+
+  // ── حماية مسارات الصيدلية (/pharmacy و/pharmacy/*) ────────────
+  // /pharmacy/login مستثنى (صفحة دخول)
+  const isPharmacyProtected =
+    PHARMACY_PROTECTED.some(p => pathname.startsWith(p)) &&
+    !pathname.startsWith("/pharmacy/login");
+
+  if (isPharmacyProtected) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/pharmacy/login", request.url));
+    }
+    // التحقق أن الحساب نوعه صيدلية
+    const { data: pharmacyClinic } = await supabase
+      .from("clinics")
+      .select("account_type, status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (pharmacyClinic?.account_type !== "pharmacy") {
+      // حساب عيادة حاول الدخول لصفحة الصيدلية → أعده للـ dashboard
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    if (pharmacyClinic?.status === "inactive") {
+      return NextResponse.redirect(new URL("/blocked?reason=frozen", request.url));
+    }
+    if (pharmacyClinic?.status === "expired") {
+      return NextResponse.redirect(new URL("/blocked?reason=cancelled", request.url));
     }
   }
 

@@ -174,10 +174,9 @@ function PatientLoginForm({ lang, tr }: { lang: Lang; tr: LoginTranslation }) {
 }
 
 // ─── Clinic / Pharmacy login (email + password) ───────────────
-function ClinicLoginForm({ lang, tr, redirectTo }: {
+function ClinicLoginForm({ lang, tr }: {
   lang: Lang;
   tr: LoginTranslation;
-  redirectTo: string;
 }) {
   const isAr = lang === "ar";
   const [email, setEmail]     = useState("");
@@ -191,7 +190,7 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
     setLoading(true);
     setError("");
     try {
-      const { error: authErr } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
         email:    email.trim(),
         password: pass,
       });
@@ -207,7 +206,13 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
         setLoading(false);
         return;
       }
-      window.location.href = redirectTo;
+      // ── التحقق من نوع الحساب وتوجيه كل نوع للمسار الصحيح ──
+      const accountType = authData?.user?.user_metadata?.account_type;
+      if (accountType === "pharmacy") {
+        window.location.href = "/pharmacy";
+      } else {
+        window.location.href = "/dashboard";
+      }
     } catch {
       setError(tr.errors.network);
       setLoading(false);
@@ -286,8 +291,6 @@ function PortalPageContent() {
 
   const PORTALS: Portal[] = ["clinic", "pharmacy", "patient"];
 
-  const redirectTo =
-    portal === "pharmacy" ? "/pharmacy/dashboard" : "/dashboard";
 
   return (
     <>
@@ -742,7 +745,7 @@ function PortalPageContent() {
             {portal === "patient" ? (
               <PatientLoginForm lang={lang} tr={tr.login} />
             ) : (
-              <ClinicLoginForm lang={lang} tr={tr.login} redirectTo={redirectTo} />
+              <ClinicLoginForm lang={lang} tr={tr.login} />
             )}
           </div>
         </div>

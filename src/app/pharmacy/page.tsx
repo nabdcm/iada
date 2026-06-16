@@ -35,60 +35,7 @@ type Sale = { id:number; date:string; items:SaleItem[]; total:number; payment_me
 type ScanNotif = { type:"success"|"error"|"info"|"warning"; message:string; sub?:string }|null;
 type SysAlert = { id:number; type:"low_stock"|"expiring"|"out_of_stock"; medicine_id:number; medicine_name:string; detail:string; date:string; read:boolean };
 
-const gen = (p:string,n:number) => p+String(n).padStart(10-p.length,"0");
-
-const USERS:User[] = [
-  {id:1,name_ar:"أحمد الصيدلاني",name_en:"Ahmed Pharmacist",role:"pharmacist",username:"pharmacist",password:"1234",avatar:"🧑‍⚕️"},
-  {id:2,name_ar:"سارة المديرة",  name_en:"Sara Manager",    role:"manager",   username:"manager",   password:"1234",avatar:"👩‍💼"},
-  {id:3,name_ar:"د. خالد الطبيب",name_en:"Dr. Khalid",      role:"doctor",    username:"doctor",    password:"1234",avatar:"👨‍⚕️"},
-];
-
-const INIT_MEDS:Medicine[] = [
-  {id:1, barcode:gen("628",1), name_ar:"أموكسيسيللين 500mg",name_en:"Amoxicillin 500mg", category:"antibiotics",unit:"كبسولة",purchase_price:8, sell_price:15,stock:240,min_stock:50, expiry_date:"2026-08-01",manufacturer:"SPIMACO"},
-  {id:2, barcode:gen("628",2), name_ar:"باراسيتامول 500mg", name_en:"Paracetamol 500mg", category:"analgesics", unit:"قرص",   purchase_price:3, sell_price:7, stock:18, min_stock:100,expiry_date:"2027-01-01",manufacturer:"Tabuk Pharma"},
-  {id:3, barcode:gen("628",3), name_ar:"ميتفورمين 850mg",   name_en:"Metformin 850mg",   category:"chronic",    unit:"قرص",   purchase_price:12,sell_price:22,stock:320,min_stock:80, expiry_date:"2026-11-15",manufacturer:"Julphar"},
-  {id:4, barcode:gen("628",4), name_ar:"أتورفاستاتين 20mg", name_en:"Atorvastatin 20mg", category:"chronic",    unit:"قرص",   purchase_price:25,sell_price:45,stock:150,min_stock:40, expiry_date:"2026-09-30"},
-  {id:5, barcode:gen("628",5), name_ar:"فيتامين D3 1000IU", name_en:"Vitamin D3 1000IU", category:"vitamins",   unit:"كبسولة",purchase_price:18,sell_price:35,stock:88, min_stock:30, expiry_date:"2025-06-10"},
-  {id:6, barcode:gen("628",6), name_ar:"بيتاديرم كريم",     name_en:"Betaderm Cream",    category:"topical",    unit:"أنبوبة",purchase_price:22,sell_price:38,stock:45, min_stock:20, expiry_date:"2026-12-01"},
-  {id:7, barcode:gen("628",7), name_ar:"ليفوفلوكساسين 500mg",name_en:"Levofloxacin 500mg",category:"antibiotics",unit:"قرص",purchase_price:20,sell_price:38,stock:6,  min_stock:30, expiry_date:"2026-07-01",manufacturer:"SPIMACO"},
-  {id:8, barcode:gen("628",8), name_ar:"أملوديبين 5mg",     name_en:"Amlodipine 5mg",    category:"chronic",    unit:"قرص",   purchase_price:10,sell_price:20,stock:200,min_stock:50, expiry_date:"2027-02-01"},
-  {id:9, barcode:gen("628",9), name_ar:"أوميبرازول 20mg",   name_en:"Omeprazole 20mg",   category:"other",      unit:"كبسولة",purchase_price:15,sell_price:28,stock:0,  min_stock:60, expiry_date:"2026-10-01"},
-  {id:10,barcode:gen("628",10),name_ar:"فيتامين C 1000mg",  name_en:"Vitamin C 1000mg",  category:"vitamins",   unit:"قرص",   purchase_price:9, sell_price:18,stock:300,min_stock:50, expiry_date:"2027-06-01"},
-];
-
-const INIT_SUPPLIERS:Supplier[] = [
-  {id:1,name:"SPIMACO - الشركة السعودية للصناعات الدوائية",contact:"محمد العمري",phone:"0112345678",email:"orders@spimaco.com",address:"الرياض، المملكة العربية السعودية",balance:12500},
-  {id:2,name:"Tabuk Pharmaceutical",contact:"فيصل الغامدي",phone:"0144567890",email:"supply@tabukpharma.com",address:"تبوك، المملكة العربية السعودية",balance:4800},
-  {id:3,name:"Julphar - Gulf Pharmaceutical",contact:"سعد المطيري",phone:"0556789012",email:"sales@julphar.net",address:"رأس الخيمة، الإمارات",balance:0},
-];
-
-const INIT_INVOICES:PurchInvoice[] = [
-  {id:1001,supplier_id:1,supplier_name:"SPIMACO",date:"2025-05-20",items:[{medicine_id:1,medicine_name:"أموكسيسيللين 500mg",qty:500,unit_price:8},{medicine_id:7,medicine_name:"ليفوفلوكساسين 500mg",qty:100,unit_price:20}],total:6000,paid:6000,status:"paid",created_by:"أحمد الصيدلاني"},
-  {id:1002,supplier_id:2,supplier_name:"Tabuk Pharma",date:"2025-05-22",items:[{medicine_id:2,medicine_name:"باراسيتامول 500mg",qty:200,unit_price:3}],total:600,paid:300,status:"partial",created_by:"سارة المديرة"},
-  {id:1003,supplier_id:3,supplier_name:"Julphar",date:"2025-05-25",items:[{medicine_id:3,medicine_name:"ميتفورمين 850mg",qty:400,unit_price:12}],total:4800,paid:0,status:"pending",created_by:"أحمد الصيدلاني"},
-];
-
-const INIT_RX:Prescription[] = [
-  {id:"RX-2025-001",mrn:"MRN-10001",patient_name:"أحمد محمد السعيد",  doctor_name:"د. سارة العمري", doctor_id:3,created_at:"2025-05-20",dispensed:false,notes:"حساسية للبنسيلين",
-   items:[{medicine_name:"أموكسيسيللين 500mg",dosage:"500mg",duration:"7 أيام",instructions:"مرتين يومياً بعد الأكل"},{medicine_name:"باراسيتامول 500mg",dosage:"500mg",duration:"3 أيام",instructions:"عند الحاجة"}]},
-  {id:"RX-2025-002",mrn:"MRN-10002",patient_name:"فاطمة علي القحطاني",doctor_name:"د. خالد النعيمي",doctor_id:3,created_at:"2025-05-22",dispensed:true,dispensed_at:"2025-05-22",dispensed_by:"أحمد الصيدلاني",
-   items:[{medicine_name:"ميتفورمين 850mg",dosage:"850mg",duration:"مستمر",instructions:"مرة صباحاً ومرة مساءً"},{medicine_name:"أتورفاستاتين 20mg",dosage:"20mg",duration:"مستمر",instructions:"مرة ليلاً"}]},
-  {id:"RX-2025-003",mrn:"MRN-10001",patient_name:"أحمد محمد السعيد",  doctor_name:"د. محمد الزهراني",doctor_id:3,created_at:"2025-05-25",dispensed:false,
-   items:[{medicine_name:"أملوديبين 5mg",dosage:"5mg",duration:"مستمر",instructions:"مرة يومياً صباحاً"},{medicine_name:"أوميبرازول 20mg",dosage:"20mg",duration:"شهر",instructions:"قبل الإفطار بـ 30 دقيقة"}]},
-];
-
-const INIT_SALES:Sale[] = [
-  {id:1,date:"2025-05-27",items:[{medicine_id:1,medicine_name:"أموكسيسيللين",qty:2,unit_price:15},{medicine_id:2,medicine_name:"باراسيتامول",qty:1,unit_price:7}],total:37,payment_method:"cash",discount:0,patient_name:"أحمد السعيد",cashier:"أحمد الصيدلاني"},
-  {id:2,date:"2025-05-27",items:[{medicine_id:5,medicine_name:"فيتامين D3",qty:1,unit_price:35}],total:35,payment_method:"card",discount:0,cashier:"أحمد الصيدلاني"},
-  {id:3,date:"2025-05-26",items:[{medicine_id:3,medicine_name:"ميتفورمين",qty:3,unit_price:22},{medicine_id:4,medicine_name:"أتورفاستاتين",qty:1,unit_price:45}],total:111,payment_method:"insurance",discount:10,patient_name:"فاطمة القحطاني",cashier:"سارة المديرة"},
-];
-
-const INIT_LOG:StockLog[] = [
-  {id:1,medicine_id:1,medicine_name:"أموكسيسيللين 500mg",type:"purchase",qty:500,date:"2025-05-20",user:"أحمد الصيدلاني",ref:"INV-1001"},
-  {id:2,medicine_id:2,medicine_name:"باراسيتامول 500mg", type:"purchase",qty:200,date:"2025-05-22",user:"سارة المديرة",  ref:"INV-1002"},
-  {id:3,medicine_id:1,medicine_name:"أموكسيسيللين 500mg",type:"sale",   qty:2,  date:"2025-05-27",user:"أحمد الصيدلاني",ref:"SALE-1"},
-  {id:4,medicine_id:9,medicine_name:"أوميبرازول 20mg",   type:"out",    qty:175,date:"2025-05-26",user:"سارة المديرة",  notes:"تلف"},
-];
+// ── بيانات الصيدلية تُحمَّل من Supabase عبر loadData() ──
 
 const CAT:{[k:string]:{ar:string;en:string;color:string;icon:string}} = {
   antibiotics:{ar:"مضادات حيوية",en:"Antibiotics",color:"#e74c3c",icon:"🦠"},
@@ -158,56 +105,6 @@ function useBarcode(onScan:(c:string)=>void, enabled=true) {
 // ══════════════════════════════════════════════════════════════
 // 🔐 شاشة تسجيل الدخول
 // ══════════════════════════════════════════════════════════════
-function LoginScreen({onLogin,lang}:{onLogin:(u:User)=>void;lang:Lang}) {
-  const isAr=lang==="ar";
-  const [username,setUsername]=useState(""); const [password,setPassword]=useState("");
-  const [error,setError]=useState(false); const [loading,setLoading]=useState(true); // true: نمنع redirect قبل اكتمال getSession
-  const doLogin=()=>{
-    setLoading(true); setError(false);
-    setTimeout(()=>{
-      const u=USERS.find(u=>u.username===username&&u.password===password);
-      if(u) onLogin(u); else setError(true);
-      setLoading(false);
-    },500);
-  };
-  const inp = (err:boolean):React.CSSProperties => ({width:"100%",padding:"11px 13px",border:`1.5px solid ${err?"#e74c3c":"#e0e7ef"}`,borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"});
-  return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a1628 0%,#0863ba 60%,#1a8fe3 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr"}}>
-      <div style={{width:"min(100%,420px)"}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{width:68,height:68,borderRadius:18,background:"rgba(255,255,255,.15)",backdropFilter:"blur(10px)",margin:"0 auto 14px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,boxShadow:"0 8px 32px rgba(0,0,0,.2)"}}>💊</div>
-          <div style={{fontSize:28,fontWeight:900,color:"#fff",letterSpacing:1}}>نبض</div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,.6)",marginTop:3}}>{isAr?"نظام إدارة الصيدلية":"Pharmacy Management System"}</div>
-        </div>
-        <div style={{background:"rgba(255,255,255,.96)",borderRadius:20,padding:"28px 24px",boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
-          <h2 style={{fontSize:17,fontWeight:800,color:"#1a2840",marginBottom:22,textAlign:"center"}}>{isAr?"تسجيل الدخول":"Sign In"}</h2>
-          <div style={{marginBottom:14}}>
-            <label style={{fontSize:11,fontWeight:700,color:"#666",display:"block",marginBottom:5}}>{isAr?"اسم المستخدم":"Username"}</label>
-            <input value={username} onChange={e=>{setUsername(e.target.value);setError(false);}} onKeyDown={e=>e.key==="Enter"&&doLogin()} style={{...inp(error),direction:"ltr",letterSpacing:.5}}/>
-          </div>
-          <div style={{marginBottom:18}}>
-            <label style={{fontSize:11,fontWeight:700,color:"#666",display:"block",marginBottom:5}}>{isAr?"كلمة المرور":"Password"}</label>
-            <input type="password" value={password} onChange={e=>{setPassword(e.target.value);setError(false);}} onKeyDown={e=>e.key==="Enter"&&doLogin()} style={inp(error)}/>
-          </div>
-          {error&&<div style={{background:"rgba(231,76,60,.08)",border:"1.5px solid rgba(231,76,60,.25)",borderRadius:10,padding:"9px 13px",marginBottom:14,fontSize:12,color:"#c0392b",fontWeight:600}}>❌ {isAr?"بيانات غير صحيحة":"Invalid credentials"}</div>}
-          <button onClick={doLogin} disabled={loading} style={{width:"100%",padding:"12px",background:loading?"#aaa":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:loading?"wait":"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.35)"}}>
-            {loading?"⏳ ...":(isAr?"دخول ←":"Sign In →")}
-          </button>
-          <div style={{marginTop:18,padding:"13px",background:"#f7f9fc",borderRadius:12,border:"1.5px solid #eef0f3"}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#aaa",marginBottom:9,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"حسابات تجريبية (1234)":"Demo accounts (1234)"}</div>
-            {USERS.map(u=>(
-              <button key={u.id} onClick={()=>{setUsername(u.username);setPassword("1234");}}
-                style={{display:"flex",alignItems:"center",gap:9,padding:"7px 10px",background:username===u.username?"rgba(8,99,186,.08)":"#fff",border:`1.5px solid ${username===u.username?"#0863ba":"#eef0f3"}`,borderRadius:9,cursor:"pointer",fontFamily:"'Rubik',sans-serif",width:"100%",marginBottom:5,textAlign:"start"}}>
-                <span style={{fontSize:16}}>{u.avatar}</span>
-                <div><div style={{fontSize:12,fontWeight:700,color:"#353535"}}>{isAr?u.name_ar:u.name_en}</div><div style={{fontSize:10,color:ROLE[u.role].color,fontWeight:600}}>{isAr?ROLE[u.role].ar:ROLE[u.role].en} · {u.username}</div></div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ══════════════════════════════════════════════════════════════
 // 🖨️ نافذة الطباعة
@@ -1069,33 +966,7 @@ export default function PharmacyPage() {
   },[lang,showNotif]);
 
   // ── تسجيل الدخول عبر Supabase Auth ───────────────────────
-  const handleLogin=useCallback(async(u:User)=>{
-    // ابحث عن الجلسة النشطة في Supabase
-    const {data:{session}}=await supabase.auth.getSession();
-    if(session?.user?.id){
-      setSupabaseUserId(session.user.id);
-      setCurrentUser(u);
-      setActiveTab(ROLE[u.role].tabs[0]);
-      await loadData(session.user.id);
-    } else {
-      // fallback: استخدم email/password من نظام الصيدلية
-      const {data,error}=await supabase.auth.signInWithPassword({
-        email: u.username.includes("@") ? u.username : `${u.username}@pharmacy.nabd`,
-        password: u.password,
-      });
-      if(!error && data.user){
-        setSupabaseUserId(data.user.id);
-        setCurrentUser(u);
-        setActiveTab(ROLE[u.role].tabs[0]);
-        await loadData(data.user.id);
-      } else {
-        // إذا فشل Auth، استمر بالنظام المحلي مؤقتاً
-        setCurrentUser(u);
-        setActiveTab(ROLE[u.role].tabs[0]);
-        showNotif({type:"warning",message:lang==="ar"?"تسجيل دخول محلي - البيانات غير محفوظة":"Local login - data not saved"},4000);
-      }
-    }
-  },[lang,loadData,showNotif]);
+  // handleLogin غير مستخدمة بعد الآن — الدخول يتم عبر /pharmacy/login
 
   // ── تحقق من جلسة Supabase عند التحميل ───────────────────
   useEffect(()=>{
