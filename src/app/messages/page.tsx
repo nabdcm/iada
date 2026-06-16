@@ -25,6 +25,7 @@ interface Message {
 // adminId يُجلب ديناميكياً من أول رسالة أدمن
 
 export default function MessagesPage() {
+  const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang]         = useState<Lang>("ar");
   const [userId, setUserId]     = useState<string>("");
   const [plan, setPlan]         = useState<PlanType>("basic");
@@ -123,10 +124,10 @@ export default function MessagesPage() {
 
   return (
     <div style={{ display:"flex",height:"100vh",fontFamily:"Rubik,sans-serif",direction: isAr?"rtl":"ltr",background:"#f5f7fa" }}>
-      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="messages" plan={plan} />
+      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="messages" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
       {/* المحادثة */}
-      <div style={{ flex:1,display:"flex",flexDirection:"column",overflow:"hidden" }}>
+      <div style={{ flex:1,display:"flex",flexDirection:"column",overflow:"hidden",[isAr?"marginRight":"marginLeft"]:sidebarWidth,transition:"margin .3s" }}>
         {/* Header */}
         <div style={{ background:"#0863ba",padding:"16px 20px",display:"flex",alignItems:"center",gap:12 }}>
           <div style={{ width:40,height:40,background:"rgba(255,255,255,.15)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>💬</div>
