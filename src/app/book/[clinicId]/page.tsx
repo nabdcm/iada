@@ -332,72 +332,36 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     try {
       const cleanPhone = form.phone.trim();
 
-      // ── 1. تحقق/إنشاء سجل مركزي في master_patients (upsert لتفادي race condition) ──
-      let mrn: string;
-      const { data: upsertedMaster } = await supabase
-        .from("master_patients")
-        .upsert({ phone: cleanPhone, name: form.name.trim() }, { onConflict: "phone", ignoreDuplicates: true })
-        .select("mrn")
-        .maybeSingle();
-
-      if (upsertedMaster?.mrn) {
-        mrn = upsertedMaster.mrn;
-      } else {
-        // fallback: اقرأ السجل الموجود (حالة ignoreDuplicates)
-        const { data: existingMaster } = await supabase
-          .from("master_patients")
-          .select("mrn")
-          .eq("phone", cleanPhone)
-          .maybeSingle();
-        mrn = existingMaster?.mrn ?? `MRN-T-${Date.now()}`;
-      }
-
-      // ── 2. تحقق إذا المريض مسجل مسبقاً في هذه العيادة ──
-      const { data: existing } = await supabase
+      // ── تحقق إذا المريض مسجل مسبقاً في هذه العيادة (بالهاتف) ──
+      const { data: existingPatient } = await supabase
         .from("patients")
         .select("id")
         .eq("user_id", clinicId)
         .eq("phone", cleanPhone)
         .maybeSingle();
 
-      let patientId: number;
-
-      if (existing) {
-        patientId = existing.id;
-      } else {
-        // ── 3. تسجيل المريض مع MRN ─────────────────────────
-        const { data: newPatient, error: patientError } = await supabase
-          .from("patients")
-          .insert({
-            user_id:          clinicId,
-            name:             form.name.trim(),
-            phone:            cleanPhone,
-            gender:           form.gender || null,
-            has_diabetes:     form.has_diabetes,
-            has_hypertension: form.has_hypertension,
-            notes:            form.notes.trim() || null,
-            is_hidden:        false,
-            mrn,
-          })
-          .select("id")
-          .single();
-
-        if (patientError) throw patientError;
-        patientId = newPatient.id;
-      }
-
-      // ── 4. إنشاء الموعد ────────────────────────────────────
+      // ── إنشاء الموعد بـ guest fields — المريض لا يُضاف حتى تتم الموافقة ──
+      // إذا كان المريض مسجلاً مسبقاً: نربط patient_id فوراً
+      // إذا كان جديداً: نخزن بياناته في guest_data حتى يوافق الطبيب
       const { error: apptError } = await supabase
         .from("appointments")
         .insert({
-          user_id:    clinicId,
-          patient_id: patientId,
-          date:       form.date,
-          time:       form.time,
-          duration:   clinic?.appointment_duration ?? 30,
-          type:       "حجز إلكتروني / Online Booking",
-          notes:      form.notes.trim() || null,
-          status:     "pending_approval",
+          user_id:      clinicId,
+          patient_id:   existingPatient?.id ?? null,
+          date:         form.date,
+          time:         form.time,
+          duration:     clinic?.appointment_duration ?? 30,
+          type:         "حجز إلكتروني / Online Booking",
+          notes:        form.notes.trim() || null,
+          status:       "pending_approval",
+          // بيانات الحاجز المؤقتة — تُستخدم لعرض الطلب للطبيب
+          guest_name:   existingPatient ? null : form.name.trim(),
+          guest_phone:  existingPatient ? null : cleanPhone,
+          guest_data:   existingPatient ? null : {
+            gender:           form.gender || null,
+            has_diabetes:     form.has_diabetes,
+            has_hypertension: form.has_hypertension,
+          },
           // للعيادات المشتركة: تسجيل الطبيب المختار
           ...(isSharedClinic && selectedDoctor ? { doctor_id: selectedDoctor.id } : {}),
         });
