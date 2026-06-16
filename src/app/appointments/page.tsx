@@ -8,6 +8,13 @@ import type { Patient, Appointment } from "@/lib/supabase";
 type Lang = "ar" | "en";
 type Status = "scheduled" | "completed" | "cancelled" | "no-show";
 
+// حقول مؤقتة للحاجز قبل الموافقة (لا تُحفظ في patients حتى القبول)
+interface GuestData {
+  gender?: string;
+  has_diabetes?: boolean;
+  has_hypertension?: boolean;
+}
+
 // ─── جداول دوام الأطباء ───────────────────────────────────
 type WorkDay = {
   enabled: boolean;
@@ -718,8 +725,14 @@ function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove
 
   if (pendingAppointments.length === 0) return null;
 
-  const getPatientName = (pid: number) => patients.find(p => p.id === pid)?.name ?? "—";
-  const getPatientPhone = (pid: number) => patients.find(p => p.id === pid)?.phone ?? "";
+  const getPatientName = (pid: number, appt?: Appointment) => {
+    if (pid) return patients.find(p => p.id === pid)?.name ?? "—";
+    return (appt as any)?.guest_name ?? "—";
+  };
+  const getPatientPhone = (pid: number, appt?: Appointment) => {
+    if (pid) return patients.find(p => p.id === pid)?.phone ?? "";
+    return (appt as any)?.guest_phone ?? "";
+  };
 
   const handleApprove = async (appt: Appointment) => {
     setLoadingId(appt.id);
@@ -790,8 +803,8 @@ function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove
       {/* قائمة الطلبات */}
       <div style={{ padding:"12px 16px", display:"flex", flexDirection:"column", gap:10 }}>
         {pendingAppointments.map(appt => {
-          const name  = getPatientName(appt.patient_id);
-          const phone = getPatientPhone(appt.patient_id);
+          const name  = getPatientName(appt.patient_id, appt);
+          const phone = getPatientPhone(appt.patient_id, appt);
           const isLoading = loadingId === appt.id;
           const [y, mo, d] = appt.date.split("-");
           const dateFormatted = `${parseInt(d)} ${tr.months[parseInt(mo)-1]} ${y}`;
@@ -1177,19 +1190,87 @@ export default function AppointmentsPage() {
     finally { setEditAppt(null); setAddModal(false); }
   };
 
-  // ── قبول طلب الحجز: تحويل الحالة إلى scheduled ────────────
+  // ── قبول طلب الحجز ─────────────────────────────────────────
+  // إذا كان patient_id موجوداً (مريض قديم) → فقط حدّث الحالة
+  // إذا كان null (حاجز جديد) → أنشئ المريض أولاً ثم ارتبط به
   const handleApproveBooking = async (appt: Appointment) => {
     try {
+      let patientId = appt.patient_id;
+      const guestName  = (appt as any).guest_name  as string | null;
+      const guestPhone = (appt as any).guest_phone as string | null;
+      const guestData  = (appt as any).guest_data  as GuestData | null;
+
+      if (!patientId && guestName && guestPhone) {
+        // ── أنشئ سجل المريض الآن ─────────────────────────────
+        // تحقق أولاً: هل هاتفه مسجل مسبقاً؟ (قد يكون سجّله الطبيب يدوياً)
+        const { data: existPat } = await supabase
+          .from("patients")
+          .select("id")
+          .eq("user_id", clinicId)
+          .eq("phone", guestPhone)
+          .maybeSingle();
+
+        if (existPat) {
+          patientId = existPat.id;
+        } else {
+          // احصل على MRN أو أنشئه
+          const { data: masterUp } = await supabase
+            .from("master_patients")
+            .upsert({ phone: guestPhone, name: guestName }, { onConflict: "phone", ignoreDuplicates: true })
+            .select("mrn")
+            .maybeSingle();
+
+          let mrn = masterUp?.mrn;
+          if (!mrn) {
+            const { data: masterEx } = await supabase
+              .from("master_patients")
+              .select("mrn")
+              .eq("phone", guestPhone)
+              .maybeSingle();
+            mrn = masterEx?.mrn ?? undefined;
+          }
+
+          // أضف المريض
+          const { data: newPat, error: patErr } = await supabase
+            .from("patients")
+            .insert({
+              user_id:          clinicId,
+              name:             guestName,
+              phone:            guestPhone,
+              gender:           guestData?.gender ?? null,
+              has_diabetes:     guestData?.has_diabetes ?? false,
+              has_hypertension: guestData?.has_hypertension ?? false,
+              is_hidden:        false,
+              ...(mrn ? { mrn } : {}),
+            })
+            .select("id")
+            .single();
+
+          if (patErr) throw patErr;
+          patientId = newPat.id;
+        }
+      }
+
+      // حدّث الموعد: scheduled + patient_id + امسح guest fields
       await supabase
         .from("appointments")
-        .update({ status: "scheduled" })
+        .update({
+          status:      "scheduled",
+          patient_id:  patientId,
+          guest_name:  null,
+          guest_phone: null,
+          guest_data:  null,
+        })
         .eq("id", appt.id);
-      // نقل الموعد من قائمة المعلقة إلى المواعيد الفعلية
+
+      // تحديث القوائم المحلية
       setPendingAppointments(prev => prev.filter(a => a.id !== appt.id));
-      setAppointments(prev => [...prev, { ...appt, status: "scheduled" as Status }]
-        .sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-      );
-      // الانتقال للتاريخ في التقويم
+      setAppointments(prev => [
+        ...prev,
+        { ...appt, status: "scheduled" as Status, patient_id: patientId as number }
+      ].sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)));
+      // تحديث قائمة المرضى لتشمل المريض الجديد
+      if (!appt.patient_id) loadPatients();
       setSelectedKey(appt.date);
     } catch (err) { console.error(err); }
   };
