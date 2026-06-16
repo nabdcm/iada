@@ -1343,6 +1343,7 @@ export default function PatientsPage() {
   const [lang,       setLang]       = useState<Lang>("ar");
   const isAr = lang==="ar";
   const tr   = T[lang];
+  const [sidebarWidth, setSidebarWidth] = useState(240);
   const [isMobile,   setIsMobile]   = useState(()=>typeof window!=="undefined"?window.innerWidth<=768:false);
 
   useEffect(()=>{
@@ -1580,12 +1581,12 @@ export default function PatientsPage() {
           .fab-add{display:none!important}
           .mobile-cards{display:none!important}
           .desktop-table{display:block!important}
-          .main-content{margin-${isAr?"right":"left"}:240px}
+          .main-content{margin-${isAr?"right":"left"}:${sidebarWidth}px}
         }
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 
