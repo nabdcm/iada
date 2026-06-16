@@ -1,9 +1,11 @@
 "use client";
 // ============================================================
 // SharedSidebar.tsx — القائمة الجانبية الموحّدة لتطبيق نبض
+// الموبايل: Bottom Navigation Bar بدلاً من زر الهامبرغر
 // ============================================================
 
 import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -48,27 +50,56 @@ const SB_IDLE      = "rgba(255,255,255,0.65)";
 const SB_BORDER    = "rgba(255,255,255,0.1)";
 const SB_INDICATOR = "#7dd3fc";
 
+// Bottom nav colours
+const BN_BG        = "#0558a8";
+const BN_ACTIVE    = "#ffffff";
+const BN_IDLE      = "rgba(255,255,255,0.55)";
+const BN_INDICATOR = "#7dd3fc";
+
 // ─── SVG Icons ───────────────────────────────────────────────
 const Icons = {
   dashboard: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+  ),
+  dashboardSm: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
       <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
     </svg>
   ),
   patients: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  patientsSm: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
       <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
   ),
   appointments: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+  appointmentsSm: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
       <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   ),
   payments: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+    </svg>
+  ),
+  paymentsSm: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
     </svg>
@@ -95,6 +126,13 @@ const Icons = {
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
     </svg>
   ),
+  more: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
   signOut: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -108,9 +146,14 @@ const Icons = {
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
     </svg>
   ),
-  menu: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  back: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  ),
+  backRtl: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
     </svg>
   ),
   close: (
@@ -125,22 +168,28 @@ const NAV_LABELS = {
   ar: {
     dashboard: "الرئيسية", patients: "المرضى", appointments: "المواعيد",
     payments: "المدفوعات", prescriptions: "الوصفات",
-    tracking: "متابعة المرضى", clinicManagement: "إدارة العيادة",
+    tracking: "متابعة", clinicManagement: "إدارة العيادة",
     messages: "الرسائل",
+    more: "المزيد",
     signOut: "خروج", plan: "خطة", clinic: "عيادة",
     notAvailable: "غير متاح في خطتك",
     expand: "توسيع القائمة", collapse: "طي القائمة",
     lang: "English",
+    back: "رجوع",
+    moreMenu: "قائمة إضافية",
   },
   en: {
     dashboard: "Dashboard", patients: "Patients", appointments: "Appointments",
     payments: "Payments", prescriptions: "Prescriptions",
-    tracking: "Patient Tracking", clinicManagement: "Clinic Mgmt",
+    tracking: "Tracking", clinicManagement: "Clinic Mgmt",
     messages: "Messages",
+    more: "More",
     signOut: "Sign Out", plan: "Plan", clinic: "Clinic",
     notAvailable: "Not available in your plan",
     expand: "Expand sidebar", collapse: "Collapse sidebar",
     lang: "العربية",
+    back: "Back",
+    moreMenu: "More Menu",
   },
 };
 
@@ -156,6 +205,21 @@ export interface SharedSidebarProps {
   onCollapse?: (collapsed: boolean) => void;
 }
 
+// ─── Main nav items (bottom bar shows first 4) ───────────────
+const MAIN_NAV = [
+  { key: "dashboard",    href: "/dashboard",       iconLg: "dashboard",    iconSm: "dashboardSm"    },
+  { key: "patients",     href: "/patients",         iconLg: "patients",     iconSm: "patientsSm"     },
+  { key: "appointments", href: "/appointments",     iconLg: "appointments", iconSm: "appointmentsSm" },
+  { key: "payments",     href: "/payments",         iconLg: "payments",     iconSm: "paymentsSm"     },
+];
+
+const SECONDARY_NAV = [
+  { key: "prescriptions",    href: "/prescriptions",     icon: "prescriptions"    },
+  { key: "tracking",         href: "/patient-tracking",  icon: "tracking"         },
+  { key: "clinicManagement", href: "/clinic-management", icon: "clinicManagement" },
+  { key: "messages",         href: "/messages",           icon: "messages"         },
+];
+
 // ─── Component ───────────────────────────────────────────────
 export default function SharedSidebar({
   lang,
@@ -170,44 +234,52 @@ export default function SharedSidebar({
   const isAr = lang === "ar";
   const tr   = NAV_LABELS[lang];
 
-  const [collapsed,   setCollapsed]   = useState(false);
-  const [isMobile,    setIsMobile]    = useState(false);
-  const [mobileOpen,  setMobileOpen]  = useState(false);
-  const [pushPerm,    setPushPerm]    = useState<"default"|"granted"|"denied"|"unsupported">("default");
+  const router   = useRouter();
+  const pathname = usePathname();
 
-  useEffect(() => { onCollapse?.(collapsed); }, [collapsed, onCollapse]);
-  const [pushLoading, setPushLoading] = useState(false);
+  const [collapsed,    setCollapsed]    = useState(false);
+  const [isMobile,     setIsMobile]     = useState(false);
+  const [moreOpen,     setMoreOpen]     = useState(false);
+  const [pushPerm,     setPushPerm]     = useState<"default"|"granted"|"denied"|"unsupported">("default");
+  const [pushLoading,  setPushLoading]  = useState(false);
 
+  // ─── Detect mobile ───────────────────────────────────────
   useEffect(() => {
     const check = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
-      if (!mobile) setMobileOpen(false);
+      if (!mobile) setMoreOpen(false);
     };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // ─── Close more drawer on route change ───────────────────
+  useEffect(() => { setMoreOpen(false); }, [pathname]);
+
+  // ─── Escape key closes more drawer ───────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileOpen(false);
+      if (e.key === "Escape") setMoreOpen(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  useEffect(() => { onCollapse?.(collapsed); }, [collapsed, onCollapse]);
+
+  // ─── Push notifications ──────────────────────────────────
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
       setPushPerm("unsupported"); return;
     }
-    setPushPerm(Notification.permission as any);
-    navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
-      if (sub) setPushPerm("granted");
-    }).catch(() => {});
+    setPushPerm(Notification.permission as "default"|"granted"|"denied");
+    navigator.serviceWorker.ready
+      .then(reg => reg.pushManager.getSubscription())
+      .then(sub => { if (sub) setPushPerm("granted"); })
+      .catch(() => {});
   }, []);
-
-  const badge = PLAN_BADGE[plan] ?? PLAN_BADGE["basic"];
 
   const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
@@ -225,49 +297,55 @@ export default function SharedSidebar({
         setPushPerm("default");
       } else {
         const perm = await Notification.requestPermission();
-        if (perm !== "granted") { setPushPerm(perm as any); return; }
+        if (perm !== "granted") { setPushPerm(perm as "default"|"denied"); return; }
         const reg = await navigator.serviceWorker.ready;
-        const b64 = (s: string) => { const p = "=".repeat((4-s.length%4)%4); const b = (s+p).replace(/-/g,"+").replace(/_/g,"/"); const r = window.atob(b); return Uint8Array.from(r,c=>c.charCodeAt(0)); };
+        const b64 = (s: string) => {
+          const p = "=".repeat((4 - s.length % 4) % 4);
+          const b = (s + p).replace(/-/g, "+").replace(/_/g, "/");
+          const r = window.atob(b);
+          return Uint8Array.from(r, c => c.charCodeAt(0));
+        };
         const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID_PUBLIC) });
-        const j = sub.toJSON(); const k = j.keys as {p256dh:string;auth:string};
-        await supabase.from("push_subscriptions").upsert({ user_id: userId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
+        const j = sub.toJSON();
+        const k = j.keys as { p256dh: string; auth: string };
+        await supabase.from("push_subscriptions").upsert(
+          { user_id: userId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth },
+          { onConflict: "user_id,endpoint" }
+        );
         setPushPerm("granted");
       }
-    } catch(e) { console.warn("push:", e); }
+    } catch (e) { console.warn("push:", e); }
     finally { setPushLoading(false); }
   };
 
-  // ─── Nav items (clinic & messages separated at bottom of nav) ───
-  const mainNavItems = [
-    { key: "dashboard",     href: "/dashboard",     icon: Icons.dashboard     },
-    { key: "patients",      href: "/patients",      icon: Icons.patients      },
-    { key: "appointments",  href: "/appointments",  icon: Icons.appointments  },
-    { key: "payments",      href: "/payments",      icon: Icons.payments      },
-    { key: "prescriptions", href: "/prescriptions", icon: Icons.prescriptions },
-    { key: "tracking",      href: "/patient-tracking", icon: Icons.tracking   },
-  ];
+  // ─── Can go back? ────────────────────────────────────────
+  const rootPages = ["/dashboard", "/patients", "/appointments", "/payments",
+    "/prescriptions", "/patient-tracking", "/clinic-management", "/messages"];
+  const isRootPage = rootPages.some(p => pathname === p);
+  const canGoBack  = !isRootPage;
 
-  const pairedNavItems = [
-    { key: "clinicManagement", href: "/clinic-management", icon: Icons.clinicManagement },
-    { key: "messages",         href: "/messages",           icon: Icons.messages         },
-  ];
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/dashboard");
+    }
+  };
 
-  const transform = isMobile
-    ? mobileOpen ? "translateX(0)" : isAr ? "translateX(100%)" : "translateX(-100%)"
-    : "translateX(0)";
-
-  const sideWidth = isMobile ? 260 : collapsed ? 70 : 240;
-
-  // ─── Shared nav item render ───────────────────────────────
-  const renderNavItem = (item: { key: string; href: string; icon: JSX.Element }, compact = false) => {
+  // ─── Sidebar nav item (desktop) ──────────────────────────
+  const renderSidebarItem = (item: { key: string; href: string; icon?: string }, compact = false) => {
     const isActive = item.key === activePage;
     const isLocked = !canAccess(item.key, plan);
+    const iconKey  = (item.icon ?? item.key) as keyof typeof Icons;
+    const icon     = Icons[iconKey] ?? Icons.dashboard;
     return (
       <a
         key={item.key}
         href={isLocked ? undefined : item.href}
-        title={collapsed || isLocked || compact ? (isLocked ? tr.notAvailable : (tr as Record<string,string>)[item.key]) : undefined}
-        onClick={e => { if (isLocked) e.preventDefault(); else if (isMobile) setMobileOpen(false); }}
+        title={collapsed || isLocked || compact
+          ? (isLocked ? tr.notAvailable : (tr as Record<string,string>)[item.key])
+          : undefined}
+        onClick={e => { if (isLocked) e.preventDefault(); }}
         style={{
           display: "flex", alignItems: "center",
           gap: (collapsed || compact) ? 0 : 11,
@@ -302,7 +380,7 @@ export default function SharedSidebar({
           }} />
         )}
         <span style={{ flexShrink: 0, display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.8 }}>
-          {item.icon}
+          {icon}
         </span>
         {!collapsed && !compact && (
           <span style={{ lineHeight: 1.3, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -316,38 +394,274 @@ export default function SharedSidebar({
     );
   };
 
-  return (
-    <>
-      {/* Overlay للموبايل */}
-      {isMobile && mobileOpen && (
-        <div
-          onClick={() => setMobileOpen(false)}
-          style={{
-            position: "fixed", inset: 0,
-            background: "rgba(0,0,0,.55)",
-            zIndex: 49,
-          }}
-        />
-      )}
+  // ═══════════════════════════════════════════════════════════
+  // MOBILE — Bottom Navigation Bar
+  // ═══════════════════════════════════════════════════════════
+  if (isMobile) {
+    const isMoreActive = SECONDARY_NAV.some(i => i.key === activePage);
 
-      {/* زر الهامبرغر */}
-      {isMobile && (
-        <button
-          aria-label={mobileOpen ? "إغلاق القائمة" : "فتح القائمة"}
-          onClick={() => setMobileOpen(o => !o)}
+    return (
+      <>
+        {/* ── Safe area spacer at bottom ── */}
+        <div style={{ height: 72, flexShrink: 0 }} />
+
+        {/* ── More drawer overlay ── */}
+        {moreOpen && (
+          <div
+            onClick={() => setMoreOpen(false)}
+            style={{
+              position: "fixed", inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              zIndex: 59,
+            }}
+          />
+        )}
+
+        {/* ── More drawer (slides up) ── */}
+        <div
           style={{
-            position: "fixed", top: 14, zIndex: 60,
-            right: isAr ? 16 : undefined, left: isAr ? undefined : 16,
-            width: 40, height: 40, borderRadius: 10,
-            background: "#0863ba", border: "none", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 12px rgba(8,99,186,.4)",
+            position: "fixed",
+            bottom: moreOpen ? 72 : -400,
+            left: 0, right: 0,
+            background: SB_BG,
+            borderRadius: "20px 20px 0 0",
+            zIndex: 60,
+            transition: "bottom .3s cubic-bezier(.4,0,.2,1)",
+            boxShadow: "0 -8px 32px rgba(5,88,168,0.45)",
+            padding: "0 16px 16px",
+            maxHeight: "60vh",
+            overflowY: "auto",
           }}
         >
-          {mobileOpen ? Icons.close : Icons.menu}
-        </button>
-      )}
+          {/* Drawer handle */}
+          <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 8px" }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.25)" }} />
+          </div>
 
+          {/* Secondary nav items */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            {SECONDARY_NAV.map(item => {
+              const isActive = item.key === activePage;
+              const isLocked = !canAccess(item.key, plan);
+              const icon = Icons[item.icon as keyof typeof Icons] ?? Icons.dashboard;
+              return (
+                <a
+                  key={item.key}
+                  href={isLocked ? undefined : item.href}
+                  onClick={e => { if (isLocked) { e.preventDefault(); return; } setMoreOpen(false); }}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    padding: "14px 8px",
+                    borderRadius: 14,
+                    textDecoration: "none",
+                    background: isActive ? SB_ACTIVE_BG : "rgba(255,255,255,0.07)",
+                    color: isLocked ? "rgba(255,255,255,0.28)" : (isActive ? SB_ACTIVE : SB_IDLE),
+                    border: isActive ? "1px solid rgba(255,255,255,0.2)" : "1px solid rgba(255,255,255,0.08)",
+                    cursor: isLocked ? "not-allowed" : "pointer",
+                    opacity: isLocked ? 0.5 : 1,
+                    fontFamily: "Rubik, sans-serif",
+                    fontSize: 12, fontWeight: isActive ? 600 : 400,
+                    textAlign: "center",
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center" }}>{icon}</span>
+                  <span>
+                    {(tr as Record<string,string>)[item.key]}
+                    {isLocked && " 🔒"}
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: SB_BORDER, marginBottom: 12 }} />
+
+          {/* Push + Sign out + Lang */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {userId && pushPerm !== "unsupported" && pushPerm !== "denied" && (
+              <button
+                onClick={handlePushToggle}
+                disabled={pushLoading}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "12px 14px", borderRadius: 12, cursor: "pointer",
+                  fontFamily: "Rubik,sans-serif", fontSize: 13, fontWeight: 600,
+                  border: pushPerm === "granted" ? "1.5px solid rgba(34,197,94,.35)" : "1.5px solid rgba(255,255,255,.2)",
+                  background: pushPerm === "granted" ? "rgba(34,197,94,.12)" : "rgba(255,255,255,.08)",
+                  color: pushPerm === "granted" ? "#86efac" : "rgba(255,255,255,.7)",
+                  opacity: pushLoading ? 0.7 : 1,
+                }}
+              >
+                <span style={{ fontSize: 18 }}>{pushPerm === "granted" ? "🔔" : "🔕"}</span>
+                {pushLoading
+                  ? (isAr ? "جارٍ..." : "Loading...")
+                  : pushPerm === "granted"
+                    ? (isAr ? "الإشعارات مفعّلة" : "Notifications On")
+                    : (isAr ? "تفعيل الإشعارات" : "Enable Notifications")}
+              </button>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button
+                onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "12px", borderRadius: 12,
+                  background: "rgba(239,68,68,0.12)",
+                  border: "1.5px solid rgba(239,68,68,0.25)",
+                  cursor: "pointer", fontFamily: "Rubik, sans-serif",
+                  fontSize: 13, fontWeight: 600, color: "#fca5a5",
+                }}
+              >
+                {Icons.signOut}
+                {tr.signOut}
+              </button>
+              <button
+                onClick={() => { setLang(lang === "ar" ? "en" : "ar"); setMoreOpen(false); }}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "12px", borderRadius: 12,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1.5px solid rgba(255,255,255,0.15)",
+                  cursor: "pointer", fontFamily: "Rubik, sans-serif",
+                  fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)",
+                }}
+              >
+                {Icons.lang}
+                {tr.lang}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Bottom Navigation Bar ── */}
+        <nav
+          style={{
+            position: "fixed",
+            bottom: 0, left: 0, right: 0,
+            height: 72,
+            background: BN_BG,
+            borderTop: "1px solid rgba(255,255,255,0.12)",
+            display: "flex", alignItems: "stretch",
+            zIndex: 58,
+            boxShadow: "0 -4px 24px rgba(5,88,168,0.35)",
+            // Safe area for iPhone home indicator
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          }}
+        >
+          {/* Back button — only on inner pages */}
+          {canGoBack && (
+            <button
+              onClick={handleBack}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                gap: 3, flex: 1, border: "none", background: "transparent",
+                color: BN_IDLE, cursor: "pointer", fontFamily: "Rubik, sans-serif",
+                fontSize: 10, fontWeight: 500, padding: "8px 4px",
+                transition: "color .18s",
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center" }}>
+                {isAr ? Icons.backRtl : Icons.back}
+              </span>
+              {tr.back}
+            </button>
+          )}
+
+          {/* Main nav items */}
+          {MAIN_NAV.map(item => {
+            const isActive = item.key === activePage;
+            const isLocked = !canAccess(item.key, plan);
+            const iconKey  = item.iconLg as keyof typeof Icons;
+            const icon     = Icons[iconKey];
+            return (
+              <a
+                key={item.key}
+                href={isLocked ? undefined : item.href}
+                onClick={e => { if (isLocked) e.preventDefault(); }}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 3, flex: 1, textDecoration: "none",
+                  color: isLocked ? "rgba(255,255,255,0.2)" : (isActive ? BN_ACTIVE : BN_IDLE),
+                  fontFamily: "Rubik, sans-serif",
+                  fontSize: 10, fontWeight: isActive ? 700 : 500,
+                  padding: "8px 4px",
+                  position: "relative",
+                  transition: "color .18s",
+                  cursor: isLocked ? "not-allowed" : "pointer",
+                }}
+              >
+                {isActive && (
+                  <div style={{
+                    position: "absolute",
+                    top: 0, left: "50%", transform: "translateX(-50%)",
+                    width: 32, height: 3, background: BN_INDICATOR,
+                    borderRadius: "0 0 4px 4px",
+                  }} />
+                )}
+                <span style={{ display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.75 }}>
+                  {icon}
+                </span>
+                <span style={{ lineHeight: 1 }}>
+                  {isLocked ? "🔒" : (tr as Record<string,string>)[item.key]}
+                </span>
+              </a>
+            );
+          })}
+
+          {/* More button */}
+          <button
+            onClick={() => setMoreOpen(o => !o)}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 3, flex: 1, border: "none", background: "transparent",
+              color: isMoreActive || moreOpen ? BN_ACTIVE : BN_IDLE,
+              cursor: "pointer", fontFamily: "Rubik, sans-serif",
+              fontSize: 10, fontWeight: isMoreActive || moreOpen ? 700 : 500,
+              padding: "8px 4px", position: "relative",
+              transition: "color .18s",
+            }}
+          >
+            {(isMoreActive || moreOpen) && (
+              <div style={{
+                position: "absolute",
+                top: 0, left: "50%", transform: "translateX(-50%)",
+                width: 32, height: 3, background: BN_INDICATOR,
+                borderRadius: "0 0 4px 4px",
+              }} />
+            )}
+            <span style={{ display: "flex", alignItems: "center", opacity: isMoreActive || moreOpen ? 1 : 0.75 }}>
+              {Icons.more}
+            </span>
+            {tr.more}
+          </button>
+        </nav>
+      </>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // DESKTOP — Original Sidebar
+  // ═══════════════════════════════════════════════════════════
+  const allNavItems = [
+    { key: "dashboard",    href: "/dashboard",      icon: "dashboardSm"    },
+    { key: "patients",     href: "/patients",        icon: "patientsSm"     },
+    { key: "appointments", href: "/appointments",    icon: "appointmentsSm" },
+    { key: "payments",     href: "/payments",        icon: "paymentsSm"     },
+    { key: "prescriptions",href: "/prescriptions",   icon: "prescriptions"  },
+    { key: "tracking",     href: "/patient-tracking",icon: "tracking"       },
+  ];
+
+  const pairedNavItems = [
+    { key: "clinicManagement", href: "/clinic-management", icon: "clinicManagement" },
+    { key: "messages",         href: "/messages",           icon: "messages"         },
+  ];
+
+  const sideWidth = collapsed ? 70 : 240;
+
+  return (
+    <>
       {/* القائمة الجانبية */}
       <aside
         style={{
@@ -355,10 +669,10 @@ export default function SharedSidebar({
           minHeight: "100vh",
           background: SB_BG,
           display: "flex", flexDirection: "column",
-          transition: "transform .3s cubic-bezier(.4,0,.2,1), width .3s cubic-bezier(.4,0,.2,1)",
+          transition: "width .3s cubic-bezier(.4,0,.2,1)",
           position: "fixed", top: 0,
           right: isAr ? 0 : undefined, left: isAr ? undefined : 0,
-          zIndex: 50, transform,
+          zIndex: 50,
           boxShadow: isAr
             ? "-4px 0 32px rgba(5,88,168,.45)"
             : "4px 0 32px rgba(5,88,168,.45)",
@@ -382,82 +696,57 @@ export default function SharedSidebar({
               </div>
             </div>
           )}
-
           {collapsed && (
             <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 28, height: 28, filter: "brightness(0) invert(1)" }} />
           )}
-
-          {!isMobile && (
-            <button
-              onClick={() => setCollapsed(c => !c)}
-              title={collapsed ? tr.expand : tr.collapse}
-              style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: "rgba(255,255,255,0.12)",
-                border: "1.5px solid rgba(255,255,255,0.22)",
-                cursor: "pointer", color: "rgba(255,255,255,0.9)",
-                fontSize: 14, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; }}
-            >
-              {collapsed ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
-            </button>
-          )}
+          <button
+            onClick={() => setCollapsed(c => !c)}
+            title={collapsed ? tr.expand : tr.collapse}
+            style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: "rgba(255,255,255,0.12)",
+              border: "1.5px solid rgba(255,255,255,0.22)",
+              cursor: "pointer", color: "rgba(255,255,255,0.9)",
+              fontSize: 14, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; }}
+          >
+            {collapsed ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
+          </button>
         </div>
 
         {/* ── Nav items ── */}
         <nav style={{ flex: 1, padding: collapsed ? "16px 10px" : "14px 12px", overflowY: "auto" }}>
-          {/* عناصر التنقل الرئيسية */}
-          {mainNavItems.map(item => renderNavItem(item))}
+          {allNavItems.map(item => renderSidebarItem(item))}
 
-          {/* فاصل */}
-          <div style={{
-            height: 1,
-            background: SB_BORDER,
-            margin: "10px 4px",
-          }} />
+          <div style={{ height: 1, background: SB_BORDER, margin: "10px 4px" }} />
 
-          {/* إدارة العيادة + الرسائل جنباً إلى جنب */}
           {collapsed ? (
-            // في وضع مطوي: كل عنصر بشكل منفصل
-            <>
-              {pairedNavItems.map(item => renderNavItem(item))}
-            </>
+            pairedNavItems.map(item => renderSidebarItem(item))
           ) : (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 6,
-              marginBottom: 3,
-            }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 3 }}>
               {pairedNavItems.map(item => {
                 const isActive = item.key === activePage;
                 const isLocked = !canAccess(item.key, plan);
+                const icon = Icons[item.icon as keyof typeof Icons] ?? Icons.dashboard;
                 return (
                   <a
                     key={item.key}
                     href={isLocked ? undefined : item.href}
                     title={isLocked ? tr.notAvailable : (tr as Record<string,string>)[item.key]}
-                    onClick={e => { if (isLocked) e.preventDefault(); else if (isMobile) setMobileOpen(false); }}
+                    onClick={e => { if (isLocked) e.preventDefault(); }}
                     style={{
                       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                      gap: 5,
-                      padding: "10px 4px",
-                      borderRadius: 10,
-                      textDecoration: "none",
+                      gap: 5, padding: "10px 4px", borderRadius: 10, textDecoration: "none",
                       background: isActive ? SB_ACTIVE_BG : "rgba(255,255,255,0.05)",
                       color: isLocked ? "rgba(255,255,255,0.28)" : (isActive ? SB_ACTIVE : SB_IDLE),
-                      fontWeight: isActive ? 600 : 400,
-                      fontSize: 11,
-                      transition: "all .18s",
-                      position: "relative",
+                      fontWeight: isActive ? 600 : 400, fontSize: 11,
+                      transition: "all .18s", position: "relative",
                       border: isActive ? "1px solid rgba(255,255,255,0.18)" : "1px solid rgba(255,255,255,0.08)",
                       cursor: isLocked ? "not-allowed" : "pointer",
-                      opacity: isLocked ? 0.5 : 1,
-                      fontFamily: "Rubik, sans-serif",
-                      textAlign: "center",
+                      opacity: isLocked ? 0.5 : 1, fontFamily: "Rubik, sans-serif", textAlign: "center",
                     }}
                     onMouseEnter={e => { if (!isActive && !isLocked) (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.1)"; }}
                     onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLAnchorElement).style.background = isActive ? SB_ACTIVE_BG : "rgba(255,255,255,0.05)"; }}
@@ -470,9 +759,7 @@ export default function SharedSidebar({
                         borderRadius: "0 0 3px 3px",
                       }} />
                     )}
-                    <span style={{ display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.85 }}>
-                      {item.icon}
-                    </span>
+                    <span style={{ display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.85 }}>{icon}</span>
                     <span style={{ lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", paddingInline: 2 }}>
                       {(tr as Record<string,string>)[item.key]}
                       {isLocked && " 🔒"}
@@ -485,12 +772,7 @@ export default function SharedSidebar({
         </nav>
 
         {/* ── Footer ── */}
-        <div style={{
-          padding: collapsed ? "12px 10px" : "12px 12px",
-          borderTop: `1px solid ${SB_BORDER}`,
-          background: SB_HEADER,
-        }}>
-          {/* زر الإشعارات */}
+        <div style={{ padding: collapsed ? "12px 10px" : "12px 12px", borderTop: `1px solid ${SB_BORDER}`, background: SB_HEADER }}>
           {!collapsed && userId && pushPerm !== "unsupported" && pushPerm !== "denied" && (
             <button
               onClick={handlePushToggle}
@@ -515,94 +797,46 @@ export default function SharedSidebar({
             </button>
           )}
 
-          {/* تسجيل الخروج + تبديل اللغة جنباً إلى جنب */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: collapsed ? "1fr" : "1fr 1fr",
-            gap: 6,
-          }}>
-            {/* Sign out */}
+          <div style={{ display: "grid", gridTemplateColumns: collapsed ? "1fr" : "1fr 1fr", gap: 6 }}>
             <button
               onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
               title={tr.signOut}
               style={{
-                display: "flex", alignItems: "center",
-                justifyContent: "center",
-                gap: collapsed ? 0 : 6,
-                padding: "10px 0",
-                borderRadius: 10,
-                background: "rgba(239,68,68,0.12)",
-                border: "1.5px solid rgba(239,68,68,0.25)",
-                cursor: "pointer", fontFamily: "Rubik, sans-serif",
-                transition: "all .2s",
-                flex: 1,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                gap: collapsed ? 0 : 6, padding: "10px 0", borderRadius: 10,
+                background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.25)",
+                cursor: "pointer", fontFamily: "Rubik, sans-serif", transition: "all .2s", flex: 1,
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.22)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.12)"; }}
             >
               {Icons.signOut}
-              {!collapsed && (
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#fca5a5" }}>
-                  {tr.signOut}
-                </span>
-              )}
+              {!collapsed && <span style={{ fontSize: 12, fontWeight: 600, color: "#fca5a5" }}>{tr.signOut}</span>}
             </button>
 
-            {/* Language toggle */}
-            {!collapsed && (
-              <button
-                onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-                title={tr.lang}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  gap: 5,
-                  padding: "10px 0",
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1.5px solid rgba(255,255,255,0.15)",
-                  borderRadius: 10, cursor: "pointer",
-                  fontSize: 12, fontFamily: "Rubik, sans-serif",
-                  color: "rgba(255,255,255,0.8)", fontWeight: 600,
-                  transition: "all .2s",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.16)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; }}
-              >
-                <span style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.8)" }}>
-                  {Icons.lang}
-                </span>
-                <span style={{ fontSize: 11 }}>{tr.lang}</span>
-              </button>
-            )}
-
-            {/* Language toggle in collapsed mode */}
-            {collapsed && (
-              <button
-                onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-                title={tr.lang}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  padding: "10px 0",
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1.5px solid rgba(255,255,255,0.15)",
-                  borderRadius: 10, cursor: "pointer",
-                  fontFamily: "Rubik, sans-serif",
-                  color: "rgba(255,255,255,0.8)",
-                  transition: "all .2s",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.16)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; }}
-              >
-                {Icons.lang}
-              </button>
-            )}
+            <button
+              onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+              title={tr.lang}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                gap: collapsed ? 0 : 5, padding: "10px 0",
+                background: "rgba(255,255,255,0.08)", border: "1.5px solid rgba(255,255,255,0.15)",
+                borderRadius: 10, cursor: "pointer", fontSize: 12,
+                fontFamily: "Rubik, sans-serif", color: "rgba(255,255,255,0.8)",
+                fontWeight: 600, transition: "all .2s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.16)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; }}
+            >
+              <span style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.8)" }}>{Icons.lang}</span>
+              {!collapsed && <span style={{ fontSize: 11 }}>{tr.lang}</span>}
+            </button>
           </div>
         </div>
       </aside>
 
       {/* Spacer */}
-      {!isMobile && (
-        <div style={{ width: collapsed ? 70 : 240, flexShrink: 0, transition: "width .3s cubic-bezier(.4,0,.2,1)" }} />
-      )}
+      <div style={{ width: sideWidth, flexShrink: 0, transition: "width .3s cubic-bezier(.4,0,.2,1)" }} />
     </>
   );
 }
