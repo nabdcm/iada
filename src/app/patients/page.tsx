@@ -788,7 +788,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
     setFieldSaved(key);
     setExpandedField(null);
     // نُخفي علامة "تم الحفظ" بعد ثانيتين
-    setTimeout(() => setFieldSaved(prev => prev===key ? null : prev), 2000);
+    setTimeout(() => { if(isMounted.current) setFieldSaved(prev => prev===key ? null : prev); }, 2000);
   };
 
   const calcAge = (dob?:string|null) => {
@@ -1340,6 +1340,9 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
 
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function PatientsPage() {
+  const isMounted = useRef(true);
+  useEffect(() => { return () => { isMounted.current = false; }; }, []);
+
   const [lang,       setLang]       = useState<Lang>("ar");
   const isAr = lang==="ar";
   const tr   = T[lang];
@@ -1494,7 +1497,7 @@ export default function PatientsPage() {
             await saveProfileToDB(np.id,userId,{ medical_fields:{},dental_chart:{},xrays:[],extra_form_fields:form.extra_fields });
           }
           setAnimIds(prev=>[...prev,np.id]);
-          setTimeout(()=>setAnimIds(prev=>prev.filter(x=>x!==np.id)),600);
+          setTimeout(()=>{ if(isMounted.current) setAnimIds(prev=>prev.filter(x=>x!==np.id)); },600);
         }
       }
       await loadPatients();
