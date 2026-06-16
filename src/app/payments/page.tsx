@@ -912,6 +912,7 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
 
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function PaymentsPage() {
+  const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang] = useState("ar");
   const isAr = lang==="ar";
   const tr = T[lang];
@@ -1918,7 +1919,7 @@ export default function PaymentsPage() {
           .shared-bar{flex-direction:column!important;align-items:flex-start!important}
         }
         @media(min-width:769px){
-          .main-content{margin-${isAr?"right":"left"}:240px;padding:0 32px 48px}
+          .main-content{margin-${isAr?"right":"left"}:${sidebarWidth}px;padding:0 32px 48px}
           .add-btn-text-short{display:none!important}
           .stats-slider-wrap{display:none!important}
           .stats-grid{display:grid!important}
@@ -1926,7 +1927,7 @@ export default function PaymentsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="payments" plan={plan} />
+        <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="payments" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="page-anim main-content" style={{ transition:"margin .3s" }}>
 
