@@ -1412,7 +1412,7 @@ export default function AppointmentsPage() {
               </div>
               <div style={{ display:"flex",gap:isMobile?6:10,alignItems:"center" }}>
                 {/* رابط الحجز — فقط للاحترافية والشاملة */}
-                {!isMobile && canAccess("payments", plan) && (
+                {canAccess("payments", plan) && (
                   <button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
                     🔗 {isAr?"رابط الحجز":"Booking Link"}
                   </button>
@@ -1968,3 +1968,4 @@ export default function AppointmentsPage() {
     </>
   );
 }
+
