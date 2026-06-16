@@ -26,7 +26,7 @@ type ClinicDoctor = {
   color?: string;
 };
 
-const SHARED_CLINIC_PLANS = ["clinic_basic", "clinic_pro", "clinic_enterprise"];
+const SHARED_CLINIC_PLANS = ["shared_basic", "shared_pro", "shared_enterprise"];
 
 const WORKING_DAYS_MAP: Record<string, number> = {
   sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6
@@ -197,20 +197,26 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
 
       if (profileError || !profileData) { setClinic(null); setLoading(false); return; }
 
-      // جلب الخطة من جدول clinics
+      // جلب الخطة وإعدادات الموافقة من جدول clinics
       const { data: clinicRow } = await supabase
         .from("clinics")
-        .select("plan")
+        .select("plan, settings")
         .eq("user_id", clinicId)
         .single();
 
-      const clinicWithPlan = { ...profileData, plan: clinicRow?.plan ?? "" } as ClinicProfile;
+      // استخراج require_approval من clinics.settings
+      const clinicSettings = typeof clinicRow?.settings === "string"
+        ? JSON.parse(clinicRow.settings)
+        : (clinicRow?.settings ?? {});
+      const requireApproval: boolean = clinicSettings.require_approval ?? false;
+
+      const clinicWithPlan = { ...profileData, plan: clinicRow?.plan ?? "", require_approval: requireApproval } as ClinicProfile;
       setClinic(clinicWithPlan);
 
       // إذا كانت عيادة مشتركة، جلب قائمة الأطباء
       if (clinicRow?.plan && SHARED_CLINIC_PLANS.includes(clinicRow.plan)) {
         const { data: doctorsData } = await supabase
-          .from("clinic_doctors")
+          .from("doctors")
           .select("id, name, specialty, color")
           .eq("user_id", clinicId)
           .order("name");
@@ -326,23 +332,24 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     try {
       const cleanPhone = form.phone.trim();
 
-      // ── 1. تحقق/إنشاء سجل مركزي في master_patients ──────
+      // ── 1. تحقق/إنشاء سجل مركزي في master_patients (upsert لتفادي race condition) ──
       let mrn: string;
-      const { data: masterExisting } = await supabase
+      const { data: upsertedMaster } = await supabase
         .from("master_patients")
+        .upsert({ phone: cleanPhone, name: form.name.trim() }, { onConflict: "phone", ignoreDuplicates: true })
         .select("mrn")
-        .eq("phone", cleanPhone)
         .maybeSingle();
 
-      if (masterExisting?.mrn) {
-        mrn = masterExisting.mrn;
+      if (upsertedMaster?.mrn) {
+        mrn = upsertedMaster.mrn;
       } else {
-        const { data: masterInserted } = await supabase
+        // fallback: اقرأ السجل الموجود (حالة ignoreDuplicates)
+        const { data: existingMaster } = await supabase
           .from("master_patients")
-          .insert({ phone: cleanPhone, name: form.name.trim() })
           .select("mrn")
-          .single();
-        mrn = masterInserted?.mrn ?? `MRN-T-${Date.now()}`;
+          .eq("phone", cleanPhone)
+          .maybeSingle();
+        mrn = existingMaster?.mrn ?? `MRN-T-${Date.now()}`;
       }
 
       // ── 2. تحقق إذا المريض مسجل مسبقاً في هذه العيادة ──
@@ -733,7 +740,10 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                     </div>
                   )}
 
-                  {form.date && isDayWorking(form.date, clinic.working_days) && (
+                  {form.date && (doctorSchedule
+                      ? (() => { const di = new Date(form.date + "T00:00:00").getDay(); const wd = doctorSchedule.days[di]; return wd?.enabled && !doctorSchedule.vacations.includes(form.date); })()
+                      : isDayWorking(form.date, clinic.working_days)
+                    ) && (
                     <div style={{ marginBottom:14 }}>
                       <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:10 }}>{tr.time}</label>
                       {/* عرض الطبيب المختار فوق الأوقات — للعيادات المشتركة */}
