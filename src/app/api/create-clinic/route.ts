@@ -46,9 +46,9 @@ export async function POST(req: Request) {
     const userId = authData.user.id;
 
     // ─── 2. إضافة في جدول clinics ────────────────────────
-    // plan: الصيدلية تأخذ "basic" لأن DB لا يقبل "pharmacy"
+    // plan: الصيدلية تأخذ "pharmacy" — العمود نوعه text ويقبل أي قيمة
     // clinic_type: الصيدلية تأخذ "general" لأن العمود NOT NULL
-    const planForDb        = account_type === "pharmacy" ? "basic"   : plan;
+    const planForDb        = account_type === "pharmacy" ? "pharmacy" : plan;
     const clinicTypeForDb  = account_type === "pharmacy" ? "general" : (clinic_type || "general");
 
     const { error: clinicError } = await supabaseAdmin

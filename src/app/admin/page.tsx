@@ -87,6 +87,7 @@ const T = {
       plans:{
         basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة",
         shared_basic:"مشتركة أساسية", shared_pro:"مشتركة احترافية", shared_enterprise:"مشتركة شاملة",
+        pharmacy:"صيدلية",
       },
       actions:{ edit:"تعديل", suspend:"تعليق", activate:"تفعيل", resetPass:"إعادة كلمة المرور", delete:"حذف", viewDetails:"التفاصيل" },
     },
@@ -223,7 +224,7 @@ const T = {
       maxDoctorsNote:"يمكن تعديل هذا الرقم بالاتفاق مع العميل",
       doctorsCount:"عدد الأطباء الحالي",
       planDesc:{ basic:"إدارة المرضى والمواعيد والسجلات • حتى 100 مريض", pro:"الأساسية + رابط الحجز + المدفوعات + واتساب • حتى 400 مريض", enterprise:"جميع الميزات + متابعة المرضى + بوابة المريض • غير محدود" },
-      plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة", shared_basic:"مشتركة أساسية", shared_pro:"مشتركة احترافية", shared_enterprise:"مشتركة شاملة" },
+      plans:{ basic:"الأساسية", pro:"الاحترافية", enterprise:"الشاملة", shared_basic:"مشتركة أساسية", shared_pro:"مشتركة احترافية", shared_enterprise:"مشتركة شاملة", pharmacy:"صيدلية" },
       deleteConfirmTitle:"تأكيد الحذف النهائي",
       deleteConfirmMsg:"هل أنت متأكد من حذف عيادة",
       deleteConfirmWarning:"سيتم حذف جميع البيانات نهائياً ولا يمكن التراجع.",
@@ -293,6 +294,7 @@ const T = {
       plans:{
         basic:"Basic", pro:"Professional", enterprise:"Comprehensive",
         shared_basic:"Shared Basic", shared_pro:"Shared Professional", shared_enterprise:"Shared Comprehensive",
+        pharmacy:"Pharmacy",
       },
       actions:{ edit:"Edit", suspend:"Suspend", activate:"Activate", resetPass:"Reset Password", delete:"Delete", viewDetails:"Details" },
     },
@@ -429,7 +431,7 @@ const T = {
       maxDoctorsNote:"This number can be adjusted by agreement with the client",
       doctorsCount:"Current Doctors Count",
       planDesc:{ basic:"Patients & appointments & records • Up to 100 patients", pro:"Basic + booking link + payments + WhatsApp • Up to 400 patients", enterprise:"All features + patient follow-up + portal • Unlimited" },
-      plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive", shared_basic:"Shared Basic", shared_pro:"Shared Pro", shared_enterprise:"Shared Comprehensive" },
+      plans:{ basic:"Basic", pro:"Professional", enterprise:"Comprehensive", shared_basic:"Shared Basic", shared_pro:"Shared Pro", shared_enterprise:"Shared Comprehensive", pharmacy:"Pharmacy" },
       deleteConfirmTitle:"Confirm Permanent Delete",
       deleteConfirmMsg:"Are you sure you want to delete clinic",
       deleteConfirmWarning:"All data will be permanently deleted and cannot be recovered.",
@@ -488,6 +490,7 @@ const T = {
 const PLAN_COLORS: Record<string, string> = {
   basic:"#0863ba", pro:"#7b2d8b", enterprise:"#e67e22",
   shared_basic:"#0e7c6a", shared_pro:"#b5451b", shared_enterprise:"#4a1480",
+  pharmacy:"#27ae60",
 };
 
 // Plan pricing config
@@ -1518,7 +1521,26 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
           {activeTab === "sub" && (
             <div style={{ display:"flex",flexDirection:"column",gap:18 }}>
 
-              {/* Plan selector */}
+              {/* Plan selector — الصيدلية لا تملك خيارات خطة */}
+              {clinic.account_type === "pharmacy" ? (
+                <div style={{ padding:"16px",background:"rgba(39,174,96,.06)",border:"1.5px solid rgba(39,174,96,.2)",borderRadius:14 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
+                    <span style={{ fontSize:22 }}>💊</span>
+                    <div>
+                      <div style={{ fontSize:14,fontWeight:700,color:"#27ae60" }}>{isAr?"اشتراك صيدلية":"Pharmacy Subscription"}</div>
+                      <div style={{ fontSize:11,color:"#888",marginTop:2 }}>{isAr?"خطة الصيدلية ثابتة ولا يمكن تغييرها":"Pharmacy plan is fixed and cannot be changed"}</div>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
+                    {(isAr
+                      ? ["إدارة المخزون","الوصفات الطبية","نقطة البيع","إدارة الموردين","التقارير","تنبيهات المخزون"]
+                      : ["Inventory","Prescriptions","Point of Sale","Suppliers","Reports","Stock Alerts"]
+                    ).map((f,i) => (
+                      <span key={i} style={{ fontSize:11,color:"#27ae60",background:"rgba(39,174,96,.1)",padding:"3px 10px",borderRadius:20,fontWeight:600 }}>✓ {f}</span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
               <div>
                 <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:10,textTransform:"uppercase",letterSpacing:.4 }}>{sm.changePlan}</label>
                 {/* قسم الخطط الفردية */}
@@ -1631,6 +1653,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                   </div>
                 )}
               </div>
+              )} {/* end clinic plan conditional */}
 
               {/* Expiry */}
               <div>
@@ -3339,11 +3362,11 @@ export default function AdminPage() {
                             <div style={{ paddingLeft:8 }}>
                               {c.account_type === "pharmacy" ? (
                                 <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(39,174,96,.12)",color:"#27ae60" }}>
-                                  💊 {isAr?"اشتراك صيدلية":"Pharmacy"}
+                                  💊 {isAr?"صيدلية":"Pharmacy"}
                                 </span>
                               ) : (
                               <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:`${PLAN_COLORS[c.plan]||"#0863ba"}20`,color:PLAN_COLORS[c.plan]||"#0863ba" }}>
-                                {tr.clinics.plans[c.plan]}
+                                {tr.clinics.plans[c.plan as keyof typeof tr.clinics.plans] || c.plan}
                               </span>
                               )}
                               {["shared_basic","shared_pro","shared_enterprise"].includes(c.plan) && (

@@ -50,8 +50,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: authError.message }, { status: 400 });
 
     // ─── 2. تحديث جدول clinics ───────────────────────────
+    // الصيدلية: plan يبقى "pharmacy" دائماً بغض النظر عما أُرسل
+    const resolvedPlan = account_type === "pharmacy" ? "pharmacy" : plan;
     const clinicUpdate: Record<string, unknown> = {
-      name, owner, email, phone, plan, expiry, status,
+      name, owner, email, phone, plan: resolvedPlan, expiry, status,
     };
 
     if (clinic_type)   clinicUpdate.clinic_type   = clinic_type;
