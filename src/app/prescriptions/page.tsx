@@ -515,6 +515,7 @@ function MedicationRow({ med, onChange, onRemove, lang, index }: {
 
 // ─── Main Page ────────────────────────────────────────────
 export default function PrescriptionsPage() {
+  const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang] = useState<Lang>("ar");
   const isAr = lang === "ar";
   const tr = t[lang];
@@ -707,7 +708,7 @@ export default function PrescriptionsPage() {
     return true;
   });
 
-  const sidebarWidth = isMobile ? 0 : 240;
+  // sidebarWidth managed via onCollapse
 
   const inputStyle = (isAr: boolean) => ({
     width: "100%", padding: "10px 14px", border: "1.5px solid #eef0f3",
@@ -741,7 +742,7 @@ export default function PrescriptionsPage() {
         }
       `}</style>
 
-      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="prescriptions" plan={plan} />
+      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="prescriptions" plan={plan} onCollapse={(c) => setSidebarWidth(isMobile ? 0 : (c ? 70 : 240))} />
 
       <main style={{
         marginRight: isAr ? sidebarWidth : 0,
