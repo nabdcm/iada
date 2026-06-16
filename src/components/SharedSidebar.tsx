@@ -237,6 +237,7 @@ export default function SharedSidebar({
   const router   = useRouter();
   const pathname = usePathname();
 
+  const [mounted,      setMounted]      = useState(false);
   const [collapsed,    setCollapsed]    = useState(false);
   const [isMobile,     setIsMobile]     = useState(false);
   const [moreOpen,     setMoreOpen]     = useState(false);
@@ -246,11 +247,10 @@ export default function SharedSidebar({
   // ─── Detect mobile ───────────────────────────────────────
   useEffect(() => {
     const check = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-      if (!mobile) setMoreOpen(false);
+      setIsMobile(window.innerWidth <= 768);
     };
     check();
+    setMounted(true);
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
@@ -319,6 +319,9 @@ export default function SharedSidebar({
   };
 
   // ─── Can go back? ────────────────────────────────────────
+  // لا نعرض شيئاً حتى يتم التحقق من حجم الشاشة (يمنع وميض الـ Sidebar)
+  if (!mounted) return null;
+
   const rootPages = ["/dashboard", "/patients", "/appointments", "/payments",
     "/prescriptions", "/patient-tracking", "/clinic-management", "/messages"];
   const isRootPage = rootPages.some(p => pathname === p);
