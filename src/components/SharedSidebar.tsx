@@ -146,6 +146,7 @@ export interface SharedSidebarProps {
   doctorCount?: number;
   maxDoctorCount?: number;
   userId?: string;
+  onCollapse?: (collapsed: boolean) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -157,6 +158,7 @@ export default function SharedSidebar({
   doctorCount,
   maxDoctorCount,
   userId,
+  onCollapse,
 }: SharedSidebarProps) {
   const isAr = lang === "ar";
   const tr   = NAV_LABELS[lang];
@@ -165,6 +167,8 @@ export default function SharedSidebar({
   const [isMobile,    setIsMobile]    = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [pushPerm,    setPushPerm]    = useState<"default"|"granted"|"denied"|"unsupported">("default");
+
+  useEffect(() => { onCollapse?.(collapsed); }, [collapsed]);
   const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
