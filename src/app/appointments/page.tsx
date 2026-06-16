@@ -1304,12 +1304,14 @@ export default function AppointmentsPage() {
         .timeline-scroll{overflow-y:auto;max-height:calc(100vh - 300px)}
         .timeline-scroll::-webkit-scrollbar{width:4px}
         .timeline-scroll::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
+        @media(max-width:768px){.appt-main-content{margin-right:0!important;margin-left:0!important;padding:0 14px 48px!important;width:100%!important}}
+        @media(min-width:769px){.appt-main-content{margin-${isAr?'right':'left'}:${sidebarWidth}px}}
       `}</style>
 
-      <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc",display:"flex" }}>
+      <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
         <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
-        <main style={{ marginRight:isAr&&!isMobile?sidebarWidth:undefined, marginLeft:!isAr&&!isMobile?sidebarWidth:undefined, flex:1, padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", maxWidth:isMobile?"100vw":`calc(100vw - ${sidebarWidth}px)`, transition:"margin .3s, max-width .3s" }}>
+        <main className="appt-main-content" style={{ padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", transition:"margin .3s" }}>
 
           {/* TOP BAR */}
           <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"18px 0 14px",borderBottom:"1.5px solid #eef0f3",marginBottom:20 }}>
