@@ -1482,7 +1482,22 @@ export default function PatientsPage() {
           await saveProfileToDB(id,userId,updated);
         }
       } else {
-        // إضافة جديد — نحصل على MRN أولاً
+        // إضافة جديد — تحقق من تكرار الهاتف أولاً
+        if (form.phone.trim()) {
+          const { data: dupCheck } = await supabase
+            .from("patients")
+            .select("id, name")
+            .eq("user_id", userId)
+            .eq("phone", form.phone.trim())
+            .maybeSingle();
+          if (dupCheck) {
+            setError(isAr
+              ? `هذا الرقم مسجّل مسبقاً باسم "${dupCheck.name}"`
+              : `This phone is already registered under "${dupCheck.name}"`);
+            return;
+          }
+        }
+        // نحصل على MRN
         const mrn = await getOrCreateMRN(form.phone.trim(), form.name);
         const { data:newPatient,error } = await supabase.from("patients").insert({
           user_id:userId, name:form.name, phone:form.phone, gender:form.gender,
