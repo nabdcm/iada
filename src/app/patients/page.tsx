@@ -1842,7 +1842,7 @@ export default function PatientsPage() {
         </main>
 
         {/* FAB */}
-        <button className="fab-add" onClick={()=>setAddModal(true)} style={{ display:"none",position:"fixed",bottom:24,right:isAr?20:undefined,left:isAr?undefined:20,width:58,height:58,borderRadius:"50%",background:clinicMeta.color,color:"#fff",border:"none",cursor:"pointer",fontSize:28,lineHeight:1,boxShadow:`0 6px 24px ${clinicMeta.color}60`,zIndex:30,alignItems:"center",justifyContent:"center" }}>＋</button>
+        <button className="fab-add" onClick={()=>setAddModal(true)} style={{ display:"none",position:"fixed",bottom:96,right:isAr?20:undefined,left:isAr?undefined:20,width:58,height:58,borderRadius:"50%",background:clinicMeta.color,color:"#fff",border:"none",cursor:"pointer",fontSize:28,lineHeight:1,boxShadow:`0 6px 24px ${clinicMeta.color}60`,zIndex:30,alignItems:"center",justifyContent:"center" }}>＋</button>
 
         {(addModal||editPatient)&&(
           <PatientModal lang={lang} patient={editPatient} clinicType={clinicType} onSave={handleSave} onClose={()=>{ setAddModal(false);setEditPatient(null); }}/>
