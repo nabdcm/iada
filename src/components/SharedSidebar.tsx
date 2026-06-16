@@ -168,7 +168,7 @@ export default function SharedSidebar({
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [pushPerm,    setPushPerm]    = useState<"default"|"granted"|"denied"|"unsupported">("default");
 
-  useEffect(() => { onCollapse?.(collapsed); }, [collapsed]);
+  useEffect(() => { onCollapse?.(collapsed); }, [collapsed, onCollapse]);
   const [pushLoading, setPushLoading] = useState(false);
 
   useEffect(() => {
