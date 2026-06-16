@@ -912,6 +912,9 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
 
 // ─── الصفحة الرئيسية ──────────────────────────────────────
 export default function PaymentsPage() {
+  const isMounted = useRef(true);
+  useEffect(() => { return () => { isMounted.current = false; }; }, []);
+
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang] = useState("ar");
   const isAr = lang==="ar";
@@ -1181,7 +1184,7 @@ export default function PaymentsPage() {
 
       setPayments(prev => [inserted, ...prev]);
       setAnimIds(prev => [...prev, inserted.id]);
-      setTimeout(() => setAnimIds(prev => prev.filter(x => x !== inserted.id)), 600);
+      setTimeout(() => { if (isMounted.current) setAnimIds(prev => prev.filter(x => x !== inserted.id)); }, 600);
       setShowModal(false);
     } catch (err) {
       console.error("handleSave error:", err);
@@ -1240,7 +1243,7 @@ export default function PaymentsPage() {
     }
     setReverseWithdrawalId(null);
     // إعادة تحميل البيانات لضمان تزامن الواجهة
-    setTimeout(() => reloadFinancials(), 300);
+    setTimeout(() => { if (isMounted.current) reloadFinancials(); }, 300);
   };
 
   // ── التراجع عن مصروف (حذف نهائي) ────────────────────────────
@@ -1254,7 +1257,7 @@ export default function PaymentsPage() {
     }
     setReverseExpenseId(null);
     // إعادة تحميل البيانات لضمان تزامن الواجهة
-    setTimeout(() => reloadFinancials(), 300);
+    setTimeout(() => { if (isMounted.current) reloadFinancials(); }, 300);
   };
 
   // ── تسجيل مصروف عيادة ────────────────────────────────────────
