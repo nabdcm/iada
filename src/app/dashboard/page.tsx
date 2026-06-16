@@ -270,6 +270,7 @@ function WeekChart({ lang, data }: { lang: Lang; data: number[] }) {
 
 // ─── Main Dashboard ───────────────────────────────────────
 export default function DashboardPage() {
+  const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang] = useState<Lang>("ar");
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isAr = lang === "ar";
@@ -537,12 +538,12 @@ export default function DashboardPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main
           className="main-fade main-content"
           style={{
-            [isAr?"marginRight":"marginLeft"]: 240,
+            [isAr?"marginRight":"marginLeft"]: sidebarWidth,
             padding:"0 32px 40px", minHeight:"100vh",
             transition:"margin .3s cubic-bezier(.4,0,.2,1)",
           }}
