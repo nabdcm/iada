@@ -949,6 +949,7 @@ export default function AppointmentsPage() {
   const tr   = T[lang];
 
   const [isMobile, setIsMobile] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(240);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
@@ -1306,9 +1307,9 @@ export default function AppointmentsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc",display:"flex" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
-        <main style={{ marginRight:isAr&&!isMobile?240:undefined, marginLeft:!isAr&&!isMobile?240:undefined, flex:1, padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", maxWidth:isMobile?"100vw":"calc(100vw - 240px)" }}>
+        <main style={{ marginRight:isAr&&!isMobile?sidebarWidth:undefined, marginLeft:!isAr&&!isMobile?sidebarWidth:undefined, flex:1, padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", maxWidth:isMobile?"100vw":`calc(100vw - ${sidebarWidth}px)`, transition:"margin .3s, max-width .3s" }}>
 
           {/* TOP BAR */}
           <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"18px 0 14px",borderBottom:"1.5px solid #eef0f3",marginBottom:20 }}>
