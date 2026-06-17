@@ -102,7 +102,12 @@ function LoginContent() {
         return;
       }
 
-      // نجح تسجيل الدخول — توجيه حسب نوع الحساب
+      // نجح تسجيل الدخول — كتابة cookie صريح للـ middleware (يبقى سنة كاملة)
+      if (authData?.session?.access_token) {
+        const maxAge = 365 * 24 * 60 * 60;
+        document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
+      // توجيه حسب نوع الحساب
       const accountType = authData?.user?.user_metadata?.account_type;
       window.location.href = accountType === "pharmacy" ? "/pharmacy" : redirectTo;
 

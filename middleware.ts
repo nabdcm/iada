@@ -8,9 +8,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const supabaseUrl     = "https://ldqaohjnlxiwvaijcsbm.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkcWFvaGpubHhpd3ZhaWpjc2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1Nzk3MDUsImV4cCI6MjA4NzE1NTcwNX0.2vo-DqFGbJqa8MEgotfujz23QjU2bfMEDIDDnbDQ1Jo";
 
-// ─── حُذف "/admin" من هنا — يملك نظام مصادقة خاصاً به ───────
+// ─── مسارات محمية ────────────────────────────────────────
 const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/admin"];
-// ── مسارات الصيدلية محمية بشكل منفصل — تتحقق من account_type ──
 const PHARMACY_PROTECTED = ["/pharmacy"];
 
 export async function middleware(request: NextRequest) {
@@ -25,21 +24,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── /blocked مسموح دائماً (حتى لا يحدث redirect loop) ──────
+  // ── /blocked مسموح دائماً ───────────────────────────────────
   if (pathname.startsWith("/blocked")) {
     return NextResponse.next();
   }
 
-  const isProtected = PROTECTED.some(p => pathname.startsWith(p));
-  if (!isProtected) return NextResponse.next();
-
-  // ── /admin محمي بـ httpOnly cookie من server-side ────────────
+  // ── /admin محمي بـ httpOnly cookie خاص ─────────────────────
   if (pathname.startsWith("/admin")) {
     const token = request.cookies.get("nabd_admin_session")?.value;
-    if (!token) {
-      // لا cookie → أكمل (ستعرض شاشة دخول المدير client-side)
-      return NextResponse.next();
-    }
+    if (!token) return NextResponse.next();
     try {
       const payload = JSON.parse(Buffer.from(token, "base64").toString("utf8")) as {
         auth: string; expiry: number; secret: string;
@@ -49,7 +42,6 @@ export async function middleware(request: NextRequest) {
         Date.now() < payload.expiry &&
         payload.secret === (process.env.NABD_ADMIN_SECRET ?? "");
       if (!isValid) {
-        // cookie منتهي أو مزيّف — امسحه
         const res = NextResponse.next();
         res.cookies.set("nabd_admin_session", "", { maxAge: 0, path: "/" });
         return res;
@@ -57,6 +49,15 @@ export async function middleware(request: NextRequest) {
     } catch {
       return NextResponse.next();
     }
+    return NextResponse.next();
+  }
+
+  const isProtected = PROTECTED.some(p => pathname.startsWith(p));
+  const isPharmacyProtected =
+    PHARMACY_PROTECTED.some(p => pathname.startsWith(p)) &&
+    !pathname.startsWith("/pharmacy/login");
+
+  if (!isProtected && !isPharmacyProtected) {
     return NextResponse.next();
   }
 
@@ -79,16 +80,33 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // ── 1. هل المستخدم مسجّل دخول؟ ────────────────────────────
+  // ── التحقق من الجلسة مع السماح بتجديد الـ token التلقائي ──
+  // getUser() يجدد الـ access token تلقائياً عبر refresh token إذا انتهى
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
+    // تحقق ثانوي: هل هناك refresh token في cookies؟
+    // إذا وُجد، اسمح بالمرور وسيتولى الـ client-side التجديد
+    const allCookies = request.cookies.getAll();
+    const hasRefreshToken = allCookies.some(
+      c => c.name.includes("auth-token") || c.name.includes("refresh")
+    );
+
+    if (hasRefreshToken) {
+      // يوجد refresh token → اسمح بالمرور، الـ browser سيجدد الجلسة
+      return response;
+    }
+
+    // لا جلسة ولا refresh token → وجّه لتسجيل الدخول
+    if (isPharmacyProtected) {
+      return NextResponse.redirect(new URL("/pharmacy/login", request.url));
+    }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // ── 2. جلب بيانات الاشتراك من جدول clinics ─────────────────
+  // ── تحقق من حالة الاشتراك ─────────────────────────────────
   const { data: clinic } = await supabase
     .from("clinics")
     .select("status, expiry")
@@ -99,43 +117,23 @@ export async function middleware(request: NextRequest) {
     const status = clinic.status as string;
     const expiry = clinic.expiry as string | null;
 
-    // تحقق من الحالة: موقوف (تجميد)
     if (status === "inactive") {
-      const blockedUrl = new URL("/blocked", request.url);
-      blockedUrl.searchParams.set("reason", "frozen");
-      return NextResponse.redirect(blockedUrl);
+      return NextResponse.redirect(new URL("/blocked?reason=frozen", request.url));
     }
-
-    // تحقق من الحالة: ملغى
     if (status === "expired") {
-      const blockedUrl = new URL("/blocked", request.url);
-      blockedUrl.searchParams.set("reason", "cancelled");
-      return NextResponse.redirect(blockedUrl);
+      return NextResponse.redirect(new URL("/blocked?reason=cancelled", request.url));
     }
-
-    // تحقق من تاريخ الانتهاء
     if (expiry) {
       const expiryDate = new Date(expiry);
-      expiryDate.setHours(23, 59, 59, 999); // نهاية يوم الانتهاء
+      expiryDate.setHours(23, 59, 59, 999);
       if (expiryDate < new Date()) {
-        const blockedUrl = new URL("/blocked", request.url);
-        blockedUrl.searchParams.set("reason", "expired");
-        return NextResponse.redirect(blockedUrl);
+        return NextResponse.redirect(new URL("/blocked?reason=expired", request.url));
       }
     }
   }
 
-  // ── حماية مسارات الصيدلية (/pharmacy و/pharmacy/*) ────────────
-  // /pharmacy/login مستثنى (صفحة دخول)
-  const isPharmacyProtected =
-    PHARMACY_PROTECTED.some(p => pathname.startsWith(p)) &&
-    !pathname.startsWith("/pharmacy/login");
-
+  // ── حماية مسارات الصيدلية ──────────────────────────────────
   if (isPharmacyProtected) {
-    if (!user) {
-      return NextResponse.redirect(new URL("/pharmacy/login", request.url));
-    }
-    // التحقق أن الحساب نوعه صيدلية
     const { data: pharmacyClinic } = await supabase
       .from("clinics")
       .select("account_type, status")
@@ -143,10 +141,8 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (pharmacyClinic?.account_type !== "pharmacy") {
-      // حساب عيادة حاول الدخول لصفحة الصيدلية → أعده للـ dashboard
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-
     if (pharmacyClinic?.status === "inactive") {
       return NextResponse.redirect(new URL("/blocked?reason=frozen", request.url));
     }

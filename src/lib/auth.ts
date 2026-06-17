@@ -7,6 +7,8 @@ import { supabase } from "./supabase";
 /** تسجيل الخروج وإعادة التوجيه لصفحة الدخول */
 export async function signOut() {
   await supabase.auth.signOut();
+  // مسح الـ cookie المستخدم من الـ middleware
+  document.cookie = "nabd-session=; path=/; max-age=0; SameSite=Lax";
   window.location.href = "/login";
 }
 
