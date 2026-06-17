@@ -3057,6 +3057,8 @@ export default function AdminPage() {
         doctors_count:(row.doctors_count as number) || undefined,
         payments_lock_enabled:  (row.payments_lock_enabled as boolean) ?? false,
         payments_lock_password: (row.payments_lock_password as string) || "",
+        restricted_access_enabled: (row.restricted_access_enabled as boolean) ?? false,
+        restricted_access_pin:     (row.restricted_access_pin as string) || "",
       }));
 
       setClinics(clinicsData);
