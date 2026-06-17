@@ -1,7 +1,7 @@
 // src/app/api/create-clinic/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthorized } from "../_adminAuth";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +9,7 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
   // ── التحقق من صلاحية الأدمن ─────────────────────────────────
   if (!isAdminAuthorized(req)) {

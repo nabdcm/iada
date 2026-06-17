@@ -1,7 +1,7 @@
 // src/app/api/doctors/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthorized } from "../_adminAuth";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 );
 
 // ── GET: جلب أطباء عيادة معينة ──────────────────────────────
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("user_id");
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 }
 
 // ── POST: إضافة / تعديل / حذف / تبديل حالة طبيب ────────────
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   // ── التحقق من صلاحية الأدمن ─────────────────────────────────
   if (!isAdminAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

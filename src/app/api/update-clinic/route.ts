@@ -1,7 +1,7 @@
 // src/app/api/update-clinic/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthorized } from "../_adminAuth";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +9,7 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   // ── التحقق من صلاحية الأدمن ─────────────────────────────────
   if (!isAdminAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

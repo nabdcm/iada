@@ -2,7 +2,7 @@
 // ─── API route لجلب العيادات بصلاحية service_role (يتجاوز RLS) ───
 
 import { isAdminAuthorized } from "../_adminAuth";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 // يجب تعريف SUPABASE_SERVICE_ROLE_KEY في .env.local
@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   // ── التحقق من صلاحية الأدمن ─────────────────────────────────
   if (!isAdminAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
