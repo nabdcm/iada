@@ -3088,6 +3088,40 @@ export default function AdminPage() {
     if (updated) setSubClinic(updated);
   }, [clinics]);
 
+  const fmtDate = (d: string) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", { year:"numeric", month:"short", day:"numeric" });
+  };
+  const isExpiringSoon = (d: string) => {
+    const diff = new Date(d).getTime() - new Date().getTime();
+    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
+  };
+  const isExpired = (d: string) => d && new Date(d) < new Date();
+
+  const fmtDateEn = (d: string) => {
+    if (!d) return "—";
+    const dt = new Date(d);
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
+  };
+
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email).catch(() => {});
+  };
+
+  // نقطة الحالة: أصفر=نشط، أخضر=محمد(مدفوع ونشط أكثر من شهر)، أحمر=منتهي، رمادي=قارب
+  const statusDot = (c: ClinicData) => {
+    if (isExpired(c.expiry))           return { color:"#c0392b", title: isAr?"منتهية":"Expired" };
+    if (isExpiringSoon(c.expiry))      return { color:"#aaa",    title: isAr?"قاربت على الانتهاء":"Expiring soon" };
+    if (c.status === "inactive")       return { color:"#e67e22", title: isAr?"معلّق":"Suspended" };
+    if (c.status === "active") {
+      const diff = new Date(c.expiry).getTime() - new Date().getTime();
+      if (diff > 30 * 24 * 60 * 60 * 1000) return { color:"#27ae60", title: isAr?"نشط":"Active" };
+      return { color:"#f1c40f", title: isAr?"نشط":"Active" };
+    }
+    return { color:"#aaa", title: "" };
+  };
+
   const filtered = useMemo(() => clinics.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.owner.toLowerCase().includes(search.toLowerCase())) return false;
     if (filter === "active"   && c.status !== "active")   return false;
@@ -3149,39 +3183,6 @@ export default function AdminPage() {
     loadClinics();
   };
 
-  const fmtDate = (d: string) => {
-    if (!d) return "—";
-    return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", { year:"numeric", month:"short", day:"numeric" });
-  };
-  const isExpiringSoon = (d: string) => {
-    const diff = new Date(d).getTime() - new Date().getTime();
-    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
-  };
-  const isExpired = (d: string) => d && new Date(d) < new Date();
-
-  const fmtDateEn = (d: string) => {
-    if (!d) return "—";
-    const dt = new Date(d);
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
-  };
-
-  const copyEmail = (email: string) => {
-    navigator.clipboard.writeText(email).catch(() => {});
-  };
-
-  // نقطة الحالة: أصفر=نشط، أخضر=محمد(مدفوع ونشط أكثر من شهر)، أحمر=منتهي، رمادي=قارب
-  const statusDot = (c: ClinicData) => {
-    if (isExpired(c.expiry))           return { color:"#c0392b", title: isAr?"منتهية":"Expired" };
-    if (isExpiringSoon(c.expiry))      return { color:"#aaa",    title: isAr?"قاربت على الانتهاء":"Expiring soon" };
-    if (c.status === "inactive")       return { color:"#e67e22", title: isAr?"معلّق":"Suspended" };
-    if (c.status === "active") {
-      const diff = new Date(c.expiry).getTime() - new Date().getTime();
-      if (diff > 30 * 24 * 60 * 60 * 1000) return { color:"#27ae60", title: isAr?"نشط":"Active" };
-      return { color:"#f1c40f", title: isAr?"نشط":"Active" };
-    }
-    return { color:"#aaa", title: "" };
-  };
 
   // ── بوابة المصادقة — بعد كل الـ hooks ─────────────────────
   if (isAuthenticated === null) {
