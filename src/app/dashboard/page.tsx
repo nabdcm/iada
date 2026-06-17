@@ -273,6 +273,7 @@ export default function DashboardPage() {
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang] = useState<Lang>("ar");
   const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const isAr = lang === "ar";
 
   // ── popup الإشعارات — يظهر مرة واحدة فقط ────────────────
@@ -296,10 +297,10 @@ export default function DashboardPage() {
       const b64 = (s: string) => { const p = "=".repeat((4-s.length%4)%4); const b = (s+p).replace(/-/g,"+").replace(/_/g,"/"); return Uint8Array.from(window.atob(b), c => c.charCodeAt(0)); };
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
       const j = sub.toJSON(); const k = j.keys as {p256dh:string;auth:string};
-      if (userId) {
+      if (currentUserId) {
         const { createClient } = await import("@supabase/supabase-js");
         const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-        await sb.from("push_subscriptions").upsert({ user_id: userId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
+        await sb.from("push_subscriptions").upsert({ user_id: currentUserId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
       }
     } catch(e) { console.warn("push:", e); }
   };
@@ -367,6 +368,7 @@ export default function DashboardPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
+      setCurrentUserId(userId);
 
       // ── Clinic plan ──
       const { data: clinicData } = await supabase

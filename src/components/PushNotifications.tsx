@@ -8,11 +8,14 @@ import { supabase } from "@/lib/supabase";
 
 const VAPID_PUBLIC = "BG73PZ28jKm8MniGKb0DJCG45VDuUBJdAJNNRX9VwPr1YD-y4o0vXy4BJRHL1qYoCIKOhuRfHE0QKLca7fq-ZQc";
 
-function urlBase64ToUint8(base64String: string): Uint8Array {
+function urlBase64ToUint8(base64String: string): Uint8Array<ArrayBuffer> {
   const padding  = "=".repeat((4 - base64String.length % 4) % 4);
   const base64   = (base64String + padding).replace(/-/g,"+").replace(/_/g,"/");
   const rawData  = window.atob(base64);
-  return Uint8Array.from(rawData, c => c.charCodeAt(0));
+  const buffer   = new ArrayBuffer(rawData.length);
+  const output   = new Uint8Array(buffer);
+  for (let i = 0; i < rawData.length; i++) output[i] = rawData.charCodeAt(i);
+  return output;
 }
 
 interface PushNotificationsProps {

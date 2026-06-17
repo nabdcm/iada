@@ -738,6 +738,9 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
   const isDental  = clinicType==="dental";
   const canXray   = canAccess("xrays", plan); // الأشعة فقط للشاملة (فردية + مشتركة)
 
+  const isMounted = useRef(true);
+  useEffect(() => { return () => { isMounted.current = false; }; }, []);
+
   const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental">("info");
 
   // إذا لم يكن للخطة صلاحية الأشعة وكان التبويب النشط هو الأشعة، نعيده للمعلومات
@@ -1096,9 +1099,10 @@ function Field({ label, children }:{ label:string; children:ReactNode }) {
 }
 
 // ─── PatientModal مع أسئلة ديناميكية ─────────────────────
-function PatientModal({ lang, patient, clinicType, onSave, onClose }: {
+function PatientModal({ lang, patient, clinicType, onSave, onClose, externalError }: {
   lang:Lang; patient:Patient|null; clinicType:ClinicType;
   onSave:(form:PatientForm,id?:number)=>void; onClose:()=>void;
+  externalError?: string;
 }) {
   const tr     = T[lang];
   const isAr   = lang==="ar";
@@ -1155,7 +1159,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose }: {
         </div>
 
         <div style={{ padding:"20px 24px" }}>
-          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:18,display:"flex",alignItems:"center",gap:8 }}>⚠️ {error}</div>}
+          {(error||externalError)&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:18,display:"flex",alignItems:"center",gap:8 }}>⚠️ {error||externalError}</div>}
 
           {/* ── أساسيات ── */}
           <Field label={tr.modal.name}>
@@ -1374,6 +1378,7 @@ export default function PatientsPage() {
   const [deletePatient,  setDeletePatient]  = useState<Patient|null>(null);
   const [profilePatient, setProfilePatient] = useState<Patient|null>(null);
   const [animIds,        setAnimIds]        = useState<number[]>([]);
+  const [saveError,      setSaveError]      = useState("");
 
   const loadClinicType = async () => {
     try {
@@ -1491,7 +1496,7 @@ export default function PatientsPage() {
             .eq("phone", form.phone.trim())
             .maybeSingle();
           if (dupCheck) {
-            setError(isAr
+            setSaveError(isAr
               ? `هذا الرقم مسجّل مسبقاً باسم "${dupCheck.name}"`
               : `This phone is already registered under "${dupCheck.name}"`);
             return;
@@ -1845,7 +1850,7 @@ export default function PatientsPage() {
         <button className="fab-add" onClick={()=>setAddModal(true)} style={{ display:"none",position:"fixed",bottom:96,right:isAr?20:undefined,left:isAr?undefined:20,width:58,height:58,borderRadius:"50%",background:clinicMeta.color,color:"#fff",border:"none",cursor:"pointer",fontSize:28,lineHeight:1,boxShadow:`0 6px 24px ${clinicMeta.color}60`,zIndex:30,alignItems:"center",justifyContent:"center" }}>＋</button>
 
         {(addModal||editPatient)&&(
-          <PatientModal lang={lang} patient={editPatient} clinicType={clinicType} onSave={handleSave} onClose={()=>{ setAddModal(false);setEditPatient(null); }}/>
+          <PatientModal lang={lang} patient={editPatient} clinicType={clinicType} onSave={handleSave} externalError={saveError} onClose={()=>{ setAddModal(false);setEditPatient(null);setSaveError(""); }}/>
         )}
         {deletePatient&&<DeleteModal lang={lang} patient={deletePatient} onConfirm={handleDelete} onClose={()=>setDeletePatient(null)}/>}
         {profilePatient&&<PatientProfileDrawer lang={lang} patient={profilePatient} clinicType={clinicType} plan={plan} onClose={()=>setProfilePatient(null)}/>}

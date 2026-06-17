@@ -2989,7 +2989,7 @@ export default function AdminPage() {
   const [resetClinic,  setResetClinic]  = useState<ClinicData | null>(null);
   const [subClinic,    setSubClinic]    = useState<ClinicData | null>(null);
   const [openMenuId,   setOpenMenuId]   = useState<number | null>(null);
-  const [msgClinic,   setMsgClinic]   = useState<Clinic|null>(null);
+  const [msgClinic,   setMsgClinic]   = useState<ClinicData|null>(null);
   const [msgBody,     setMsgBody]     = useState("");
   const [msgTemplate, setMsgTemplate] = useState("custom");
   const [msgSending,  setMsgSending]  = useState(false);
