@@ -3105,10 +3105,12 @@ export default function AdminPage() {
 
   const stats = useMemo(() => ({
     total:      clinics.length,
-    active:     clinics.filter(c => c.status === "active").length,
     clinics:    clinics.filter(c => c.account_type !== "pharmacy").length,
     pharmacies: clinics.filter(c => c.account_type === "pharmacy").length,
-    expiring:   clinics.filter(c => {
+    active:     clinics.filter(c => c.status === "active").length,
+    frozen:     clinics.filter(c => c.status === "inactive").length,
+    expired:    clinics.filter(c => isExpired(c.expiry)).length,
+    expiringSoon: clinics.filter(c => {
       const d = new Date(c.expiry);
       const n = new Date();
       return (d.getTime() - n.getTime()) < 30 * 24 * 60 * 60 * 1000 && d > n;
@@ -3157,6 +3159,30 @@ export default function AdminPage() {
   };
   const isExpired = (d: string) => d && new Date(d) < new Date();
 
+  const fmtDateEn = (d: string) => {
+    if (!d) return "—";
+    const dt = new Date(d);
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
+  };
+
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email).catch(() => {});
+  };
+
+  // نقطة الحالة: أصفر=نشط، أخضر=محمد(مدفوع ونشط أكثر من شهر)، أحمر=منتهي، رمادي=قارب
+  const statusDot = (c: ClinicData) => {
+    if (isExpired(c.expiry))           return { color:"#c0392b", title: isAr?"منتهية":"Expired" };
+    if (isExpiringSoon(c.expiry))      return { color:"#aaa",    title: isAr?"قاربت على الانتهاء":"Expiring soon" };
+    if (c.status === "inactive")       return { color:"#e67e22", title: isAr?"معلّق":"Suspended" };
+    if (c.status === "active") {
+      const diff = new Date(c.expiry).getTime() - new Date().getTime();
+      if (diff > 30 * 24 * 60 * 60 * 1000) return { color:"#27ae60", title: isAr?"نشط":"Active" };
+      return { color:"#f1c40f", title: isAr?"نشط":"Active" };
+    }
+    return { color:"#aaa", title: "" };
+  };
+
   // ── بوابة المصادقة — بعد كل الـ hooks ─────────────────────
   if (isAuthenticated === null) {
     return (
@@ -3191,22 +3217,46 @@ export default function AdminPage() {
         .tab-btn.active{background:rgba(8,99,186,.08);color:#0863ba;font-weight:700}
         .tab-btn:not(.active){background:transparent;color:#888}
         .tab-btn:not(.active):hover{background:rgba(8,99,186,.04);color:#666}
-        .icon-btn-dark{width:30px;height:30px;border-radius:8px;border:1.5px solid #eef0f3;background:transparent;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#aaa}
+        .icon-btn-dark{width:32px;height:32px;border-radius:8px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#aaa;flex-shrink:0}
         .icon-btn-dark:hover{border-color:#0863ba;background:rgba(8,99,186,.06);color:#0863ba}
+        .icon-btn-dark.msg:hover{border-color:#8e44ad;background:rgba(142,68,173,.06);color:#8e44ad}
+        .icon-btn-dark.edit:hover{border-color:#2980b9;background:rgba(41,128,185,.06);color:#2980b9}
+        .icon-btn-dark.more:hover{border-color:#666;background:#f7f9fc;color:#666}
         .filter-chip-dark{padding:6px 14px;border-radius:20px;border:1.5px solid #eef0f3;background:transparent;cursor:pointer;font-size:12px;font-family:'Rubik',sans-serif;color:#888;transition:all .2s}
         .filter-chip-dark.active{background:rgba(8,99,186,.08);color:#0863ba;border-color:rgba(8,99,186,.2)}
         .filter-chip-dark:hover:not(.active){border-color:#ccc;color:#666}
-        .stat-dark{background:#fff;border-radius:16px;padding:20px;border:1.5px solid #eef0f3;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(8,99,186,.05)}
+        .stat-dark{background:#fff;border-radius:16px;padding:18px 20px;border:1.5px solid #eef0f3;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(8,99,186,.05)}
         .dropdown-dark{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(8,99,186,.12);border:1.5px solid #eef0f3;min-width:170px;z-index:100;overflow:hidden;animation:modalIn .18s ease}
         .dropdown-dark-item{padding:10px 16px;font-size:13px;color:#666;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s;font-family:'Rubik',sans-serif}
         .dropdown-dark-item:hover{background:#f7f9fc;color:#353535}
         .dropdown-dark-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
+        .email-copy{cursor:pointer;transition:color .15s}
+        .email-copy:hover{color:#0863ba !important}
+        /* ── Mobile ── */
+        @media(max-width:768px){
+          .admin-sidebar{display:none !important}
+          .admin-main{margin-left:0 !important;margin-right:0 !important;padding:12px !important}
+          .admin-topbar{padding:12px 16px !important}
+          .stats-grid{grid-template-columns:repeat(2,1fr) !important;gap:10px !important}
+          .admin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+          .admin-row-grid{grid-template-columns:1fr auto !important}
+          .admin-row-desktop{display:none !important}
+          .admin-row-mobile{display:flex !important}
+          .admin-header-row{display:none !important}
+          .search-filter-wrap{flex-direction:column !important;gap:8px !important}
+          .filter-chips-wrap{flex-wrap:wrap !important}
+          .topbar-actions{gap:8px !important}
+          .topbar-actions button{padding:8px 12px !important;font-size:12px !important}
+        }
+        @media(min-width:769px){
+          .admin-row-mobile{display:none !important}
+        }
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc",display:"flex" }}>
 
         {/* ── SIDEBAR ── */}
-        <aside style={{ width:220,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50,boxShadow:"4px 0 24px rgba(8,99,186,.06)" }}>
+        <aside className="admin-sidebar" style={{ width:220,minHeight:"100vh",background:"#fff",borderRight:isAr?"none":"1.5px solid #eef0f3",borderLeft:isAr?"1.5px solid #eef0f3":"none",display:"flex",flexDirection:"column",position:"fixed",top:0,[isAr?"right":"left"]:0,zIndex:50,boxShadow:"4px 0 24px rgba(8,99,186,.06)" }}>
           <div style={{ padding:"24px 20px",borderBottom:"1.5px solid #eef0f3" }}>
             <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
               <div style={{ width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
@@ -3274,10 +3324,10 @@ export default function AdminPage() {
         </aside>
 
         {/* ── MAIN ── */}
-        <main className="page-anim" style={{ [isAr?"marginRight":"marginLeft"]:220,flex:1,padding:"0 32px 48px",minHeight:"100vh" }}>
+        <main className="page-anim admin-main" style={{ [isAr?"marginRight":"marginLeft"]:220,flex:1,padding:"0 32px 48px",minHeight:"100vh" }}>
 
           {/* TOP BAR */}
-          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
+          <div className="admin-topbar" style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
                 <h1 style={{ fontSize:20,fontWeight:800,color:"#353535" }}>
@@ -3308,18 +3358,20 @@ export default function AdminPage() {
           <div style={{ paddingTop:24 }}>
 
             {/* STATS */}
-            <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24 }}>
+            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:12,marginBottom:24 }}>
               {[
-                { label:tr.stats.totalClinics,  value:stats.total,      icon:"📊",  color:"#0863ba", accent:"#0863ba" },
-                { label:tr.stats.activeClinics, value:stats.active,     icon:"✅",  color:"#2e7d32", accent:"#2e7d32" },
-                { label:isAr?"عيادات":"Clinics", value:stats.clinics,   icon:"🏥",  color:"#0863ba", accent:"#0863ba" },
-                { label:isAr?"صيدليات":"Pharmacies", value:stats.pharmacies, icon:"💊", color:"#27ae60", accent:"#27ae60" },
+                { label:isAr?"إجمالي الحسابات":"Total Accounts",  value:stats.total,        icon:"📊", color:"#0863ba", accent:"#0863ba" },
+                { label:isAr?"عيادات":"Clinics",                   value:stats.clinics,      icon:"🏥", color:"#0863ba", accent:"#0863ba" },
+                { label:isAr?"صيدليات":"Pharmacies",               value:stats.pharmacies,   icon:"💊", color:"#27ae60", accent:"#27ae60" },
+                { label:isAr?"نشطة":"Active",                      value:stats.active,       icon:"✅", color:"#2e7d32", accent:"#2e7d32" },
+                { label:isAr?"تنتهي قريباً":"Expiring Soon",       value:stats.expiringSoon, icon:"⏳", color:"#e67e22", accent:"#e67e22" },
+                { label:isAr?"منتهية":"Expired",                   value:stats.expired,      icon:"❌", color:"#c0392b", accent:"#c0392b" },
               ].map((s, i) => (
-                <div key={i} className="stat-dark" style={{ animation:`fadeUp .4s ${i*60}ms ease both` }}>
+                <div key={i} className="stat-dark" style={{ animation:`fadeUp .4s ${i*50}ms ease both` }}>
                   <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:s.accent,borderRadius:"16px 16px 0 0" }} />
-                  <div style={{ width:38,height:38,background:`${s.accent}18`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:12 }}>{s.icon}</div>
-                  <div style={{ fontSize:28,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
-                  <div style={{ fontSize:11,color:"#aaa",marginTop:6,fontWeight:500 }}>{s.label}</div>
+                  <div style={{ width:34,height:34,background:`${s.accent}15`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}>{s.icon}</div>
+                  <div style={{ fontSize:26,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
+                  <div style={{ fontSize:10,color:"#aaa",marginTop:5,fontWeight:500,lineHeight:1.3 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -3328,7 +3380,7 @@ export default function AdminPage() {
             {activeTab === "clinics" && (
               <>
                 {/* SEARCH + FILTER */}
-                <div style={{ background:"#fff",borderRadius:12,padding:"14px 16px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
+                <div className="search-filter-wrap" style={{ background:"#fff",borderRadius:12,padding:"14px 16px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
                   <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
                     <span style={{ color:"#ccc",fontSize:14 }}>🔍</span>
                     <input
@@ -3339,7 +3391,7 @@ export default function AdminPage() {
                     />
                     {search && <button onClick={() => setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#aaa" }}>✕</button>}
                   </div>
-                <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                <div className="filter-chips-wrap" style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
                     {[["all",tr.filterAll],["active",tr.filterActive],["inactive",tr.filterInactive]].map(([k,v]) => (
                       <button key={k} className={`filter-chip-dark${filter===k?" active":""}`} onClick={() => setFilter(k)}>{v}</button>
                     ))}
@@ -3360,9 +3412,14 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
-                    <div style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 160px",padding:"11px 20px",background:"#f7f9fc",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
-                      {[tr.clinics.table.name,tr.clinics.table.owner,tr.clinics.table.email,tr.clinics.table.status,tr.clinics.table.plan,tr.clinics.table.expiry,tr.clinics.table.actions].map((h,i) => (
-                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.6,paddingLeft:i>0&&i<6?8:0,textAlign:i===6?"center":"start" }}>{h}</div>
+                    <div className="admin-header-row" style={{ display:"grid",gridTemplateColumns:"2fr 140px 110px 120px",padding:"10px 20px",background:"#f7f9fc",borderBottom:"1.5px solid #eef0f3" }}>
+                      {[
+                        isAr?"العيادة / الصيدلية":"Clinic / Pharmacy",
+                        isAr?"الخطة":"Plan",
+                        isAr?"تاريخ الانتهاء":"Expiry",
+                        isAr?"الإجراءات":"Actions",
+                      ].map((h,i) => (
+                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.6,textAlign:i===3?"center":"start",paddingLeft:i>0&&i<3?8:0 }}>{h}</div>
                       ))}
                     </div>
 
@@ -3373,73 +3430,147 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       paginatedClinics.map(c => {
-                        const ss      = STATUS_COLORS[c.status] || STATUS_COLORS.active;
-                        const pc      = PLAN_COLORS[c.plan];
+                        const dot     = statusDot(c);
                         const expSoon = isExpiringSoon(c.expiry);
                         const exp     = isExpired(c.expiry);
+                        const planColor = PLAN_COLORS[c.plan] || "#0863ba";
                         return (
-                          <div key={c.id} className="admin-row" style={{ display:"grid",gridTemplateColumns:"1fr 130px 180px 90px 100px 120px 160px",padding:"14px 20px",alignItems:"center",gap:0 }}>
-                            <div>
-                              <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6 }}>
-                                <span style={{ fontSize:15 }}>
-                                  {c.account_type === "pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]}
-                                </span>
-                                {c.name}
-                                {c.account_type === "pharmacy" && (
-                                  <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"rgba(39,174,96,.1)",color:"#27ae60",flexShrink:0 }}>
-                                    {isAr?"صيدلية":"Pharmacy"}
+                          <div key={c.id} className="admin-row">
+                            {/* ── Desktop row ── */}
+                            <div className="admin-row-desktop" style={{ display:"grid",gridTemplateColumns:"2fr 140px 110px 120px",padding:"14px 20px",alignItems:"center" }}>
+
+                              {/* العيادة: نقطة + اسم + إيميل */}
+                              <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                                <div title={dot.title} style={{ width:9,height:9,borderRadius:"50%",background:dot.color,flexShrink:0,boxShadow:`0 0 0 2px ${dot.color}22` }} />
+                                <div style={{ minWidth:0 }}>
+                                  <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
+                                    <span style={{ fontSize:14 }}>{c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]}</span>
+                                    <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{c.name}</span>
+                                  </div>
+                                  <div
+                                    className="email-copy"
+                                    title={isAr?"اضغط لنسخ":"Click to copy"}
+                                    onClick={() => copyEmail(c.email)}
+                                    style={{ fontSize:11,color:"#aaa",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:280 }}
+                                  >{c.email}</div>
+                                </div>
+                              </div>
+
+                              {/* الخطة */}
+                              <div style={{ paddingLeft:8 }}>
+                                {c.account_type === "pharmacy" ? (
+                                  <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(39,174,96,.12)",color:"#27ae60" }}>
+                                    💊 {isAr?"صيدلية":"Pharmacy"}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:`${planColor}18`,color:planColor }}>
+                                    {tr.clinics.plans[c.plan as keyof typeof tr.clinics.plans] || c.plan}
                                   </span>
                                 )}
-                              </div>
-                              <div style={{ fontSize:11,color:"#ccc",marginTop:2 }}>ID: #{c.id}</div>
-                            </div>
-                            <div style={{ fontSize:12,color:"#666",paddingLeft:8 }}>{c.owner}</div>
-                            <div style={{ fontSize:11,color:"#aaa",paddingLeft:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{c.email}</div>
-                            <div style={{ paddingLeft:8 }}>
-                              <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>
-                                {tr.clinics.statuses[c.status]}
-                              </span>
-                            </div>
-                            <div style={{ paddingLeft:8 }}>
-                              {c.account_type === "pharmacy" ? (
-                                <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(39,174,96,.12)",color:"#27ae60" }}>
-                                  💊 {isAr?"صيدلية":"Pharmacy"}
-                                </span>
-                              ) : (
-                              <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:`${PLAN_COLORS[c.plan]||"#0863ba"}20`,color:PLAN_COLORS[c.plan]||"#0863ba" }}>
-                                {tr.clinics.plans[c.plan as keyof typeof tr.clinics.plans] || c.plan}
-                              </span>
-                              )}
-                              {["shared_basic","shared_pro","shared_enterprise"].includes(c.plan) && (
-                                <div style={{ fontSize:9,color:PLAN_COLORS[c.plan],fontWeight:600,marginTop:3 }}>
-                                  👥 {c.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[c.plan] ?? 2} {isAr?"أطباء":"doctors"}
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ paddingLeft:8 }}>
-                              <div style={{ fontSize:11,color:exp?"#c0392b":expSoon?"#e67e22":"#aaa",fontWeight:exp||expSoon?700:400 }}>{fmtDate(c.expiry)}</div>
-                              {expSoon && !exp && <div style={{ fontSize:9,color:"#e67e22",fontWeight:600,marginTop:2,animation:"pulse 2s infinite" }}>⚠ {isAr?"تنتهي قريباً":"Expiring soon"}</div>}
-                              {exp      && <div style={{ fontSize:9,color:"#c0392b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
-                            </div>
-                            <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,position:"relative" }} onClick={e => e.stopPropagation()}>
-                              <button
-                                onClick={e => { e.stopPropagation(); setSubClinic(c); }}
-                                style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",transition:"all .18s" }}>
-                                💳 {isAr?"تعديل الاشتراك":"Edit Sub"}
-                              </button>
-                              <button className="icon-btn-dark" onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }}>⋯</button>
-                              {openMenuId === c.id && (
-                                <div className="dropdown-dark">
-                                  <div className="dropdown-dark-item" onClick={() => { setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setOpenMenuId(null); }}>💬 {(tr as any).messaging?.title ?? "مراسلة"}{msgUnread[c.user_id ?? ""] ? ` (${msgUnread[c.user_id ?? ""]})` : ""}</div>
-              <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
-                                  <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}>🔑 {tr.clinics.actions.resetPass}</div>
-                                  <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
-                                    {c.status==="active"?"⏸ "+tr.clinics.actions.suspend:"▶ "+tr.clinics.actions.activate}
+                                {["shared_basic","shared_pro","shared_enterprise"].includes(c.plan) && (
+                                  <div style={{ fontSize:9,color:planColor,fontWeight:600,marginTop:3 }}>
+                                    👥 {c.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[c.plan] ?? 2} {isAr?"أطباء":"drs"}
                                   </div>
-                                  <div style={{ height:1,background:"#eef0f3",margin:"4px 0" }} />
-                                  <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}>🗑️ {tr.clinics.actions.delete}</div>
+                                )}
+                              </div>
+
+                              {/* تاريخ الانتهاء — أرقام إنجليزية دائماً */}
+                              <div style={{ paddingLeft:8 }}>
+                                <div style={{ fontSize:12,fontWeight:exp||expSoon?700:400,color:exp?"#c0392b":expSoon?"#e67e22":"#666",fontVariantNumeric:"tabular-nums",direction:"ltr",textAlign:"start" }}>
+                                  {fmtDateEn(c.expiry)}
                                 </div>
-                              )}
+                                {expSoon && !exp && <div style={{ fontSize:9,color:"#e67e22",fontWeight:600,marginTop:2 }}>⚠ {isAr?"قريباً":"Soon"}</div>}
+                                {exp      && <div style={{ fontSize:9,color:"#c0392b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
+                              </div>
+
+                              {/* أزرار الإجراءات */}
+                              <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,position:"relative" }} onClick={e => e.stopPropagation()}>
+                                {/* تعديل الاشتراك */}
+                                <button
+                                  className="icon-btn-dark"
+                                  title={isAr?"تعديل الاشتراك":"Edit Subscription"}
+                                  onClick={e => { e.stopPropagation(); setSubClinic(c); }}
+                                  style={{ width:32,height:32 }}
+                                >💳</button>
+
+                                {/* مراسلة */}
+                                <button
+                                  className="icon-btn-dark msg"
+                                  title={isAr?"مراسلة":"Message"}
+                                  onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); }}
+                                  style={{ width:32,height:32,position:"relative" }}
+                                >
+                                  💬
+                                  {msgUnread[c.user_id ?? ""] ? (
+                                    <span style={{ position:"absolute",top:-3,right:-3,width:14,height:14,borderRadius:"50%",background:"#c0392b",color:"#fff",fontSize:8,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                                      {msgUnread[c.user_id ?? ""]}
+                                    </span>
+                                  ) : null}
+                                </button>
+
+                                {/* المزيد */}
+                                <button
+                                  className="icon-btn-dark more"
+                                  title={isAr?"المزيد":"More"}
+                                  onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }}
+                                  style={{ width:32,height:32 }}
+                                >⋯</button>
+
+                                {openMenuId === c.id && (
+                                  <div className="dropdown-dark">
+                                    <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
+                                    <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}>🔑 {tr.clinics.actions.resetPass}</div>
+                                    <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
+                                      {c.status==="active" ? "⏸ "+tr.clinics.actions.suspend : "▶ "+tr.clinics.actions.activate}
+                                    </div>
+                                    <div style={{ height:1,background:"#eef0f3",margin:"4px 0" }} />
+                                    <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}>🗑️ {tr.clinics.actions.delete}</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* ── Mobile row ── */}
+                            <div className="admin-row-mobile" style={{ padding:"14px 16px",flexDirection:"column",gap:10 }}>
+                              {/* الصف الأول: نقطة + اسم + أزرار */}
+                              <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                                <div title={dot.title} style={{ width:8,height:8,borderRadius:"50%",background:dot.color,flexShrink:0 }} />
+                                <span style={{ fontSize:13,fontWeight:700,color:"#353535",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
+                                  {c.account_type==="pharmacy" ? "💊 " : CLINIC_TYPE_ICONS[c.clinic_type||"general"]+" "}{c.name}
+                                </span>
+                                <div style={{ display:"flex",gap:5,flexShrink:0 }} onClick={e => e.stopPropagation()}>
+                                  <button className="icon-btn-dark" title={isAr?"تعديل الاشتراك":"Edit Sub"} onClick={e => { e.stopPropagation(); setSubClinic(c); }} style={{ width:30,height:30 }}>💳</button>
+                                  <button className="icon-btn-dark msg" title={isAr?"مراسلة":"Msg"} onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); }} style={{ width:30,height:30,position:"relative" }}>
+                                    💬
+                                    {msgUnread[c.user_id ?? ""] ? <span style={{ position:"absolute",top:-3,right:-3,width:13,height:13,borderRadius:"50%",background:"#c0392b",color:"#fff",fontSize:7,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>{msgUnread[c.user_id ?? ""]}</span> : null}
+                                  </button>
+                                  <button className="icon-btn-dark more" onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }} style={{ width:30,height:30 }}>⋯</button>
+                                  {openMenuId === c.id && (
+                                    <div className="dropdown-dark" style={{ top:"calc(100% + 4px)",right:0 }}>
+                                      <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
+                                      <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}>🔑 {tr.clinics.actions.resetPass}</div>
+                                      <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
+                                        {c.status==="active" ? "⏸ "+tr.clinics.actions.suspend : "▶ "+tr.clinics.actions.activate}
+                                      </div>
+                                      <div style={{ height:1,background:"#eef0f3",margin:"4px 0" }} />
+                                      <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}>🗑️ {tr.clinics.actions.delete}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {/* الصف الثاني: إيميل + خطة + تاريخ */}
+                              <div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+                                <span
+                                  className="email-copy"
+                                  onClick={() => copyEmail(c.email)}
+                                  style={{ fontSize:11,color:"#aaa",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:160 }}
+                                >{c.email}</span>
+                                <span style={{ width:1,height:12,background:"#eef0f3",flexShrink:0 }} />
+                                <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${planColor}15`,color:planColor }}>
+                                  {c.account_type==="pharmacy" ? (isAr?"صيدلية":"Pharmacy") : (tr.clinics.plans[c.plan as keyof typeof tr.clinics.plans]||c.plan)}
+                                </span>
+                                <span style={{ fontSize:11,color:exp?"#c0392b":expSoon?"#e67e22":"#aaa",fontVariantNumeric:"tabular-nums",direction:"ltr",display:"inline-block",fontWeight:exp||expSoon?700:400 }}>{fmtDateEn(c.expiry)}</span>
+                              </div>
                             </div>
                           </div>
                         );
