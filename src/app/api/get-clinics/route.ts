@@ -1,6 +1,7 @@
 // src/app/api/get-clinics/route.ts
 // ─── API route لجلب العيادات بصلاحية service_role (يتجاوز RLS) ───
 
+import { isAdminAuthorized } from "../_adminAuth";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -13,8 +14,7 @@ const supabaseAdmin = createClient(
 
 export async function GET(req: Request) {
   // ── التحقق من صلاحية الأدمن ─────────────────────────────────
-  const adminSecret = req.headers.get("x-admin-secret");
-  if (adminSecret !== process.env.NABD_ADMIN_SECRET) {
+  if (!isAdminAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

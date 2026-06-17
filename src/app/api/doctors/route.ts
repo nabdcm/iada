@@ -1,5 +1,6 @@
 // src/app/api/doctors/route.ts
 import { createClient } from "@supabase/supabase-js";
+import { isAdminAuthorized } from "../_adminAuth";
 import { NextResponse } from "next/server";
 
 const supabaseAdmin = createClient(
@@ -39,8 +40,7 @@ export async function GET(req: Request) {
 // ── POST: إضافة / تعديل / حذف / تبديل حالة طبيب ────────────
 export async function POST(req: Request) {
   // ── التحقق من صلاحية الأدمن ─────────────────────────────────
-  const adminSecret = req.headers.get("x-admin-secret");
-  if (adminSecret !== process.env.NABD_ADMIN_SECRET) {
+  if (!isAdminAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

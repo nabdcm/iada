@@ -2,6 +2,7 @@
 // ─── تجميد / رفع تجميد العيادة ───────────────────────────────
 
 import { NextRequest, NextResponse } from "next/server";
+import { isAdminAuthorized } from "../_adminAuth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -12,8 +13,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   // ── التحقق من صلاحية الأدمن ─────────────────────────────────
-  const adminSecret = req.headers.get("x-admin-secret");
-  if (adminSecret !== process.env.NABD_ADMIN_SECRET) {
+  if (!isAdminAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

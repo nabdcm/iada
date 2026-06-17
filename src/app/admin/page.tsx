@@ -2735,19 +2735,20 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
 // ─── بيانات دخول المدير — مستقلة تماماً عن Supabase ────────
 // ============================================================
 // ── Admin API helper ────────────────────────────────────────
+// ── Admin API helper — يُرسل x-admin-secret من server env فقط ─
+// الـ secret لم يعد NEXT_PUBLIC — يُرسَل عبر الـ cookie بدلاً منه
 const adminFetch = (url: string, options: RequestInit = {}) =>
   fetch(url, {
     ...options,
+    credentials: "include", // يُرسل الـ httpOnly cookie تلقائياً
     headers: {
       "Content-Type": "application/json",
-      "x-admin-secret": process.env.NEXT_PUBLIC_NABD_ADMIN_SECRET ?? "",
       ...(options.headers as Record<string, string> ?? {}),
     },
   });
 
-const ADMIN_USERNAME = "nabd";
-const ADMIN_PASSWORD = "nabd.111";
-const SESSION_KEY    = "__nabd_admin_auth__";
+// SESSION_KEY لا يزال مستخدماً لتتبع حالة الـ auth في client بعد التحقق
+const SESSION_KEY = "__nabd_admin_auth__";
 
 // ─── شاشة تسجيل دخول المدير ──────────────────────────────
 function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
@@ -2759,7 +2760,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   const [attempts, setAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -2771,20 +2772,23 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      if (
-        username.trim().toLowerCase() === ADMIN_USERNAME &&
-        password === ADMIN_PASSWORD
-      ) {
-        // حفظ الجلسة مع وقت انتهاء (ساعة واحدة)
-        const expiry = Date.now() + 60 * 60 * 1000;
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ auth: "1", expiry }));
+
+    try {
+      const res = await fetch("/api/admin-login", {
+        method:      "POST",
+        credentials: "include",
+        headers:     { "Content-Type": "application/json" },
+        body:        JSON.stringify({ username: username.trim(), password }),
+      });
+
+      if (res.ok) {
+        // حفظ flag بسيط في sessionStorage فقط للـ UI state (ليس للتحقق الأمني)
+        sessionStorage.setItem(SESSION_KEY, "1");
         setAttempts(0);
         onSuccess();
       } else {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
-        // قفل مؤقت بعد 5 محاولات فاشلة
         if (newAttempts >= 5) {
           const lockDuration = Math.min(newAttempts * 30, 300) * 1000;
           setLockedUntil(Date.now() + lockDuration);
@@ -2792,10 +2796,13 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         } else {
           setError(`اسم المستخدم أو كلمة المرور غير صحيحة. (${5 - newAttempts} محاولات متبقية)`);
         }
-        setLoading(false);
         setPassword("");
       }
-    }, 800);
+    } catch {
+      setError("خطأ في الاتصال. حاول مرة أخرى.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -2956,19 +2963,15 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    let ok = false;
-    if (raw) {
-      try {
-        const { auth, expiry } = JSON.parse(raw);
-        ok = auth === "1" && Date.now() < expiry;
-        if (!ok) sessionStorage.removeItem(SESSION_KEY);
-      } catch { ok = false; }
-    }
-    setIsAuthenticated(ok);
+    // التحقق من الجلسة عبر الـ server (httpOnly cookie)
+    fetch("/api/admin-check", { credentials: "include" })
+      .then(r => setIsAuthenticated(r.ok))
+      .catch(() => setIsAuthenticated(false));
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch("/api/admin-logout", { method: "POST", credentials: "include" })
+      .catch(() => {});
     sessionStorage.removeItem(SESSION_KEY);
     setIsAuthenticated(false);
   };

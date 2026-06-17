@@ -33,9 +33,30 @@ export async function middleware(request: NextRequest) {
   const isProtected = PROTECTED.some(p => pathname.startsWith(p));
   if (!isProtected) return NextResponse.next();
 
-  // ── /admin يملك نظام مصادقة خاصاً (client-side) ─────────────
-  // نمنع فقط الوصول المباشر بدون session header خاص
+  // ── /admin محمي بـ httpOnly cookie من server-side ────────────
   if (pathname.startsWith("/admin")) {
+    const token = request.cookies.get("nabd_admin_session")?.value;
+    if (!token) {
+      // لا cookie → أكمل (ستعرض شاشة دخول المدير client-side)
+      return NextResponse.next();
+    }
+    try {
+      const payload = JSON.parse(Buffer.from(token, "base64").toString("utf8")) as {
+        auth: string; expiry: number; secret: string;
+      };
+      const isValid =
+        payload.auth === "1" &&
+        Date.now() < payload.expiry &&
+        payload.secret === (process.env.NABD_ADMIN_SECRET ?? "");
+      if (!isValid) {
+        // cookie منتهي أو مزيّف — امسحه
+        const res = NextResponse.next();
+        res.cookies.set("nabd_admin_session", "", { maxAge: 0, path: "/" });
+        return res;
+      }
+    } catch {
+      return NextResponse.next();
+    }
     return NextResponse.next();
   }
 
