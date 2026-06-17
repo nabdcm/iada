@@ -3032,6 +3032,8 @@ export default function AdminPage() {
   };
   const [dataToolsModal, setDataToolsModal] = useState(false);
   const [accountFilter, setAccountFilter] = useState<"all"|"clinic"|"pharmacy">("all");
+  const [currentPage,   setCurrentPage]   = useState(1);
+  const PAGE_SIZE = 20;
 
   useEffect(() => { loadClinics(); }, []);
 
@@ -3094,6 +3096,12 @@ export default function AdminPage() {
     if (accountFilter === "pharmacy" && c.account_type !== "pharmacy") return false;
     return true;
   }), [clinics, search, filter, accountFilter]);
+
+  // ── إعادة الصفحة لـ 1 عند أي تغيير في البحث أو الفلاتر ────
+  useEffect(() => { setCurrentPage(1); }, [search, filter, accountFilter]);
+
+  const totalPages      = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedClinics = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const stats = useMemo(() => ({
     total:      clinics.length,
@@ -3364,7 +3372,7 @@ export default function AdminPage() {
                         <div style={{ fontSize:14 }}>{tr.noResults}</div>
                       </div>
                     ) : (
-                      filtered.map(c => {
+                      paginatedClinics.map(c => {
                         const ss      = STATUS_COLORS[c.status] || STATUS_COLORS.active;
                         const pc      = PLAN_COLORS[c.plan];
                         const expSoon = isExpiringSoon(c.expiry);
@@ -3437,6 +3445,61 @@ export default function AdminPage() {
                         );
                       })
                     )}
+                  </div>
+                )}
+
+                {/* ── PAGINATION ── */}
+                {!loading && filtered.length > PAGE_SIZE && (
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:16, padding:"12px 16px", background:"#fff", borderRadius:12, border:"1.5px solid #eef0f3" }}>
+                    {/* عداد النتائج */}
+                    <span style={{ fontSize:12, color:"#aaa", fontFamily:"Rubik,sans-serif" }}>
+                      {isAr
+                        ? `عرض ${(currentPage-1)*PAGE_SIZE+1}–${Math.min(currentPage*PAGE_SIZE, filtered.length)} من ${filtered.length}`
+                        : `Showing ${(currentPage-1)*PAGE_SIZE+1}–${Math.min(currentPage*PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+                    </span>
+
+                    {/* أزرار التنقل */}
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      {/* السابق */}
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p-1))}
+                        disabled={currentPage === 1}
+                        style={{ width:34, height:34, borderRadius:8, border:"1.5px solid #eef0f3", background: currentPage===1 ? "#f7f9fc" : "#fff", cursor: currentPage===1 ? "not-allowed" : "pointer", fontSize:14, color: currentPage===1 ? "#ccc" : "#666", display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s" }}
+                      >
+                        {isAr ? "›" : "‹"}
+                      </button>
+
+                      {/* أرقام الصفحات */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                        .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                          if (idx > 0 && p - (arr[idx-1] as number) > 1) acc.push("...");
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((item, idx) =>
+                          item === "..." ? (
+                            <span key={`dots-${idx}`} style={{ width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, color:"#aaa" }}>…</span>
+                          ) : (
+                            <button
+                              key={item}
+                              onClick={() => setCurrentPage(item as number)}
+                              style={{ width:34, height:34, borderRadius:8, border: currentPage===item ? "1.5px solid rgba(8,99,186,.3)" : "1.5px solid #eef0f3", background: currentPage===item ? "rgba(8,99,186,.08)" : "#fff", cursor:"pointer", fontSize:13, fontWeight: currentPage===item ? 700 : 400, color: currentPage===item ? "#0863ba" : "#666", fontFamily:"Rubik,sans-serif", transition:"all .15s" }}
+                            >
+                              {item}
+                            </button>
+                          )
+                        )}
+
+                      {/* التالي */}
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))}
+                        disabled={currentPage === totalPages}
+                        style={{ width:34, height:34, borderRadius:8, border:"1.5px solid #eef0f3", background: currentPage===totalPages ? "#f7f9fc" : "#fff", cursor: currentPage===totalPages ? "not-allowed" : "pointer", fontSize:14, color: currentPage===totalPages ? "#ccc" : "#666", display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s" }}
+                      >
+                        {isAr ? "‹" : "›"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </>
