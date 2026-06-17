@@ -1175,6 +1175,12 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
   const [newPass,       setNewPass]       = useState("");
   const [copied,        setCopied]        = useState(false);
   const [copiedLink,    setCopiedLink]    = useState(false);
+  const [showPin,       setShowPin]       = useState(false);
+  // savedRA tracks what's actually persisted in DB — used to gate the copy-link button
+  const [savedRA, setSavedRA] = useState({
+    enabled: clinic.restricted_access_enabled ?? false,
+    pin:     clinic.restricted_access_pin     ?? "",
+  });
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState("");
   const [successMsg,    setSuccessMsg]    = useState("");
@@ -1342,6 +1348,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     if (!result.ok) { setError(result.error!); return; }
     setSuccessMsg(isAr?"✓ تم الحفظ بنجاح":"✓ Saved successfully");
     setNewPass("");
+    setSavedRA({ enabled: form.restricted_access_enabled, pin: form.restricted_access_pin });
     onSave(); // تحديث القائمة في الخلفية
     setTimeout(() => { setSuccessMsg(""); onClose(); }, 800);
   };
@@ -1992,6 +1999,10 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                   const pin = String(Math.floor(1000 + Math.random() * 9000));
                   setForm(p => ({ ...p, restricted_access_pin: pin }));
                 };
+                // الرابط يظهر فقط إذا كان الحفظ الفعلي في DB يطابق الحالة الحالية
+                const linkReady = savedRA.enabled === form.restricted_access_enabled &&
+                  savedRA.pin === form.restricted_access_pin &&
+                  savedRA.enabled;
                 return (
                   <div style={{ marginTop:6,borderTop:"1.5px solid #eef0f3",paddingTop:16 }}>
                     <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
@@ -2028,44 +2039,61 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
                         {form.restricted_access_enabled && (
                           <>
-                            {/* PIN */}
+                            {/* PIN — يظهر كنجوم مع زر إظهار/إخفاء */}
                             <div>
                               <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6,textTransform:"uppercase" as const,letterSpacing:.4 }}>
                                 {ra.pinLabel}
                               </label>
                               <div style={{ display:"flex",gap:8 }}>
-                                <input
-                                  value={form.restricted_access_pin}
-                                  onChange={e => setForm(p => ({ ...p, restricted_access_pin: e.target.value.replace(/\D/g,"").slice(0,8) }))}
-                                  placeholder={ra.pinPh}
-                                  inputMode="numeric"
-                                  maxLength={8}
-                                  style={{ ...inputSt, flex:1, fontFamily:"monospace", letterSpacing:4, fontSize:18, fontWeight:700 }}
-                                  onFocus={e => e.target.style.borderColor="#0e7c6a"}
-                                  onBlur={e => e.target.style.borderColor="#e8eaed"}
-                                />
+                                <div style={{ flex:1,position:"relative" as const,display:"flex",alignItems:"center" }}>
+                                  <input
+                                    type={showPin ? "text" : "password"}
+                                    value={form.restricted_access_pin}
+                                    onChange={e => setForm(p => ({ ...p, restricted_access_pin: e.target.value.replace(/\D/g,"").slice(0,8) }))}
+                                    placeholder={ra.pinPh}
+                                    inputMode="numeric"
+                                    autoComplete="new-password"
+                                    name="restricted_access_pin"
+                                    maxLength={8}
+                                    style={{ ...inputSt, flex:1, fontFamily:"monospace", letterSpacing: showPin ? 6 : 4, fontSize:18, fontWeight:700, paddingLeft:40 }}
+                                    onFocus={e => e.target.style.borderColor="#0e7c6a"}
+                                    onBlur={e => e.target.style.borderColor="#e8eaed"}
+                                  />
+                                  {/* زر إظهار/إخفاء */}
+                                  <button type="button" onClick={() => setShowPin(v => !v)}
+                                    style={{ position:"absolute" as const,left:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,padding:0,color:"#aaa",lineHeight:1 }}
+                                    title={showPin ? "إخفاء" : "إظهار"}>
+                                    {showPin ? "🙈" : "👁️"}
+                                  </button>
+                                </div>
                                 <button type="button" onClick={genPin}
-                                  style={{ padding:"0 14px",background:"rgba(14,124,106,.06)",color:"#0e7c6a",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
+                                  style={{ padding:"0 14px",background:"rgba(14,124,106,.06)",color:"#0e7c6a",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" as const }}>
                                   🎲 {ra.generate}
                                 </button>
                               </div>
                               <p style={{ fontSize:11,color:"#aaa",marginTop:5,lineHeight:1.5 }}>⚠️ {ra.pinNote}</p>
                             </div>
 
-                            {/* رابط الدخول */}
+                            {/* رابط الدخول — يظهر فقط بعد الحفظ */}
                             <div>
                               <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6,textTransform:"uppercase" as const,letterSpacing:.4 }}>
                                 {ra.linkLabel}
                               </label>
-                              <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-                                <code style={{ flex:1,background:"#f7f9fc",padding:"10px 12px",borderRadius:10,fontSize:11,color:"#0e7c6a",fontFamily:"monospace",wordBreak:"break-all",border:"1.5px solid rgba(14,124,106,.2)",lineHeight:1.5 }}>
-                                  {restrictedLink}
-                                </code>
-                                <button type="button" onClick={copyRestrictedLink}
-                                  style={{ padding:"10px 14px",background:copiedLink?"rgba(46,125,50,.08)":"rgba(14,124,106,.06)",color:copiedLink?"#2e7d32":"#0e7c6a",border:`1.5px solid ${copiedLink?"rgba(46,125,50,.2)":"rgba(14,124,106,.2)"}`,borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",transition:"all .2s" }}>
-                                  {copiedLink ? ra.copiedLink : ra.copyLink}
-                                </button>
-                              </div>
+                              {linkReady ? (
+                                <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+                                  <code style={{ flex:1,background:"#f7f9fc",padding:"10px 12px",borderRadius:10,fontSize:11,color:"#0e7c6a",fontFamily:"monospace",wordBreak:"break-all" as const,border:"1.5px solid rgba(14,124,106,.2)",lineHeight:1.5 }}>
+                                    {restrictedLink}
+                                  </code>
+                                  <button type="button" onClick={copyRestrictedLink}
+                                    style={{ padding:"10px 14px",background:copiedLink?"rgba(46,125,50,.08)":"rgba(14,124,106,.06)",color:copiedLink?"#2e7d32":"#0e7c6a",border:`1.5px solid ${copiedLink?"rgba(46,125,50,.2)":"rgba(14,124,106,.2)"}`,borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" as const,transition:"all .2s" }}>
+                                    {copiedLink ? ra.copiedLink : ra.copyLink}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ padding:"10px 14px",background:"rgba(230,126,34,.06)",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:10,fontSize:12,color:"#e67e22",display:"flex",alignItems:"center",gap:8 }}>
+                                  💾 {isAr ? "احفظ الإعدادات أولاً لتتمكن من نسخ الرابط" : "Save settings first to copy the link"}
+                                </div>
+                              )}
                             </div>
                           </>
                         )}
