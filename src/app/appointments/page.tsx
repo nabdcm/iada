@@ -982,6 +982,7 @@ export default function AppointmentsPage() {
   const [plan,                setPlan]                = useState<PlanType>("basic");
   const [shareModal,          setShareModal]          = useState(false);
   const [copied,              setCopied]              = useState(false);
+  const [displayCopied,       setDisplayCopied]       = useState(false);
   const [viewMonth,           setViewMonth]           = useState(now.getMonth());
   const [viewYear,            setViewYear]            = useState(now.getFullYear());
   const [selectedKey,         setSelectedKey]         = useState(todayKey);
@@ -1417,6 +1418,20 @@ export default function AppointmentsPage() {
                     🔗 {isAr?"رابط الحجز":"Booking Link"}
                   </button>
                 )}
+                {/* زر شاشة قاعة الانتظار */}
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/display/${clinicId}`;
+                    navigator.clipboard.writeText(url).then(() => {
+                      setDisplayCopied(true);
+                      setTimeout(() => setDisplayCopied(false), 2500);
+                    });
+                  }}
+                  title={isAr?"نسخ رابط شاشة قاعة الانتظار":"Copy Waiting Room Display URL"}
+                  style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:displayCopied?"rgba(46,125,50,.08)":"#fff",color:displayCopied?"#2e7d32":"#555",border:`1.5px solid ${displayCopied?"rgba(46,125,50,.3)":"#eef0f3"}`,borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .25s" }}
+                >
+                  {displayCopied ? (isAr?"✓ تم النسخ":"✓ Copied!") : (isMobile?"🖥️":`🖥️ ${isAr?"شاشة الانتظار":"Display"}`)}
+                </button>
                 {/* زر التحديث */}
                 <button
                   onClick={() => { loadPatients(); loadAppointments(); }}
