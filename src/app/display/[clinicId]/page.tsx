@@ -1,27 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-// ─── Supabase (anon, read-only public queries) ─────────────────
-const supabase = createClient(
-  "https://ldqaohjnlxiwvaijcsbm.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkcWFvaGpubHhpd3ZhaWpjc2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1Nzk3MDUsImV4cCI6MjA4NzE1NTcwNX0.2vo-DqFGbJqa8MEgotfujz23QjU2bfMEDIDDnbDQ1Jo"
-);
 
 // ─── Types ──────────────────────────────────────────────────────
-interface Appointment {
+interface ApiAppointment {
   id: number;
   patient_id: number;
   date: string;
   time: string;
   duration: number;
   status: string;
-}
-
-interface Patient {
-  id: number;
-  name: string;
+  patientName: string;
 }
 
 interface DisplayAppt {
@@ -46,12 +35,10 @@ function maskName(fullName: string): string {
     .slice(1)
     .map((p, i) => {
       if (i === 0) {
-        // أول حرفين من الكنية + نجوم
         const visible = p.slice(0, 2);
         const stars = "*".repeat(Math.max(0, p.length - 2));
         return visible + stars;
       }
-      // باقي الأجزاء: كلها نجوم
       return "*".repeat(p.length);
     })
     .join(" ");
@@ -120,60 +107,34 @@ export default function DisplayPage({
     return () => clearInterval(id);
   }, []);
 
-  // ─── Fetch data ───────────────────────────────────────────────
+  // ─── Fetch via API route (bypasses RLS) ───────────────────────
   const fetchData = useCallback(async () => {
     try {
-      // جلب معلومات العيادة
-      const { data: clinicData } = await supabase
-        .from("clinics")
-        .select("name, owner")
-        .eq("user_id", clinicId)
-        .single();
+      const today = todayISO();
+      const res = await fetch(`/api/display-data?clinicId=${encodeURIComponent(clinicId)}&date=${today}`);
 
-      if (!clinicData) {
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        console.error("display-data error:", json);
         setError("العيادة غير موجودة");
         return;
       }
-      setClinicInfo({ name: clinicData.name, owner: clinicData.owner });
 
-      const today = todayISO();
+      const data = await res.json();
+      setClinicInfo({ name: data.clinic.name, owner: data.clinic.owner });
+
       const nowMin = nowMinutes();
+      const appts: ApiAppointment[] = data.appointments ?? [];
 
-      // جلب المواعيد
-      const { data: apptData } = await supabase
-        .from("appointments")
-        .select("id, patient_id, date, time, duration, status")
-        .eq("user_id", clinicId)
-        .eq("date", today)
-        .not("status", "in", '("cancelled","no-show","pending_approval")')
-        .order("time", { ascending: true });
-
-      const appts: Appointment[] = apptData ?? [];
       if (appts.length === 0) {
         setAppointments([]);
         setCurrentAppt(null);
         return;
       }
 
-      // جلب أسماء المرضى
-      const patientIds = [...new Set(appts.map((a) => a.patient_id))];
-      const { data: patientData } = await supabase
-        .from("patients")
-        .select("id, name")
-        .in("id", patientIds);
-
-      const patientMap: Record<number, string> = {};
-      (patientData as Patient[] ?? []).forEach((p) => {
-        patientMap[p.id] = p.name;
-      });
-
       // ─── تحديد "المريض الحالي" ────────────────────────────────
-      // المريض الحالي = أقرب موعد scheduled/completed وقته <= الوقت الحالي
-      // أو أول موعد scheduled إذا لم يبدأ اليوم بعد
+      let current: ApiAppointment | null = null;
 
-      let current: Appointment | null = null;
-
-      // 1. ابحث عن آخر موعد وقته <= الآن وحالته scheduled أو completed
       const pastOrNow = appts.filter(
         (a) =>
           timeToMinutes(a.time) <= nowMin &&
@@ -182,24 +143,18 @@ export default function DisplayPage({
       if (pastOrNow.length > 0) {
         current = pastOrNow[pastOrNow.length - 1];
       } else {
-        // 2. أول موعد scheduled في المستقبل
         const upcoming = appts.filter((a) => a.status === "scheduled");
         if (upcoming.length > 0) current = upcoming[0];
       }
 
-      // ─── قائمة الـ 5 القادمة (بعد الحالي، scheduled فقط) ─────
+      // ─── قائمة الـ 5 القادمة (بعد الحالي) ────────────────────
       const upcomingList = appts
-        .filter(
-          (a) =>
-            a.status === "scheduled" &&
-            a.id !== current?.id
-        )
+        .filter((a) => a.status === "scheduled" && a.id !== current?.id)
         .slice(0, 5);
 
-      // ─── بناء DisplayAppt ─────────────────────────────────────
-      const toDisplay = (a: Appointment, isCurrent: boolean): DisplayAppt => ({
+      const toDisplay = (a: ApiAppointment, isCurrent: boolean): DisplayAppt => ({
         id: a.id,
-        maskedName: maskName(patientMap[a.patient_id] ?? "مريض"),
+        maskedName: maskName(a.patientName),
         time: formatTime12(a.time),
         status: a.status,
         isCurrent,
@@ -211,7 +166,6 @@ export default function DisplayPage({
       // ─── Flash عند تغيير المريض الحالي ───────────────────────
       if (current && current.id !== prevCurrentRef.current) {
         if (prevCurrentRef.current !== null) {
-          // تغيّر المريض الحالي → flash
           setCallFlash(currentDisplay);
           setTimeout(() => setCallFlash(null), 8000);
         }
@@ -221,7 +175,7 @@ export default function DisplayPage({
       setCurrentAppt(currentDisplay);
       setAppointments(upcomingDisplay);
     } catch (err) {
-      console.error(err);
+      console.error("fetchData error:", err);
     }
   }, [clinicId]);
 
@@ -321,16 +275,12 @@ export default function DisplayPage({
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800;900&display=swap');
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body { background: #020b18; }
-
         @keyframes fadeSlideIn {
           from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes flashIn {
           0%   { opacity: 0; transform: scale(.85); }
           15%  { opacity: 1; transform: scale(1.04); }
@@ -338,12 +288,10 @@ export default function DisplayPage({
           85%  { opacity: 1; transform: scale(1); }
           100% { opacity: 0; transform: scale(.95); }
         }
-
         @keyframes pulse {
           0%, 100% { box-shadow: 0 0 0 0 rgba(56,189,248,.4); }
           50%       { box-shadow: 0 0 0 20px rgba(56,189,248,0); }
         }
-
         @keyframes blink {
           0%, 100% { opacity: 1; }
           50%       { opacity: 0.4; }
@@ -365,8 +313,6 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     position: "relative",
   },
-
-  // Flash
   flashOverlay: {
     position: "fixed",
     inset: 0,
@@ -393,8 +339,6 @@ const styles: Record<string, React.CSSProperties> = {
   flashLabel: { fontSize: 22, color: "#94d2ff", fontWeight: 600, marginBottom: 12 },
   flashName: { fontSize: 64, fontWeight: 900, color: "#fff", letterSpacing: 2, marginBottom: 8 },
   flashTime: { fontSize: 28, color: "#38bdf8", fontWeight: 700 },
-
-  // Header
   header: {
     display: "flex",
     alignItems: "center",
@@ -411,8 +355,6 @@ const styles: Record<string, React.CSSProperties> = {
   clockBox: { textAlign: "left" as const },
   clockTime: { fontSize: 52, fontWeight: 900, color: "#38bdf8", lineHeight: 1, fontVariantNumeric: "tabular-nums" },
   clockDate: { fontSize: 14, color: "rgba(255,255,255,.4)", marginTop: 4, textAlign: "right" as const },
-
-  // Body
   body: {
     flex: 1,
     display: "grid",
@@ -429,8 +371,6 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: "uppercase" as const,
     marginBottom: 20,
   },
-
-  // Current patient
   currentSection: { display: "flex", flexDirection: "column" },
   currentCard: {
     background: "linear-gradient(135deg, rgba(56,189,248,.12) 0%, rgba(14,165,233,.06) 100%)",
@@ -477,8 +417,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
   },
-
-  // Upcoming
   upcomingSection: { display: "flex", flexDirection: "column" },
   emptyUpcoming: {
     fontSize: 16,
@@ -513,8 +451,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   upcomingName: { flex: 1, fontSize: 22, fontWeight: 700, color: "#e2e8f0" },
   upcomingTime: { fontSize: 18, fontWeight: 600, color: "rgba(255,255,255,.45)" },
-
-  // Footer
   footer: {
     display: "flex",
     alignItems: "center",
@@ -525,8 +461,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footerBrand: { fontSize: 12, color: "rgba(255,255,255,.25)", fontWeight: 600 },
   footerNote: { fontSize: 11, color: "rgba(255,255,255,.15)" },
-
-  // Error
   errorPage: {
     fontFamily: "'Rubik', sans-serif",
     background: "#020b18",
