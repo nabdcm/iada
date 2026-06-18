@@ -638,6 +638,267 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
   );
 }
 
+// ─── Waiting Room Display Modal ────────────────────────────
+function maskName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const rest = parts.slice(1).map((p, i) => {
+    if (i === 0) return p.slice(0, 2) + "*".repeat(Math.max(0, p.length - 2));
+    return "*".repeat(p.length);
+  }).join(" ");
+  return `${first} ${rest}`;
+}
+
+function fmt12(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "م" : "ص"}`;
+}
+
+function WaitingRoomModal({ appointments, patients, onClose }: {
+  appointments: Appointment[];
+  patients: { id: number; name: string }[];
+  onClose: () => void;
+}) {
+  const [clock, setClock] = useState("");
+  const [dateLabel, setDateLabel] = useState("");
+  const [flashName, setFlashName] = useState<string | null>(null);
+  const prevCurrentId = useRef<number | null>(null);
+
+  // ─── ساعة ────────────────────────────────────────────────
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      const ss = String(now.getSeconds()).padStart(2, "0");
+      setClock(`${hh}:${mm}:${ss}`);
+      const days = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+      const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+      setDateLabel(`${days[now.getDay()]}، ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ─── إغلاق بـ Escape ─────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  // ─── حساب المواعيد ──────────────────────────────────────
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  })();
+
+  const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
+  const todayAppts = appointments
+    .filter(a => a.date === todayStr && a.status !== "cancelled" && a.status !== "no-show")
+    .sort((a, b) => toMin(a.time) - toMin(b.time));
+
+  const getName = (pid: number) => {
+    const p = patients.find(x => x.id === pid);
+    return maskName(p?.name ?? "مريض");
+  };
+
+  // المريض الحالي: آخر موعد وقته <= الآن، أو أول قادم
+  let current: Appointment | null = null;
+  const pastOrNow = todayAppts.filter(a => toMin(a.time) <= nowMin && (a.status === "scheduled" || a.status === "completed"));
+  if (pastOrNow.length > 0) current = pastOrNow[pastOrNow.length - 1];
+  else {
+    const upcoming = todayAppts.filter(a => a.status === "scheduled");
+    if (upcoming.length > 0) current = upcoming[0];
+  }
+
+  const upcomingList = todayAppts
+    .filter(a => a.status === "scheduled" && a.id !== current?.id)
+    .slice(0, 5);
+
+  // Flash عند تغيير المريض الحالي
+  useEffect(() => {
+    if (current && current.id !== prevCurrentId.current) {
+      if (prevCurrentId.current !== null) {
+        setFlashName(getName(current.patient_id));
+        setTimeout(() => setFlashName(null), 7000);
+      }
+      prevCurrentId.current = current.id;
+    }
+  });
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 500,
+      background: "#0a0f1a",
+      fontFamily: "'Rubik', sans-serif",
+      display: "flex", flexDirection: "column",
+      direction: "rtl", overflow: "hidden",
+    }}>
+      {/* Flash overlay */}
+      {flashName && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 10,
+          background: "rgba(8,99,186,.92)",
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center",
+          animation: "wr-flash 7s ease forwards",
+          backdropFilter: "blur(4px)",
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔔</div>
+          <div style={{ fontSize: 18, color: "rgba(255,255,255,.7)", fontWeight: 600, marginBottom: 12 }}>يُرجى التفضل للداخل</div>
+          <div style={{ fontSize: 72, fontWeight: 900, color: "#fff", letterSpacing: 2 }}>{flashName}</div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{
+        background: "rgba(255,255,255,.04)",
+        borderBottom: "1px solid rgba(255,255,255,.08)",
+        padding: "20px 40px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: "rgba(8,99,186,.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 22,
+          }}>🏥</div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>شاشة قاعة الانتظار</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{dateLabel}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <div style={{ fontSize: 40, fontWeight: 900, color: "#0863ba", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+            {clock}
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 40, height: 40, borderRadius: 10,
+              background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)",
+              color: "rgba(255,255,255,.6)", fontSize: 18, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >✕</button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, overflow: "hidden" }}>
+
+        {/* المريض الحالي */}
+        <div style={{
+          borderLeft: "1px solid rgba(255,255,255,.06)",
+          padding: "40px 48px",
+          display: "flex", flexDirection: "column",
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: "rgba(8,99,186,.7)", textTransform: "uppercase", marginBottom: 24 }}>
+            المريض الحالي
+          </div>
+          {current ? (
+            <div style={{
+              background: "rgba(8,99,186,.08)",
+              border: "1.5px solid rgba(8,99,186,.25)",
+              borderRadius: 20, padding: "36px 32px",
+              flex: 1, display: "flex", flexDirection: "column", gap: 16,
+            }}>
+              <div style={{
+                display: "inline-flex", alignSelf: "flex-start",
+                alignItems: "center", gap: 6,
+                background: "rgba(46,125,50,.12)", border: "1px solid rgba(46,125,50,.3)",
+                borderRadius: 20, padding: "5px 14px",
+                fontSize: 12, fontWeight: 700, color: "#4caf50",
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4caf50", display: "inline-block" }} />
+                جارٍ الآن
+              </div>
+              <div style={{ fontSize: 52, fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>
+                {getName(current.patient_id)}
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: "#0863ba" }}>
+                {fmt12(current.time)}
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              flex: 1, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              background: "rgba(255,255,255,.02)",
+              border: "1.5px dashed rgba(255,255,255,.08)",
+              borderRadius: 20,
+            }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🕐</div>
+              <div style={{ fontSize: 15, color: "rgba(255,255,255,.3)" }}>لا يوجد موعد حالي</div>
+            </div>
+          )}
+        </div>
+
+        {/* المواعيد القادمة */}
+        <div style={{ padding: "40px 48px", display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: "rgba(8,99,186,.7)", textTransform: "uppercase", marginBottom: 24 }}>
+            المواعيد القادمة
+          </div>
+          {upcomingList.length === 0 ? (
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,.25)", marginTop: 16 }}>لا توجد مواعيد قادمة</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {upcomingList.map((a, i) => (
+                <div key={a.id} style={{
+                  display: "flex", alignItems: "center", gap: 16,
+                  background: "rgba(255,255,255,.04)",
+                  border: "1px solid rgba(255,255,255,.07)",
+                  borderRadius: 14, padding: "16px 20px",
+                }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    background: "rgba(8,99,186,.15)",
+                    color: "#0863ba", fontSize: 14, fontWeight: 800,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{i + 1}</div>
+                  <div style={{ flex: 1, fontSize: 20, fontWeight: 700, color: "#e0e6f0" }}>
+                    {getName(a.patient_id)}
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,.4)" }}>
+                    {fmt12(a.time)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        borderTop: "1px solid rgba(255,255,255,.06)",
+        padding: "12px 40px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "rgba(255,255,255,.02)",
+      }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,.2)", fontWeight: 600 }}>نبض — نظام إدارة العيادات</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,.15)" }}>اضغط Esc للخروج</span>
+      </div>
+
+      <style>{`
+        @keyframes wr-flash {
+          0%   { opacity: 0; }
+          8%   { opacity: 1; }
+          85%  { opacity: 1; }
+          100% { opacity: 0; pointer-events: none; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+
 // ─── Notification Toast ────────────────────────────────────
 function NotificationToast({ lang, appt, patientName, onDismiss }: {
   lang: Lang; appt: Appointment; patientName: string; onDismiss: () => void;
@@ -982,7 +1243,7 @@ export default function AppointmentsPage() {
   const [plan,                setPlan]                = useState<PlanType>("basic");
   const [shareModal,          setShareModal]          = useState(false);
   const [copied,              setCopied]              = useState(false);
-  const [displayCopied,       setDisplayCopied]       = useState(false);
+  const [showWaitingRoom,      setShowWaitingRoom]      = useState(false);
   const [viewMonth,           setViewMonth]           = useState(now.getMonth());
   const [viewYear,            setViewYear]            = useState(now.getFullYear());
   const [selectedKey,         setSelectedKey]         = useState(todayKey);
@@ -1420,17 +1681,11 @@ export default function AppointmentsPage() {
                 )}
                 {/* زر شاشة قاعة الانتظار */}
                 <button
-                  onClick={() => {
-                    const url = `${window.location.origin}/display/${clinicId}`;
-                    navigator.clipboard.writeText(url).then(() => {
-                      setDisplayCopied(true);
-                      setTimeout(() => setDisplayCopied(false), 2500);
-                    });
-                  }}
-                  title={isAr?"نسخ رابط شاشة قاعة الانتظار":"Copy Waiting Room Display URL"}
-                  style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:displayCopied?"rgba(46,125,50,.08)":"#fff",color:displayCopied?"#2e7d32":"#555",border:`1.5px solid ${displayCopied?"rgba(46,125,50,.3)":"#eef0f3"}`,borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .25s" }}
+                  onClick={() => setShowWaitingRoom(true)}
+                  title={isAr?"شاشة قاعة الانتظار":"Waiting Room Display"}
+                  style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#555",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .25s" }}
                 >
-                  {displayCopied ? (isAr?"✓ تم النسخ":"✓ Copied!") : (isMobile?"🖥️":`🖥️ ${isAr?"شاشة الانتظار":"Display"}`)}
+                  {isMobile?"🖥️":`🖥️ ${isAr?"شاشة الانتظار":"Display"}`}
                 </button>
                 {/* زر التحديث */}
                 <button
@@ -1975,6 +2230,9 @@ export default function AppointmentsPage() {
         )}
         {shareModal&&(
           <ShareModal lang={lang} clinicId={clinicId} copied={copied} setCopied={setCopied} onClose={()=>setShareModal(false)}/>
+        )}
+        {showWaitingRoom&&(
+          <WaitingRoomModal appointments={appointments} patients={patients} onClose={()=>setShowWaitingRoom(false)}/>
         )}
         {notification&&(
           <NotificationToast lang={lang} appt={notification} patientName={getPatientName(notification.patient_id)} onDismiss={()=>setNotification(null)}/>
