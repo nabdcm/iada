@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -2993,12 +2993,16 @@ export default function AdminPage() {
   const [subClinic,    setSubClinic]    = useState<ClinicData | null>(null);
   const [infoClinic,   setInfoClinic]   = useState<ClinicData | null>(null);
   const [openMenuId,   setOpenMenuId]   = useState<number | null>(null);
-  const [msgClinic,   setMsgClinic]   = useState<ClinicData|null>(null);
-  const [msgBody,     setMsgBody]     = useState("");
-  const [msgTemplate, setMsgTemplate] = useState("custom");
-  const [msgSending,  setMsgSending]  = useState(false);
-  const [msgSuccess,  setMsgSuccess]  = useState(false);
-  const [msgUnread,   setMsgUnread]   = useState<Record<string,number>>({});
+  const [msgClinic,        setMsgClinic]        = useState<ClinicData|null>(null);
+  const [msgBody,          setMsgBody]          = useState("");
+  const [msgTemplate,      setMsgTemplate]      = useState("custom");
+  const [msgSending,       setMsgSending]       = useState(false);
+  const [msgSuccess,       setMsgSuccess]       = useState(false);
+  const [msgUnread,        setMsgUnread]        = useState<Record<string,number>>({});
+  const [msgHistory,       setMsgHistory]       = useState<Array<{id:number;from_id:string;to_id:string;from_role:"admin"|"doctor";body:string;is_read:boolean;created_at:string;expires_at:string}>>([]);
+  const [msgHistoryLoading,setMsgHistoryLoading]= useState(false);
+  const [msgView,          setMsgView]          = useState<"compose"|"history">("history");
+  const msgBottomRef = useRef<HTMLDivElement>(null);
   const [adminUserId, setAdminUserId] = useState<string>("");
 
   // ── إرسال رسالة للطبيب ─────────────────────────────────
@@ -3014,19 +3018,77 @@ export default function AdminPage() {
     supabase.auth.getUser().then(({ data }) => { if (data.user) setAdminUserId(data.user.id); });
   }, []);
 
+  // تحميل تاريخ المحادثة مع عيادة معينة
+  const loadMsgHistory = async (clinicUserId: string) => {
+    if (!adminUserId) return;
+    setMsgHistoryLoading(true);
+    const { data } = await supabase
+      .from("clinic_messages")
+      .select("*")
+      .or(`and(from_id.eq.${adminUserId},to_id.eq.${clinicUserId}),and(from_id.eq.${clinicUserId},to_id.eq.${adminUserId})`)
+      .order("created_at", { ascending: true });
+    setMsgHistory(data ?? []);
+    setMsgHistoryLoading(false);
+    // تعليم رسائل الطبيب كمقروءة
+    await supabase.from("clinic_messages")
+      .update({ is_read: true })
+      .eq("from_id", clinicUserId)
+      .eq("to_id", adminUserId)
+      .eq("is_read", false);
+    // تحديث عداد الرسائل غير المقروءة
+    setMsgUnread(prev => ({ ...prev, [clinicUserId]: 0 }));
+    setTimeout(() => { msgBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 150);
+  };
+
+  // Realtime: استقبال ردود الأطباء في الأدمن
+  useEffect(() => {
+    if (!adminUserId) return;
+    const channel = supabase
+      .channel(`admin-messages-${adminUserId}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "clinic_messages",
+        filter: `to_id=eq.${adminUserId}`,
+      }, (payload) => {
+        const newMsg = payload.new as {id:number;from_id:string;to_id:string;from_role:"admin"|"doctor";body:string;is_read:boolean;created_at:string;expires_at:string};
+        // تحديث عداد الرسائل غير المقروءة
+        setMsgUnread(prev => ({
+          ...prev,
+          [newMsg.from_id]: (prev[newMsg.from_id] ?? 0) + 1,
+        }));
+        // إذا كان المودال مفتوحاً لهذه العيادة أضف الرسالة مباشرة
+        setMsgClinic(current => {
+          if (current?.user_id === newMsg.from_id) {
+            setMsgHistory(prev => [...prev, newMsg]);
+            setTimeout(() => { msgBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 100);
+            // علّم كمقروءة
+            supabase.from("clinic_messages").update({ is_read: true }).eq("id", newMsg.id);
+          }
+          return current;
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminUserId]);
+
   const handleSendMessage = async () => {
     if (!msgClinic?.user_id || !msgBody.trim() || !adminUserId) return;
     setMsgSending(true);
     try {
+      const bodyText = msgBody.trim();
       const { error } = await supabase.from("clinic_messages").insert({
         from_id: adminUserId, to_id: msgClinic.user_id,
-        from_role: "admin", body: msgBody.trim(),
+        from_role: "admin", body: bodyText,
       });
       if (!error) {
-        setMsgSuccess(true); setMsgBody("");
+        setMsgSuccess(true); setMsgBody(""); setMsgTemplate("custom");
         fetch("/api/push", { method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ userId: msgClinic.user_id, title:"💬 رسالة جديدة من نبض", body: msgBody.trim().slice(0,80), url:"/messages" }) });
-        setTimeout(() => { setMsgSuccess(false); setMsgClinic(null); }, 2000);
+          body: JSON.stringify({ userId: msgClinic.user_id, title:"💬 رسالة جديدة من نبض", body: bodyText.slice(0,80), url:"/messages" }) });
+        // أعد تحميل التاريخ
+        await loadMsgHistory(msgClinic.user_id);
+        setTimeout(() => setMsgSuccess(false), 3000);
       }
     } catch(e) { console.error(e); }
     setMsgSending(false);
@@ -3507,7 +3569,7 @@ export default function AdminPage() {
                                 <button
                                   className="icon-btn-dark msg"
                                   title={isAr?"مراسلة":"Message"}
-                                  onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); }}
+                                  onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(adminUserId && c.user_id) loadMsgHistory(c.user_id); }}
                                   style={{ width:32,height:32,position:"relative" }}
                                 >
                                   💬
@@ -3551,7 +3613,7 @@ export default function AdminPage() {
                                 <div style={{ display:"flex",gap:5,flexShrink:0 }} onClick={e => e.stopPropagation()}>
                                   <button className="icon-btn-dark" title={isAr?"معلومات":"Info"} onClick={e => { e.stopPropagation(); setInfoClinic(c); }} style={{ width:30,height:30 }}>ℹ️</button>
                                   <button className="icon-btn-dark" title={isAr?"تعديل الاشتراك":"Edit Sub"} onClick={e => { e.stopPropagation(); setSubClinic(c); }} style={{ width:30,height:30 }}>💳</button>
-                                  <button className="icon-btn-dark msg" title={isAr?"مراسلة":"Msg"} onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); }} style={{ width:30,height:30,position:"relative" }}>
+                                  <button className="icon-btn-dark msg" title={isAr?"مراسلة":"Msg"} onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(adminUserId && c.user_id) loadMsgHistory(c.user_id); }} style={{ width:30,height:30,position:"relative" }}>
                                     💬
                                     {msgUnread[c.user_id ?? ""] ? <span style={{ position:"absolute",top:-3,right:-3,width:13,height:13,borderRadius:"50%",background:"#c0392b",color:"#fff",fontSize:7,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>{msgUnread[c.user_id ?? ""]}</span> : null}
                                   </button>
@@ -3712,49 +3774,131 @@ export default function AdminPage() {
       {/* ══ Modal المراسلة ══════════════════════════════════════ */}
       {msgClinic && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
-          onClick={() => setMsgClinic(null)}>
-          <div style={{ background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:480,direction:"rtl",fontFamily:"Rubik,sans-serif" }}
+          onClick={() => { setMsgClinic(null); setMsgHistory([]); setMsgView("history"); }}>
+          <div style={{ background:"#fff",borderRadius:20,width:"100%",maxWidth:520,maxHeight:"85vh",direction:"rtl",fontFamily:"Rubik,sans-serif",display:"flex",flexDirection:"column",overflow:"hidden" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize:17,fontWeight:800,color:"#1a2840",marginBottom:16 }}>
-              💬 مراسلة الطبيب — {msgClinic.name}
+
+            {/* Header */}
+            <div style={{ background:"#0863ba",padding:"14px 18px",display:"flex",alignItems:"center",gap:12,flexShrink:0 }}>
+              <div style={{ width:36,height:36,background:"rgba(255,255,255,.15)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💬</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:15,fontWeight:800,color:"#fff" }}>{msgClinic.name}</div>
+                <div style={{ fontSize:11,color:"rgba(255,255,255,.7)" }}>الرسائل تُحذف تلقائياً بعد 48 ساعة</div>
+              </div>
+              <button onClick={() => { setMsgClinic(null); setMsgHistory([]); setMsgView("history"); }}
+                style={{ background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                ✕
+              </button>
             </div>
 
-            {/* قوالب */}
-            <div style={{ display:"flex",gap:8,marginBottom:14,flexWrap:"wrap" }}>
-              {(["welcome","expiry","custom"] as const).map(t => (
-                <button key={t}
-                  onClick={() => { setMsgTemplate(t); setMsgBody(getMsgTemplate(t, msgClinic?.name ?? "")); }}
-                  style={{ padding:"7px 14px",borderRadius:20,border:"1.5px solid",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"Rubik,sans-serif",
-                    borderColor: msgTemplate===t ? "#0863ba" : "#e0e0e0",
-                    background:  msgTemplate===t ? "#0863ba" : "#f5f7fa",
-                    color:       msgTemplate===t ? "#fff" : "#555" }}>
-                  {t === "welcome" ? "ترحيبية" : t === "expiry" ? "انتهاء الاشتراك" : "مخصصة"}
+            {/* تبديل العرض */}
+            <div style={{ display:"flex",borderBottom:"1.5px solid #eef0f3",flexShrink:0 }}>
+              {(["history","compose"] as const).map(v => (
+                <button key={v}
+                  onClick={() => {
+                    setMsgView(v);
+                    if (v === "history") setTimeout(() => { msgBottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, 100);
+                  }}
+                  style={{ flex:1,padding:"11px",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,
+                    background: msgView===v ? "#f0f6ff" : "#fff",
+                    color:      msgView===v ? "#0863ba" : "#888",
+                    borderBottom: msgView===v ? "2.5px solid #0863ba" : "2.5px solid transparent" }}>
+                  {v === "history" ? "📜 سجل المحادثة" : "✏️ رسالة جديدة"}
                 </button>
               ))}
             </div>
 
-            {/* نص الرسالة */}
-            <textarea
-              value={msgBody}
-              onChange={e => setMsgBody(e.target.value)}
-              placeholder="اكتب رسالتك هنا..."
-              rows={6}
-              style={{ width:"100%",padding:12,borderRadius:12,border:"1.5px solid #e0e0e0",fontFamily:"Rubik,sans-serif",fontSize:14,resize:"vertical",outline:"none",lineHeight:1.7 }}
-            />
-            <div style={{ fontSize:11,color:"#aaa",marginTop:4,textAlign:"left" }}>{msgBody.length}/2000</div>
+            {/* سجل المحادثة */}
+            {msgView === "history" && (
+              <div style={{ flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:8 }}>
+                {msgHistoryLoading ? (
+                  <div style={{ textAlign:"center",color:"#aaa",padding:40,fontSize:13 }}>جارٍ التحميل...</div>
+                ) : msgHistory.length === 0 ? (
+                  <div style={{ textAlign:"center",color:"#aaa",padding:40,fontSize:13 }}>
+                    لا توجد رسائل سابقة مع هذه العيادة.<br/>
+                    <span style={{ fontSize:11 }}>انتقل لـ &quot;رسالة جديدة&quot; لبدء المحادثة</span>
+                  </div>
+                ) : msgHistory.map(msg => {
+                  const isAdminMsg = msg.from_role === "admin";
+                  return (
+                    <div key={msg.id} style={{ display:"flex",justifyContent: isAdminMsg ? "flex-end" : "flex-start" }}>
+                      <div style={{
+                        maxWidth:"80%",padding:"9px 13px",
+                        borderRadius: isAdminMsg ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                        background: isAdminMsg ? "#0863ba" : "#f0f6ff",
+                        color: isAdminMsg ? "#fff" : "#1a2840",
+                        fontSize:13, lineHeight:1.6, whiteSpace:"pre-wrap",
+                        boxShadow:"0 1px 3px rgba(0,0,0,.08)",
+                      }}>
+                        {!isAdminMsg && <div style={{ fontSize:10,fontWeight:700,color:"#0863ba",marginBottom:3 }}>الطبيب 👨‍⚕️</div>}
+                        {msg.body}
+                        <div style={{ fontSize:10,opacity:.5,marginTop:3,textAlign:"left" }}>
+                          {new Date(msg.created_at).toLocaleString("ar-SA",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={msgBottomRef} />
+              </div>
+            )}
 
-            {/* أزرار */}
-            <div style={{ display:"flex",gap:10,marginTop:16 }}>
-              <button
-                onClick={handleSendMessage}
-                disabled={msgSending || !msgBody.trim() || msgBody.length > 2000}
-                style={{ flex:1,padding:"13px 0",borderRadius:12,background:"linear-gradient(135deg,#0863ba,#0558a8)",color:"#fff",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"Rubik,sans-serif",opacity:msgSending||!msgBody.trim()?0.6:1 }}>
-                {msgSuccess ? "✅ تم الإرسال" : msgSending ? "جارٍ الإرسال..." : "إرسال الرسالة"}
-              </button>
-              <button onClick={() => setMsgClinic(null)}
-                style={{ padding:"13px 20px",borderRadius:12,background:"#f5f7fa",color:"#888",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:14,fontFamily:"Rubik,sans-serif" }}>
-                إلغاء
-              </button>
+            {/* رسالة جديدة */}
+            {msgView === "compose" && (
+              <div style={{ flex:1,overflowY:"auto",padding:"16px 20px",display:"flex",flexDirection:"column",gap:12 }}>
+                <div>
+                  <div style={{ fontSize:12,color:"#888",marginBottom:8 }}>قوالب سريعة</div>
+                  <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                    {(["welcome","expiry","custom"] as const).map(t => (
+                      <button key={t}
+                        onClick={() => { setMsgTemplate(t); setMsgBody(getMsgTemplate(t, msgClinic?.name ?? "")); }}
+                        style={{ padding:"7px 14px",borderRadius:20,border:"1.5px solid",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"Rubik,sans-serif",
+                          borderColor: msgTemplate===t ? "#0863ba" : "#e0e0e0",
+                          background:  msgTemplate===t ? "#0863ba" : "#f5f7fa",
+                          color:       msgTemplate===t ? "#fff" : "#555" }}>
+                        {t === "welcome" ? "ترحيبية" : t === "expiry" ? "انتهاء الاشتراك" : "مخصصة"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea
+                  value={msgBody}
+                  onChange={e => setMsgBody(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                  placeholder="اكتب رسالتك هنا... (Enter للإرسال)"
+                  rows={6}
+                  style={{ width:"100%",padding:12,borderRadius:12,border:"1.5px solid #e0e0e0",fontFamily:"Rubik,sans-serif",fontSize:14,resize:"vertical",outline:"none",lineHeight:1.7 }}
+                />
+                <div style={{ fontSize:11,color:"#aaa",textAlign:"left" }}>{msgBody.length}/2000</div>
+              </div>
+            )}
+
+            {/* أزرار الإجراء */}
+            <div style={{ borderTop:"1.5px solid #eef0f3",padding:"12px 16px",display:"flex",gap:10,flexShrink:0 }}>
+              {msgView === "compose" ? (
+                <>
+                  <button onClick={handleSendMessage}
+                    disabled={msgSending || !msgBody.trim() || msgBody.length > 2000}
+                    style={{ flex:1,padding:"12px 0",borderRadius:12,background:"linear-gradient(135deg,#0863ba,#0558a8)",color:"#fff",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"Rubik,sans-serif",opacity:msgSending||!msgBody.trim()?0.6:1 }}>
+                    {msgSuccess ? "✅ تم الإرسال" : msgSending ? "جارٍ الإرسال..." : "إرسال الرسالة"}
+                  </button>
+                  <button onClick={() => setMsgView("history")}
+                    style={{ padding:"12px 16px",borderRadius:12,background:"#f5f7fa",color:"#888",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:13,fontFamily:"Rubik,sans-serif" }}>
+                    إلغاء
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setMsgView("compose")}
+                    style={{ flex:1,padding:"12px 0",borderRadius:12,background:"linear-gradient(135deg,#0863ba,#0558a8)",color:"#fff",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"Rubik,sans-serif" }}>
+                    ✏️ رسالة جديدة
+                  </button>
+                  <button onClick={() => { setMsgClinic(null); setMsgHistory([]); setMsgView("history"); }}
+                    style={{ padding:"12px 16px",borderRadius:12,background:"#f5f7fa",color:"#888",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:13,fontFamily:"Rubik,sans-serif" }}>
+                    إغلاق
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
