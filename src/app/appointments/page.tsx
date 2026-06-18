@@ -702,6 +702,7 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
   const [clock, setClock]           = useState("");
   const [dateLabel, setDateLabel]   = useState("");
   const [called, setCalled]         = useState<CalledPatient | null>(null);
+  const [animatingId, setAnimatingId] = useState<number | null>(null); // id الموعد الذي يُكبَّر حالياً
   const [tick, setTick]             = useState(0); // force re-render every minute
   const prevCurrentIds              = useRef<Record<number, number | null>>({});
   const isShared                    = isSharedPlan(plan);
@@ -764,7 +765,7 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
     ? doctorIds.map(did => {
         const drAppts = todayAppts.filter(a => (a as any).doctor_id === did);
         const current = getCurrent(drAppts);
-        const upcoming = drAppts.filter(a => a.status === "scheduled" && a.id !== current?.id).slice(0, 4);
+        const upcoming = drAppts.filter(a => a.status === "scheduled" && a.id !== current?.id && toMin(a.time) > nowMin()).slice(0, 4);
         return { did, current, upcoming };
       }).filter(col => col.current || col.upcoming.length > 0)
     : [];
@@ -776,11 +777,10 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
       const prev = prevCurrentIds.current[key] ?? null;
       if (cur && cur.id !== prev) {
         if (prev !== null) {
-          // تغيّر المريض — أطلق التنبيه
-          const drName = isShared ? getDrName((cur as any).doctor_id) : "";
-          setCalled({ name: getName(cur.patient_id), doctorName: drName, time: fmt12(cur.time) });
+          // تغيّر المريض — كبّر البطاقة + صوت (لا overlay)
           playCallSound();
-          setTimeout(() => setCalled(null), 7000);
+          setAnimatingId(cur.id);
+          setTimeout(() => setAnimatingId(null), 2200);
         }
         prevCurrentIds.current[key] = cur.id;
       }
@@ -798,7 +798,7 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
 
   // ── المريض الحالي للعيادة العادية ────────────────────────
   const simpleCurrent  = !isShared ? getCurrent(todayAppts) : null;
-  const simpleUpcoming = !isShared ? todayAppts.filter(a => a.status === "scheduled" && a.id !== simpleCurrent?.id).slice(0, 5) : [];
+  const simpleUpcoming = !isShared ? todayAppts.filter(a => a.status === "scheduled" && a.id !== simpleCurrent?.id && toMin(a.time) > nowMin()).slice(0, 5) : [];
 
   // ── عدد الأعمدة لتحديد عرضها ────────────────────────────
   const colCount = columns.length;
@@ -810,36 +810,7 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
       display:"flex", flexDirection:"column", direction:"rtl", overflow:"hidden",
     }}>
 
-      {/* ══ Flash overlay ═══════════════════════════════════ */}
-      {called && (
-        <div style={{
-          position:"absolute", inset:0, zIndex:20,
-          background:"linear-gradient(135deg,#0863ba 0%,#054a8c 100%)",
-          display:"flex", flexDirection:"column",
-          alignItems:"center", justifyContent:"center",
-          animation:"wr-flash 7s ease forwards",
-        }}>
-          <div style={{ fontSize:64, marginBottom:16, animation:"wr-bell 0.5s ease infinite alternate" }}>🔔</div>
-          <div style={{ fontSize:18, color:"rgba(255,255,255,.75)", fontWeight:600, marginBottom:12, letterSpacing:3 }}>
-            يُرجى التفضل للداخل
-          </div>
-          <div style={{
-            fontSize:80, fontWeight:900, color:"#fff", letterSpacing:2,
-            textShadow:"0 4px 32px rgba(0,0,0,.25)",
-            animation:"wr-pop 0.4s cubic-bezier(.175,.885,.32,1.275) both",
-          }}>
-            {called.name}
-          </div>
-          {called.doctorName && (
-            <div style={{ marginTop:16, fontSize:22, color:"rgba(255,255,255,.65)", fontWeight:600 }}>
-              {called.doctorName}
-            </div>
-          )}
-          <div style={{ marginTop:10, fontSize:28, color:"rgba(255,255,255,.85)", fontWeight:700 }}>
-            {called.time}
-          </div>
-        </div>
-      )}
+      {/* Flash overlay removed — card zoom used instead */}
 
       {/* ══ Top bar ══════════════════════════════════════════ */}
       <div style={{
@@ -888,11 +859,15 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
             {simpleCurrent ? (
               <div style={{
                 textAlign:"center", background:"#fff",
-                border:"1.5px solid #eef0f3", borderRadius:24,
-                boxShadow:"0 4px 32px rgba(8,99,186,.1)",
+                border: simpleCurrent && animatingId === simpleCurrent.id ? "2px solid #0863ba" : "1.5px solid #eef0f3",
+                borderRadius:24,
+                boxShadow: simpleCurrent && animatingId === simpleCurrent.id ? "0 8px 60px rgba(8,99,186,.35)" : "0 4px 32px rgba(8,99,186,.1)",
                 padding:"52px 80px 44px", marginBottom:40,
                 position:"relative", overflow:"hidden",
-                animation:"wr-slide-up 0.5s cubic-bezier(.175,.885,.32,1.275) both",
+                animation: simpleCurrent && animatingId === simpleCurrent.id
+                  ? "wr-zoom-card 2.2s cubic-bezier(.175,.885,.32,1.275) both"
+                  : "wr-slide-up 0.5s cubic-bezier(.175,.885,.32,1.275) both",
+                transition:"box-shadow .3s, border .3s",
               }}>
                 <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:"linear-gradient(90deg,#0863ba,#054a8c)" }} />
                 <div style={{
@@ -987,11 +962,16 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
                 {/* المريض الحالي لهذا الطبيب */}
                 {col.current ? (
                   <div style={{
-                    background:"#fff", border:"1.5px solid #eef0f3",
+                    background:"#fff",
+                    border: col.current && animatingId === col.current.id ? "2px solid #0863ba" : "1.5px solid #eef0f3",
                     borderRadius:16, padding:"20px", marginBottom:14,
                     position:"relative", overflow:"hidden",
-                    boxShadow:"0 2px 16px rgba(8,99,186,.08)",
-                    animation:"wr-slide-up 0.45s cubic-bezier(.175,.885,.32,1.275) both",
+                    boxShadow: col.current && animatingId === col.current.id ? "0 8px 48px rgba(8,99,186,.3)" : "0 2px 16px rgba(8,99,186,.08)",
+                    animation: col.current && animatingId === col.current.id
+                      ? "wr-zoom-card 2.2s cubic-bezier(.175,.885,.32,1.275) both"
+                      : "wr-slide-up 0.45s cubic-bezier(.175,.885,.32,1.275) both",
+                    transition:"box-shadow .3s, border .3s",
+                    zIndex: col.current && animatingId === col.current.id ? 10 : 1,
                   }}>
                     <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${AVT_COLORS[ci % AVT_COLORS.length]},${AVT_COLORS[(ci+1) % AVT_COLORS.length]})` }} />
                     <div style={{
@@ -1061,16 +1041,6 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
       </div>
 
       <style>{`
-        @keyframes wr-flash {
-          0%   { opacity:0; }
-          5%   { opacity:1; }
-          82%  { opacity:1; }
-          100% { opacity:0; pointer-events:none; }
-        }
-        @keyframes wr-pop {
-          0%   { opacity:0; transform:scale(.7); }
-          100% { opacity:1; transform:scale(1); }
-        }
         @keyframes wr-slide-up {
           from { opacity:0; transform:translateY(18px); }
           to   { opacity:1; transform:translateY(0); }
@@ -1079,9 +1049,13 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
           0%,100% { opacity:1; transform:scale(1); }
           50%      { opacity:.4; transform:scale(.7); }
         }
-        @keyframes wr-bell {
-          from { transform:rotate(-15deg); }
-          to   { transform:rotate(15deg); }
+        @keyframes wr-zoom-card {
+          0%   { transform:scale(1);    box-shadow:0 2px 16px rgba(8,99,186,.08); }
+          18%  { transform:scale(1.08); box-shadow:0 24px 80px rgba(8,99,186,.4); }
+          38%  { transform:scale(1.06); box-shadow:0 20px 60px rgba(8,99,186,.32); }
+          70%  { transform:scale(1.06); box-shadow:0 20px 60px rgba(8,99,186,.28); }
+          88%  { transform:scale(1.02); box-shadow:0 8px 30px rgba(8,99,186,.15); }
+          100% { transform:scale(1);    box-shadow:0 2px 16px rgba(8,99,186,.08); }
         }
       `}</style>
     </div>
