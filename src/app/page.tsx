@@ -368,6 +368,21 @@ export default function LandingPage() {
   const t = translations[lang];
   const isAr = lang === "ar";
 
+  // تحويل تلقائي للـ dashboard إذا كانت هناك جلسة محفوظة (مهم للـ PWA)
+  useEffect(() => {
+    import("@/lib/supabase").then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) return;
+        const meta = session.user?.user_metadata;
+        if (meta?.account_type === "pharmacy") {
+          window.location.replace("/pharmacy");
+        } else {
+          window.location.replace("/dashboard");
+        }
+      });
+    });
+  }, []);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
