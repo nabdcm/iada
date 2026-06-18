@@ -644,8 +644,8 @@ function maskName(fullName: string): string {
   if (parts.length === 1) return parts[0];
   const first = parts[0];
   const rest = parts.slice(1).map((p, i) => {
-    if (i === 0) return p.slice(0, 2) + "*".repeat(Math.max(0, p.length - 2));
-    return "*".repeat(p.length);
+    if (i === 0) return p.slice(0, 2) + "●".repeat(Math.max(0, p.length - 2));
+    return "●".repeat(p.length);
   }).join(" ");
   return `${first} ${rest}`;
 }
@@ -660,20 +660,19 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
   patients: { id: number; name: string }[];
   onClose: () => void;
 }) {
-  const [clock, setClock] = useState("");
+  const [clock, setClock]       = useState("");
   const [dateLabel, setDateLabel] = useState("");
   const [flashName, setFlashName] = useState<string | null>(null);
   const prevCurrentId = useRef<number | null>(null);
 
-  // ─── ساعة ────────────────────────────────────────────────
   useEffect(() => {
     const tick = () => {
       const now = new Date();
-      const hh = String(now.getHours()).padStart(2, "0");
-      const mm = String(now.getMinutes()).padStart(2, "0");
-      const ss = String(now.getSeconds()).padStart(2, "0");
+      const hh = String(now.getHours()).padStart(2,"0");
+      const mm = String(now.getMinutes()).padStart(2,"0");
+      const ss = String(now.getSeconds()).padStart(2,"0");
       setClock(`${hh}:${mm}:${ss}`);
-      const days = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+      const days   = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
       const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
       setDateLabel(`${days[now.getDay()]}، ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`);
     };
@@ -682,19 +681,16 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
     return () => clearInterval(id);
   }, []);
 
-  // ─── إغلاق بـ Escape ─────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // ─── حساب المواعيد ──────────────────────────────────────
   const todayStr = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   })();
-
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
 
@@ -707,7 +703,6 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
     return maskName(p?.name ?? "مريض");
   };
 
-  // المريض الحالي: آخر موعد وقته <= الآن، أو أول قادم
   let current: Appointment | null = null;
   const pastOrNow = todayAppts.filter(a => toMin(a.time) <= nowMin && (a.status === "scheduled" || a.status === "completed"));
   if (pastOrNow.length > 0) current = pastOrNow[pastOrNow.length - 1];
@@ -720,12 +715,11 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
     .filter(a => a.status === "scheduled" && a.id !== current?.id)
     .slice(0, 5);
 
-  // Flash عند تغيير المريض الحالي
   useEffect(() => {
     if (current && current.id !== prevCurrentId.current) {
       if (prevCurrentId.current !== null) {
         setFlashName(getName(current.patient_id));
-        setTimeout(() => setFlashName(null), 7000);
+        setTimeout(() => setFlashName(null), 6000);
       }
       prevCurrentId.current = current.id;
     }
@@ -733,165 +727,202 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 500,
-      background: "#0a0f1a",
-      fontFamily: "'Rubik', sans-serif",
-      display: "flex", flexDirection: "column",
-      direction: "rtl", overflow: "hidden",
+      position:"fixed", inset:0, zIndex:500,
+      background:"#f7f9fc",
+      fontFamily:"'Rubik',sans-serif",
+      display:"flex", flexDirection:"column",
+      direction:"rtl", overflow:"hidden",
     }}>
-      {/* Flash overlay */}
+
+      {/* ── Flash overlay ─────────────────────────────────── */}
       {flashName && (
         <div style={{
-          position: "absolute", inset: 0, zIndex: 10,
-          background: "rgba(8,99,186,.92)",
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          animation: "wr-flash 7s ease forwards",
-          backdropFilter: "blur(4px)",
+          position:"absolute", inset:0, zIndex:20,
+          background:"rgba(8,99,186,.97)",
+          display:"flex", flexDirection:"column",
+          alignItems:"center", justifyContent:"center",
+          animation:"wr-flash 6s ease forwards",
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🔔</div>
-          <div style={{ fontSize: 18, color: "rgba(255,255,255,.7)", fontWeight: 600, marginBottom: 12 }}>يُرجى التفضل للداخل</div>
-          <div style={{ fontSize: 72, fontWeight: 900, color: "#fff", letterSpacing: 2 }}>{flashName}</div>
+          <div style={{ fontSize:56, marginBottom:20 }}>🔔</div>
+          <div style={{ fontSize:20, color:"rgba(255,255,255,.75)", fontWeight:600, marginBottom:16, letterSpacing:2 }}>
+            يُرجى التفضل للداخل
+          </div>
+          <div style={{ fontSize:80, fontWeight:900, color:"#fff", letterSpacing:3, textShadow:"0 4px 32px rgba(0,0,0,.2)" }}>
+            {flashName}
+          </div>
         </div>
       )}
 
-      {/* Header */}
+      {/* ── Top bar ───────────────────────────────────────── */}
       <div style={{
-        background: "rgba(255,255,255,.04)",
-        borderBottom: "1px solid rgba(255,255,255,.08)",
-        padding: "20px 40px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background:"#fff",
+        borderBottom:"1.5px solid #eef0f3",
+        boxShadow:"0 2px 16px rgba(8,99,186,.06)",
+        padding:"0 40px",
+        height:64,
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        flexShrink:0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        {/* شعار نبض */}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: "rgba(8,99,186,.25)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22,
-          }}>🏥</div>
+            width:40, height:40, borderRadius:10,
+            background:"linear-gradient(135deg,#0863ba,#054a8c)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:20, boxShadow:"0 4px 12px rgba(8,99,186,.3)",
+          }}>💙</div>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>شاشة قاعة الانتظار</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{dateLabel}</div>
+            <div style={{ fontSize:17, fontWeight:800, color:"#353535", lineHeight:1.1 }}>نبض</div>
+            <div style={{ fontSize:11, color:"#aaa", fontWeight:500 }}>شاشة قاعة الانتظار</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div style={{ fontSize: 40, fontWeight: 900, color: "#0863ba", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
-            {clock}
+
+        {/* تاريخ + ساعة */}
+        <div style={{ display:"flex", alignItems:"center", gap:24 }}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:11, color:"#aaa", fontWeight:500, marginBottom:2 }}>{dateLabel}</div>
+            <div style={{
+              fontSize:30, fontWeight:900, color:"#0863ba",
+              fontVariantNumeric:"tabular-nums", lineHeight:1,
+              letterSpacing:1,
+            }}>{clock}</div>
           </div>
           <button
             onClick={onClose}
+            title="إغلاق (Esc)"
             style={{
-              width: 40, height: 40, borderRadius: 10,
-              background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)",
-              color: "rgba(255,255,255,.6)", fontSize: 18, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              width:36, height:36, borderRadius:9,
+              background:"#f7f9fc", border:"1.5px solid #eef0f3",
+              color:"#aaa", fontSize:16, cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              transition:"all .2s",
             }}
           >✕</button>
         </div>
       </div>
 
-      {/* Body */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, overflow: "hidden" }}>
+      {/* ── Main: المريض الحالي في المنتصف ───────────────── */}
+      <div style={{
+        flex:1, display:"flex", flexDirection:"column",
+        alignItems:"center", justifyContent:"center",
+        padding:"40px 60px 24px",
+        gap:0,
+      }}>
 
-        {/* المريض الحالي */}
-        <div style={{
-          borderLeft: "1px solid rgba(255,255,255,.06)",
-          padding: "40px 48px",
-          display: "flex", flexDirection: "column",
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: "rgba(8,99,186,.7)", textTransform: "uppercase", marginBottom: 24 }}>
-            المريض الحالي
-          </div>
-          {current ? (
-            <div style={{
-              background: "rgba(8,99,186,.08)",
-              border: "1.5px solid rgba(8,99,186,.25)",
-              borderRadius: 20, padding: "36px 32px",
-              flex: 1, display: "flex", flexDirection: "column", gap: 16,
-            }}>
-              <div style={{
-                display: "inline-flex", alignSelf: "flex-start",
-                alignItems: "center", gap: 6,
-                background: "rgba(46,125,50,.12)", border: "1px solid rgba(46,125,50,.3)",
-                borderRadius: 20, padding: "5px 14px",
-                fontSize: 12, fontWeight: 700, color: "#4caf50",
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4caf50", display: "inline-block" }} />
-                جارٍ الآن
-              </div>
-              <div style={{ fontSize: 52, fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>
-                {getName(current.patient_id)}
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 700, color: "#0863ba" }}>
-                {fmt12(current.time)}
-              </div>
-            </div>
-          ) : (
-            <div style={{
-              flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              background: "rgba(255,255,255,.02)",
-              border: "1.5px dashed rgba(255,255,255,.08)",
-              borderRadius: 20,
-            }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🕐</div>
-              <div style={{ fontSize: 15, color: "rgba(255,255,255,.3)" }}>لا يوجد موعد حالي</div>
-            </div>
-          )}
-        </div>
+        {/* بطاقة المريض الحالي */}
+        {current ? (
+          <div style={{
+            textAlign:"center",
+            background:"#fff",
+            border:"1.5px solid #eef0f3",
+            borderRadius:24,
+            boxShadow:"0 4px 32px rgba(8,99,186,.1)",
+            padding:"52px 80px 44px",
+            marginBottom:48,
+            position:"relative",
+            overflow:"hidden",
+          }}>
+            {/* شريط لوني أعلى البطاقة */}
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:"linear-gradient(90deg,#0863ba,#054a8c)" }} />
 
-        {/* المواعيد القادمة */}
-        <div style={{ padding: "40px 48px", display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: "rgba(8,99,186,.7)", textTransform: "uppercase", marginBottom: 24 }}>
-            المواعيد القادمة
+            <div style={{
+              display:"inline-flex", alignItems:"center", gap:6,
+              background:"rgba(46,125,50,.08)", border:"1px solid rgba(46,125,50,.2)",
+              borderRadius:20, padding:"4px 14px",
+              fontSize:12, fontWeight:700, color:"#2e7d32",
+              marginBottom:20,
+            }}>
+              <span style={{ width:7, height:7, borderRadius:"50%", background:"#4caf50", display:"inline-block", animation:"wr-dot 1.4s ease infinite" }} />
+              جارٍ الآن
+            </div>
+
+            <div style={{ fontSize:64, fontWeight:900, color:"#353535", lineHeight:1.1, marginBottom:16, letterSpacing:1 }}>
+              {getName(current.patient_id)}
+            </div>
+            <div style={{ fontSize:28, fontWeight:700, color:"#0863ba" }}>
+              {fmt12(current.time)}
+            </div>
           </div>
-          {upcomingList.length === 0 ? (
-            <div style={{ fontSize: 14, color: "rgba(255,255,255,.25)", marginTop: 16 }}>لا توجد مواعيد قادمة</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        ) : (
+          <div style={{
+            textAlign:"center", marginBottom:48,
+            background:"#fff", border:"1.5px solid #eef0f3",
+            borderRadius:24, padding:"52px 80px",
+            boxShadow:"0 4px 32px rgba(8,99,186,.06)",
+          }}>
+            <div style={{ fontSize:40, marginBottom:14 }}>🕐</div>
+            <div style={{ fontSize:18, color:"#bbb", fontWeight:500 }}>لا يوجد موعد حالي</div>
+          </div>
+        )}
+
+        {/* المرضى القادمون — عرضي أفقي */}
+        {upcomingList.length > 0 && (
+          <div style={{ width:"100%", maxWidth:900 }}>
+            <div style={{
+              fontSize:11, fontWeight:700, letterSpacing:3,
+              color:"#bbb", textAlign:"center",
+              textTransform:"uppercase", marginBottom:16,
+            }}>
+              المواعيد القادمة
+            </div>
+            <div style={{
+              display:"flex", gap:14, justifyContent:"center",
+              flexWrap:"wrap",
+            }}>
               {upcomingList.map((a, i) => (
                 <div key={a.id} style={{
-                  display: "flex", alignItems: "center", gap: 16,
-                  background: "rgba(255,255,255,.04)",
-                  border: "1px solid rgba(255,255,255,.07)",
-                  borderRadius: 14, padding: "16px 20px",
+                  background:"#fff",
+                  border:"1.5px solid #eef0f3",
+                  borderRadius:14,
+                  boxShadow:"0 2px 10px rgba(8,99,186,.06)",
+                  padding:"16px 24px",
+                  display:"flex", flexDirection:"column",
+                  alignItems:"center", gap:6,
+                  minWidth:140,
+                  position:"relative", overflow:"hidden",
                 }}>
+                  <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(8,99,186,.15)", borderRadius:"14px 14px 0 0" }} />
                   <div style={{
-                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                    background: "rgba(8,99,186,.15)",
-                    color: "#0863ba", fontSize: 14, fontWeight: 800,
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width:26, height:26, borderRadius:7,
+                    background:"rgba(8,99,186,.08)",
+                    color:"#0863ba", fontSize:12, fontWeight:800,
+                    display:"flex", alignItems:"center", justifyContent:"center",
                   }}>{i + 1}</div>
-                  <div style={{ flex: 1, fontSize: 20, fontWeight: 700, color: "#e0e6f0" }}>
+                  <div style={{ fontSize:17, fontWeight:700, color:"#353535", textAlign:"center" }}>
                     {getName(a.patient_id)}
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,.4)" }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:"#aaa" }}>
                     {fmt12(a.time)}
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ────────────────────────────────────────── */}
       <div style={{
-        borderTop: "1px solid rgba(255,255,255,.06)",
-        padding: "12px 40px",
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: "rgba(255,255,255,.02)",
+        borderTop:"1.5px solid #eef0f3",
+        background:"#fff",
+        padding:"10px 40px",
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        flexShrink:0,
       }}>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,.2)", fontWeight: 600 }}>نبض — نظام إدارة العيادات</span>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,.15)" }}>اضغط Esc للخروج</span>
+        <span style={{ fontSize:11, color:"#ccc", fontWeight:600 }}>نبض — نظام إدارة العيادات</span>
+        <span style={{ fontSize:11, color:"#ccc" }}>اضغط Esc للخروج</span>
       </div>
 
       <style>{`
         @keyframes wr-flash {
-          0%   { opacity: 0; }
-          8%   { opacity: 1; }
-          85%  { opacity: 1; }
-          100% { opacity: 0; pointer-events: none; }
+          0%   { opacity:0; }
+          6%   { opacity:1; }
+          82%  { opacity:1; }
+          100% { opacity:0; pointer-events:none; }
+        }
+        @keyframes wr-dot {
+          0%,100% { opacity:1; transform:scale(1); }
+          50%      { opacity:.4; transform:scale(.7); }
         }
       `}</style>
     </div>
