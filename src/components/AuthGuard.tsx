@@ -1,0 +1,94 @@
+"use client";
+
+// ============================================================
+// AuthGuard — حماية الصفحات على مستوى الـ client
+// يضمن استمرار الجلسة حتى في PWA على الموبايل
+// ============================================================
+
+import { useEffect, useState, type ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
+
+interface Props {
+  children: ReactNode;
+  redirectTo?: string;
+}
+
+export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
+  const [status, setStatus] = useState<"loading" | "ok" | "redirect">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function check() {
+      // getSession يقرأ من localStorage أولاً ويجدد تلقائياً إن انتهى
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (cancelled) return;
+
+      if (session) {
+        // كتابة cookie بسيط حتى يعمل الـ middleware
+        const maxAge = 400 * 24 * 60 * 60;
+        document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
+        setStatus("ok");
+      } else {
+        setStatus("redirect");
+      }
+    }
+
+    check();
+
+    // الاستماع لتغييرات الجلسة (logout من تبويب آخر إلخ)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      if (!session) {
+        document.cookie = "nabd-session=; path=/; max-age=0; SameSite=Lax";
+        setStatus("redirect");
+      } else {
+        const maxAge = 400 * 24 * 60 * 60;
+        document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
+        setStatus("ok");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (status === "loading") {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#f8fafc",
+        fontFamily: "'Rubik', sans-serif",
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: 40,
+            height: 40,
+            border: "3px solid #e2e8f0",
+            borderTopColor: "#0f766e",
+            borderRadius: "50%",
+            animation: "spin .7s linear infinite",
+            margin: "0 auto 12px",
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "redirect") {
+    if (typeof window !== "undefined") {
+      const current = window.location.pathname;
+      window.location.href = `${redirectTo}?redirect=${encodeURIComponent(current)}`;
+    }
+    return null;
+  }
+
+  return <>{children}</>;
+}

@@ -89,7 +89,9 @@ export default function PharmacyLogin() {
       return;
     }
 
-    // ✅ نجاح → توجيه لصفحة الصيدلية
+    // ✅ نجاح → كتابة cookie وتوجيه لصفحة الصيدلية
+    const maxAge = 400 * 24 * 60 * 60;
+    document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
     window.location.href = "/pharmacy";
   };
 
