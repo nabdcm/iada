@@ -639,6 +639,7 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
 }
 
 // ─── Waiting Room Display Modal ────────────────────────────
+
 function maskName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return parts[0];
@@ -655,29 +656,71 @@ function fmt12(t: string): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "م" : "ص"}`;
 }
 
-function WaitingRoomModal({ appointments, patients, onClose }: {
+function playCallSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.18);
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.18);
+      gain.gain.linearRampToValueAtTime(0.28, ctx.currentTime + i * 0.18 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.28);
+      osc.start(ctx.currentTime + i * 0.18);
+      osc.stop(ctx.currentTime + i * 0.18 + 0.3);
+    });
+    // ثانية: نفس اللحن مرة أخرى بعد 1.2 ثانية
+    setTimeout(() => {
+      notes.forEach((freq, i) => {
+        const osc2  = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.connect(gain2); gain2.connect(ctx.destination);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.18);
+        gain2.gain.setValueAtTime(0, ctx.currentTime + i * 0.18);
+        gain2.gain.linearRampToValueAtTime(0.22, ctx.currentTime + i * 0.18 + 0.04);
+        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.28);
+        osc2.start(ctx.currentTime + i * 0.18);
+        osc2.stop(ctx.currentTime + i * 0.18 + 0.3);
+      });
+    }, 1200);
+  } catch {}
+}
+
+interface CalledPatient { name: string; doctorName: string; time: string; }
+
+function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
   appointments: Appointment[];
   patients: { id: number; name: string }[];
+  doctors: Doctor[];
+  plan: PlanType;
   onClose: () => void;
 }) {
-  const [clock, setClock]       = useState("");
-  const [dateLabel, setDateLabel] = useState("");
-  const [flashName, setFlashName] = useState<string | null>(null);
-  const prevCurrentId = useRef<number | null>(null);
+  const [clock, setClock]           = useState("");
+  const [dateLabel, setDateLabel]   = useState("");
+  const [called, setCalled]         = useState<CalledPatient | null>(null);
+  const [tick, setTick]             = useState(0); // force re-render every minute
+  const prevCurrentIds              = useRef<Record<number, number | null>>({});
+  const isShared                    = isSharedPlan(plan);
 
+  // ── ساعة ─────────────────────────────────────────────────
   useEffect(() => {
-    const tick = () => {
+    const update = () => {
       const now = new Date();
       const hh = String(now.getHours()).padStart(2,"0");
       const mm = String(now.getMinutes()).padStart(2,"0");
       const ss = String(now.getSeconds()).padStart(2,"0");
       setClock(`${hh}:${mm}:${ss}`);
+      if (now.getSeconds() === 0) setTick(t => t + 1); // تحديث المواعيد كل دقيقة
       const days   = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
       const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
       setDateLabel(`${days[now.getDay()]}، ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`);
     };
-    tick();
-    const id = setInterval(tick, 1000);
+    update();
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -687,83 +730,125 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // ── بيانات اليوم ─────────────────────────────────────────
   const todayStr = (() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   })();
   const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
+
+  const getName = (pid: number) => maskName(patients.find(x => x.id === pid)?.name ?? "مريض");
+  const getDrName = (did: number) => doctors.find(x => x.id === did)?.name ?? "الطبيب";
+  const getDrSpec = (did: number) => doctors.find(x => x.id === did)?.specialty ?? "";
 
   const todayAppts = appointments
     .filter(a => a.date === todayStr && a.status !== "cancelled" && a.status !== "no-show")
     .sort((a, b) => toMin(a.time) - toMin(b.time));
 
-  const getName = (pid: number) => {
-    const p = patients.find(x => x.id === pid);
-    return maskName(p?.name ?? "مريض");
+  // ── منطق العيادة العادية (غير مشتركة) ───────────────────
+  const getCurrent = (appts: Appointment[]): Appointment | null => {
+    const nm = nowMin();
+    const past = appts.filter(a => toMin(a.time) <= nm && (a.status === "scheduled" || a.status === "completed"));
+    if (past.length) return past[past.length - 1];
+    const upcoming = appts.filter(a => a.status === "scheduled");
+    return upcoming[0] ?? null;
   };
 
-  let current: Appointment | null = null;
-  const pastOrNow = todayAppts.filter(a => toMin(a.time) <= nowMin && (a.status === "scheduled" || a.status === "completed"));
-  if (pastOrNow.length > 0) current = pastOrNow[pastOrNow.length - 1];
-  else {
-    const upcoming = todayAppts.filter(a => a.status === "scheduled");
-    if (upcoming.length > 0) current = upcoming[0];
-  }
+  // ── منطق العيادة المشتركة: مجموعة لكل طبيب ──────────────
+  const doctorIds = isShared
+    ? [...new Set(todayAppts.map(a => (a as any).doctor_id as number).filter(Boolean))]
+    : [];
 
-  const upcomingList = todayAppts
-    .filter(a => a.status === "scheduled" && a.id !== current?.id)
-    .slice(0, 5);
+  const columns = isShared
+    ? doctorIds.map(did => {
+        const drAppts = todayAppts.filter(a => (a as any).doctor_id === did);
+        const current = getCurrent(drAppts);
+        const upcoming = drAppts.filter(a => a.status === "scheduled" && a.id !== current?.id).slice(0, 4);
+        return { did, current, upcoming };
+      }).filter(col => col.current || col.upcoming.length > 0)
+    : [];
 
+  // ── كشف تغيير المريض الحالي وإطلاق التنبيه ──────────────
   useEffect(() => {
-    if (current && current.id !== prevCurrentId.current) {
-      if (prevCurrentId.current !== null) {
-        setFlashName(getName(current.patient_id));
-        setTimeout(() => setFlashName(null), 6000);
+    const checkChanges = (appts: Appointment[], key: number) => {
+      const cur = getCurrent(appts);
+      const prev = prevCurrentIds.current[key] ?? null;
+      if (cur && cur.id !== prev) {
+        if (prev !== null) {
+          // تغيّر المريض — أطلق التنبيه
+          const drName = isShared ? getDrName((cur as any).doctor_id) : "";
+          setCalled({ name: getName(cur.patient_id), doctorName: drName, time: fmt12(cur.time) });
+          playCallSound();
+          setTimeout(() => setCalled(null), 7000);
+        }
+        prevCurrentIds.current[key] = cur.id;
       }
-      prevCurrentId.current = current.id;
+    };
+
+    if (isShared) {
+      doctorIds.forEach(did => {
+        const drAppts = todayAppts.filter(a => (a as any).doctor_id === did);
+        checkChanges(drAppts, did);
+      });
+    } else {
+      checkChanges(todayAppts, 0);
     }
-  });
+  }); // بدون deps — يتحقق عند كل render
+
+  // ── المريض الحالي للعيادة العادية ────────────────────────
+  const simpleCurrent  = !isShared ? getCurrent(todayAppts) : null;
+  const simpleUpcoming = !isShared ? todayAppts.filter(a => a.status === "scheduled" && a.id !== simpleCurrent?.id).slice(0, 5) : [];
+
+  // ── عدد الأعمدة لتحديد عرضها ────────────────────────────
+  const colCount = columns.length;
 
   return (
     <div style={{
       position:"fixed", inset:0, zIndex:500,
-      background:"#f7f9fc",
-      fontFamily:"'Rubik',sans-serif",
-      display:"flex", flexDirection:"column",
-      direction:"rtl", overflow:"hidden",
+      background:"#f7f9fc", fontFamily:"'Rubik',sans-serif",
+      display:"flex", flexDirection:"column", direction:"rtl", overflow:"hidden",
     }}>
 
-      {/* ── Flash overlay ─────────────────────────────────── */}
-      {flashName && (
+      {/* ══ Flash overlay ═══════════════════════════════════ */}
+      {called && (
         <div style={{
           position:"absolute", inset:0, zIndex:20,
-          background:"rgba(8,99,186,.97)",
+          background:"linear-gradient(135deg,#0863ba 0%,#054a8c 100%)",
           display:"flex", flexDirection:"column",
           alignItems:"center", justifyContent:"center",
-          animation:"wr-flash 6s ease forwards",
+          animation:"wr-flash 7s ease forwards",
         }}>
-          <div style={{ fontSize:56, marginBottom:20 }}>🔔</div>
-          <div style={{ fontSize:20, color:"rgba(255,255,255,.75)", fontWeight:600, marginBottom:16, letterSpacing:2 }}>
+          <div style={{ fontSize:64, marginBottom:16, animation:"wr-bell 0.5s ease infinite alternate" }}>🔔</div>
+          <div style={{ fontSize:18, color:"rgba(255,255,255,.75)", fontWeight:600, marginBottom:12, letterSpacing:3 }}>
             يُرجى التفضل للداخل
           </div>
-          <div style={{ fontSize:80, fontWeight:900, color:"#fff", letterSpacing:3, textShadow:"0 4px 32px rgba(0,0,0,.2)" }}>
-            {flashName}
+          <div style={{
+            fontSize:80, fontWeight:900, color:"#fff", letterSpacing:2,
+            textShadow:"0 4px 32px rgba(0,0,0,.25)",
+            animation:"wr-pop 0.4s cubic-bezier(.175,.885,.32,1.275) both",
+          }}>
+            {called.name}
+          </div>
+          {called.doctorName && (
+            <div style={{ marginTop:16, fontSize:22, color:"rgba(255,255,255,.65)", fontWeight:600 }}>
+              {called.doctorName}
+            </div>
+          )}
+          <div style={{ marginTop:10, fontSize:28, color:"rgba(255,255,255,.85)", fontWeight:700 }}>
+            {called.time}
           </div>
         </div>
       )}
 
-      {/* ── Top bar ───────────────────────────────────────── */}
+      {/* ══ Top bar ══════════════════════════════════════════ */}
       <div style={{
-        background:"#fff",
-        borderBottom:"1.5px solid #eef0f3",
+        background:"#fff", borderBottom:"1.5px solid #eef0f3",
         boxShadow:"0 2px 16px rgba(8,99,186,.06)",
-        padding:"0 40px",
-        height:64,
+        padding:"0 40px", height:64,
         display:"flex", alignItems:"center", justifyContent:"space-between",
         flexShrink:0,
       }}>
-        {/* شعار نبض */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={{
             width:40, height:40, borderRadius:10,
@@ -776,137 +861,199 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
             <div style={{ fontSize:11, color:"#aaa", fontWeight:500 }}>شاشة قاعة الانتظار</div>
           </div>
         </div>
-
-        {/* تاريخ + ساعة */}
         <div style={{ display:"flex", alignItems:"center", gap:24 }}>
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:11, color:"#aaa", fontWeight:500, marginBottom:2 }}>{dateLabel}</div>
-            <div style={{
-              fontSize:30, fontWeight:900, color:"#0863ba",
-              fontVariantNumeric:"tabular-nums", lineHeight:1,
-              letterSpacing:1,
-            }}>{clock}</div>
+            <div style={{ fontSize:30, fontWeight:900, color:"#0863ba", fontVariantNumeric:"tabular-nums", lineHeight:1, letterSpacing:1 }}>{clock}</div>
           </div>
-          <button
-            onClick={onClose}
-            title="إغلاق (Esc)"
-            style={{
-              width:36, height:36, borderRadius:9,
-              background:"#f7f9fc", border:"1.5px solid #eef0f3",
-              color:"#aaa", fontSize:16, cursor:"pointer",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              transition:"all .2s",
-            }}
-          >✕</button>
+          <button onClick={onClose} title="إغلاق (Esc)" style={{
+            width:36, height:36, borderRadius:9,
+            background:"#f7f9fc", border:"1.5px solid #eef0f3",
+            color:"#aaa", fontSize:16, cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}>✕</button>
         </div>
       </div>
 
-      {/* ── Main: المريض الحالي في المنتصف ───────────────── */}
-      <div style={{
-        flex:1, display:"flex", flexDirection:"column",
-        alignItems:"center", justifyContent:"center",
-        padding:"40px 60px 24px",
-        gap:0,
-      }}>
+      {/* ══ Body ═════════════════════════════════════════════ */}
+      <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column" }}>
 
-        {/* بطاقة المريض الحالي */}
-        {current ? (
+        {/* ── عيادة عادية: مريض واحد في المنتصف ── */}
+        {!isShared && (
           <div style={{
-            textAlign:"center",
-            background:"#fff",
-            border:"1.5px solid #eef0f3",
-            borderRadius:24,
-            boxShadow:"0 4px 32px rgba(8,99,186,.1)",
-            padding:"52px 80px 44px",
-            marginBottom:48,
-            position:"relative",
-            overflow:"hidden",
+            flex:1, display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center",
+            padding:"32px 60px 20px",
           }}>
-            {/* شريط لوني أعلى البطاقة */}
-            <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:"linear-gradient(90deg,#0863ba,#054a8c)" }} />
-
-            <div style={{
-              display:"inline-flex", alignItems:"center", gap:6,
-              background:"rgba(46,125,50,.08)", border:"1px solid rgba(46,125,50,.2)",
-              borderRadius:20, padding:"4px 14px",
-              fontSize:12, fontWeight:700, color:"#2e7d32",
-              marginBottom:20,
-            }}>
-              <span style={{ width:7, height:7, borderRadius:"50%", background:"#4caf50", display:"inline-block", animation:"wr-dot 1.4s ease infinite" }} />
-              جارٍ الآن
-            </div>
-
-            <div style={{ fontSize:64, fontWeight:900, color:"#353535", lineHeight:1.1, marginBottom:16, letterSpacing:1 }}>
-              {getName(current.patient_id)}
-            </div>
-            <div style={{ fontSize:28, fontWeight:700, color:"#0863ba" }}>
-              {fmt12(current.time)}
-            </div>
-          </div>
-        ) : (
-          <div style={{
-            textAlign:"center", marginBottom:48,
-            background:"#fff", border:"1.5px solid #eef0f3",
-            borderRadius:24, padding:"52px 80px",
-            boxShadow:"0 4px 32px rgba(8,99,186,.06)",
-          }}>
-            <div style={{ fontSize:40, marginBottom:14 }}>🕐</div>
-            <div style={{ fontSize:18, color:"#bbb", fontWeight:500 }}>لا يوجد موعد حالي</div>
+            {simpleCurrent ? (
+              <div style={{
+                textAlign:"center", background:"#fff",
+                border:"1.5px solid #eef0f3", borderRadius:24,
+                boxShadow:"0 4px 32px rgba(8,99,186,.1)",
+                padding:"52px 80px 44px", marginBottom:40,
+                position:"relative", overflow:"hidden",
+                animation:"wr-slide-up 0.5s cubic-bezier(.175,.885,.32,1.275) both",
+              }}>
+                <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:"linear-gradient(90deg,#0863ba,#054a8c)" }} />
+                <div style={{
+                  display:"inline-flex", alignItems:"center", gap:6,
+                  background:"rgba(46,125,50,.08)", border:"1px solid rgba(46,125,50,.2)",
+                  borderRadius:20, padding:"4px 14px",
+                  fontSize:12, fontWeight:700, color:"#2e7d32", marginBottom:20,
+                }}>
+                  <span style={{ width:7, height:7, borderRadius:"50%", background:"#4caf50", display:"inline-block", animation:"wr-dot 1.4s ease infinite" }} />
+                  جارٍ الآن
+                </div>
+                <div style={{ fontSize:64, fontWeight:900, color:"#353535", lineHeight:1.1, marginBottom:16 }}>
+                  {getName(simpleCurrent.patient_id)}
+                </div>
+                <div style={{ fontSize:28, fontWeight:700, color:"#0863ba" }}>
+                  {fmt12(simpleCurrent.time)}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                textAlign:"center", background:"#fff", border:"1.5px dashed #eef0f3",
+                borderRadius:24, padding:"52px 80px", marginBottom:40,
+              }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>🕐</div>
+                <div style={{ fontSize:18, color:"#bbb" }}>لا يوجد موعد حالي</div>
+              </div>
+            )}
+            {simpleUpcoming.length > 0 && (
+              <div style={{ width:"100%", maxWidth:900 }}>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:3, color:"#bbb", textAlign:"center", textTransform:"uppercase", marginBottom:14 }}>المواعيد القادمة</div>
+                <div style={{ display:"flex", gap:14, justifyContent:"center", flexWrap:"wrap" }}>
+                  {simpleUpcoming.map((a, i) => (
+                    <div key={a.id} style={{
+                      background:"#fff", border:"1.5px solid #eef0f3", borderRadius:14,
+                      boxShadow:"0 2px 10px rgba(8,99,186,.06)",
+                      padding:"14px 22px", display:"flex", flexDirection:"column",
+                      alignItems:"center", gap:5, minWidth:130,
+                      position:"relative", overflow:"hidden",
+                      animation:`wr-slide-up 0.4s ${i*0.07}s cubic-bezier(.175,.885,.32,1.275) both`,
+                    }}>
+                      <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(8,99,186,.12)" }} />
+                      <div style={{ width:24, height:24, borderRadius:6, background:"rgba(8,99,186,.08)", color:"#0863ba", fontSize:11, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"#353535", textAlign:"center" }}>{getName(a.patient_id)}</div>
+                      <div style={{ fontSize:12, fontWeight:600, color:"#aaa" }}>{fmt12(a.time)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* المرضى القادمون — عرضي أفقي */}
-        {upcomingList.length > 0 && (
-          <div style={{ width:"100%", maxWidth:900 }}>
-            <div style={{
-              fontSize:11, fontWeight:700, letterSpacing:3,
-              color:"#bbb", textAlign:"center",
-              textTransform:"uppercase", marginBottom:16,
-            }}>
-              المواعيد القادمة
-            </div>
-            <div style={{
-              display:"flex", gap:14, justifyContent:"center",
-              flexWrap:"wrap",
-            }}>
-              {upcomingList.map((a, i) => (
-                <div key={a.id} style={{
-                  background:"#fff",
-                  border:"1.5px solid #eef0f3",
-                  borderRadius:14,
-                  boxShadow:"0 2px 10px rgba(8,99,186,.06)",
-                  padding:"16px 24px",
-                  display:"flex", flexDirection:"column",
-                  alignItems:"center", gap:6,
-                  minWidth:140,
-                  position:"relative", overflow:"hidden",
+        {/* ── عيادة مشتركة: عمود لكل طبيب ── */}
+        {isShared && (
+          <div style={{
+            flex:1, display:"grid",
+            gridTemplateColumns: colCount <= 3 ? `repeat(${colCount}, 1fr)` : `repeat(${Math.min(colCount,4)}, 1fr)`,
+            gap:0, overflow:"hidden",
+          }}>
+            {columns.map((col, ci) => (
+              <div key={col.did} style={{
+                borderLeft: ci < columns.length - 1 ? "1.5px solid #eef0f3" : "none",
+                display:"flex", flexDirection:"column",
+                padding:"28px 28px 20px",
+                overflow:"hidden",
+                animation:`wr-slide-up 0.4s ${ci*0.1}s cubic-bezier(.175,.885,.32,1.275) both`,
+              }}>
+                {/* رأس الطبيب */}
+                <div style={{
+                  display:"flex", alignItems:"center", gap:12, marginBottom:20,
+                  paddingBottom:16, borderBottom:"1.5px solid #eef0f3",
                 }}>
-                  <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:"rgba(8,99,186,.15)", borderRadius:"14px 14px 0 0" }} />
                   <div style={{
-                    width:26, height:26, borderRadius:7,
-                    background:"rgba(8,99,186,.08)",
-                    color:"#0863ba", fontSize:12, fontWeight:800,
+                    width:40, height:40, borderRadius:10, flexShrink:0,
+                    background:`${AVT_COLORS[ci % AVT_COLORS.length]}18`,
+                    color:AVT_COLORS[ci % AVT_COLORS.length],
+                    fontSize:14, fontWeight:800,
                     display:"flex", alignItems:"center", justifyContent:"center",
-                  }}>{i + 1}</div>
-                  <div style={{ fontSize:17, fontWeight:700, color:"#353535", textAlign:"center" }}>
-                    {getName(a.patient_id)}
-                  </div>
-                  <div style={{ fontSize:13, fontWeight:600, color:"#aaa" }}>
-                    {fmt12(a.time)}
+                  }}>{getDrName(col.did).charAt(0)}</div>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:"#353535", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                      {getDrName(col.did)}
+                    </div>
+                    {getDrSpec(col.did) && (
+                      <div style={{ fontSize:11, color:"#aaa", marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {getDrSpec(col.did)}
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* المريض الحالي لهذا الطبيب */}
+                {col.current ? (
+                  <div style={{
+                    background:"#fff", border:"1.5px solid #eef0f3",
+                    borderRadius:16, padding:"20px", marginBottom:14,
+                    position:"relative", overflow:"hidden",
+                    boxShadow:"0 2px 16px rgba(8,99,186,.08)",
+                    animation:"wr-slide-up 0.45s cubic-bezier(.175,.885,.32,1.275) both",
+                  }}>
+                    <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${AVT_COLORS[ci % AVT_COLORS.length]},${AVT_COLORS[(ci+1) % AVT_COLORS.length]})` }} />
+                    <div style={{
+                      display:"inline-flex", alignItems:"center", gap:5,
+                      background:"rgba(46,125,50,.08)", border:"1px solid rgba(46,125,50,.2)",
+                      borderRadius:20, padding:"3px 10px",
+                      fontSize:11, fontWeight:700, color:"#2e7d32", marginBottom:12,
+                    }}>
+                      <span style={{ width:6, height:6, borderRadius:"50%", background:"#4caf50", display:"inline-block", animation:"wr-dot 1.4s ease infinite" }} />
+                      جارٍ الآن
+                    </div>
+                    <div style={{ fontSize: colCount <= 2 ? 36 : colCount === 3 ? 28 : 22, fontWeight:900, color:"#353535", lineHeight:1.15, marginBottom:8 }}>
+                      {getName(col.current.patient_id)}
+                    </div>
+                    <div style={{ fontSize: colCount <= 2 ? 20 : 16, fontWeight:700, color:"#0863ba" }}>
+                      {fmt12(col.current.time)}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    background:"#fafbfc", border:"1.5px dashed #eef0f3",
+                    borderRadius:16, padding:"20px", marginBottom:14,
+                    textAlign:"center",
+                  }}>
+                    <div style={{ fontSize:11, color:"#ccc" }}>لا يوجد موعد حالي</div>
+                  </div>
+                )}
+
+                {/* المواعيد القادمة لهذا الطبيب */}
+                {col.upcoming.length > 0 && (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, flex:1, overflow:"hidden" }}>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:2, color:"#ccc", textTransform:"uppercase", marginBottom:4 }}>القادمون</div>
+                    {col.upcoming.map((a, i) => (
+                      <div key={a.id} style={{
+                        display:"flex", alignItems:"center", gap:10,
+                        background:"#fff", border:"1px solid #eef0f3",
+                        borderRadius:10, padding:"10px 14px",
+                        animation:`wr-slide-up 0.35s ${i*0.06}s cubic-bezier(.175,.885,.32,1.275) both`,
+                      }}>
+                        <div style={{ width:22, height:22, borderRadius:6, background:"rgba(8,99,186,.08)", color:"#0863ba", fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{i+1}</div>
+                        <div style={{ flex:1, fontSize:14, fontWeight:700, color:"#353535", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{getName(a.patient_id)}</div>
+                        <div style={{ fontSize:12, fontWeight:600, color:"#aaa", flexShrink:0 }}>{fmt12(a.time)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {colCount === 0 && (
+              <div style={{ gridColumn:"1/-1", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:"#bbb" }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>🕐</div>
+                <div style={{ fontSize:16 }}>لا توجد مواعيد لهذا اليوم</div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* ── Footer ────────────────────────────────────────── */}
+      {/* ══ Footer ═══════════════════════════════════════════ */}
       <div style={{
-        borderTop:"1.5px solid #eef0f3",
-        background:"#fff",
-        padding:"10px 40px",
-        display:"flex", justifyContent:"space-between", alignItems:"center",
+        borderTop:"1.5px solid #eef0f3", background:"#fff",
+        padding:"10px 40px", display:"flex", justifyContent:"space-between", alignItems:"center",
         flexShrink:0,
       }}>
         <span style={{ fontSize:11, color:"#ccc", fontWeight:600 }}>نبض — نظام إدارة العيادات</span>
@@ -916,13 +1063,25 @@ function WaitingRoomModal({ appointments, patients, onClose }: {
       <style>{`
         @keyframes wr-flash {
           0%   { opacity:0; }
-          6%   { opacity:1; }
+          5%   { opacity:1; }
           82%  { opacity:1; }
           100% { opacity:0; pointer-events:none; }
+        }
+        @keyframes wr-pop {
+          0%   { opacity:0; transform:scale(.7); }
+          100% { opacity:1; transform:scale(1); }
+        }
+        @keyframes wr-slide-up {
+          from { opacity:0; transform:translateY(18px); }
+          to   { opacity:1; transform:translateY(0); }
         }
         @keyframes wr-dot {
           0%,100% { opacity:1; transform:scale(1); }
           50%      { opacity:.4; transform:scale(.7); }
+        }
+        @keyframes wr-bell {
+          from { transform:rotate(-15deg); }
+          to   { transform:rotate(15deg); }
         }
       `}</style>
     </div>
@@ -2263,7 +2422,7 @@ export default function AppointmentsPage() {
           <ShareModal lang={lang} clinicId={clinicId} copied={copied} setCopied={setCopied} onClose={()=>setShareModal(false)}/>
         )}
         {showWaitingRoom&&(
-          <WaitingRoomModal appointments={appointments} patients={patients} onClose={()=>setShowWaitingRoom(false)}/>
+          <WaitingRoomModal appointments={appointments} patients={patients} doctors={doctors} plan={plan} onClose={()=>setShowWaitingRoom(false)}/>
         )}
         {notification&&(
           <NotificationToast lang={lang} appt={notification} patientName={getPatientName(notification.patient_id)} onDismiss={()=>setNotification(null)}/>
