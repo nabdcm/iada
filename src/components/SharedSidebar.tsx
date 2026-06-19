@@ -243,6 +243,84 @@ export default function SharedSidebar({
   const [moreOpen,     setMoreOpen]     = useState(false);
   const [pushPerm,     setPushPerm]     = useState<"default"|"granted"|"denied"|"unsupported">("default");
   const [pushLoading,  setPushLoading]  = useState(false);
+  const [selfUserId,   setSelfUserId]   = useState<string>("");
+  const [unreadMsgs,   setUnreadMsgs]   = useState(0);
+
+  // ─── جلب هوية المستخدم الحالي (الطبيب) داخلياً ────────────
+  useEffect(() => {
+    if (userId) { setSelfUserId(userId); return; }
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setSelfUserId(data.user.id);
+    });
+  }, [userId]);
+
+  // ─── صوت إشعار وصول رسالة (Web Audio API) ─────────────────
+  const playMsgSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.35);
+    } catch { /* صامت إذا لم يدعم المتصفح */ }
+  };
+
+  // ─── عدّاد الرسائل غير المقروءة + Realtime ────────────────
+  useEffect(() => {
+    if (!selfUserId) return;
+
+    const loadUnread = async () => {
+      const { count } = await supabase
+        .from("clinic_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("to_id", selfUserId)
+        .eq("is_read", false);
+      setUnreadMsgs(count ?? 0);
+    };
+    loadUnread();
+
+    const channel = supabase
+      .channel(`sidebar-unread-${selfUserId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "clinic_messages",
+        filter: `to_id=eq.${selfUserId}`,
+      }, () => {
+        setUnreadMsgs(prev => prev + 1);
+        // لا نُشغّل الصوت إذا كان المستخدم بالفعل في صفحة الرسائل
+        if (pathname !== "/messages") playMsgSound();
+      })
+      .on("postgres_changes", {
+        event: "UPDATE", schema: "public", table: "clinic_messages",
+        filter: `to_id=eq.${selfUserId}`,
+      }, () => { loadUnread(); })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selfUserId]);
+
+  // ─── إعادة فحص العداد عند الدخول لصفحة الرسائل (تصفير) ────
+  useEffect(() => {
+    if (pathname === "/messages" && selfUserId) {
+      const t = setTimeout(async () => {
+        const { count } = await supabase
+          .from("clinic_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("to_id", selfUserId)
+          .eq("is_read", false);
+        setUnreadMsgs(count ?? 0);
+      }, 800);
+      return () => clearTimeout(t);
+    }
+  }, [pathname, selfUserId]);
 
   // ─── Detect mobile ───────────────────────────────────────
   useEffect(() => {
@@ -341,6 +419,7 @@ export default function SharedSidebar({
     const isLocked = !canAccess(item.key, plan);
     const iconKey  = (item.icon ?? item.key) as keyof typeof Icons;
     const icon     = Icons[iconKey] ?? Icons.dashboard;
+    const showBadge = item.key === "messages" && unreadMsgs > 0;
     return (
       <a
         key={item.key}
@@ -382,12 +461,34 @@ export default function SharedSidebar({
             borderRadius: isAr ? "3px 0 0 3px" : "0 3px 3px 0",
           }} />
         )}
-        <span style={{ flexShrink: 0, display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.8 }}>
+        <span style={{ flexShrink: 0, display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.8, position: "relative" }}>
           {icon}
+          {showBadge && (
+            <span style={{
+              position: "absolute", top: -4, [isAr ? "left" : "right"]: -6,
+              minWidth: 15, height: 15, padding: "0 3px",
+              borderRadius: "50%", background: "#e53935",
+              color: "#fff", fontSize: 9, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              border: "1.5px solid #0558a8", lineHeight: 1,
+            }}>
+              {unreadMsgs > 9 ? "9+" : unreadMsgs}
+            </span>
+          )}
         </span>
         {!collapsed && !compact && (
           <span style={{ lineHeight: 1.3, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {(tr as Record<string,string>)[item.key]}
+          </span>
+        )}
+        {!collapsed && !compact && showBadge && (
+          <span style={{
+            minWidth: 18, height: 18, padding: "0 5px",
+            borderRadius: 9, background: "#e53935", color: "#fff",
+            fontSize: 10, fontWeight: 700, display: "flex",
+            alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            {unreadMsgs > 9 ? "9+" : unreadMsgs}
           </span>
         )}
         {!collapsed && !compact && isLocked && (
@@ -447,6 +548,7 @@ export default function SharedSidebar({
               const isActive = item.key === activePage;
               const isLocked = !canAccess(item.key, plan);
               const icon = Icons[item.icon as keyof typeof Icons] ?? Icons.dashboard;
+              const showBadge = item.key === "messages" && unreadMsgs > 0;
               return (
                 <a
                   key={item.key}
@@ -465,8 +567,21 @@ export default function SharedSidebar({
                     fontFamily: "Rubik, sans-serif",
                     fontSize: 12, fontWeight: isActive ? 600 : 400,
                     textAlign: "center",
+                    position: "relative",
                   }}
                 >
+                  {showBadge && (
+                    <span style={{
+                      position: "absolute", top: 8, [isAr ? "left" : "right"]: 8,
+                      minWidth: 16, height: 16, padding: "0 4px",
+                      borderRadius: "50%", background: "#e53935",
+                      color: "#fff", fontSize: 9, fontWeight: 700,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      lineHeight: 1,
+                    }}>
+                      {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                    </span>
+                  )}
                   <span style={{ display: "flex", alignItems: "center" }}>{icon}</span>
                   <span>
                     {(tr as Record<string,string>)[item.key]}
@@ -634,8 +749,20 @@ export default function SharedSidebar({
                 borderRadius: "0 0 4px 4px",
               }} />
             )}
-            <span style={{ display: "flex", alignItems: "center", opacity: isMoreActive || moreOpen ? 1 : 0.75 }}>
+            <span style={{ display: "flex", alignItems: "center", opacity: isMoreActive || moreOpen ? 1 : 0.75, position: "relative" }}>
               {Icons.more}
+              {unreadMsgs > 0 && (
+                <span style={{
+                  position: "absolute", top: -4, [isAr ? "left" : "right"]: -6,
+                  minWidth: 14, height: 14, padding: "0 3px",
+                  borderRadius: "50%", background: "#e53935",
+                  color: "#fff", fontSize: 8, fontWeight: 700,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "1.5px solid #0558a8", lineHeight: 1,
+                }}>
+                  {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                </span>
+              )}
             </span>
             {tr.more}
           </button>
@@ -734,6 +861,7 @@ export default function SharedSidebar({
                 const isActive = item.key === activePage;
                 const isLocked = !canAccess(item.key, plan);
                 const icon = Icons[item.icon as keyof typeof Icons] ?? Icons.dashboard;
+                const showBadge = item.key === "messages" && unreadMsgs > 0;
                 return (
                   <a
                     key={item.key}
@@ -762,7 +890,21 @@ export default function SharedSidebar({
                         borderRadius: "0 0 3px 3px",
                       }} />
                     )}
-                    <span style={{ display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.85 }}>{icon}</span>
+                    <span style={{ display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.85, position: "relative" }}>
+                      {icon}
+                      {showBadge && (
+                        <span style={{
+                          position: "absolute", top: -5, [isAr ? "left" : "right"]: -8,
+                          minWidth: 15, height: 15, padding: "0 3px",
+                          borderRadius: "50%", background: "#e53935",
+                          color: "#fff", fontSize: 9, fontWeight: 700,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          border: "1.5px solid #0558a8", lineHeight: 1,
+                        }}>
+                          {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                        </span>
+                      )}
+                    </span>
                     <span style={{ lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", paddingInline: 2 }}>
                       {(tr as Record<string,string>)[item.key]}
                       {isLocked && " 🔒"}
