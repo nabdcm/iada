@@ -181,15 +181,15 @@ export default function MessagesPage() {
         body { margin: 0; }
 
         .msg-root {
-          display: flex;
           height: 100vh;
           font-family: 'Rubik', sans-serif;
           background: #f5f7fa;
+          overflow: hidden;
         }
 
         /* ── المحتوى الرئيسي ── */
         .msg-main {
-          flex: 1;
+          height: 100vh;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -321,8 +321,11 @@ export default function MessagesPage() {
         ═══════════════════════════════════ */
         @media (max-width: 768px) {
           .msg-main {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            bottom: 72px;
+            margin: 0 !important;
+            height: auto;
           }
           .msg-header {
             padding: 12px 14px;
