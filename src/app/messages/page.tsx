@@ -22,7 +22,7 @@ interface Message {
   expires_at: string;
 }
 
-const ADMIN_WELL_KNOWN_ROLE = "admin";
+const ADMIN_ID = "admin";
 
 // ── صوت الإشعار (Web Audio API — لا يحتاج ملف خارجي) ──────
 function playMsgSound() {
@@ -51,11 +51,9 @@ export default function MessagesPage() {
   const [body, setBody]         = useState("");
   const [sending, setSending]   = useState(false);
   const [loading, setLoading]   = useState(true);
-  const [adminId, setAdminId]   = useState<string>("");
   const [error, setError]       = useState<string>("");
   const [mounted, setMounted]   = useState(false);
   const bottomRef               = useRef<HTMLDivElement>(null);
-  const adminIdRef              = useRef<string>("");
 
   const isAr = lang === "ar";
 
@@ -82,7 +80,7 @@ export default function MessagesPage() {
     })();
   }, []);
 
-  // Realtime
+  // Realtime — يستمع للرسائل الواردة من الأدمن (to_id = هوية الطبيب)
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
@@ -95,12 +93,7 @@ export default function MessagesPage() {
       }, (payload) => {
         const newMsg = payload.new as Message;
         setMessages(prev => [...prev, newMsg]);
-        if (newMsg.from_role === ADMIN_WELL_KNOWN_ROLE) {
-          if (!adminIdRef.current) {
-            adminIdRef.current = newMsg.from_id;
-            setAdminId(newMsg.from_id);
-          }
-          // ── صوت الإشعار عند وصول رسالة من الأدمن ──
+        if (newMsg.from_role === "admin") {
           playMsgSound();
         }
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -122,27 +115,14 @@ export default function MessagesPage() {
       .order("created_at", { ascending: true });
 
     if (fetchError) { console.error("loadMessages:", fetchError); return; }
-
     setMessages(data ?? []);
-    const adminMsg = (data ?? []).find((m: Message) => m.from_role === ADMIN_WELL_KNOWN_ROLE);
-    if (adminMsg) {
-      adminIdRef.current = adminMsg.from_id;
-      setAdminId(adminMsg.from_id);
-    }
   }
 
   async function sendMessage() {
     if (!body.trim() || !userId) return;
-    if (!adminIdRef.current) {
-      setError(isAr
-        ? "لا يمكن الإرسال الآن — لم يتواصل فريق نبض بعد."
-        : "Cannot send yet — NABD team hasn't initiated contact.");
-      setTimeout(() => setError(""), 4000);
-      return;
-    }
     setSending(true); setError("");
     const { error: insertError } = await supabase.from("clinic_messages").insert({
-      from_id: userId, to_id: adminIdRef.current, from_role: "doctor", body: body.trim(),
+      from_id: userId, to_id: ADMIN_ID, from_role: "doctor", body: body.trim(),
     });
     if (!insertError) {
       setBody("");
@@ -150,6 +130,7 @@ export default function MessagesPage() {
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } else {
       setError(isAr ? "حدث خطأ أثناء الإرسال" : "Error sending message");
+      setTimeout(() => setError(""), 4000);
     }
     setSending(false);
   }
@@ -427,7 +408,7 @@ export default function MessagesPage() {
             <button
               className="msg-send-btn"
               onClick={sendMessage}
-              disabled={sending || !body.trim() || !adminIdRef.current}
+              disabled={sending || !body.trim()}
             >
               {sending ? "..." : (isAr ? "إرسال" : "Send")}
             </button>

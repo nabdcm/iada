@@ -3003,7 +3003,6 @@ export default function AdminPage() {
   const [msgHistoryLoading,setMsgHistoryLoading]= useState(false);
   const [msgView,          setMsgView]          = useState<"compose"|"history">("history");
   const msgBottomRef = useRef<HTMLDivElement>(null);
-  const [adminUserId, setAdminUserId] = useState<string>("");
 
   // ── إرسال رسالة للطبيب ─────────────────────────────────
   const getMsgTemplate = (t: string, clinicName: string) => {
@@ -3014,85 +3013,66 @@ export default function AdminPage() {
     };
     return temps[t] ?? "";
   };
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { if (data.user) setAdminUserId(data.user.id); });
-  }, []);
 
-  // تحميل تاريخ المحادثة مع عيادة معينة
+  // تحميل تاريخ المحادثة مع عيادة معينة — عبر API بصلاحية service_role
+  // (الأدمن ليس مستخدم Supabase Auth، لذا لا يمكن الاعتماد على auth.uid()/RLS هنا)
   const loadMsgHistory = async (clinicUserId: string) => {
-    if (!adminUserId) return;
     setMsgHistoryLoading(true);
-    const { data } = await supabase
-      .from("clinic_messages")
-      .select("*")
-      .or(`and(from_id.eq.${adminUserId},to_id.eq.${clinicUserId}),and(from_id.eq.${clinicUserId},to_id.eq.${adminUserId})`)
-      .order("created_at", { ascending: true });
-    setMsgHistory(data ?? []);
+    try {
+      const res = await adminFetch(`/api/admin-messages?clinicUserId=${clinicUserId}`, { cache: "no-store" });
+      const data = res.ok ? await res.json() : [];
+      setMsgHistory(data ?? []);
+    } catch (e) { console.error("loadMsgHistory:", e); }
     setMsgHistoryLoading(false);
-    // تعليم رسائل الطبيب كمقروءة
-    await supabase.from("clinic_messages")
-      .update({ is_read: true })
-      .eq("from_id", clinicUserId)
-      .eq("to_id", adminUserId)
-      .eq("is_read", false);
-    // تحديث عداد الرسائل غير المقروءة
     setMsgUnread(prev => ({ ...prev, [clinicUserId]: 0 }));
     setTimeout(() => { msgBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 150);
   };
 
-  // Realtime: استقبال ردود الأطباء في الأدمن
+  // تحميل عدّاد الرسائل غير المقروءة لكل العيادات (polling)
+  const loadAllUnread = async () => {
+    try {
+      const res = await adminFetch("/api/admin-messages", { method: "PATCH", cache: "no-store" });
+      if (res.ok) {
+        const counts = await res.json();
+        setMsgUnread(counts ?? {});
+      }
+    } catch (e) { console.error("loadAllUnread:", e); }
+  };
+
+  // Polling: تحديث العداد كل 15 ثانية + تحديث المحادثة المفتوحة إن وُجدت
   useEffect(() => {
-    if (!adminUserId) return;
-    const channel = supabase
-      .channel(`admin-messages-${adminUserId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "clinic_messages",
-        filter: `to_id=eq.${adminUserId}`,
-      }, (payload) => {
-        const newMsg = payload.new as {id:number;from_id:string;to_id:string;from_role:"admin"|"doctor";body:string;is_read:boolean;created_at:string;expires_at:string};
-        // تحديث عداد الرسائل غير المقروءة
-        setMsgUnread(prev => ({
-          ...prev,
-          [newMsg.from_id]: (prev[newMsg.from_id] ?? 0) + 1,
-        }));
-        // إذا كان المودال مفتوحاً لهذه العيادة أضف الرسالة مباشرة
-        setMsgClinic(current => {
-          if (current?.user_id === newMsg.from_id) {
-            setMsgHistory(prev => [...prev, newMsg]);
-            setTimeout(() => { msgBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 100);
-            // علّم كمقروءة
-            supabase.from("clinic_messages").update({ is_read: true }).eq("id", newMsg.id);
-          }
-          return current;
-        });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    loadAllUnread();
+    const interval = setInterval(() => {
+      loadAllUnread();
+      setMsgClinic(current => {
+        if (current?.user_id) loadMsgHistory(current.user_id);
+        return current;
+      });
+    }, 15000);
+    return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminUserId]);
+  }, []);
 
   const handleSendMessage = async () => {
-    if (!msgClinic?.user_id || !msgBody.trim() || !adminUserId) return;
+    if (!msgClinic?.user_id || !msgBody.trim()) return;
     setMsgSending(true);
     try {
       const bodyText = msgBody.trim();
-      const { error } = await supabase.from("clinic_messages").insert({
-        from_id: adminUserId, to_id: msgClinic.user_id,
-        from_role: "admin", body: bodyText,
+      const res = await adminFetch("/api/admin-messages", {
+        method: "POST",
+        body: JSON.stringify({ clinicUserId: msgClinic.user_id, body: bodyText }),
       });
-      if (!error) {
+      if (res.ok) {
         setMsgSuccess(true); setMsgBody(""); setMsgTemplate("custom");
         fetch("/api/push", { method:"POST", headers:{"Content-Type":"application/json"},
           body: JSON.stringify({ userId: msgClinic.user_id, title:"💬 رسالة جديدة من نبض", body: bodyText.slice(0,80), url:"/messages" }) });
-        // أعد تحميل التاريخ
         await loadMsgHistory(msgClinic.user_id);
         setTimeout(() => setMsgSuccess(false), 3000);
       }
     } catch(e) { console.error(e); }
     setMsgSending(false);
   };
+
   const [dataToolsModal, setDataToolsModal] = useState(false);
   const [accountFilter, setAccountFilter] = useState<"all"|"clinic"|"pharmacy">("all");
   const [currentPage,   setCurrentPage]   = useState(1);
@@ -3569,7 +3549,7 @@ export default function AdminPage() {
                                 <button
                                   className="icon-btn-dark msg"
                                   title={isAr?"مراسلة":"Message"}
-                                  onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(adminUserId && c.user_id) loadMsgHistory(c.user_id); }}
+                                  onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(c.user_id) loadMsgHistory(c.user_id); }}
                                   style={{ width:32,height:32,position:"relative" }}
                                 >
                                   💬
@@ -3613,7 +3593,7 @@ export default function AdminPage() {
                                 <div style={{ display:"flex",gap:5,flexShrink:0 }} onClick={e => e.stopPropagation()}>
                                   <button className="icon-btn-dark" title={isAr?"معلومات":"Info"} onClick={e => { e.stopPropagation(); setInfoClinic(c); }} style={{ width:30,height:30 }}>ℹ️</button>
                                   <button className="icon-btn-dark" title={isAr?"تعديل الاشتراك":"Edit Sub"} onClick={e => { e.stopPropagation(); setSubClinic(c); }} style={{ width:30,height:30 }}>💳</button>
-                                  <button className="icon-btn-dark msg" title={isAr?"مراسلة":"Msg"} onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(adminUserId && c.user_id) loadMsgHistory(c.user_id); }} style={{ width:30,height:30,position:"relative" }}>
+                                  <button className="icon-btn-dark msg" title={isAr?"مراسلة":"Msg"} onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(c.user_id) loadMsgHistory(c.user_id); }} style={{ width:30,height:30,position:"relative" }}>
                                     💬
                                     {msgUnread[c.user_id ?? ""] ? <span style={{ position:"absolute",top:-3,right:-3,width:13,height:13,borderRadius:"50%",background:"#c0392b",color:"#fff",fontSize:7,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>{msgUnread[c.user_id ?? ""]}</span> : null}
                                   </button>
