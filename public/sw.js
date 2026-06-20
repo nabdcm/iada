@@ -26,8 +26,8 @@ self.addEventListener("push", (e) => {
 
   const options = {
     body:    payload.body    ?? "",
-    icon:    payload.icon    ?? "/Logo_Nabd.svg",
-    badge:   payload.badge   ?? "/Logo_Nabd.svg",
+    icon:    payload.icon    ?? "/Logo_Nabd_icon.png",
+    badge:   payload.badge   ?? "/Logo_Nabd_badge.png",
     tag:     payload.tag     ?? "nabd-notif",
     data:    payload.data    ?? {},
     dir:     "rtl",
