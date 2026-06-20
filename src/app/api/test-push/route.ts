@@ -10,8 +10,8 @@ export async function GET() {
   const { data, error } = await supabaseAdmin.functions.invoke("send-push", {
     body: {
       user_id: "bd3c5b4a-9d93-4d07-b044-b0422136c86e",
-      title: "نبض — اختبار 2",
-      body: "تجربة ثانية بعد تصحيح الأيقونة ✅",
+      title: "نبض — اختبار 3",
+      body: "بعد حذف الكاش وإعادة التثبيت ✅",
       url: "/dashboard",
     },
   });
