@@ -298,9 +298,7 @@ export default function DashboardPage() {
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
       const j = sub.toJSON(); const k = j.keys as {p256dh:string;auth:string};
       if (currentUserId) {
-        const { createClient } = await import("@supabase/supabase-js");
-        const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-        await sb.from("push_subscriptions").upsert({ user_id: currentUserId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
+        await supabase.from("push_subscriptions").upsert({ user_id: currentUserId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
       }
     } catch(e) { console.warn("push:", e); }
   };
