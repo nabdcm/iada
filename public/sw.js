@@ -2,7 +2,7 @@
 // sw.js — Service Worker لإشعارات نبض
 // ============================================================
 
-const CACHE_NAME = "nabd-v1";
+const CACHE_NAME = "nabd-v2";
 
 // تثبيت الـ SW
 self.addEventListener("install", (e) => {
