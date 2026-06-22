@@ -9,8 +9,11 @@ export const metadata: Metadata = {
   title: "نبض | NABD — Clinic Manager",
   description: "نظام إدارة العيادات الطبية — مرضى، مواعيد، مدفوعات",
   icons: {
-    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💗</text></svg>',
-    apple: "/Logo_Nabd.svg",
+    icon: [
+      { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
 };
 
