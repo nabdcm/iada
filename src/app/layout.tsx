@@ -6,8 +6,31 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "نبض | NABD — Clinic Manager",
-  description: "نظام إدارة العيادات الطبية — مرضى، مواعيد، مدفوعات",
+  metadataBase: new URL("https://nabd.clinic"),
+  title: {
+    default: "نبض | NABD — نظام إدارة العيادات والصيدليات",
+    template: "%s | نبض NABD",
+  },
+  description: "نبض — نظام سحابي لإدارة العيادات الطبية والصيدليات: حجز المواعيد، ملفات المرضى، الوصفات، المدفوعات، وإشعارات لحظية. متوافق مع الموبايل والكمبيوتر.",
+  keywords: ["نبض", "NABD", "إدارة عيادات", "نظام طبي", "حجز مواعيد طبية", "إدارة صيدليات", "clinic management system", "medical software"],
+  authors: [{ name: "NABD" }],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "ar_AR",
+    url: "https://nabd.clinic",
+    siteName: "نبض NABD",
+    title: "نبض | NABD — نظام إدارة العيادات والصيدليات",
+    description: "نظام سحابي لإدارة العيادات الطبية والصيدليات: حجز المواعيد، ملفات المرضى، الوصفات، والمدفوعات.",
+    images: [{ url: "/icon-512.png", width: 512, height: 512 }],
+  },
+  twitter: {
+    card: "summary",
+    title: "نبض | NABD — نظام إدارة العيادات والصيدليات",
+    description: "نظام سحابي لإدارة العيادات الطبية والصيدليات.",
+    images: ["/icon-512.png"],
+  },
+  robots: { index: true, follow: true },
   icons: {
     icon: [
       { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },

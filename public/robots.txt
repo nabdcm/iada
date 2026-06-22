@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /$
+Allow: /privacy-policy
+Allow: /book
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /appointments
+Disallow: /patients
+Disallow: /patient-tracking
+Disallow: /prescriptions
+Disallow: /payments
+Disallow: /messages
+Disallow: /secretary
+Disallow: /pharmacy
+Disallow: /clinic-management
+Disallow: /daily-log
+Disallow: /display
+Disallow: /portal
+Disallow: /patient-portal
+Disallow: /restricted-access
+Disallow: /blocked
+Disallow: /login
+Disallow: /api
+
+Sitemap: https://nabd.clinic/sitemap.xml
