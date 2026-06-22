@@ -137,7 +137,7 @@ export default function MessagesPage() {
 
   function formatTime(iso: string) {
     const d = new Date(iso);
-    return d.toLocaleString(isAr ? "ar-SA" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleString(isAr ? "ar-SA-u-ca-gregory" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
   function getExpiryLabel(iso: string): string {

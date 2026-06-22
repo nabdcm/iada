@@ -3133,7 +3133,7 @@ export default function AdminPage() {
 
   const fmtDate = (d: string) => {
     if (!d) return "—";
-    return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", { year:"numeric", month:"short", day:"numeric" });
+    return new Date(d).toLocaleDateString(isAr ? "ar-SA-u-ca-gregory" : "en-US", { year:"numeric", month:"short", day:"numeric" });
   };
   const isExpiringSoon = (d: string) => {
     const diff = new Date(d).getTime() - new Date().getTime();
@@ -3813,7 +3813,7 @@ export default function AdminPage() {
                         {!isAdminMsg && <div style={{ fontSize:10,fontWeight:700,color:"#0863ba",marginBottom:3 }}>الطبيب 👨‍⚕️</div>}
                         {msg.body}
                         <div style={{ fontSize:10,opacity:.5,marginTop:3,textAlign:"left" }}>
-                          {new Date(msg.created_at).toLocaleString("ar-SA",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
+                          {new Date(msg.created_at).toLocaleString("ar-SA-u-ca-gregory",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
                         </div>
                       </div>
                     </div>

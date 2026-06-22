@@ -320,7 +320,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const now = new Date();
     setGreetingKey(getGreetingKey());
-    setDateStr(now.toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", {
+    setDateStr(now.toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US", {
       weekday: "long", year: "numeric", month: "long", day: "numeric",
     }));
     setDaysElapsed(now.getDate());

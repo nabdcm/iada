@@ -864,7 +864,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                         { label:t.name,   value:patient.name, icon:"👤" },
                         { label:t.phone,  value:patient.phone||"—", icon:"📞" },
                         { label:t.gender, value:patient.gender?(isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")):"—", icon:"⚧" },
-                        { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
+                        { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA-u-ca-gregory":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
                         { label:t.age,    value:calcAge(patient.date_of_birth)!=="—"?`${calcAge(patient.date_of_birth)} ${t.years}`:"—", icon:"🎯" },
                         { label:isAr?"الرقم الطبي":"Medical ID", value:(patient as any).mrn||"—", icon:"🪪" },
                       ].map(f=>(
@@ -1317,7 +1317,7 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
         <div style={{ borderTop:"1px solid #f0f2f5",padding:"12px 16px 0" }}>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12 }}>
             <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.phone}</div><div style={{ fontSize:13,color:"#555",direction:"ltr",textAlign:isAr?"right":"left" }}>{p.phone||"—"}</div></div>
-            <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.dob}</div><div style={{ fontSize:13,color:"#555" }}>{p.date_of_birth?new Date(p.date_of_birth).toLocaleDateString(lang==="ar"?"ar-SA":"en-US",{year:"numeric",month:"short",day:"numeric"}):"—"}</div></div>
+            <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.dob}</div><div style={{ fontSize:13,color:"#555" }}>{p.date_of_birth?new Date(p.date_of_birth).toLocaleDateString(lang==="ar"?"ar-SA-u-ca-gregory":"en-US",{year:"numeric",month:"short",day:"numeric"}):"—"}</div></div>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:6,paddingBottom:14 }}>
             {[

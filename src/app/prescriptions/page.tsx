@@ -405,7 +405,7 @@ function printPrescription(prescription: Prescription, lang: Lang, clinicName: s
           </div>
           <div class="meta-card">
             <div class="label">${tr.printDate}</div>
-            <div class="value">${new Date(prescription.date).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+            <div class="value">${new Date(prescription.date).toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
           </div>
         </div>
 
@@ -919,7 +919,7 @@ export default function PrescriptionsPage() {
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a2e" }}>{rx.patient_name}</div>
                         <div style={{ fontSize: 11, color: "#aaa", marginTop: 2, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                          📅 {new Date(rx.date).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          📅 {new Date(rx.date).toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
                           {/* شارة الطبيب — للخطط المشتركة فقط */}
                           {isSharedPlan(plan) && rx.doctor_id && (() => {
                             const dr = doctors.find(d => d.id === rx.doctor_id);

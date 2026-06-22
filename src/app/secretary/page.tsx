@@ -611,7 +611,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
                       { label:isAr?"الاسم":"Name",  value:patient.name,  icon:"👤" },
                       { label:isAr?"الهاتف":"Phone", value:(patient.phone||"—"), icon:"📞" },
                       { label:isAr?"الجنس":"Gender", value:patient.gender?(isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")):"—", icon:"⚧" },
-                      { label:isAr?"تاريخ الميلاد":"DOB", value:(patient as any).date_of_birth?new Date((patient as any).date_of_birth).toLocaleDateString(isAr?"ar-SA":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
+                      { label:isAr?"تاريخ الميلاد":"DOB", value:(patient as any).date_of_birth?new Date((patient as any).date_of_birth).toLocaleDateString(isAr?"ar-SA-u-ca-gregory":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
                     ].map(f=>(
                       <div key={f.label} style={{ background:"#f7f9fc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>
                         <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:4 }}>{f.icon} {f.label}</div>
