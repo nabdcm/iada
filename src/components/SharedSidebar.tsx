@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import NotificationBell from "@/components/NotificationBell";
 
 // ─── Types ───────────────────────────────────────────────────
 export type PlanType =
@@ -824,22 +825,25 @@ export default function SharedSidebar({
           {collapsed && (
             <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 28, height: 28, filter: "brightness(0) invert(1)" }} />
           )}
-          <button
-            onClick={() => setCollapsed(c => !c)}
-            title={collapsed ? tr.expand : tr.collapse}
-            style={{
-              width: 28, height: 28, borderRadius: 8,
-              background: "rgba(255,255,255,0.12)",
-              border: "1.5px solid rgba(255,255,255,0.22)",
-              cursor: "pointer", color: "rgba(255,255,255,0.9)",
-              fontSize: 14, flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; }}
-          >
-            {collapsed ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {!collapsed && <NotificationBell userId={selfUserId} lang={lang} variant="light" />}
+            <button
+              onClick={() => setCollapsed(c => !c)}
+              title={collapsed ? tr.expand : tr.collapse}
+              style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: "rgba(255,255,255,0.12)",
+                border: "1.5px solid rgba(255,255,255,0.22)",
+                cursor: "pointer", color: "rgba(255,255,255,0.9)",
+                fontSize: 14, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; }}
+            >
+              {collapsed ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
+            </button>
+          </div>
         </div>
 
         {/* ── Nav items ── */}

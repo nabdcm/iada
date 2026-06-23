@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
+import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -568,12 +569,9 @@ export default function DashboardPage() {
                     style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:160,direction:isAr?"rtl":"ltr" }}
                   />
                 </div>
-                <button className="topbar-notification" style={{ width:40,height:40,borderRadius:10,background:"#fff",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:16,position:"relative",display:"flex",alignItems:"center",justifyContent:"center" }}>
-                  🔔
-                  {todayTotal > 0 && (
-                    <div style={{ position:"absolute",top:8,right:8,width:8,height:8,borderRadius:"50%",background:"#ffb5b5",border:"2px solid #fff" }} />
-                  )}
-                </button>
+                <div className="topbar-notification">
+                  <NotificationBell userId={currentUserId} lang={lang} variant="dark" />
+                </div>
               </div>
             </div>
           </div>
