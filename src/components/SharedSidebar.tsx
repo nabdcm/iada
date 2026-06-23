@@ -354,7 +354,7 @@ export default function SharedSidebar({
       .catch(() => {});
   }, []);
 
-  const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+  const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BG73PZ28jKm8MniGKb0DJCG45VDuUBJdAJNNRX9VwPr1YD-y4o0vXy4BJRHL1qYoCIKOhuRfHE0QKLca7fq-ZQc";
 
   const handlePushToggle = async () => {
     if (!userId || !("serviceWorker" in navigator)) return;

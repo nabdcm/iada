@@ -3065,7 +3065,7 @@ export default function AdminPage() {
       if (res.ok) {
         setMsgSuccess(true); setMsgBody(""); setMsgTemplate("custom");
         fetch("/api/push", { method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ userId: msgClinic.user_id, title:"💬 رسالة جديدة من نبض", body: bodyText.slice(0,80), url:"/messages" }) });
+          body: JSON.stringify({ user_id: msgClinic.user_id, title:"💬 رسالة جديدة من نبض", body: bodyText.slice(0,80), url:"/messages" }) });
         await loadMsgHistory(msgClinic.user_id);
         setTimeout(() => setMsgSuccess(false), 3000);
       }

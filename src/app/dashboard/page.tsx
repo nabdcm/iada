@@ -293,7 +293,7 @@ export default function DashboardPage() {
       const perm = await Notification.requestPermission();
       if (perm !== "granted") return;
       const reg = await navigator.serviceWorker.ready;
-      const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+      const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BG73PZ28jKm8MniGKb0DJCG45VDuUBJdAJNNRX9VwPr1YD-y4o0vXy4BJRHL1qYoCIKOhuRfHE0QKLca7fq-ZQc";
       const b64 = (s: string) => { const p = "=".repeat((4-s.length%4)%4); const b = (s+p).replace(/-/g,"+").replace(/_/g,"/"); return Uint8Array.from(window.atob(b), c => c.charCodeAt(0)); };
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
       const j = sub.toJSON(); const k = j.keys as {p256dh:string;auth:string};
