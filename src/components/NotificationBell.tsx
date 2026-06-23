@@ -158,7 +158,7 @@ export default function NotificationBell({ userId, lang = "ar", variant = "dark"
         <div
           dir={isAr ? "rtl" : "ltr"}
           style={{
-            position: "absolute", top: 48, insetInlineEnd: 0, width: 340, maxWidth: "calc(100vw - 32px)",
+            position: "absolute", top: 48, ...(isAr ? { right: 0 } : { left: 0 }), width: 340, maxWidth: "calc(100vw - 32px)",
             background: "#fff", border: "1.5px solid #eef0f3", borderRadius: 14,
             boxShadow: "0 12px 32px rgba(0,0,0,.12)", zIndex: 1000, overflow: "hidden",
             fontFamily: "Rubik, sans-serif",
