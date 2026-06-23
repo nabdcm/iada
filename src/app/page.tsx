@@ -103,49 +103,105 @@ const translations = {
       title: "خطط الأسعار",
       titleHighlight: "المرنة",
       subtitle: "اختر الخطة التي تناسب احتياجات عيادتك",
+      individualTab: "فردي",
+      sharedTab: "مشترك",
       monthly: "شهرياً",
       annual: "سنوياً",
       save: "شهران مجاناً 🎁",
       per_month: "$ / شهر",
       per_year: "$ / سنة",
       cta: "ابدأ الآن",
-      plans: [
+      individualPlans: [
         {
           icon: "🩺",
           name: "الأساسية",
-          monthlyPrice: "10",
-          annualPrice: "54",
-          annualMonthly: "4.50",
-          features: [
-            "إدارة المرضى",
-            "إدارة المواعيد",
-            "بدون رابط حجز",
-          ],
+          monthlyPrice: "5.99",
+          annualPrice: "59",
+          annualMonthly: "4.92",
+          features: ["إدارة المرضى", "السجلات الطبية", "إدارة المواعيد", "حتى 100 مريض"],
         },
         {
           icon: "🏥",
           name: "الاحترافية",
           popular: true,
-          monthlyPrice: "15",
+          monthlyPrice: "7.99",
           annualPrice: "79",
           annualMonthly: "6.58",
           features: [
-            "إدارة المرضى",
-            "إدارة المواعيد",
-            "الإدارة المالية",
-            "رابط مشاركة الحجز",
+            "جميع ميزات الأساسية",
+            "رابط حجز المواعيد",
+            "إدارة المدفوعات",
+            "مراسلة المرضى عبر واتساب",
+            "تذكير المواعيد",
+            "حتى 400 مريض",
           ],
         },
         {
           icon: "🚀",
           name: "الشاملة",
-          monthlyPrice: "29",
+          monthlyPrice: "14.99",
           annualPrice: "149",
           annualMonthly: "12.42",
           features: [
             "جميع ميزات الاحترافية",
-            "متابعة المرضى المباشرة",
-            "جميع الميزات",
+            "متابعة المرضى برابط خاص",
+            "تقارير يومية للمريض",
+            "بوابة خاصة بالمريض",
+            "تسجيل الوصفات الطبية",
+            "عدد مرضى غير محدود",
+            "أولوية في الدعم الفني",
+          ],
+        },
+      ],
+      sharedPlans: [
+        {
+          icon: "🩺",
+          name: "مشتركة أساسية",
+          monthlyPrice: "7.99",
+          annualPrice: "79",
+          annualMonthly: "6.58",
+          features: [
+            "إدارة المرضى",
+            "السجلات الطبية",
+            "إدارة المواعيد",
+            "حتى 100 مريض",
+            "حتى طبيبين",
+            "تخصيص المرضى لكل طبيب",
+          ],
+        },
+        {
+          icon: "🏥",
+          name: "مشتركة احترافية",
+          popular: true,
+          monthlyPrice: "13.99",
+          annualPrice: "139",
+          annualMonthly: "11.58",
+          features: [
+            "جميع ميزات الأساسية المشتركة",
+            "رابط حجز المواعيد",
+            "إدارة المدفوعات",
+            "مراسلة المرضى عبر واتساب",
+            "تذكير المواعيد",
+            "حتى 400 مريض",
+            "حتى 3 أطباء",
+          ],
+        },
+        {
+          icon: "🚀",
+          name: "مشتركة شاملة",
+          monthlyPrice: "21.99",
+          annualPrice: "219",
+          annualMonthly: "18.25",
+          features: [
+            "جميع ميزات الاحترافية المشتركة",
+            "متابعة المرضى",
+            "تقارير يومية",
+            "بوابة المريض",
+            "وصفات طبية",
+            "عدد مرضى غير محدود",
+            "حتى 5 أطباء",
+            "أولوية في الدعم",
+            "عدد أطباء مخصص",
           ],
         },
       ],
@@ -261,49 +317,105 @@ const translations = {
       title: "Flexible Pricing",
       titleHighlight: "Plans",
       subtitle: "Choose the plan that fits your clinic's needs",
+      individualTab: "Individual",
+      sharedTab: "Shared",
       monthly: "Monthly",
       annual: "Annual",
       save: "2 months free 🎁",
       per_month: "$ / mo",
       per_year: "$ / yr",
       cta: "Get Started",
-      plans: [
+      individualPlans: [
         {
           icon: "🩺",
           name: "Basic",
-          monthlyPrice: "10",
-          annualPrice: "54",
-          annualMonthly: "4.50",
-          features: [
-            "Patients Management",
-            "Appointments Management",
-            "No Booking Link",
-          ],
+          monthlyPrice: "5.99",
+          annualPrice: "59",
+          annualMonthly: "4.92",
+          features: ["Patient management", "Medical records", "Appointments management", "Up to 100 patients"],
         },
         {
           icon: "🏥",
           name: "Professional",
           popular: true,
-          monthlyPrice: "15",
+          monthlyPrice: "7.99",
           annualPrice: "79",
           annualMonthly: "6.58",
           features: [
-            "Patients Management",
-            "Appointments Management",
-            "Financial Management",
-            "Booking Link",
+            "All Basic features",
+            "Clinic booking link",
+            "Payments management",
+            "WhatsApp patient messaging",
+            "Appointment reminders",
+            "Up to 400 patients",
           ],
         },
         {
           icon: "🚀",
           name: "Comprehensive",
-          monthlyPrice: "29",
+          monthlyPrice: "14.99",
           annualPrice: "149",
           annualMonthly: "12.42",
           features: [
-            "All Professional Features",
-            "Direct Patient Follow-up",
-            "All Features",
+            "All Professional features",
+            "Patient follow-up link",
+            "Daily patient reports",
+            "Patient portal",
+            "Prescription records",
+            "Unlimited patients",
+            "Priority support",
+          ],
+        },
+      ],
+      sharedPlans: [
+        {
+          icon: "🩺",
+          name: "Shared Basic",
+          monthlyPrice: "7.99",
+          annualPrice: "79",
+          annualMonthly: "6.58",
+          features: [
+            "Patient management",
+            "Medical records",
+            "Appointments management",
+            "Up to 100 patients",
+            "Up to 2 doctors",
+            "Patients assigned per doctor",
+          ],
+        },
+        {
+          icon: "🏥",
+          name: "Shared Professional",
+          popular: true,
+          monthlyPrice: "13.99",
+          annualPrice: "139",
+          annualMonthly: "11.58",
+          features: [
+            "All Shared Basic features",
+            "Clinic booking link",
+            "Payments management",
+            "WhatsApp messaging",
+            "Appointment reminders",
+            "Up to 400 patients",
+            "Up to 3 doctors",
+          ],
+        },
+        {
+          icon: "🚀",
+          name: "Shared Comprehensive",
+          monthlyPrice: "21.99",
+          annualPrice: "219",
+          annualMonthly: "18.25",
+          features: [
+            "All Shared Professional features",
+            "Patient follow-up",
+            "Daily reports",
+            "Patient portal",
+            "Prescriptions",
+            "Unlimited patients",
+            "Up to 5 doctors",
+            "Priority support",
+            "Custom doctor count",
           ],
         },
       ],
@@ -351,6 +463,7 @@ export default function LandingPage() {
   const [lang, setLang] = useState("ar");
   const [scrolled, setScrolled] = useState(false);
   const [pricingAnnual, setPricingAnnual] = useState(false);
+  const [planTab, setPlanTab] = useState<"individual" | "shared">("individual");
   const t = translations[lang];
   const isAr = lang === "ar";
 
@@ -975,6 +1088,22 @@ export default function LandingPage() {
           <div className="pricing-toggle">
             <div className="toggle-pill">
               <div
+                className={`toggle-pill-option${planTab === "individual" ? " active" : ""}`}
+                onClick={() => setPlanTab("individual")}
+              >
+                {t.pricing.individualTab}
+              </div>
+              <div
+                className={`toggle-pill-option${planTab === "shared" ? " active" : ""}`}
+                onClick={() => setPlanTab("shared")}
+              >
+                {t.pricing.sharedTab}
+              </div>
+            </div>
+          </div>
+          <div className="pricing-toggle">
+            <div className="toggle-pill">
+              <div
                 className={`toggle-pill-option${!pricingAnnual ? " active" : ""}`}
                 onClick={() => setPricingAnnual(false)}
               >
@@ -990,7 +1119,7 @@ export default function LandingPage() {
             {pricingAnnual && <span className="pricing-save-badge">{t.pricing.save}</span>}
           </div>
           <div className="pricing-grid">
-            {t.pricing.plans.map((plan: any, i: number) => (
+            {(planTab === "individual" ? t.pricing.individualPlans : t.pricing.sharedPlans).map((plan: any, i: number) => (
               <div className={`pricing-card${plan.popular ? " popular" : ""}`} key={i}>
                 {plan.popular && <div className="popular-badge">⭐ {isAr ? "الأكثر طلباً" : "Most Popular"}</div>}
                 <div className="pricing-icon">{plan.icon}</div>
