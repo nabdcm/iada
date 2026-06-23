@@ -3,7 +3,7 @@
 
 import { NextResponse } from "next/server";
 
-const SESSION_DURATION_MS = 60 * 60 * 1000;
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 export const ADMIN_COOKIE = "nabd_admin_session";
 
 export async function POST(req: Request) {

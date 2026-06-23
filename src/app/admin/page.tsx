@@ -2737,8 +2737,8 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
 // ── Admin API helper ────────────────────────────────────────
 // ── Admin API helper — يُرسل x-admin-secret من server env فقط ─
 // الـ secret لم يعد NEXT_PUBLIC — يُرسَل عبر الـ cookie بدلاً منه
-const adminFetch = (url: string, options: RequestInit = {}) =>
-  fetch(url, {
+const adminFetch = async (url: string, options: RequestInit = {}) => {
+  const res = await fetch(url, {
     ...options,
     credentials: "include", // يُرسل الـ httpOnly cookie تلقائياً
     headers: {
@@ -2746,6 +2746,13 @@ const adminFetch = (url: string, options: RequestInit = {}) =>
       ...(options.headers as Record<string, string> ?? {}),
     },
   });
+  if (res.status === 401) {
+    // الجلسة انتهت — أعد تحميل الصفحة لإظهار شاشة تسجيل الدخول
+    sessionStorage.removeItem(SESSION_KEY);
+    window.location.reload();
+  }
+  return res;
+};
 
 // SESSION_KEY لا يزال مستخدماً لتتبع حالة الـ auth في client بعد التحقق
 const SESSION_KEY = "__nabd_admin_auth__";
