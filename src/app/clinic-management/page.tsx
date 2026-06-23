@@ -113,6 +113,8 @@ const T = {
       workingHours: "ساعات العمل الافتراضية للعيادة",
       defaultFrom: "من",
       defaultTo: "إلى",
+      is24h: "العيادة تعمل 24 ساعة",
+      is24hSub: "فتح كامل اليوم لاستقبال الحجوزات في أي وقت",
       weekendDays: "أيام العطلة الأسبوعية",
       allowOnlineBooking: "السماح بالحجز الإلكتروني",
       requireApproval: "يتطلب موافقة الطبيب",
@@ -201,6 +203,8 @@ const T = {
       workingHours: "Default clinic working hours",
       defaultFrom: "From",
       defaultTo: "To",
+      is24h: "Clinic operates 24 hours",
+      is24hSub: "Open all day for bookings at any time",
       weekendDays: "Weekend Days",
       allowOnlineBooking: "Allow online booking",
       requireApproval: "Requires doctor approval",
@@ -819,6 +823,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
   const [clinicName, setClinicName] = useState("");
   const [defaultFrom, setDefaultFrom] = useState("08:00");
   const [defaultTo, setDefaultTo] = useState("18:00");
+  const [is24h, setIs24h] = useState(false);
   const [weekendDays, setWeekendDays] = useState<number[]>([5,6]);
   const [allowOnline, setAllowOnline] = useState(true);
   const [requireApproval, setRequireApproval] = useState(false);
@@ -833,6 +838,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
           const st = typeof data.settings === "string" ? JSON.parse(data.settings) : data.settings;
           setDefaultFrom(st.default_from ?? "08:00");
           setDefaultTo(st.default_to ?? "18:00");
+          setIs24h(st.is_24_hours ?? (st.default_from === "00:00" && st.default_to === "23:59"));
           setWeekendDays(st.weekend_days ?? [5,6]);
           setAllowOnline(st.allow_online_booking ?? true);
           setRequireApproval(st.require_approval ?? false);
@@ -848,9 +854,12 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
 
   const save = async () => {
     setSaveStatus("saving");
+    const effectiveFrom = is24h ? "00:00" : defaultFrom;
+    const effectiveTo   = is24h ? "23:59" : defaultTo;
     const settings = {
-      default_from: defaultFrom,
-      default_to: defaultTo,
+      default_from: effectiveFrom,
+      default_to: effectiveTo,
+      is_24_hours: is24h,
       weekend_days: weekendDays,
       allow_online_booking: allowOnline,
       require_approval: requireApproval,
@@ -862,8 +871,8 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       .filter((_,i) => !weekendDays.includes(i));
     await supabase.from("clinic_profiles").update({
       clinic_name: clinicName,
-      working_hours_start: defaultFrom,
-      working_hours_end:   defaultTo,
+      working_hours_start: effectiveFrom,
+      working_hours_end:   effectiveTo,
       working_days:        workingDaysCodes,
     }).eq("id", userId);
     setSaveStatus("saved");
@@ -891,16 +900,26 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
 
       {/* ساعات العمل */}
       <div style={cardSt}>
-        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:12 }}>⏰ {s.workingHours}</div>
-        <div style={{ display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" }}>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
+          <div>
+            <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>🌙 {s.is24h}</div>
+            <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{s.is24hSub}</div>
+          </div>
+          <button onClick={() => setIs24h(v => !v)}
+            style={{ width:48,height:26,borderRadius:13,background:is24h?"#0863ba":"#ddd",border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0 }}>
+            <div style={{ position:"absolute",top:3,left:isAr ? (is24h?3:26) : (is24h?26:3),width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.2)",transition:"left .2s" }}/>
+          </button>
+        </div>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:12,paddingTop:12,borderTop:"1px solid #f5f5f5",opacity:is24h?.4:1 }}>⏰ {s.workingHours}</div>
+        <div style={{ display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",opacity:is24h?.4:1,pointerEvents:is24h?"none":"auto" }}>
           <div>
             <div style={{ fontSize:11,color:"#aaa",marginBottom:4 }}>{s.defaultFrom}</div>
-            <input type="time" value={defaultFrom} onChange={e=>setDefaultFrom(e.target.value)} style={{ ...inputSt, width:110 }}/>
+            <input type="time" value={defaultFrom} disabled={is24h} onChange={e=>setDefaultFrom(e.target.value)} style={{ ...inputSt, width:110 }}/>
           </div>
           <div style={{ color:"#ccc",marginTop:16 }}>→</div>
           <div>
             <div style={{ fontSize:11,color:"#aaa",marginBottom:4 }}>{s.defaultTo}</div>
-            <input type="time" value={defaultTo} onChange={e=>setDefaultTo(e.target.value)} style={{ ...inputSt, width:110 }}/>
+            <input type="time" value={defaultTo} disabled={is24h} onChange={e=>setDefaultTo(e.target.value)} style={{ ...inputSt, width:110 }}/>
           </div>
         </div>
       </div>

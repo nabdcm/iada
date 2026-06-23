@@ -196,6 +196,17 @@ export default function ClinicProfileSetup({ lang = "ar" }: { lang?: Lang }) {
           </h3>
         </div>
         <div style={{ padding:"20px 22px",display:"flex",flexDirection:"column",gap:16 }}>
+          <label style={{ display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,color:"#0863ba",cursor:"pointer" }}>
+            <input type="checkbox"
+              checked={form.working_hours_start === "00:00" && form.working_hours_end === "23:59"}
+              onChange={e => setForm({
+                ...form,
+                working_hours_start: e.target.checked ? "00:00" : "09:00",
+                working_hours_end:   e.target.checked ? "23:59" : "17:00",
+              })}
+            />
+            {isAr ? "العيادة تعمل 24 ساعة" : "Clinic operates 24 hours"}
+          </label>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12 }}>
             <div>
               <label style={{ display:"block",fontSize:12,fontWeight:700,color:"#555",marginBottom:7 }}>
