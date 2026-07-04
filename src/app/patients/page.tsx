@@ -439,6 +439,163 @@ const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a08
 const getColor    = (id:number) => AVATAR_COLORS[(id-1)%AVATAR_COLORS.length];
 const getInitials = (name:string) => name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
 
+// ─── Print Medical Report ──────────────────────────────────
+function printMedicalReport(
+  patient: Patient,
+  medicalFields: Record<string,string>,
+  medFieldDefs: MedicalField[],
+  clinicType: ClinicType,
+  clinicName: string,
+  doctorName: string,
+  clinicPhone: string,
+  lang: Lang,
+) {
+  const isAr = lang === "ar";
+  const dir = isAr ? "rtl" : "ltr";
+  const meta = CLINIC_TYPE_META[clinicType] ?? CLINIC_TYPE_META.general;
+
+  const calcAgeLocal = (dob?:string|null) => {
+    if (!dob) return "—";
+    const b = new Date(dob), n = new Date();
+    let age = n.getFullYear()-b.getFullYear();
+    if (n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate())) age--;
+    return age>=0 ? String(age) : "—";
+  };
+  const genderLabel = patient.gender ? (isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")) : "—";
+  const age = calcAgeLocal(patient.date_of_birth);
+
+  const filledFields = medFieldDefs.filter(f => (medicalFields?.[f.key]??"").trim().length>0);
+
+  const sectionsHTML = filledFields.length
+    ? filledFields.map(f => `
+      <div class="section-title">${f.icon} ${isAr?f.label_ar:f.label_en}</div>
+      <div class="notes-box" style="margin-bottom:20px; white-space:pre-wrap;">${(medicalFields[f.key]||"").replace(/</g,"&lt;")}</div>
+    `).join("")
+    : `<div class="notes-box" style="text-align:center; color:#aaa;">${isAr?"لا توجد بيانات مسجلة في السجل الطبي":"No data recorded in the medical record"}</div>`;
+
+  const genDate = new Date().toLocaleDateString(isAr?"ar-SA-u-ca-gregory":"en-US",{ year:"numeric", month:"long", day:"numeric" });
+
+  const html = `
+    <!DOCTYPE html>
+    <html dir="${dir}" lang="${lang}">
+    <head>
+      <meta charset="UTF-8" />
+      <title>${isAr?"تقرير طبي":"Medical Report"}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: ${isAr ? "'Noto Naskh Arabic', serif" : "'Noto Sans', sans-serif"};
+          direction: ${dir};
+          background: #fff;
+          color: #1a1a2e;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+        .page { max-width: 800px; margin: 0 auto; padding: 40px; }
+        .header {
+          display: flex; justify-content: space-between; align-items: flex-start;
+          padding-bottom: 24px; border-bottom: 3px solid ${meta.color}; margin-bottom: 28px;
+        }
+        .clinic-info h1 { font-size: 24px; font-weight: 800; color: ${meta.color}; margin-bottom: 4px; }
+        .clinic-info p { font-size: 13px; color: #666; margin-bottom: 2px; }
+        .rx-badge {
+          width: 64px; height: 64px;
+          background: linear-gradient(135deg, ${meta.color}, ${meta.color}cc);
+          border-radius: 16px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 28px; color: white;
+          box-shadow: 0 4px 16px ${meta.color}40;
+        }
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        .meta-card { background: #f7f9fc; border: 1.5px solid #eef0f3; border-radius: 12px; padding: 14px 18px; }
+        .meta-card .label { font-size: 10px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+        .meta-card .value { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+        .section-title {
+          font-size: 13px; font-weight: 700; color: ${meta.color};
+          text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
+          display: flex; align-items: center; gap: 8px;
+        }
+        .section-title::after { content: ""; flex: 1; height: 1.5px; background: linear-gradient(90deg, ${meta.color}20, transparent); }
+        .notes-box {
+          background: rgba(0,0,0,.02);
+          border: 1.5px solid #eef0f3;
+          border-radius: 10px;
+          padding: 14px 18px;
+          font-size: 13px;
+          color: #333;
+          line-height: 1.8;
+        }
+        .footer {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+          padding-top: 24px; border-top: 1.5px solid #eef0f3; margin-top: 32px;
+        }
+        .signature-area { text-align: center; }
+        .signature-line { border-bottom: 1.5px dashed #ccc; margin-bottom: 8px; height: 60px; }
+        .signature-label { font-size: 11px; color: #888; }
+        .footer-note { text-align: center; font-size: 10px; color: #bbb; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f0f2f5; }
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .page { padding: 20px; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="page">
+        <div class="header">
+          <div class="clinic-info">
+            <h1>${clinicName || (isAr?"عيادة نبض":"NABD Clinic")}</h1>
+            ${doctorName?`<p>👨‍⚕️ ${doctorName}</p>`:""}
+            ${clinicPhone?`<p>📞 ${clinicPhone}</p>`:""}
+            <p style="font-size:11px; color:#999; margin-top:6px;">${isAr?"تقرير طبي":"Medical Report"} — ${isAr?meta.ar:meta.en}</p>
+          </div>
+          <div class="rx-badge">${meta.icon}</div>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-card">
+            <div class="label">${isAr?"اسم المريض":"Patient Name"}</div>
+            <div class="value">${patient.name}</div>
+          </div>
+          <div class="meta-card">
+            <div class="label">${isAr?"تاريخ التقرير":"Report Date"}</div>
+            <div class="value">${genDate}</div>
+          </div>
+          <div class="meta-card">
+            <div class="label">${isAr?"الجنس":"Gender"}</div>
+            <div class="value">${genderLabel}</div>
+          </div>
+          <div class="meta-card">
+            <div class="label">${isAr?"العمر":"Age"}</div>
+            <div class="value">${age!=="—"?`${age} ${isAr?"سنة":"yrs"}`:"—"}</div>
+          </div>
+        </div>
+
+        <div class="section-title">${isAr?"محتوى السجل الطبي":"Medical Record Content"}</div>
+        ${sectionsHTML}
+
+        <div class="footer">
+          <div class="signature-area">
+            <div class="signature-line"></div>
+            <div class="signature-label">${isAr?"توقيع الطبيب":"Doctor's Signature"}</div>
+          </div>
+          <div class="signature-area">
+            <div class="signature-line"></div>
+            <div class="signature-label">${isAr?"ختم العيادة":"Clinic Stamp"}</div>
+          </div>
+        </div>
+
+        <div class="footer-note">نبض — نظام إدارة العيادة | NABD Clinic Management System</div>
+      </div>
+      <script>window.onload = () => { window.print(); }</script>
+    </body>
+    </html>
+  `;
+
+  const w = window.open("", "_blank");
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
 function openWhatsApp(phone:string) {
   let cleaned = phone.replace(/[^0-9+]/g,"");
   if (cleaned.startsWith("09")) cleaned = "963"+cleaned.slice(1);
@@ -1283,8 +1440,8 @@ function DeleteModal({ lang, patient, onConfirm, onClose }: { lang:Lang; patient
 }
 
 // ─── Patient Card (Mobile) ────────────────────────────────
-function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onToggleHide, onWhatsApp, onProfile }: {
-  p:Patient; lang:Lang; isAr:boolean; clinicType:ClinicType;
+function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onToggleHide, onWhatsApp, onProfile, onReport, reportLoading }: {
+  p:Patient; lang:Lang; isAr:boolean; clinicType:ClinicType; onReport:()=>void; reportLoading?:boolean;
   calcAge:(d?:string|null)=>string|number;
   onEdit:()=>void; onDelete:()=>void; onToggleHide:()=>void; onWhatsApp:()=>void; onProfile:()=>void;
 }) {
@@ -1319,9 +1476,10 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
             <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.phone}</div><div style={{ fontSize:13,color:"#555",direction:"ltr",textAlign:isAr?"right":"left" }}>{p.phone||"—"}</div></div>
             <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.dob}</div><div style={{ fontSize:13,color:"#555" }}>{p.date_of_birth?new Date(p.date_of_birth).toLocaleDateString(lang==="ar"?"ar-SA-u-ca-gregory":"en-US",{year:"numeric",month:"short",day:"numeric"}):"—"}</div></div>
           </div>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:6,paddingBottom:14 }}>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr",gap:6,paddingBottom:14 }}>
             {[
               { icon:"📋",label:tr.actions.profile,  fn:onProfile,    bg:"rgba(8,99,186,.08)",   color:"#0863ba" },
+              { icon:reportLoading?"⏳":"📄",label:isAr?"تقرير":"Report", fn:onReport, bg:"rgba(8,99,186,.06)", color:"#0863ba" },
               { icon:"✏️",label:tr.actions.edit,     fn:onEdit,       bg:"rgba(8,99,186,.06)",   color:"#0863ba" },
               { icon:p.is_hidden?"👁":"🙈",label:p.is_hidden?tr.actions.show:tr.actions.hide, fn:onToggleHide, bg:"#f7f9fc", color:"#888" },
               { icon:"🗑️",label:tr.actions.delete,   fn:onDelete,     bg:"rgba(192,57,43,.06)", color:"#c0392b" },
@@ -1379,12 +1537,31 @@ export default function PatientsPage() {
   const [profilePatient, setProfilePatient] = useState<Patient|null>(null);
   const [animIds,        setAnimIds]        = useState<number[]>([]);
   const [saveError,      setSaveError]      = useState("");
+  const [clinicName,     setClinicName]     = useState("");
+  const [doctorName,     setDoctorName]     = useState("");
+  const [clinicPhone,    setClinicPhone]    = useState("");
+  const [reportLoadingId,setReportLoadingId]= useState<number|null>(null);
+
+  const handleGenerateReport = async (p: Patient) => {
+    setReportLoadingId(p.id);
+    try {
+      const profile = await loadProfileFromDB(p.id);
+      const medFieldsForType = MEDICAL_FIELDS_BY_TYPE[clinicType] ?? MEDICAL_FIELDS_BY_TYPE.general;
+      printMedicalReport(p, profile?.medical_fields ?? {}, medFieldsForType, clinicType, clinicName, doctorName, clinicPhone, lang);
+    } finally {
+      setReportLoadingId(null);
+    }
+  };
 
   const loadClinicType = async () => {
     try {
       const { data:{ user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("clinics").select("clinic_type, plan, max_doctors").eq("user_id",user.id).maybeSingle();
+      const { data:settingsData } = await supabase.from("settings").select("clinic_name, doctor_name").eq("user_id",user.id).maybeSingle();
+      if (settingsData?.clinic_name) setClinicName(settingsData.clinic_name);
+      if (settingsData?.doctor_name) setDoctorName(settingsData.doctor_name);
+      const { data } = await supabase.from("clinics").select("clinic_type, plan, max_doctors, phone").eq("user_id",user.id).maybeSingle();
+      if (data?.phone) setClinicPhone(data.phone);
       if (data?.clinic_type) {
         const ct = data.clinic_type as ClinicType;
         setClinicTypeState(ct);
@@ -1747,7 +1924,8 @@ export default function PatientsPage() {
                 <PatientCard key={p.id} p={p} lang={lang} isAr={isAr} calcAge={calcAge} clinicType={clinicType}
                   onEdit={()=>setEditPatient(p)} onDelete={()=>setDeletePatient(p)}
                   onToggleHide={()=>toggleHide(p.id)} onWhatsApp={()=>p.phone&&openWhatsApp(p.phone)}
-                  onProfile={()=>setProfilePatient(p)}/>
+                  onProfile={()=>setProfilePatient(p)}
+                  onReport={()=>handleGenerateReport(p)} reportLoading={reportLoadingId===p.id}/>
               ))}
             </div>
 
@@ -1829,6 +2007,9 @@ export default function PatientsPage() {
                         </button>
                       )}
                       {/* أزرار أيقونات فقط: تعديل، إخفاء، حذف */}
+                      <button className="action-icon-btn" title={isAr?"تقرير طبي":"Medical Report"} onClick={()=>handleGenerateReport(p)} disabled={reportLoadingId===p.id} style={{ opacity:reportLoadingId===p.id?0.5:1 }}>
+                        {reportLoadingId===p.id?"⏳":"📄"}
+                      </button>
                       <button className="action-icon-btn" title={tr.actions.edit} onClick={()=>setEditPatient(p)}>✏️</button>
                       <button className="action-icon-btn" title={p.is_hidden?tr.actions.show:tr.actions.hide} onClick={()=>toggleHide(p.id)}>
                         {p.is_hidden?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
