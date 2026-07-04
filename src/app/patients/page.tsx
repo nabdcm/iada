@@ -1658,9 +1658,9 @@ export default function PatientsPage() {
       const { data:{ user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data:settingsData } = await supabase.from("settings").select("clinic_name, doctor_name").eq("user_id",user.id).maybeSingle();
-      if (settingsData?.clinic_name) setClinicName(settingsData.clinic_name);
       if (settingsData?.doctor_name) setDoctorName(settingsData.doctor_name);
-      const { data } = await supabase.from("clinics").select("clinic_type, plan, max_doctors, phone").eq("user_id",user.id).maybeSingle();
+      const { data } = await supabase.from("clinics").select("clinic_type, plan, max_doctors, phone, name").eq("user_id",user.id).maybeSingle();
+      setClinicName(settingsData?.clinic_name || data?.name || "");
       if (data?.phone) setClinicPhone(data.phone);
       if (data?.clinic_type) {
         const ct = data.clinic_type as ClinicType;
