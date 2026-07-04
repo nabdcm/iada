@@ -213,14 +213,16 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
       const clinicWithPlan = { ...profileData, plan: clinicRow?.plan ?? "", require_approval: requireApproval } as ClinicProfile;
       setClinic(clinicWithPlan);
 
-      // إذا كانت عيادة مشتركة، جلب قائمة الأطباء
-      if (clinicRow?.plan && SHARED_CLINIC_PLANS.includes(clinicRow.plan)) {
-        const { data: doctorsData } = await supabase
-          .from("doctors")
-          .select("id, name, specialty, color")
-          .eq("user_id", clinicId)
-          .order("name");
-        setDoctors(doctorsData ?? []);
+      // جلب قائمة الأطباء (مشتركة أو فردية)
+      const { data: doctorsData } = await supabase
+        .from("doctors")
+        .select("id, name, specialty, color")
+        .eq("user_id", clinicId)
+        .order("name");
+      setDoctors(doctorsData ?? []);
+      // للعيادات الفردية: تحديد الطبيب الوحيد تلقائياً لجلب دوامه
+      if (!(clinicRow?.plan && SHARED_CLINIC_PLANS.includes(clinicRow.plan)) && doctorsData && doctorsData.length > 0) {
+        setSelectedDoctor(doctorsData[0]);
       }
 
       setLoading(false);
