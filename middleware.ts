@@ -6,7 +6,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions"];
+const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room"];
 const PHARMACY_PROTECTED = ["/pharmacy"];
 
 export async function middleware(request: NextRequest) {

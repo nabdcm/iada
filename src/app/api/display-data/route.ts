@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   // ── 1. جلب معلومات العيادة ─────────────────────────────────
   const { data: clinic, error: clinicErr } = await supabaseAdmin
     .from("clinics")
-    .select("name, owner")
+    .select("name, owner, plan")
     .eq("user_id", clinicId)
     .maybeSingle();
 
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   // ── 2. جلب مواعيد اليوم ───────────────────────────────────
   const { data: appointments, error: apptErr } = await supabaseAdmin
     .from("appointments")
-    .select("id, patient_id, date, time, duration, status")
+    .select("id, patient_id, date, time, duration, status, queue_status, doctor_id")
     .eq("user_id", clinicId)
     .eq("date", date)
     .neq("status", "cancelled")
@@ -61,8 +61,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // ── 4. جلب الأطباء (للعيادات المشتركة) ─────────────────────
+  const { data: doctors } = await supabaseAdmin
+    .from("doctors")
+    .select("id, name, color")
+    .eq("user_id", clinicId);
+
   return NextResponse.json({
     clinic,
+    doctors: doctors ?? [],
     appointments: appts.map((a) => ({
       ...a,
       patientName: patientMap[a.patient_id] ?? "مريض",

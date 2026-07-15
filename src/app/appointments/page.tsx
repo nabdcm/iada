@@ -1407,7 +1407,6 @@ export default function AppointmentsPage() {
   const [plan,                setPlan]                = useState<PlanType>("basic");
   const [shareModal,          setShareModal]          = useState(false);
   const [copied,              setCopied]              = useState(false);
-  const [showWaitingRoom,      setShowWaitingRoom]      = useState(false);
   const [viewMonth,           setViewMonth]           = useState(now.getMonth());
   const [viewYear,            setViewYear]            = useState(now.getFullYear());
   const [selectedKey,         setSelectedKey]         = useState(todayKey);
@@ -1843,10 +1842,10 @@ export default function AppointmentsPage() {
                     🔗 {isAr?"رابط الحجز":"Booking Link"}
                   </button>
                 )}
-                {/* زر شاشة قاعة الانتظار */}
+                {/* زر شاشة قاعة الانتظار — يفتح لوحة التحكم الجديدة بالدور */}
                 <button
-                  onClick={() => setShowWaitingRoom(true)}
-                  title={isAr?"شاشة قاعة الانتظار":"Waiting Room Display"}
+                  onClick={() => window.open("/waiting-room", "_blank")}
+                  title={isAr?"شاشة تحكم قاعة الانتظار":"Waiting Room Control"}
                   style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#555",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .25s" }}
                 >
                   {isMobile?"🖥️":`🖥️ ${isAr?"شاشة الانتظار":"Display"}`}
@@ -2394,9 +2393,6 @@ export default function AppointmentsPage() {
         )}
         {shareModal&&(
           <ShareModal lang={lang} clinicId={clinicId} copied={copied} setCopied={setCopied} onClose={()=>setShareModal(false)}/>
-        )}
-        {showWaitingRoom&&(
-          <WaitingRoomModal appointments={appointments} patients={patients} doctors={doctors} plan={plan} onClose={()=>setShowWaitingRoom(false)}/>
         )}
         {notification&&(
           <NotificationToast lang={lang} appt={notification} patientName={getPatientName(notification.patient_id)} onDismiss={()=>setNotification(null)}/>

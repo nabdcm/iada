@@ -10,8 +10,12 @@ interface ApiAppointment {
   time: string;
   duration: number;
   status: string;
+  queue_status: "waiting" | "called" | "done" | "skipped";
+  doctor_id: number | null;
   patientName: string;
 }
+
+interface ApiDoctor { id: number; name: string; color?: string; }
 
 interface DisplayAppt {
   id: number;
@@ -19,6 +23,14 @@ interface DisplayAppt {
   time: string;
   status: string;
   isCurrent: boolean;
+}
+
+interface DisplayColumn {
+  doctorId: number | null;
+  doctorName: string | null;
+  color: string;
+  current: DisplayAppt | null;
+  upcoming: DisplayAppt[];
 }
 
 interface ClinicInfo {
@@ -79,13 +91,12 @@ export default function DisplayPage({
   const clinicId = params.clinicId;
 
   const [clinicInfo, setClinicInfo] = useState<ClinicInfo | null>(null);
-  const [appointments, setAppointments] = useState<DisplayAppt[]>([]);
-  const [currentAppt, setCurrentAppt] = useState<DisplayAppt | null>(null);
+  const [columns, setColumns] = useState<DisplayColumn[]>([]);
   const [clock, setClock] = useState<string>("");
   const [dateLabel, setDateLabel] = useState<string>("");
   const [callFlash, setCallFlash] = useState<DisplayAppt | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const prevCurrentRef = useRef<number | null>(null);
+  const prevCurrentRef = useRef<Record<string, number | null>>({});
 
   // ─── Clock ────────────────────────────────────────────────────
   useEffect(() => {
@@ -107,7 +118,9 @@ export default function DisplayPage({
     return () => clearInterval(id);
   }, []);
 
-  // ─── Fetch via API route (bypasses RLS) ───────────────────────
+  const DOCTOR_COLORS = ["#38bdf8", "#4ade80", "#f472b6", "#fbbf24", "#a78bfa", "#fb923c"];
+
+  // ─── Fetch via API route (bypasses RLS) — يعكس اختيار الطبيب اليدوي ─
   const fetchData = useCallback(async () => {
     try {
       const today = todayISO();
@@ -123,34 +136,9 @@ export default function DisplayPage({
       const data = await res.json();
       setClinicInfo({ name: data.clinic.name, owner: data.clinic.owner });
 
-      const nowMin = nowMinutes();
       const appts: ApiAppointment[] = data.appointments ?? [];
-
-      if (appts.length === 0) {
-        setAppointments([]);
-        setCurrentAppt(null);
-        return;
-      }
-
-      // ─── تحديد "المريض الحالي" ────────────────────────────────
-      let current: ApiAppointment | null = null;
-
-      const pastOrNow = appts.filter(
-        (a) =>
-          timeToMinutes(a.time) <= nowMin &&
-          (a.status === "scheduled" || a.status === "completed")
-      );
-      if (pastOrNow.length > 0) {
-        current = pastOrNow[pastOrNow.length - 1];
-      } else {
-        const upcoming = appts.filter((a) => a.status === "scheduled");
-        if (upcoming.length > 0) current = upcoming[0];
-      }
-
-      // ─── قائمة الـ 5 القادمة (بعد الحالي) ────────────────────
-      const upcomingList = appts
-        .filter((a) => a.status === "scheduled" && a.id !== current?.id)
-        .slice(0, 5);
+      const doctorsList: ApiDoctor[] = data.doctors ?? [];
+      const isShared = !!data.clinic?.plan?.toString().startsWith("shared_");
 
       const toDisplay = (a: ApiAppointment, isCurrent: boolean): DisplayAppt => ({
         id: a.id,
@@ -160,20 +148,43 @@ export default function DisplayPage({
         isCurrent,
       });
 
-      const currentDisplay = current ? toDisplay(current, true) : null;
-      const upcomingDisplay = upcomingList.map((a) => toDisplay(a, false));
+      const buildColumn = (doctorId: number | null, doctorName: string | null, color: string, list: ApiAppointment[]): DisplayColumn => {
+        const current = list.find(a => a.queue_status === "called") || null;
+        const upcoming = list
+          .filter(a => a.queue_status === "waiting")
+          .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
+          .slice(0, 5);
+        return {
+          doctorId, doctorName, color,
+          current: current ? toDisplay(current, true) : null,
+          upcoming: upcoming.map(a => toDisplay(a, false)),
+        };
+      };
 
-      // ─── Flash عند تغيير المريض الحالي ───────────────────────
-      if (current && current.id !== prevCurrentRef.current) {
-        if (prevCurrentRef.current !== null) {
-          setCallFlash(currentDisplay);
-          setTimeout(() => setCallFlash(null), 8000);
-        }
-        prevCurrentRef.current = current?.id ?? null;
+      let newColumns: DisplayColumn[];
+      if (isShared && doctorsList.length > 0) {
+        newColumns = doctorsList
+          .map((d, i) => buildColumn(d.id, d.name, d.color || DOCTOR_COLORS[i % DOCTOR_COLORS.length], appts.filter(a => a.doctor_id === d.id)))
+          .filter(c => c.current || c.upcoming.length > 0 || appts.some(a => a.doctor_id === c.doctorId));
+      } else {
+        newColumns = [buildColumn(null, null, "#38bdf8", appts)];
       }
 
-      setCurrentAppt(currentDisplay);
-      setAppointments(upcomingDisplay);
+      // ─── Flash عند تغيير المريض الحالي بأي عمود ───────────────
+      newColumns.forEach(col => {
+        const key = String(col.doctorId ?? "single");
+        const prevId = prevCurrentRef.current[key] ?? null;
+        const curId = col.current?.id ?? null;
+        if (curId !== null && curId !== prevId) {
+          if (prevId !== null) {
+            setCallFlash(col.current);
+            setTimeout(() => setCallFlash(null), 8000);
+          }
+        }
+        prevCurrentRef.current[key] = curId;
+      });
+
+      setColumns(newColumns);
     } catch (err) {
       console.error("fetchData error:", err);
     }
@@ -228,43 +239,50 @@ export default function DisplayPage({
       </header>
 
       {/* ── Body ── */}
-      <main style={styles.body}>
-        {/* Current patient */}
-        <section style={styles.currentSection}>
-          <div style={styles.sectionLabel}>المريض الحالي</div>
-          {currentAppt ? (
-            <div style={styles.currentCard}>
-              <div style={styles.currentBadge}>🟢 جارٍ الآن</div>
-              <div style={styles.currentName}>{currentAppt.maskedName}</div>
-              <div style={styles.currentTime}>{currentAppt.time}</div>
-            </div>
-          ) : (
-            <div style={styles.emptyCard}>
-              <span style={{ fontSize: 40 }}>🕐</span>
-              <span style={{ marginTop: 12, fontSize: 18, color: "rgba(255,255,255,.5)" }}>
-                لا يوجد موعد حالي
-              </span>
-            </div>
-          )}
-        </section>
-
-        {/* Upcoming list */}
-        <section style={styles.upcomingSection}>
-          <div style={styles.sectionLabel}>المواعيد القادمة</div>
-          {appointments.length === 0 ? (
-            <div style={styles.emptyUpcoming}>لا توجد مواعيد قادمة لهذا اليوم</div>
-          ) : (
-            <div style={styles.upcomingList}>
-              {appointments.map((a, i) => (
-                <div key={a.id} style={{ ...styles.upcomingCard, animationDelay: `${i * 0.08}s` }}>
-                  <div style={styles.upcomingRank}>{i + 1}</div>
-                  <div style={styles.upcomingName}>{a.maskedName}</div>
-                  <div style={styles.upcomingTime}>{a.time}</div>
+      <main style={columns.length > 1 ? { ...styles.body, gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` } : styles.body}>
+        {columns.map((col) => (
+          <div key={String(col.doctorId ?? "single")} style={columns.length > 1 ? styles.doctorColumn : styles.singleColumnWrap}>
+            {col.doctorName && (
+              <div style={{ ...styles.doctorHeader, color: col.color }}>{"د. " + col.doctorName}</div>
+            )}
+            {/* Current patient */}
+            <section style={styles.currentSection}>
+              <div style={styles.sectionLabel}>المريض الحالي</div>
+              {col.current ? (
+                <div style={{ ...styles.currentCard, borderColor: `${col.color}59`, background: `linear-gradient(135deg, ${col.color}1f 0%, ${col.color}0f 100%)` }}>
+                  <div style={styles.currentBadge}>🟢 جارٍ الآن</div>
+                  <div style={styles.currentName}>{col.current.maskedName}</div>
+                  <div style={{ ...styles.currentTime, color: col.color }}>{col.current.time}</div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              ) : (
+                <div style={styles.emptyCard}>
+                  <span style={{ fontSize: 40 }}>🕐</span>
+                  <span style={{ marginTop: 12, fontSize: 18, color: "rgba(255,255,255,.5)" }}>
+                    لا يوجد مريض قيد الاستقبال
+                  </span>
+                </div>
+              )}
+            </section>
+
+            {/* Upcoming list */}
+            <section style={styles.upcomingSection}>
+              <div style={styles.sectionLabel}>قائمة الانتظار</div>
+              {col.upcoming.length === 0 ? (
+                <div style={styles.emptyUpcoming}>لا يوجد مرضى بقائمة الانتظار</div>
+              ) : (
+                <div style={styles.upcomingList}>
+                  {col.upcoming.map((a, i) => (
+                    <div key={a.id} style={{ ...styles.upcomingCard, animationDelay: `${i * 0.08}s` }}>
+                      <div style={{ ...styles.upcomingRank, color: col.color, background: `${col.color}1f` }}>{i + 1}</div>
+                      <div style={styles.upcomingName}>{a.maskedName}</div>
+                      <div style={styles.upcomingTime}>{a.time}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        ))}
       </main>
 
       {/* ── Footer ── */}
@@ -372,6 +390,9 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 20,
   },
   currentSection: { display: "flex", flexDirection: "column" },
+  doctorColumn: { display: "flex", flexDirection: "column", gap: 0, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 20, padding: 20 },
+  singleColumnWrap: { display: "contents" },
+  doctorHeader: { fontSize: 20, fontWeight: 800, marginBottom: 16, textAlign: "center" as const },
   currentCard: {
     background: "linear-gradient(135deg, rgba(56,189,248,.12) 0%, rgba(14,165,233,.06) 100%)",
     border: "2px solid rgba(56,189,248,.35)",
