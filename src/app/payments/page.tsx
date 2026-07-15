@@ -47,6 +47,9 @@ const T = {
       doctorOptional:"الطبيب (اختياري)",
       doctorOptionalHint:"يمكنك تخصيص الدفعة لطبيب محدد أو تركها كإيراد مشترك للعيادة",
       sharedRevenue:"إيراد مشترك",
+      doctorShare:"نسبة الطبيب من الدفعة (%)",
+      doctorSharePh:"مثال: 50",
+      doctorShareHint:"اتركه فارغاً لاستخدام النسبة الافتراضية للعيادة",
     },
     months:["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
     noResults:"لا توجد نتائج",
@@ -67,6 +70,9 @@ const T = {
       consultation:"معاينة",
       session:"جلسة",
       followup:"مراجعة",
+      other:"أخرى",
+      otherReason:"سبب آخر *",
+      otherReasonPh:"اكتب السبب...",
     },
     prepayment:{
       label:"دفع مسبق",
@@ -165,6 +171,9 @@ const T = {
       doctorOptional:"Doctor (Optional)",
       doctorOptionalHint:"You can assign this payment to a specific doctor or leave it as shared clinic revenue",
       sharedRevenue:"Shared Revenue",
+      doctorShare:"Doctor's Share of Payment (%)",
+      doctorSharePh:"e.g. 50",
+      doctorShareHint:"Leave empty to use the clinic's default percentage",
     },
     months:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
     noResults:"No results found",
@@ -185,6 +194,9 @@ const T = {
       consultation:"Consultation",
       session:"Session",
       followup:"Follow-up",
+      other:"Other",
+      otherReason:"Reason *",
+      otherReasonPh:"Enter reason...",
     },
     prepayment:{
       label:"Prepayment",
@@ -347,7 +359,9 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
     patientId:"", amount:"", description:"", method:"cash",
     date:fmt(new Date()), status:"paid", notes:"",
     doctorId:"", // للخطط المشتركة فقط
-    sessionType:"session", // معاينة | جلسة | مراجعة
+    doctorSharePercentage:"", // نسبة الطبيب من الدفعة — للخطط المشتركة فقط
+    sessionType:"session", // معاينة | جلسة | مراجعة | أخرى
+    sessionTypeOther:"", // السبب عند اختيار "أخرى"
     isPrepayment:false,    // دفع مسبق
     prepaymentSessions:1,  // عدد الجلسات المدفوعة مسبقاً
   });
@@ -374,6 +388,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
 
   const handleSave = async (asPending=false) => {
     if (!form.patientId||!form.amount) { setError(tr.modal.required); return; }
+    if (form.sessionType==="other" && !form.sessionTypeOther.trim()) { setError(tr.sessionType.otherReason); return; }
     // تخصيص الطبيب اختياري في الخطط المشتركة — لا validation إلزامي
     setSaving(true);
     try {
@@ -386,9 +401,13 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
         status: (asPending ? "pending" : "paid") as "paid"|"pending"|"cancelled",
         notes: form.notes || undefined,
         session_type: form.sessionType,
+        session_type_other: form.sessionType==="other" ? form.sessionTypeOther.trim() : undefined,
         is_prepayment: form.isPrepayment,
         prepayment_sessions: form.isPrepayment ? form.prepaymentSessions : undefined,
         ...(isSharedClinic && form.doctorId ? { doctor_id: Number(form.doctorId) } : {}),
+        ...(isSharedClinic && form.doctorId && form.doctorSharePercentage
+          ? { doctor_share_percentage: Math.min(100, Math.max(0, parseFloat(form.doctorSharePercentage))) }
+          : {}),
       } as any);
     } catch(e) {
       setError(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving payment");
@@ -528,6 +547,21 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                   </button>
                 ))}
               </div>
+              {form.doctorId && (
+                <div style={{ marginTop:12 }}>
+                  <label style={{ fontSize:12,fontWeight:600,color:"#888",marginBottom:6,display:"block" }}>{tr.modal.doctorShare}</label>
+                  <input
+                    type="number" min={0} max={100} step="0.1"
+                    value={form.doctorSharePercentage}
+                    onChange={e=>setForm({...form,doctorSharePercentage:e.target.value})}
+                    placeholder={tr.modal.doctorSharePh}
+                    style={inputSt}
+                    onFocus={e=>(e.target.style.borderColor="#0891b2")}
+                    onBlur={e=>(e.target.style.borderColor="#e8eaed")}
+                  />
+                  <div style={{ marginTop:6,fontSize:11,color:"#aaa",lineHeight:1.6 }}>{tr.modal.doctorShareHint}</div>
+                </div>
+              )}
             </F>
           )}
           <div style={{ display:"flex",gap:12 }}>
@@ -549,6 +583,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                 { k:"consultation", icon:"🩺", label:tr.sessionType.consultation },
                 { k:"session",      icon:"🛋️", label:tr.sessionType.session      },
                 { k:"followup",     icon:"🔄", label:tr.sessionType.followup     },
+                { k:"other",        icon:"📝", label:tr.sessionType.other        },
               ].map(s=>(
                 <label key={s.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.sessionType===s.k?"1.5px solid #0863ba":"1.5px solid #eee",background:form.sessionType===s.k?"rgba(8,99,186,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.sessionType===s.k?700:400,color:form.sessionType===s.k?"#0863ba":"#888" }}>
                   <span>{s.icon}</span>{s.label}
@@ -556,6 +591,16 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                 </label>
               ))}
             </div>
+            {form.sessionType==="other" && (
+              <input
+                value={form.sessionTypeOther}
+                onChange={e=>setForm({...form,sessionTypeOther:e.target.value})}
+                placeholder={tr.sessionType.otherReasonPh}
+                style={{ ...inputSt, marginTop:8 }}
+                onFocus={e=>(e.target.style.borderColor="#0863ba")}
+                onBlur={e=>(e.target.style.borderColor="#e8eaed")}
+              />
+            )}
           </F>
 
           {/* دفع مسبق */}
@@ -2332,10 +2377,13 @@ export default function PaymentsPage() {
                                     consultation:{icon:"🩺",color:"#0863ba",bg:"rgba(8,99,186,.08)"},
                                     session:     {icon:"🛋️",color:"#2e7d32",bg:"rgba(46,125,50,.08)"},
                                     followup:    {icon:"🔄",color:"#7b2d8b",bg:"rgba(123,45,139,.08)"},
+                                    other:       {icon:"📝",color:"#e67e22",bg:"rgba(230,126,34,.08)"},
                                   };
                                   const st = stMap[(p as any).session_type];
                                   if (!st) return null;
-                                  const label = tr.sessionType[(p as any).session_type as keyof typeof tr.sessionType];
+                                  const label = (p as any).session_type==="other"
+                                    ? ((p as any).session_type_other || tr.sessionType.other)
+                                    : tr.sessionType[(p as any).session_type as keyof typeof tr.sessionType];
                                   return (
                                     <span style={{ display:"inline-flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:st.bg,color:st.color,marginInlineEnd:5 }}>
                                       {st.icon} {label}
