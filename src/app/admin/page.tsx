@@ -3048,6 +3048,7 @@ export default function AdminPage() {
 
   // Polling: تحديث العداد كل 15 ثانية + تحديث المحادثة المفتوحة إن وُجدت
   useEffect(() => {
+    if (!isAuthenticated) return; // لا نستدعي الـ API قبل التأكد من الجلسة — لتفادي حلقة 401 → reload
     loadAllUnread();
     const interval = setInterval(() => {
       loadAllUnread();
@@ -3058,7 +3059,7 @@ export default function AdminPage() {
     }, 15000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthenticated]);
 
   const handleSendMessage = async () => {
     if (!msgClinic?.user_id || !msgBody.trim()) return;
@@ -3085,7 +3086,7 @@ export default function AdminPage() {
   const [currentPage,   setCurrentPage]   = useState(1);
   const PAGE_SIZE = 20;
 
-  useEffect(() => { loadClinics(); }, []);
+  useEffect(() => { if (isAuthenticated) loadClinics(); }, [isAuthenticated]);
 
   const loadClinics = async () => {
     setLoading(true);
