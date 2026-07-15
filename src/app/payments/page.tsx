@@ -998,8 +998,8 @@ export default function PaymentsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [plan, setPlan] = useState<PlanType>("basic");
 
-  // إخفاء الأرقام الرئيسية (وضع الخصوصية)
-  const [numbersHidden, setNumbersHidden] = useState(true);
+  // إخفاء الأرقام الرئيسية (وضع الخصوصية) — يُفعّل فقط إذا كان قفل المدفوعات مُفعّلاً من الأدمن
+  const [numbersHidden, setNumbersHidden] = useState(false);
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [revealPasswordInput, setRevealPasswordInput] = useState("");
   const [revealPasswordError, setRevealPasswordError] = useState(false);
@@ -1053,6 +1053,7 @@ export default function PaymentsPage() {
       if (clinicRow?.payments_lock_enabled) {
         setPaymentsLockEnabled(true);
         setPaymentsLockPassword(clinicRow.payments_lock_password || "");
+        setNumbersHidden(true); // إخفاء الأرقام افتراضياً فقط عند تفعيل القفل من الأدمن
       }
 
       const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
