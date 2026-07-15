@@ -1422,6 +1422,40 @@ export default function PaymentsPage() {
         <td class="amount-purple">-${e.amount.toLocaleString()} ل.س</td>
       </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد مصروفات هذا الشهر</td></tr>`;
 
+    // ── محاسبة الأطباء — للعيادات المشتركة فقط ─────────────
+    const doctorSettlementRows = (() => {
+      if (!isSharedClinicPlan(plan) || doctors.length === 0) return "";
+      const paidMonthPayments = monthPayments.filter(p => p.status === "paid");
+      const rows = doctors.map(doc => {
+        const docPayments = paidMonthPayments.filter(p => (p as any).doctor_id === doc.id);
+        if (docPayments.length === 0) return null;
+        const totalRevenue = docPayments.reduce((s, p) => s + p.amount, 0);
+        const docShare = docPayments.reduce((s, p) => {
+          const pct = (p as any).doctor_share_percentage;
+          return s + (pct != null ? p.amount * (pct / 100) : 0);
+        }, 0);
+        const unspecifiedCount = docPayments.filter(p => (p as any).doctor_share_percentage == null).length;
+        return `<tr>
+          <td>${isAr ? "د. " : "Dr. "}${doc.name}</td>
+          <td>${docPayments.length}</td>
+          <td class="amount-blue">${totalRevenue.toLocaleString()} ل.س</td>
+          <td class="amount-green">${docShare.toLocaleString()} ل.س${unspecifiedCount > 0 ? ` <span style="color:#e67e22;font-size:10px">(${unspecifiedCount} بدون نسبة محددة)</span>` : ""}</td>
+          <td class="amount-purple">${(totalRevenue - docShare).toLocaleString()} ل.س</td>
+        </tr>`;
+      }).filter(Boolean).join("");
+      if (!rows) return "";
+      return `
+  <!-- قسم محاسبة الأطباء -->
+  <div class="section-title" style="border-color:#0891b2">🩺 محاسبة الأطباء (نسبة كل طبيب من الإيرادات)</div>
+  <table>
+    <thead style="background:#0891b2"><tr style="color:#fff">
+      <th>الطبيب</th><th>عدد الدفعات</th><th>إجمالي الإيرادات</th><th>حصة الطبيب</th><th>حصة العيادة</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+    })();
+
+
     const svgLogo = `<svg viewBox="0 0 337.74 393.31" style="width:44px;height:44px" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="g1" x1="117.2" y1="92.34" x2="173.01" y2="298.39" gradientUnits="userSpaceOnUse">
@@ -1474,6 +1508,7 @@ export default function PaymentsPage() {
   .amount-green { font-weight: 700; color: #2e7d32; }
   .amount-red { font-weight: 700; color: #c0392b; }
   .amount-purple { font-weight: 700; color: #7b2d8b; }
+  .amount-blue { font-weight: 700; color: #0863ba; }
   .status-paid { color: #2e7d32; font-weight: 600; }
   .status-pending { color: #e67e22; font-weight: 600; }
   .status-cancelled { color: #c0392b; font-weight: 600; }
@@ -1568,6 +1603,7 @@ export default function PaymentsPage() {
       ${monthExpenses.length > 0 ? `<tr class="total-row"><td colspan="5" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ل.س</td></tr>` : ""}
     </tbody>
   </table>
+${doctorSettlementRows}
 
   <!-- الرصيد الصافي -->
   <div class="net-box ${netBalance >= 0 ? "net-positive" : "net-negative"}">
@@ -1844,6 +1880,112 @@ export default function PaymentsPage() {
     };
     openDailyReport(html);
   };
+
+  // ── استخراج فاتورة لدفعة واحدة ───────────────────────────
+  const exportInvoicePDF = (payment: Payment) => {
+    const patient = patients.find(x => x.id === payment.patient_id);
+    const doctor = isSharedClinicPlan(plan) ? doctors.find(d => d.id === (payment as any).doctor_id) : null;
+    const methodMap: Record<string,string> = { cash:"نقداً", card:"بطاقة", transfer:"تحويل" };
+    const statusMap: Record<string,string> = { paid:"مدفوع", pending:"معلّق", cancelled:"ملغي" };
+    const sessionTypeMap: Record<string,string> = { consultation:"معاينة", session:"جلسة", followup:"مراجعة", other:(payment as any).session_type_other || "أخرى" };
+    const invoiceNo = `INV-${payment.id}-${payment.date.replace(/-/g,"")}`;
+
+    const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<title>فاتورة ${invoiceNo}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Rubik', 'Arial', sans-serif; direction: rtl; background: #fff; color: #222; padding: 40px; font-size: 14px; }
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #0863ba; padding-bottom: 20px; margin-bottom: 28px; }
+  .logo-text { font-size: 28px; font-weight: 800; color: #0863ba; }
+  .logo-sub { font-size: 12px; color: #888; margin-top: 2px; }
+  .invoice-title { text-align: left; }
+  .invoice-title h1 { font-size: 20px; font-weight: 800; color: #353535; }
+  .invoice-title p { font-size: 12px; color: #888; margin-top: 4px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+  .info-box { background: #f7f9fc; border: 1.5px solid #eef0f3; border-radius: 12px; padding: 16px 20px; }
+  .info-box h3 { font-size: 11px; color: #aaa; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; letter-spacing: .4px; }
+  .info-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+  .info-row span:first-child { color: #888; }
+  .info-row span:last-child { font-weight: 700; color: #353535; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  thead tr { background: #0863ba; color: #fff; }
+  th { padding: 12px 16px; text-align: right; font-size: 12px; font-weight: 700; }
+  td { padding: 14px 16px; border-bottom: 1px solid #eef0f3; font-size: 13px; }
+  .total-row td { font-weight: 800; background: #f0f7ff; color: #0863ba; border-top: 2px solid #0863ba; font-size: 16px; }
+  .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .status-paid { background: rgba(46,125,50,.1); color: #2e7d32; }
+  .status-pending { background: rgba(230,126,34,.1); color: #e67e22; }
+  .status-cancelled { background: rgba(192,57,43,.1); color: #c0392b; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1.5px solid #eef0f3; text-align: center; font-size: 11px; color: #aaa; }
+  @media print { body { padding: 20px; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo-text">نبض</div>
+      <div class="logo-sub">${clinicName || "نظام إدارة العيادة"}</div>
+    </div>
+    <div class="invoice-title">
+      <h1>فاتورة دفعة</h1>
+      <p>${invoiceNo}</p>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-box">
+      <h3>بيانات المريض</h3>
+      <div class="info-row"><span>الاسم</span><span>${patient?.name || "—"}</span></div>
+      ${doctor ? `<div class="info-row"><span>الطبيب المعالج</span><span>${isAr ? "د. " : "Dr. "}${doctor.name}</span></div>` : ""}
+    </div>
+    <div class="info-box">
+      <h3>بيانات الفاتورة</h3>
+      <div class="info-row"><span>التاريخ</span><span>${fmtDateGregorian(payment.date)}</span></div>
+      <div class="info-row"><span>طريقة الدفع</span><span>${methodMap[payment.method] || payment.method}</span></div>
+      <div class="info-row"><span>الحالة</span><span class="status-badge status-${payment.status}">${statusMap[payment.status] || payment.status}</span></div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>الوصف</th><th>نوع الجلسة</th><th>المبلغ</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>${payment.description || "—"}</td>
+        <td>${(payment as any).session_type ? (sessionTypeMap[(payment as any).session_type] || "—") : "—"}</td>
+        <td>${payment.amount.toLocaleString()} ل.س</td>
+      </tr>
+      <tr class="total-row"><td colspan="2">الإجمالي</td><td>${payment.amount.toLocaleString()} ل.س</td></tr>
+    </tbody>
+  </table>
+
+  ${payment.notes ? `<div class="info-box"><h3>ملاحظات</h3><div style="font-size:13px;color:#555">${payment.notes}</div></div>` : ""}
+
+  <div class="footer">
+    نبض${clinicName ? " — " + clinicName : ""} · تاريخ الإصدار: ${new Date().toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"long", day:"numeric" })}
+  </div>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => { win.focus(); win.print(); }, 500);
+    } else {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }
+  };
+
 
   return (
     <>
@@ -2330,6 +2472,7 @@ export default function PaymentsPage() {
                                   <span style={{ fontSize:11,color:"#aaa" }}>{methodIcon[p.method]} {tr.methods[p.method]}</span>
                                 </div>
                                 <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                                  <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>🧾</button>
                                   <button className="icon-btn" onClick={()=>setDeleteId(p.id)}>🗑️</button>
                                 </div>
                               </div>
@@ -2408,7 +2551,8 @@ export default function PaymentsPage() {
                               <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
                                 {p.amount.toLocaleString()} ل.س
                               </div>
-                              <div style={{ display:"flex",justifyContent:"center" }}>
+                              <div style={{ display:"flex",justifyContent:"center",gap:4 }}>
+                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>🧾</button>
                                 <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>🗑️</button>
                               </div>
                             </div>
