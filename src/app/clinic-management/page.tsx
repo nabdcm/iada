@@ -979,6 +979,294 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
   );
 }
 
+// ─── تبويب خطط العيادة (رابط عام للباقات) ─────────────────────
+type ClinicPackage = {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  billing_period: string;
+  features: string[];
+  payment_type: "link" | "whatsapp";
+  payment_value: string;
+  button_label: string;
+  is_featured: boolean;
+  is_active: boolean;
+  sort_order: number;
+};
+
+const emptyPackage: Omit<ClinicPackage, "id"> = {
+  title: "", description: "", price: 0, currency: "USD", billing_period: "monthly",
+  features: [], payment_type: "link", payment_value: "", button_label: "",
+  is_featured: false, is_active: true, sort_order: 0,
+};
+
+function PlansTab({ lang, userId, isMobile }: { lang: Lang; userId: string; isMobile: boolean }) {
+  const isAr = lang === "ar";
+  const tx = {
+    ar: {
+      title: "خطط وباقات العيادة", sub: "أضف الباقات التي يمكن للمرضى الاشتراك بها عبر رابط عام خاص بعيادتك",
+      shareLink: "مشاركة رابط الباقات", copy: "نسخ الرابط", copied: "تم النسخ ✓",
+      addPackage: "إضافة باقة جديدة", edit: "تعديل", delete: "حذف", save: "حفظ", cancel: "إلغاء",
+      packageTitle: "اسم الباقة", packageTitlePh: "مثال: الباقة الذهبية",
+      description: "الوصف", descriptionPh: "وصف مختصر للباقة...",
+      price: "السعر", currency: "العملة", billing: "الدورة",
+      monthly: "شهرياً", yearly: "سنوياً", onetime: "دفعة واحدة",
+      features: "المزايا", featuresPh: "اكتب ميزة واضغط Enter",
+      paymentMethod: "طريقة الدفع", paymentLink: "رابط دفع", paymentWhatsapp: "واتساب",
+      paymentValueLink: "رابط الدفع", paymentValueLinkPh: "https://...",
+      paymentValueWa: "رقم الواتساب", paymentValueWaPh: "9639XXXXXXXX",
+      buttonLabel: "نص الزر", buttonLabelPh: "اشترك الآن",
+      featured: "تمييز هذه الباقة كالأكثر طلباً",
+      active: "مفعّلة وظاهرة للمرضى",
+      noPackages: "لا توجد باقات بعد، ابدأ بإضافة أول باقة",
+      confirmDelete: "هل تريد حذف هذه الباقة؟",
+    },
+    en: {
+      title: "Clinic Plans & Packages", sub: "Add packages patients can subscribe to via your clinic's public link",
+      shareLink: "Share Packages Link", copy: "Copy Link", copied: "Copied ✓",
+      addPackage: "Add New Package", edit: "Edit", delete: "Delete", save: "Save", cancel: "Cancel",
+      packageTitle: "Package Name", packageTitlePh: "e.g. Gold Package",
+      description: "Description", descriptionPh: "Short package description...",
+      price: "Price", currency: "Currency", billing: "Billing",
+      monthly: "Monthly", yearly: "Yearly", onetime: "One-time",
+      features: "Features", featuresPh: "Type a feature and press Enter",
+      paymentMethod: "Payment Method", paymentLink: "Payment Link", paymentWhatsapp: "WhatsApp",
+      paymentValueLink: "Payment Link", paymentValueLinkPh: "https://...",
+      paymentValueWa: "WhatsApp Number", paymentValueWaPh: "9639XXXXXXXX",
+      buttonLabel: "Button Text", buttonLabelPh: "Subscribe Now",
+      featured: "Mark as Most Popular",
+      active: "Active & visible to patients",
+      noPackages: "No packages yet, add your first one",
+      confirmDelete: "Delete this package?",
+    },
+  }[lang];
+
+  const [packages, setPackages] = useState<ClinicPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<ClinicPackage | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [featureInput, setFeatureInput] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from("clinic_packages").select("*").eq("user_id", userId).order("sort_order");
+    setPackages((data ?? []).map((p: any) => ({
+      ...p,
+      features: Array.isArray(p.features) ? p.features : (typeof p.features === "string" ? JSON.parse(p.features) : []),
+    })));
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { if (userId) load(); }, [userId, load]);
+
+  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/clinic-plans/${userId}` : "";
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const openNew = () => {
+    setEditing({ ...emptyPackage, id: 0, sort_order: packages.length });
+    setShowForm(true);
+  };
+
+  const openEdit = (p: ClinicPackage) => { setEditing({ ...p }); setShowForm(true); };
+
+  const savePackage = async () => {
+    if (!editing || !editing.title.trim()) return;
+    const payload = {
+      user_id: userId,
+      title: editing.title.trim(),
+      description: editing.description,
+      price: editing.price,
+      currency: editing.currency,
+      billing_period: editing.billing_period,
+      features: editing.features,
+      payment_type: editing.payment_type,
+      payment_value: editing.payment_value,
+      button_label: editing.button_label,
+      is_featured: editing.is_featured,
+      is_active: editing.is_active,
+      sort_order: editing.sort_order,
+    };
+    if (editing.id) {
+      await supabase.from("clinic_packages").update(payload).eq("id", editing.id).eq("user_id", userId);
+    } else {
+      await supabase.from("clinic_packages").insert(payload);
+    }
+    setShowForm(false);
+    setEditing(null);
+    load();
+  };
+
+  const deletePackage = async (id: number) => {
+    if (!confirm(tx.confirmDelete)) return;
+    await supabase.from("clinic_packages").delete().eq("id", id).eq("user_id", userId);
+    load();
+  };
+
+  const addFeature = () => {
+    if (!featureInput.trim() || !editing) return;
+    setEditing({ ...editing, features: [...editing.features, featureInput.trim()] });
+    setFeatureInput("");
+  };
+
+  const removeFeature = (idx: number) => {
+    if (!editing) return;
+    setEditing({ ...editing, features: editing.features.filter((_, i) => i !== idx) });
+  };
+
+  const inputSt: React.CSSProperties = {
+    padding: "11px 14px", border: "1.5px solid #e8eaed", borderRadius: 10,
+    fontFamily: "Rubik,sans-serif", fontSize: 14, color: "#353535",
+    background: "#fafbfc", outline: "none", direction: isAr ? "rtl" : "ltr", width: "100%", boxSizing: "border-box",
+  };
+  const cardSt: React.CSSProperties = {
+    background: "#fff", borderRadius: 16, border: "1.5px solid #f0f2f5",
+    padding: "20px 22px", marginBottom: 14, boxShadow: "0 2px 10px rgba(0,0,0,.04)",
+  };
+  const labelSt: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 8 };
+
+  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#999" }}>...</div>;
+
+  return (
+    <div style={{ maxWidth: isMobile ? "100%" : 720 }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: "#353535" }}>{tx.title}</div>
+        <div style={{ fontSize: 12.5, color: "#999", marginTop: 4 }}>{tx.sub}</div>
+      </div>
+
+      {/* رابط المشاركة */}
+      <div style={{ ...cardSt, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 6 }}>🔗 {tx.shareLink}</div>
+          <div style={{ fontSize: 13, color: "#0863ba", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 380 }}>{shareUrl}</div>
+        </div>
+        <button onClick={copyLink} style={{ padding: "10px 18px", background: copied ? "#2e7d32" : "#0863ba", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "Rubik,sans-serif", flexShrink: 0 }}>
+          {copied ? tx.copied : tx.copy}
+        </button>
+      </div>
+
+      {/* زر إضافة */}
+      {!showForm && (
+        <button onClick={openNew} style={{ marginBottom: 16, padding: "12px 22px", background: "#0863ba", color: "#fff", border: "none", borderRadius: 12, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "Rubik,sans-serif", display: "flex", alignItems: "center", gap: 8 }}>
+          ＋ {tx.addPackage}
+        </button>
+      )}
+
+      {/* نموذج الإضافة/التعديل */}
+      {showForm && editing && (
+        <div style={cardSt}>
+          <div style={labelSt}>{tx.packageTitle}</div>
+          <input style={{ ...inputSt, marginBottom: 12 }} value={editing.title} placeholder={tx.packageTitlePh}
+            onChange={e => setEditing({ ...editing, title: e.target.value })} />
+
+          <div style={labelSt}>{tx.description}</div>
+          <textarea style={{ ...inputSt, marginBottom: 12, minHeight: 60, resize: "vertical" }} value={editing.description} placeholder={tx.descriptionPh}
+            onChange={e => setEditing({ ...editing, description: e.target.value })} />
+
+          <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 100 }}>
+              <div style={labelSt}>{tx.price}</div>
+              <input type="number" style={inputSt} value={editing.price}
+                onChange={e => setEditing({ ...editing, price: parseFloat(e.target.value) || 0 })} />
+            </div>
+            <div style={{ flex: 1, minWidth: 90 }}>
+              <div style={labelSt}>{tx.currency}</div>
+              <input style={inputSt} value={editing.currency}
+                onChange={e => setEditing({ ...editing, currency: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={labelSt}>{tx.billing}</div>
+              <select style={inputSt} value={editing.billing_period}
+                onChange={e => setEditing({ ...editing, billing_period: e.target.value })}>
+                <option value="monthly">{tx.monthly}</option>
+                <option value="yearly">{tx.yearly}</option>
+                <option value="onetime">{tx.onetime}</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={labelSt}>{tx.features}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <input style={inputSt} value={featureInput} placeholder={tx.featuresPh}
+              onChange={e => setFeatureInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addFeature(); } }} />
+            <button onClick={addFeature} style={{ padding: "0 18px", background: "#eef3fb", color: "#0863ba", border: "none", borderRadius: 10, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>＋</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+            {editing.features.map((f, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f7f9fc", borderRadius: 8, padding: "7px 12px", fontSize: 13 }}>
+                <span>✓ {f}</span>
+                <button onClick={() => removeFeature(i)} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 15, fontWeight: 700 }}>×</button>
+              </div>
+            ))}
+          </div>
+
+          <div style={labelSt}>{tx.paymentMethod}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            {(["link", "whatsapp"] as const).map(pt => (
+              <button key={pt} onClick={() => setEditing({ ...editing, payment_type: pt })}
+                style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1.5px solid ${editing.payment_type === pt ? "#0863ba" : "#eee"}`, background: editing.payment_type === pt ? "rgba(8,99,186,.08)" : "#fafbfc", color: editing.payment_type === pt ? "#0863ba" : "#888", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Rubik,sans-serif" }}>
+                {pt === "link" ? `🔗 ${tx.paymentLink}` : `💬 ${tx.paymentWhatsapp}`}
+              </button>
+            ))}
+          </div>
+          <div style={labelSt}>{editing.payment_type === "link" ? tx.paymentValueLink : tx.paymentValueWa}</div>
+          <input style={{ ...inputSt, marginBottom: 12, direction: "ltr" }}
+            value={editing.payment_value}
+            placeholder={editing.payment_type === "link" ? tx.paymentValueLinkPh : tx.paymentValueWaPh}
+            onChange={e => setEditing({ ...editing, payment_value: e.target.value })} />
+
+          <div style={labelSt}>{tx.buttonLabel}</div>
+          <input style={{ ...inputSt, marginBottom: 14 }} value={editing.button_label} placeholder={tx.buttonLabelPh}
+            onChange={e => setEditing({ ...editing, button_label: e.target.value })} />
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <input type="checkbox" checked={editing.is_featured} onChange={e => setEditing({ ...editing, is_featured: e.target.checked })} />
+            <span style={{ fontSize: 13, color: "#555" }}>{tx.featured}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+            <input type="checkbox" checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} />
+            <span style={{ fontSize: 13, color: "#555" }}>{tx.active}</span>
+          </div>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={savePackage} style={{ padding: "11px 26px", background: "#0863ba", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "Rubik,sans-serif" }}>{tx.save}</button>
+            <button onClick={() => { setShowForm(false); setEditing(null); }} style={{ padding: "11px 26px", background: "#f5f6f8", color: "#666", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "Rubik,sans-serif" }}>{tx.cancel}</button>
+          </div>
+        </div>
+      )}
+
+      {/* قائمة الباقات */}
+      {packages.length === 0 && !showForm ? (
+        <div style={{ ...cardSt, textAlign: "center", color: "#999", fontSize: 13 }}>{tx.noPackages}</div>
+      ) : (
+        packages.map(p => (
+          <div key={p.id} style={{ ...cardSt, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", opacity: p.is_active ? 1 : 0.55 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#353535", display: "flex", alignItems: "center", gap: 8 }}>
+                {p.title}
+                {p.is_featured && <span style={{ fontSize: 10, background: "#0863ba", color: "#fff", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>⭐</span>}
+                {!p.is_active && <span style={{ fontSize: 10, background: "#eee", color: "#999", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>{isAr ? "غير مفعّلة" : "Inactive"}</span>}
+              </div>
+              <div style={{ fontSize: 12.5, color: "#999", marginTop: 3 }}>{p.price} {p.currency} · {p.features.length} {isAr ? "ميزة" : "features"}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => openEdit(p)} style={{ padding: "8px 16px", background: "#eef3fb", color: "#0863ba", border: "none", borderRadius: 9, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "Rubik,sans-serif" }}>{tx.edit}</button>
+              <button onClick={() => deletePackage(p.id)} style={{ padding: "8px 16px", background: "rgba(192,57,43,.08)", color: "#c0392b", border: "none", borderRadius: 9, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "Rubik,sans-serif" }}>{tx.delete}</button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 // ─── الصفحة الرئيسية ──────────────────────────────────────────
 export default function ClinicManagementPage() {
   const [lang, setLang] = useState<Lang>("ar");
@@ -989,7 +1277,7 @@ export default function ClinicManagementPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"schedules"|"vacations"|"settings">("schedules");
+  const [activeTab, setActiveTab] = useState<"schedules"|"vacations"|"settings"|"plans">("schedules");
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -1083,10 +1371,14 @@ export default function ClinicManagementPage() {
 
   // ── متاحة لجميع الخطط ──
 
-  const tabs: { key: "schedules"|"vacations"|"settings"; label: string; icon: string }[] = [
+  // خطط العيادة متاحة فقط للخطة الشاملة (enterprise / shared_enterprise)
+  const hasPlansAccess = plan === "enterprise" || plan === "shared_enterprise";
+
+  const tabs: { key: "schedules"|"vacations"|"settings"|"plans"; label: string; icon: string }[] = [
     { key:"schedules",  label:tr.tabs.schedules,  icon:"🗓" },
     { key:"vacations",  label:tr.tabs.vacations,  icon:"🏖" },
     { key:"settings",   label:tr.tabs.settings,   icon:"⚙️" },
+    ...(hasPlansAccess ? [{ key:"plans" as const, label:isAr?"خطط العيادة":"Clinic Plans", icon:"💳" }] : []),
   ];
 
   return (
@@ -1159,6 +1451,9 @@ export default function ClinicManagementPage() {
               )}
               {activeTab === "settings" && (
                 <SettingsTab lang={lang} userId={userId} isMobile={isMobile}/>
+              )}
+              {activeTab === "plans" && hasPlansAccess && (
+                <PlansTab lang={lang} userId={userId} isMobile={isMobile}/>
               )}
             </div>
           </div>
