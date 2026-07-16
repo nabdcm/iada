@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -24,9 +24,12 @@ interface Patient {
   created_at?: string;
 }
 
+type XRayImage = { id: string; url: string; type: string; date: string; note: string; name: string };
+
 interface PatientProfile {
   medical_fields: Record<string, string>;
   extra_form_fields: Record<string, string | boolean>;
+  xrays?: XRayImage[];
 }
 
 interface Appointment {
@@ -104,6 +107,120 @@ const calcAge = (dob?:string|null) => {
   return Math.floor((Date.now()-new Date(dob).getTime())/(1000*60*60*24*365.25));
 };
 
+const XRAY_TYPES: Record<string,string> = { panoramic:"بانورامك", periapical:"بيريابيكال", bitewing:"بيت وينغ", chest:"صدر", hand:"يد", spine:"عمود فقري", other:"أخرى" };
+
+function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: boolean; onChange:(imgs:XRayImage[])=>void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [dragging,   setDragging]   = useState(false);
+  const [newType,    setNewType]    = useState("panoramic");
+  const [newNote,    setNewNote]    = useState("");
+  const [preview,    setPreview]    = useState<XRayImage|null>(null);
+  const [pendingImg, setPendingImg] = useState<XRayImage|null>(null);
+
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPendingImg({
+        id: Date.now().toString(),
+        url: e.target?.result as string,
+        type: newType,
+        date: new Date().toISOString().slice(0,10),
+        note: newNote,
+        name: file.name,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const confirmSave = () => {
+    if (!pendingImg) return;
+    const finalImg: XRayImage = { ...pendingImg, type:newType, note:newNote };
+    onChange([finalImg, ...xrays]);
+    setPendingImg(null);
+    setNewNote("");
+  };
+
+  return (
+    <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
+        <div>
+          <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:5 }}>النوع</label>
+          <select value={newType} onChange={e=>setNewType(e.target.value)} style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,outline:"none",background:"#fafbfc" }}>
+            {Object.entries(XRAY_TYPES).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:5 }}>ملاحظة</label>
+          <input value={newNote} onChange={e=>setNewNote(e.target.value)} style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,outline:"none",background:"#fafbfc",direction:"rtl" }}/>
+        </div>
+      </div>
+
+      {pendingImg ? (
+        <div style={{ borderRadius:14,border:"2px solid #0863ba",background:"#f0f6ff",padding:14,display:"flex",flexDirection:"column",gap:12 }}>
+          <div style={{ fontSize:12,fontWeight:700,color:"#0863ba" }}>🩻 معاينة الصورة — تأكد قبل الحفظ</div>
+          <img src={pendingImg.url} alt={pendingImg.name} style={{ width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,background:"#000",border:"1.5px solid #dde4f0" }}/>
+          <div style={{ fontSize:11,color:"#555" }}><span style={{ fontWeight:700 }}>الملف:</span> {pendingImg.name}</div>
+          <div style={{ display:"flex",gap:10 }}>
+            <button onClick={confirmSave} disabled={saving}
+              style={{ flex:1,padding:"12px 0",background:saving?"#7aabdb":"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer",minHeight:48 }}>
+              {saving ? "جاري الحفظ..." : "حفظ الصورة"}
+            </button>
+            <button onClick={()=>setPendingImg(null)}
+              style={{ padding:"12px 18px",background:"#fff",color:"#e74c3c",border:"1.5px solid #f5c6cb",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",minHeight:48 }}>
+              إلغاء
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div onClick={()=>fileRef.current?.click()}
+          onDragOver={e=>{e.preventDefault();setDragging(true);}}
+          onDragLeave={()=>setDragging(false)}
+          onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)handleFile(f);}}
+          style={{ border:`2px dashed ${dragging?"#0863ba":"#c8d4e0"}`,borderRadius:14,padding:"28px 16px",textAlign:"center",cursor:"pointer",background:dragging?"rgba(8,99,186,.05)":"#fafbfc" }}>
+          <div style={{ fontSize:36,marginBottom:8 }}>🩻</div>
+          <div style={{ fontSize:13,color:"#888",fontWeight:500 }}>اسحب الصورة هنا أو انقر للرفع</div>
+          <div style={{ fontSize:11,color:"#bbb",marginTop:4 }}>JPG, PNG, WEBP</div>
+        </div>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{const f=e.target.files?.[0];if(f)handleFile(f);e.target.value="";}}/>
+
+      {xrays.length===0?(
+        <div style={{ textAlign:"center",padding:"32px 0",color:"#ccc" }}><div style={{ fontSize:36,marginBottom:8 }}>🩻</div><div style={{ fontSize:13 }}>لا توجد صور أشعة</div></div>
+      ):(
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))",gap:10 }}>
+          {xrays.map(img=>(
+            <div key={img.id} onClick={()=>setPreview(img)} style={{ borderRadius:12,overflow:"hidden",border:"1.5px solid #eef0f3",background:"#fff",boxShadow:"0 2px 8px rgba(0,0,0,.06)",cursor:"pointer" }}>
+              <div style={{ position:"relative",aspectRatio:"4/3",overflow:"hidden",background:"#f0f2f5" }}>
+                <img src={img.url} alt={img.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
+                <button onClick={e=>{e.stopPropagation();onChange(xrays.filter(x=>x.id!==img.id));}} style={{ position:"absolute",top:4,right:4,width:22,height:22,borderRadius:"50%",background:"rgba(0,0,0,.5)",border:"none",cursor:"pointer",color:"#fff",fontSize:11 }}>✕</button>
+              </div>
+              <div style={{ padding:"8px 10px" }}>
+                <div style={{ fontSize:11,fontWeight:700,color:"#0863ba" }}>{XRAY_TYPES[img.type]??img.type}</div>
+                <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{img.date}</div>
+                {img.note&&<div style={{ fontSize:10,color:"#888",marginTop:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{img.note}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {preview&&(
+        <div style={{ position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"center",justifyContent:"center" }} onClick={()=>setPreview(null)}>
+          <div style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(8px)" }}/>
+          <div style={{ position:"relative",zIndex:1,maxWidth:"90vw",maxHeight:"90vh",display:"flex",flexDirection:"column",gap:12 }} onClick={e=>e.stopPropagation()}>
+            <img src={preview.url} alt={preview.name} style={{ maxWidth:"100%",maxHeight:"80vh",borderRadius:12,objectFit:"contain" }}/>
+            <div style={{ background:"rgba(255,255,255,.1)",backdropFilter:"blur(10px)",borderRadius:10,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <div><div style={{ color:"#fff",fontSize:13,fontWeight:700 }}>{XRAY_TYPES[preview.type]}</div><div style={{ color:"rgba(255,255,255,.6)",fontSize:11 }}>{preview.date}{preview.note&&` — ${preview.note}`}</div></div>
+              <button onClick={()=>setPreview(null)} style={{ background:"rgba(255,255,255,.2)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:16,width:32,height:32 }}>✕</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ════════════════════════════════════════════════════════════
 export default function RestrictedAccessPage() {
   const params   = useParams();
@@ -143,7 +260,8 @@ export default function RestrictedAccessPage() {
   const [profilePatient,  setProfilePatient]  = useState<Patient | null>(null);
   const [profile,         setProfile]         = useState<PatientProfile | null>(null);
   const [profileLoading,  setProfileLoading]  = useState(false);
-  const [profileTab,      setProfileTab]      = useState<"info"|"medical">("info");
+  const [profileTab,      setProfileTab]      = useState<"info"|"medical"|"xrays">("info");
+  const [xraySaving,      setXraySaving]      = useState(false);
 
   // ── Medical record editing state ──────────────────────────
   const [expandedField,   setExpandedField]   = useState<string | null>(null);
@@ -260,10 +378,18 @@ export default function RestrictedAccessPage() {
     setFieldSaved(null);
     setProfileLoading(true);
     const { ok, data } = await callRA("profile", { pin: enteredPin, patientId: p.id });
-    const loaded = ok && data?.profile ? data.profile : { medical_fields:{}, extra_form_fields:{} };
+    const loaded = ok && data?.profile ? data.profile : { medical_fields:{}, extra_form_fields:{}, xrays:[] };
     setProfile(loaded);
     setDraftValues(loaded.medical_fields ?? {});
     setProfileLoading(false);
+  };
+
+  const saveXrays = async (imgs: XRayImage[]) => {
+    if (!profilePatient) return;
+    setProfile((prev: PatientProfile | null) => prev ? { ...prev, xrays: imgs } : prev);
+    setXraySaving(true);
+    await callRA("save_xrays", { pin: enteredPin, patientId: profilePatient.id, xrays: imgs });
+    setXraySaving(false);
   };
 
   const saveField = async (key: string) => {
@@ -295,6 +421,7 @@ export default function RestrictedAccessPage() {
 
   const clinicColor = CLINIC_TYPE_COLORS[clinicInfo?.clinic_type || "general"] || "#0863ba";
   const medFields   = MEDICAL_FIELDS_BY_TYPE[clinicInfo?.clinic_type || "general"] || MEDICAL_FIELDS_BY_TYPE.general;
+  const canXray     = clinicInfo?.plan === "enterprise" || clinicInfo?.plan === "shared_enterprise";
 
   if (stage === "loading") return <LoadingScreen />;
   if (stage === "error")   return <ErrorScreen />;
@@ -487,7 +614,8 @@ export default function RestrictedAccessPage() {
                 </div>
                 {/* Tabs */}
                 <div style={{ display:"flex" }}>
-                  {([{key:"info",label:"👤 المعلومات"},{key:"medical",label:"🏥 السجل الطبي"}] as const).map(tab => (
+                  {([{key:"info",label:"👤 المعلومات"},{key:"medical",label:"🏥 السجل الطبي"},
+                     ...(canXray ? [{key:"xrays" as const,label:"🩻 الأشعة"}] : [])] as const).map(tab => (
                     <button key={tab.key} onClick={() => setProfileTab(tab.key)}
                       style={{ flex:1,padding:"10px 4px",border:"none",background:"transparent",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,color:profileTab===tab.key?"#0863ba":"#aaa",borderBottom:profileTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",transition:"all .18s" }}>
                       {tab.label}
@@ -621,6 +749,15 @@ export default function RestrictedAccessPage() {
                         })}
 
                       </div>
+                    )}
+
+                    {/* ── XRAYS TAB ── */}
+                    {profileTab === "xrays" && canXray && (
+                      <XRaySection
+                        xrays={profile?.xrays ?? []}
+                        saving={xraySaving}
+                        onChange={saveXrays}
+                      />
                     )}
                   </>
                 )}

@@ -124,15 +124,96 @@ export async function POST(req: Request) {
 
       const { data: profile } = await supabaseAdmin
         .from("patient_profiles")
-        .select("medical_fields, extra_form_fields")
+        .select("medical_fields, extra_form_fields, xrays")
         .eq("patient_id", patientId)
         .maybeSingle();
 
       return NextResponse.json({
         profile: profile
-          ? { medical_fields: profile.medical_fields ?? {}, extra_form_fields: profile.extra_form_fields ?? {} }
-          : { medical_fields: {}, extra_form_fields: {} },
+          ? { medical_fields: profile.medical_fields ?? {}, extra_form_fields: profile.extra_form_fields ?? {}, xrays: profile.xrays ?? [] }
+          : { medical_fields: {}, extra_form_fields: {}, xrays: [] },
       });
+    }
+
+    // ─────────────────────────────────────────────────────
+    // action: "save_medical_field" — حفظ حقل واحد من السجل الطبي
+    // ─────────────────────────────────────────────────────
+    if (action === "save_medical_field") {
+      const patientId = body?.patientId;
+      const key        = body?.key as string | undefined;
+      const value      = (body?.value as string | undefined) ?? "";
+      if (!patientId || !key) return BAD_REQUEST;
+
+      // تأكد أن المريض ينتمي لهذه العيادة
+      const { data: patient } = await supabaseAdmin
+        .from("patients")
+        .select("id")
+        .eq("id", patientId)
+        .eq("user_id", clinicId)
+        .maybeSingle();
+      if (!patient) return BAD_REQUEST;
+
+      const { data: existing } = await supabaseAdmin
+        .from("patient_profiles")
+        .select("medical_fields")
+        .eq("patient_id", patientId)
+        .maybeSingle();
+
+      const updatedFields = { ...(existing?.medical_fields ?? {}), [key]: value };
+
+      const { error: upsertError } = await supabaseAdmin
+        .from("patient_profiles")
+        .upsert({
+          patient_id: patientId,
+          user_id: clinicId,
+          medical_fields: updatedFields,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "patient_id" });
+
+      if (upsertError) {
+        console.error("[restricted-access] save_medical_field upsert error:", upsertError);
+        return NextResponse.json({ error: "server_error" }, { status: 500 });
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
+    // ─────────────────────────────────────────────────────
+    // action: "save_xrays" — حفظ مصفوفة صور الأشعة كاملة
+    // ─────────────────────────────────────────────────────
+    if (action === "save_xrays") {
+      const patientId = body?.patientId;
+      const xrays      = body?.xrays;
+      if (!patientId || !Array.isArray(xrays)) return BAD_REQUEST;
+
+      // الأشعة متاحة فقط للخطط الشاملة
+      if (clinic.plan !== "enterprise" && clinic.plan !== "shared_enterprise") {
+        return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      }
+
+      const { data: patient } = await supabaseAdmin
+        .from("patients")
+        .select("id")
+        .eq("id", patientId)
+        .eq("user_id", clinicId)
+        .maybeSingle();
+      if (!patient) return BAD_REQUEST;
+
+      const { error: upsertError } = await supabaseAdmin
+        .from("patient_profiles")
+        .upsert({
+          patient_id: patientId,
+          user_id: clinicId,
+          xrays,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "patient_id" });
+
+      if (upsertError) {
+        console.error("[restricted-access] save_xrays upsert error:", upsertError);
+        return NextResponse.json({ error: "server_error" }, { status: 500 });
+      }
+
+      return NextResponse.json({ ok: true });
     }
 
     return BAD_REQUEST;
