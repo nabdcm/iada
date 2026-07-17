@@ -30,8 +30,9 @@ type StockLog = { id:number; medicine_id:number; medicine_name:string; type:"in"
 type Medicine = { id:number; name_ar:string; name_en:string; category:MedCat; barcode:string; unit:string; purchase_price:number; sell_price:number; stock:number; min_stock:number; expiry_date?:string; manufacturer?:string };
 type RxItem = { medicine_name:string; dosage:string; duration:string; instructions:string };
 type Prescription = { id:string; mrn:string; patient_name:string; doctor_name:string; doctor_id:number; created_at:string; items:RxItem[]; notes?:string; dispensed:boolean; dispensed_at?:string; dispensed_by?:string };
-type SaleItem = { medicine_id:number; medicine_name:string; qty:number; unit_price:number };
-type Sale = { id:number; date:string; items:SaleItem[]; total:number; payment_method:"cash"|"card"|"insurance"; prescription_id?:string; patient_name?:string; discount:number; cashier:string };
+type SaleItem = { id?:number; medicine_id:number; medicine_name:string; qty:number; unit_price:number; returned_qty?:number };
+type SaleReturn = { id:number; sale_id:number; date:string; reason?:string; total_refund:number; created_by:string };
+type Sale = { id:number; date:string; items:SaleItem[]; total:number; payment_method:"cash"|"card"|"insurance"; prescription_id?:string; patient_name?:string; discount:number; cashier:string; returns?:SaleReturn[] };
 type ScanNotif = { type:"success"|"error"|"info"|"warning"; message:string; sub?:string }|null;
 type SysAlert = { id:number; type:"low_stock"|"expiring"|"out_of_stock"; medicine_id:number; medicine_name:string; detail:string; date:string; read:boolean };
 
@@ -795,6 +796,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   const [showForm,setShowForm]=useState(false); const [items,setItems]=useState<SaleItem[]>([]);
   const [mQ,setMQ]=useState(""); const [discount,setDiscount]=useState(0); const [payment,setPayment]=useState<"cash"|"card"|"insurance">("cash");
   const [pName,setPName]=useState(""); const [rxId,setRxId]=useState(""); const [flashId,setFlashId]=useState<number|null>(null); const [printSale,setPrintSale]=useState<Sale|null>(null);
+  const [returnSale,setReturnSale]=useState<Sale|null>(null); const [retQty,setRetQty]=useState<{[id:number]:number}>({}); const [retReason,setRetReason]=useState("");
 
   const mRes=mQ.trim()?medicines.filter(m=>(m.name_ar+m.name_en).toLowerCase().includes(mQ.toLowerCase())||m.barcode.includes(mQ)).slice(0,6):[];
 
@@ -833,6 +835,26 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
       setPrintSale(ns);
     }
     setItems([]); setDiscount(0); setPayment("cash"); setPName(""); setRxId(""); setShowForm(false); setBarcodeMode(null);
+  };
+
+  const openReturn=(s:Sale)=>{
+    setReturnSale(s);
+    const q:{[id:number]:number}={};
+    s.items.forEach(it=>{ if(it.id) q[it.id]=0; });
+    setRetQty(q); setRetReason("");
+  };
+
+  const submitReturn=async()=>{
+    if(!returnSale||!userId) return;
+    const items=returnSale.items.filter(it=>it.id&&retQty[it.id]>0).map(it=>({sale_item_id:it.id,medicine_id:it.medicine_id,medicine_name:it.medicine_name,qty:retQty[it.id!],unit_price:it.unit_price}));
+    if(items.length===0){ showNotif({type:"error",message:isAr?"اختر كمية للإرجاع":"Select a quantity"},2500); return; }
+    const cashier=isAr?currentUser.name_ar:currentUser.name_en;
+    const res=await fetch("/api/pharmacy/returns",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,sale_id:returnSale.id,items,reason:retReason||null,created_by:cashier})});
+    const json=await res.json();
+    if(json.success){
+      showNotif({type:"success",message:isAr?"تم تسجيل المرتجع":"Return recorded"},2500);
+      setReturnSale(null); onRefresh();
+    } else { showNotif({type:"error",message:json.error||"Error"},3500); }
   };
 
   const today=new Date().toISOString().slice(0,10); const todaySales=sales.filter(s=>s.date===today); const todayTotal=todaySales.reduce((s,x)=>s+x.total,0);
@@ -881,15 +903,42 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
       <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",boxShadow:"0 2px 13px rgba(8,99,186,.05)",overflow:"hidden"}}>
         <div style={{padding:"13px 17px",borderBottom:"1.5px solid #f0f2f5",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?"سجل المبيعات":"Sales History"}</span><span style={{fontSize:11,color:"#aaa"}}>{sales.length} {isAr?"عملية":"tx"}</span></div>
         {sales.length===0?(<div style={{textAlign:"center",padding:"36px",color:"#ccc"}}><div style={{fontSize:30,marginBottom:7}}>🛒</div><div>{isAr?"لا مبيعات":"No sales"}</div></div>)
-        :sales.map(s=>(<div key={s.id} style={{padding:"11px 17px",borderBottom:"1px solid #f0f2f5",display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,flexWrap:"wrap"}}>
-          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,color:"#353535",marginBottom:1}}>{s.patient_name||`${isAr?"بيع":"Sale"} #${s.id}`}</div><div style={{fontSize:11,color:"#aaa"}}>{s.date} · {s.items.length} {isAr?"أدوية":"items"} · {s.cashier}</div></div>
+        :sales.map(s=>{
+          const returnedTotal=(s.returns||[]).reduce((sum,r)=>sum+r.total_refund,0);
+          const fullyReturned=s.items.every(it=>(it.returned_qty||0)>=it.qty);
+          return (<div key={s.id} style={{padding:"11px 17px",borderBottom:"1px solid #f0f2f5",display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,color:"#353535",marginBottom:1}}>{s.patient_name||`${isAr?"بيع":"Sale"} #${s.id}`}</div><div style={{fontSize:11,color:"#aaa"}}>{s.date} · {s.items.length} {isAr?"أدوية":"items"} · {s.cashier}{returnedTotal>0&&<span style={{color:"#e67e22",fontWeight:700}}> · {isAr?"مرتجع":"Returned"} {returnedTotal}</span>}</div></div>
           <div style={{display:"flex",gap:7,alignItems:"center",flexShrink:0}}>
             <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#f0f4f8",color:"#888",fontWeight:600}}>{pi[s.payment_method]} {pm[s.payment_method]}</span>
             <span style={{fontSize:14,fontWeight:800,color:"#0863ba"}}>{s.total}<span style={{fontSize:10,fontWeight:400,color:"#aaa"}}> {isAr?"ر.س":"SAR"}</span></span>
+            {!fullyReturned&&<button onClick={()=>openReturn(s)} className="action-icon-btn" title={isAr?"إرجاع":"Return"} style={{color:"#e67e22",borderColor:"rgba(230,126,34,.3)"}}>↩️</button>}
             <button onClick={()=>setPrintSale(s)} className="action-icon-btn" title={isAr?"طباعة":"Print"}>🖨️</button>
           </div>
-        </div>))}
+        </div>);})}
       </div>
+      {returnSale&&(
+        <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>setReturnSale(null)}/>
+          <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(96vw,480px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>↩️ {isAr?"إرجاع من البيع":"Return from Sale"} #{returnSale.id}</h2><button onClick={()=>setReturnSale(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            {returnSale.items.map(it=>{
+              const remaining=it.qty-(it.returned_qty||0);
+              if(remaining<=0||!it.id) return null;
+              return (
+                <div key={it.id} style={{display:"flex",alignItems:"center",gap:9,marginBottom:10,padding:"9px 11px",background:"#f7f9fc",borderRadius:10}}>
+                  <div style={{flex:1,fontSize:13,fontWeight:600,color:"#353535"}}>{it.medicine_name}<div style={{fontSize:10,color:"#aaa"}}>{isAr?"متاح للإرجاع":"Available"}: {remaining}</div></div>
+                  <input type="number" min={0} max={remaining} value={retQty[it.id]||0} onChange={e=>setRetQty(p=>({...p,[it.id!]:Math.max(0,Math.min(remaining,Number(e.target.value)))}))} style={{width:64,padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",textAlign:"center"}}/>
+                </div>
+              );
+            })}
+            <div style={{marginBottom:16}}><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"سبب الإرجاع (اختياري)":"Reason (optional)"}</label><input value={retReason} onChange={e=>setRetReason(e.target.value)} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={submitReturn} className="btn-primary-lg" style={{flex:1,justifyContent:"center",background:"#e67e22",boxShadow:"0 4px 14px rgba(230,126,34,.35)"}}>✅ {isAr?"تأكيد الإرجاع":"Confirm Return"}</button>
+              <button onClick={()=>setReturnSale(null)} style={{padding:"13px 22px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:13,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {printSale&&<PrintModal sale={printSale} lang={lang} cashierName={isAr?currentUser.name_ar:currentUser.name_en} onClose={()=>setPrintSale(null)}/>}
     </div>
   );
