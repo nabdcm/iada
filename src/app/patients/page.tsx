@@ -1886,7 +1886,7 @@ export default function PatientsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 

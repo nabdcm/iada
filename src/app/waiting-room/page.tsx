@@ -198,7 +198,7 @@ export default function WaitingRoomPage() {
         .wr-row{animation:fadeUp .25s ease both}
       `}</style>
       <div style={{ display:"flex", minHeight:"100vh" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} userId={userId} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} planLoading={loading} userId={userId} />
         <main style={{ flex:1, padding:"28px 28px 90px", maxWidth:1100, margin:"0 auto", width:"100%" }} dir={isAr?"rtl":"ltr"}>
           <div style={{ marginBottom:22 }}>
             <h1 style={{ fontSize:22, fontWeight:800, color:"#353535" }}>{tr.title}</h1>

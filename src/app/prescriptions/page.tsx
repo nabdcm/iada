@@ -742,7 +742,7 @@ export default function PrescriptionsPage() {
         }
       `}</style>
 
-      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="prescriptions" plan={plan} onCollapse={(c) => setSidebarWidth(isMobile ? 0 : (c ? 70 : 240))} />
+      <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="prescriptions" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(isMobile ? 0 : (c ? 70 : 240))} />
 
       <main style={{
         marginRight: isAr ? sidebarWidth : 0,

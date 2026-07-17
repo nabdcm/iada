@@ -1815,7 +1815,7 @@ export default function AppointmentsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="appt-main-content" style={{ padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", transition:"margin .3s" }}>
 

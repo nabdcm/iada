@@ -195,6 +195,7 @@ export interface SharedSidebarProps {
   setLang: (l: Lang) => void;
   activePage: string;
   plan?: PlanType;
+  planLoading?: boolean;
   doctorCount?: number;
   maxDoctorCount?: number;
   userId?: string;
@@ -222,6 +223,7 @@ export default function SharedSidebar({
   setLang,
   activePage,
   plan = "basic",
+  planLoading = false,
   doctorCount,
   maxDoctorCount,
   userId,
@@ -412,7 +414,7 @@ export default function SharedSidebar({
   // ─── Sidebar nav item (desktop) ──────────────────────────
   const renderSidebarItem = (item: { key: string; href: string; icon?: string }, compact = false) => {
     const isActive = item.key === activePage;
-    const isLocked = !canAccess(item.key, plan);
+    const isLocked = !planLoading && !canAccess(item.key, plan);
     const iconKey  = (item.icon ?? item.key) as keyof typeof Icons;
     const icon     = Icons[iconKey] ?? Icons.dashboard;
     const showBadge = item.key === "messages" && unreadMsgs > 0;
@@ -542,7 +544,7 @@ export default function SharedSidebar({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
             {SECONDARY_NAV.map(item => {
               const isActive = item.key === activePage;
-              const isLocked = !canAccess(item.key, plan);
+              const isLocked = !planLoading && !canAccess(item.key, plan);
               const icon = Icons[item.icon as keyof typeof Icons] ?? Icons.dashboard;
               const showBadge = item.key === "messages" && unreadMsgs > 0;
               return (
@@ -686,7 +688,7 @@ export default function SharedSidebar({
           {/* Main nav items */}
           {MAIN_NAV.map(item => {
             const isActive = item.key === activePage;
-            const isLocked = !canAccess(item.key, plan);
+            const isLocked = !planLoading && !canAccess(item.key, plan);
             const iconKey  = item.iconLg as keyof typeof Icons;
             const icon     = Icons[iconKey];
             return (
@@ -858,7 +860,7 @@ export default function SharedSidebar({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 3 }}>
               {pairedNavItems.map(item => {
                 const isActive = item.key === activePage;
-                const isLocked = !canAccess(item.key, plan);
+                const isLocked = !planLoading && !canAccess(item.key, plan);
                 const icon = Icons[item.icon as keyof typeof Icons] ?? Icons.dashboard;
                 const showBadge = item.key === "messages" && unreadMsgs > 0;
                 return (

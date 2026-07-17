@@ -2136,7 +2136,7 @@ ${doctorSettlementRows}
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="payments" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
+        <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="payments" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="page-anim main-content" style={{ transition:"margin .3s" }}>
 

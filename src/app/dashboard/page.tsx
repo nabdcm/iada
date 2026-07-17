@@ -539,7 +539,7 @@ export default function DashboardPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan} planLoading={loadingStats} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main
           className="main-fade main-content"

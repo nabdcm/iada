@@ -339,6 +339,7 @@ export default function MessagesPage() {
           setLang={setLang as (l:"ar"|"en")=>void}
           activePage="messages"
           plan={plan}
+          planLoading={loading}
           onCollapse={(c) => setSidebarWidth(c ? 70 : 240)}
         />
 
