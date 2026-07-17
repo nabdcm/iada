@@ -14,6 +14,10 @@ export async function POST(req: Request) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     if (action === "add") {
+      if (items !== undefined && !Array.isArray(items)) {
+        return NextResponse.json({ error: "items يجب أن تكون مصفوفة" }, { status: 400 });
+      }
+
       // 1. الرأس
       const { data: inv, error } = await supabaseAdmin
         .from("pharmacy_purchase_invoices")
@@ -24,9 +28,14 @@ export async function POST(req: Request) {
 
       // 2. البنود
       if (items?.length) {
-        await supabaseAdmin.from("pharmacy_purchase_invoice_items").insert(
+        const { error: itemsError } = await supabaseAdmin.from("pharmacy_purchase_invoice_items").insert(
           items.map((it: { medicine_id: number; medicine_name: string; qty: number; unit_price: number }) => ({ invoice_id: inv.id, ...it }))
         );
+        if (itemsError) {
+          // تراجع عن الفاتورة الرئيسية لتفادي فاتورة بدون بنود
+          await supabaseAdmin.from("pharmacy_purchase_invoices").delete().eq("id", inv.id);
+          return NextResponse.json({ error: `فشل حفظ بنود الفاتورة: ${itemsError.message}` }, { status: 400 });
+        }
         // 3. رفع المخزون (عملية atomic)
         for (const it of items) {
           await supabaseAdmin.rpc("adjust_medicine_stock", { p_id: it.medicine_id, p_user_id: user_id, p_delta: it.qty });
