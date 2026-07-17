@@ -405,9 +405,12 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
         is_prepayment: form.isPrepayment,
         prepayment_sessions: form.isPrepayment ? form.prepaymentSessions : undefined,
         ...(isSharedClinic && form.doctorId ? { doctor_id: Number(form.doctorId) } : {}),
-        ...(isSharedClinic && form.doctorId && form.doctorSharePercentage
-          ? { doctor_share_percentage: Math.min(100, Math.max(0, parseFloat(form.doctorSharePercentage))) }
-          : {}),
+        ...(() => {
+          if (!isSharedClinic || !form.doctorId || !form.doctorSharePercentage) return {};
+          const parsed = parseFloat(form.doctorSharePercentage);
+          if (isNaN(parsed)) return {}; // قيمة غير صالحة — تُعامل كأنها غير محددة
+          return { doctor_share_percentage: Math.min(100, Math.max(0, parsed)) };
+        })(),
       } as any);
     } catch(e) {
       setError(isAr ? "حدث خطأ أثناء الحفظ" : "Error saving payment");
@@ -551,9 +554,21 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                 <div style={{ marginTop:12 }}>
                   <label style={{ fontSize:12,fontWeight:600,color:"#888",marginBottom:6,display:"block" }}>{tr.modal.doctorShare}</label>
                   <input
-                    type="number" min={0} max={100} step="0.1"
+                    type="text" inputMode="decimal"
                     value={form.doctorSharePercentage}
-                    onChange={e=>setForm({...form,doctorSharePercentage:e.target.value})}
+                    onChange={e=>{
+                      // يسمح فقط بأرقام إنجليزية وفاصلة عشرية واحدة، ويحوّل الأرقام العربية/الفارسية تلقائياً
+                      const arabicDigits: Record<string,string> = {"٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9","۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9"};
+                      let v = e.target.value.replace(/[٠-٩۰-۹]/g, ch => arabicDigits[ch] || "");
+                      v = v.replace(/[^0-9.]/g, "");
+                      const firstDot = v.indexOf(".");
+                      if (firstDot !== -1) v = v.slice(0, firstDot+1) + v.slice(firstDot+1).replace(/\./g, "");
+                      if (v !== "") {
+                        const num = parseFloat(v);
+                        if (!isNaN(num) && num > 100) v = "100";
+                      }
+                      setForm({...form,doctorSharePercentage:v});
+                    }}
                     placeholder={tr.modal.doctorSharePh}
                     style={inputSt}
                     onFocus={e=>(e.target.style.borderColor="#0891b2")}
@@ -1432,10 +1447,13 @@ export default function PaymentsPage() {
         if (docPayments.length === 0) return null;
         const totalRevenue = docPayments.reduce((s, p) => s + p.amount, 0);
         const docShare = docPayments.reduce((s, p) => {
-          const pct = (p as any).doctor_share_percentage;
-          return s + (pct != null ? p.amount * (pct / 100) : 0);
+          const pct = Number((p as any).doctor_share_percentage);
+          return s + (!isNaN(pct) && (p as any).doctor_share_percentage != null ? p.amount * (pct / 100) : 0);
         }, 0);
-        const unspecifiedCount = docPayments.filter(p => (p as any).doctor_share_percentage == null).length;
+        const unspecifiedCount = docPayments.filter(p => {
+          const pct = (p as any).doctor_share_percentage;
+          return pct == null || isNaN(Number(pct));
+        }).length;
         return `<tr>
           <td>${isAr ? "د. " : "Dr. "}${doc.name}</td>
           <td>${docPayments.length}</td>
