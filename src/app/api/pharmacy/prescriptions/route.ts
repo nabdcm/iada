@@ -14,6 +14,9 @@ export async function POST(req: Request) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     if (action === "add") {
+      if (items !== undefined && !Array.isArray(items)) {
+        return NextResponse.json({ error: "items يجب أن تكون مصفوفة" }, { status: 400 });
+      }
       const { rx_id, ...rest } = fields;
       const { data: rx, error } = await supabaseAdmin
         .from("pharmacy_prescriptions")
