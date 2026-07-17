@@ -4,11 +4,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL  || "https://ldqaohjnlxiwvaijcsbm.supabase.co",
   process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
+
+const NO_STORE = { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" };
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +22,7 @@ export async function GET(req: NextRequest) {
   const date     = searchParams.get("date"); // YYYY-MM-DD
 
   if (!clinicId || !date) {
-    return NextResponse.json({ error: "missing params" }, { status: 400 });
+    return NextResponse.json({ error: "missing params" }, { status: 400, headers: NO_STORE });
   }
 
   // ── 1. جلب معلومات العيادة ─────────────────────────────────
@@ -27,7 +33,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (clinicErr || !clinic) {
-    return NextResponse.json({ error: "clinic not found" }, { status: 404 });
+    return NextResponse.json({ error: "clinic not found" }, { status: 404, headers: NO_STORE });
   }
 
   // ── 2. جلب مواعيد اليوم ───────────────────────────────────
@@ -42,7 +48,7 @@ export async function GET(req: NextRequest) {
     .order("time", { ascending: true });
 
   if (apptErr) {
-    return NextResponse.json({ error: "appointments fetch failed" }, { status: 500 });
+    return NextResponse.json({ error: "appointments fetch failed" }, { status: 500, headers: NO_STORE });
   }
 
   const appts = appointments ?? [];
@@ -74,5 +80,5 @@ export async function GET(req: NextRequest) {
       ...a,
       patientName: patientMap[a.patient_id] ?? "مريض",
     })),
-  });
+  }, { headers: NO_STORE });
 }

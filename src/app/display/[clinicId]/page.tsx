@@ -124,14 +124,15 @@ export default function DisplayPage({
   const fetchData = useCallback(async () => {
     try {
       const today = todayISO();
-      const res = await fetch(`/api/display-data?clinicId=${encodeURIComponent(clinicId)}&date=${today}`);
+      const res = await fetch(`/api/display-data?clinicId=${encodeURIComponent(clinicId)}&date=${today}`, { cache: "no-store" });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        console.error("display-data error:", json);
-        setError("العيادة غير موجودة");
+        console.error("display-data error:", res.status, json);
+        setError(res.status === 404 ? "العيادة غير موجودة" : `تعذّر تحميل البيانات (${res.status})`);
         return;
       }
+      setError(null);
 
       const data = await res.json();
       setClinicInfo({ name: data.clinic.name, owner: data.clinic.owner });
