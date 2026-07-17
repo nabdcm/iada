@@ -3510,14 +3510,14 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",overflow:"hidden",boxShadow:"0 2px 12px rgba(8,99,186,.05)" }}>
-                    <div className="admin-header-row" style={{ display:"grid",gridTemplateColumns:"2fr 140px 110px 120px",padding:"10px 20px",background:"#f7f9fc",borderBottom:"1.5px solid #eef0f3" }}>
+                    <div className="admin-header-row" style={{ display:"grid",gridTemplateColumns:"minmax(200px,1.6fr) 150px 150px 190px",gap:12,padding:"12px 20px",background:"#f7f9fc",borderBottom:"1.5px solid #eef0f3" }}>
                       {[
                         isAr?"العيادة / الصيدلية":"Clinic / Pharmacy",
                         isAr?"الخطة":"Plan",
                         isAr?"تاريخ الانتهاء":"Expiry",
                         isAr?"الإجراءات":"Actions",
                       ].map((h,i) => (
-                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.6,textAlign:i===3?"center":"start",paddingLeft:i>0&&i<3?8:0 }}>{h}</div>
+                        <div key={i} style={{ fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.6,textAlign:i===3?"end":"start",paddingLeft:i>0&&i<3?8:0 }}>{h}</div>
                       ))}
                     </div>
 
@@ -3535,7 +3535,7 @@ export default function AdminPage() {
                         return (
                           <div key={c.id} className="admin-row">
                             {/* ── Desktop row ── */}
-                            <div className="admin-row-desktop" style={{ display:"grid",gridTemplateColumns:"2fr 140px 110px 120px",padding:"14px 20px",alignItems:"center" }}>
+                            <div className="admin-row-desktop" style={{ display:"grid",gridTemplateColumns:"minmax(200px,1.6fr) 150px 150px 190px",gap:12,padding:"16px 20px",alignItems:"center" }}>
 
                               {/* العيادة: نقطة + اسم + إيميل */}
                               <div style={{ display:"flex",alignItems:"center",gap:10 }}>
@@ -3582,13 +3582,13 @@ export default function AdminPage() {
                               </div>
 
                               {/* أزرار الإجراءات */}
-                              <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,position:"relative" }} onClick={e => e.stopPropagation()}>
+                              <div style={{ display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,position:"relative" }} onClick={e => e.stopPropagation()}>
                                 {/* معلومات العيادة */}
                                 <button
                                   className="icon-btn-dark"
                                   title={isAr?"معلومات العيادة":"Clinic Info"}
                                   onClick={e => { e.stopPropagation(); setInfoClinic(c); }}
-                                  style={{ width:32,height:32 }}
+                                  style={{ width:38,height:38,fontSize:16 }}
                                 >ℹ️</button>
 
                                 {/* تعديل الاشتراك */}
@@ -3596,7 +3596,7 @@ export default function AdminPage() {
                                   className="icon-btn-dark"
                                   title={isAr?"تعديل الاشتراك":"Edit Subscription"}
                                   onClick={e => { e.stopPropagation(); setSubClinic(c); }}
-                                  style={{ width:32,height:32 }}
+                                  style={{ width:38,height:38,fontSize:16 }}
                                 >💳</button>
 
                                 {/* مراسلة */}
@@ -3604,7 +3604,7 @@ export default function AdminPage() {
                                   className="icon-btn-dark msg"
                                   title={isAr?"مراسلة":"Message"}
                                   onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(c.user_id) loadMsgHistory(c.user_id); }}
-                                  style={{ width:32,height:32,position:"relative" }}
+                                  style={{ width:38,height:38,fontSize:16,position:"relative" }}
                                 >
                                   💬
                                   {msgUnread[c.user_id ?? ""] ? (
@@ -3619,7 +3619,7 @@ export default function AdminPage() {
                                   className="icon-btn-dark more"
                                   title={isAr?"المزيد":"More"}
                                   onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }}
-                                  style={{ width:32,height:32 }}
+                                  style={{ width:38,height:38,fontSize:16 }}
                                 >⋯</button>
 
                                 {openMenuId === c.id && (
