@@ -14,9 +14,10 @@ export async function POST(req: Request) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     if (action === "add") {
+      const { rx_id, ...rest } = fields;
       const { data: rx, error } = await supabaseAdmin
         .from("pharmacy_prescriptions")
-        .insert({ user_id, id: fields.rx_id || `RX-${Date.now()}`, ...fields })
+        .insert({ user_id, id: rx_id || `RX-${Date.now()}`, ...rest })
         .select().single();
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
