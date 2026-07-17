@@ -73,7 +73,7 @@ interface Doctor {
 const T = {
   ar: {
     appName: "نبض", adminBadge: "لوحة المدير",
-    nav: { clinics:"العيادات", users:"المستخدمون", subscriptions:"الاشتراكات", settings:"الإعدادات" },
+    nav: { clinics:"العيادات" },
     stats: {
       totalClinics:"إجمالي العيادات", activeClinics:"عيادات نشطة",
       totalUsers:"المستخدمون", monthRevenue:"إيرادات الشهر",
@@ -280,7 +280,7 @@ const T = {
   },
   en: {
     appName: "NABD", adminBadge: "Admin Panel",
-    nav: { clinics:"Clinics", users:"Users", subscriptions:"Subscriptions", settings:"Settings" },
+    nav: { clinics:"Clinics" },
     stats: {
       totalClinics:"Total Clinics", activeClinics:"Active Clinics",
       totalUsers:"Total Users", monthRevenue:"Monthly Revenue",
@@ -3202,6 +3202,23 @@ export default function AdminPage() {
     }).length,
   }), [clinics]);
 
+  // ── العيادات التي ينتهي اشتراكها خلال أسبوع (لبطاقة التذكير) ──
+  const expiringWithinWeek = useMemo(() => clinics.filter(c => {
+    if (!c.expiry) return false;
+    const diff = new Date(c.expiry).getTime() - new Date().getTime();
+    return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000;
+  }).sort((a, b) => new Date(a.expiry).getTime() - new Date(b.expiry).getTime()), [clinics]);
+
+  const [expiryCardIndex, setExpiryCardIndex] = useState(0);
+  useEffect(() => {
+    if (expiringWithinWeek.length < 2) return;
+    const t = setInterval(() => {
+      setExpiryCardIndex(i => (i + 1) % expiringWithinWeek.length);
+    }, 4000);
+    return () => clearInterval(t);
+  }, [expiringWithinWeek.length]);
+  useEffect(() => { setExpiryCardIndex(0); }, [expiringWithinWeek.length]);
+
   const toggleStatus = async (clinic: ClinicData) => {
     if (!clinic.user_id) return;
     const newStatus = clinic.status === "active" ? "inactive" : "active";
@@ -3337,7 +3354,7 @@ export default function AdminPage() {
 
           <nav style={{ flex:1,padding:"16px 12px" }}>
             {Object.entries(tr.nav).map(([k, v]) => {
-              const icons = { clinics:"🏥", users:"👥", subscriptions:"💳", settings:"⚙️" };
+              const icons = { clinics:"🏥" };
               const isActive = activeTab === k;
               return (
                 <button key={k} onClick={() => setActiveTab(k)}
@@ -3383,13 +3400,10 @@ export default function AdminPage() {
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div>
                 <h1 style={{ fontSize:20,fontWeight:800,color:"#353535" }}>
-                  {activeTab === "clinics" && tr.clinics.title}
-                  {activeTab !== "clinics" && tr.nav[activeTab as keyof typeof tr.nav]}
+                  {tr.clinics.title}
                 </h1>
                 <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>
-                  {activeTab === "clinics"
-                    ? `${stats.active} ${isAr?"نشط من":"active of"} ${stats.total} · 🏥 ${stats.clinics} ${isAr?"عيادة":"clinics"} · 💊 ${stats.pharmacies} ${isAr?"صيدلية":"pharmacies"}`
-                    : tr.comingSoon}
+                  {`${stats.active} ${isAr?"نشط من":"active of"} ${stats.total} · 🏥 ${stats.clinics} ${isAr?"عيادة":"clinics"} · 💊 ${stats.pharmacies} ${isAr?"صيدلية":"pharmacies"}`}
                 </p>
               </div>
               {activeTab === "clinics" && (
@@ -3427,6 +3441,38 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+
+            {/* بطاقة تذكير بقرب انتهاء الاشتراك (خلال أسبوع) — تتقلّب بين العيادات إن كان أكثر من واحدة */}
+            {expiringWithinWeek.length > 0 && (() => {
+              const c = expiringWithinWeek[expiryCardIndex % expiringWithinWeek.length];
+              const daysLeft = Math.max(1, Math.ceil((new Date(c.expiry).getTime() - Date.now()) / (24*60*60*1000)));
+              return (
+                <div key={c.user_id} style={{ background:"linear-gradient(90deg,rgba(230,126,34,.08),rgba(230,126,34,.02))",border:"1.5px solid rgba(230,126,34,.25)",borderRadius:14,padding:"14px 18px",marginBottom:20,display:"flex",alignItems:"center",gap:14,animation:"fadeUp .35s ease both" }}>
+                  <div style={{ width:38,height:38,borderRadius:10,background:"rgba(230,126,34,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>⏳</div>
+                  <div style={{ flex:1,minWidth:0 }}>
+                    <div style={{ fontSize:13,fontWeight:700,color:"#353535" }}>
+                      {isAr
+                        ? `اشتراك «${c.name}» ينتهي خلال ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"} (${fmtDate(c.expiry)})`
+                        : `«${c.name}»'s subscription expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"} (${fmtDateEn(c.expiry)})`}
+                    </div>
+                    <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>
+                      {c.owner} · {c.email}
+                    </div>
+                  </div>
+                  {expiringWithinWeek.length > 1 && (
+                    <div style={{ display:"flex",gap:4,flexShrink:0 }}>
+                      {expiringWithinWeek.map((_, i) => (
+                        <div key={i} style={{ width:6,height:6,borderRadius:"50%",background:i===expiryCardIndex?"#e67e22":"rgba(230,126,34,.25)",transition:"background .2s" }} />
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={() => setSubClinic(c)}
+                    style={{ padding:"7px 14px",background:"#e67e22",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:700,fontFamily:"Rubik,sans-serif",cursor:"pointer",flexShrink:0 }}>
+                    {isAr?"تجديد":"Renew"}
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* CLINICS TAB */}
             {activeTab === "clinics" && (
@@ -3695,14 +3741,6 @@ export default function AdminPage() {
                   </div>
                 )}
               </>
-            )}
-
-            {activeTab !== "clinics" && (
-              <div style={{ textAlign:"center",padding:"80px 20px",color:"#ccc" }}>
-                <div style={{ fontSize:64,marginBottom:20 }}>🚧</div>
-                <h2 style={{ fontSize:24,fontWeight:800,color:"#353535",marginBottom:10 }}>{tr.comingSoon}</h2>
-                <p style={{ fontSize:14,color:"#aaa" }}>{isAr?"هذا القسم قيد التطوير":"This section is under development"}</p>
-              </div>
             )}
 
           </div>
