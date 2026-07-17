@@ -27,10 +27,9 @@ export async function POST(req: Request) {
         await supabaseAdmin.from("pharmacy_purchase_invoice_items").insert(
           items.map((it: { medicine_id: number; medicine_name: string; qty: number; unit_price: number }) => ({ invoice_id: inv.id, ...it }))
         );
-        // 3. رفع المخزون
+        // 3. رفع المخزون (عملية atomic)
         for (const it of items) {
-          const { data: med } = await supabaseAdmin.from("pharmacy_medicines").select("stock").eq("id", it.medicine_id).single();
-          if (med) await supabaseAdmin.from("pharmacy_medicines").update({ stock: med.stock + it.qty }).eq("id", it.medicine_id);
+          await supabaseAdmin.rpc("adjust_medicine_stock", { p_id: it.medicine_id, p_user_id: user_id, p_delta: it.qty });
         }
         // 4. سجل الحركة
         await supabaseAdmin.from("pharmacy_stock_logs").insert(

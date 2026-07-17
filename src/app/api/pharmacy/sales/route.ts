@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
     if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "items required" }, { status: 400 });
 
-    // 0. التحقق من كفاية المخزون قبل أي إدخال
+    // 0. التحقق من كفاية المخزون قبل أي إدخال (فحص أولي سريع، الحسم الفعلي atomic لاحقًا)
     for (const it of items) {
       const { data: med, error: medError } = await supabaseAdmin
         .from("pharmacy_medicines")
@@ -46,11 +46,19 @@ export async function POST(req: Request) {
     if (itemsError) console.error("sale items error:", itemsError);
 
     // 3. تخفيض المخزون لكل دواء
+    // 3. تخفيض المخزون لكل دواء (عملية atomic تمنع تعارض العمليات المتزامنة)
+    const stockErrors: string[] = [];
     for (const it of items) {
-      const { data: med } = await supabaseAdmin.from("pharmacy_medicines").select("stock").eq("id", it.medicine_id).eq("user_id", user_id).single();
-      if (med) {
-        await supabaseAdmin.from("pharmacy_medicines").update({ stock: med.stock - it.qty }).eq("id", it.medicine_id).eq("user_id", user_id);
-      }
+      const { error: rpcError } = await supabaseAdmin.rpc("adjust_medicine_stock", {
+        p_id: it.medicine_id, p_user_id: user_id, p_delta: -it.qty,
+      });
+      if (rpcError) stockErrors.push(it.medicine_name || String(it.medicine_id));
+    }
+    if (stockErrors.length > 0) {
+      // تراجع عن عملية البيع لأن المخزون لم يعد كافيًا وقت التنفيذ الفعلي
+      await supabaseAdmin.from("pharmacy_sale_items").delete().eq("sale_id", sale.id);
+      await supabaseAdmin.from("pharmacy_sales").delete().eq("id", sale.id);
+      return NextResponse.json({ error: `تعذر إتمام البيع، المخزون تغيّر لـ: ${stockErrors.join("، ")}` }, { status: 409 });
     }
 
     // 4. تسجيل حركة المخزون
