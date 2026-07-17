@@ -46,21 +46,17 @@ export async function POST(req: Request) {
     }
 
     if (action === "adjust_stock") {
-      // تعديل المخزون (إضافة أو خصم)
-      const { data: med } = await supabaseAdmin
-        .from("pharmacy_medicines")
-        .select("stock")
-        .eq("id", id)
-        .single();
-      if (!med) return NextResponse.json({ error: "Medicine not found" }, { status: 404 });
-
-      const newStock = Math.max(0, (med.stock || 0) + (fields.delta || 0));
-      const { error } = await supabaseAdmin
-        .from("pharmacy_medicines")
-        .update({ stock: newStock })
-        .eq("id", id)
-        .eq("user_id", user_id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      // تعديل المخزون (إضافة أو خصم) - عملية atomic ومفلترة بحساب المستخدم
+      const { data, error } = await supabaseAdmin.rpc("adjust_medicine_stock", {
+        p_id: id, p_user_id: user_id, p_delta: fields.delta || 0,
+      });
+      if (error) {
+        if (error.message?.includes("INSUFFICIENT_STOCK_OR_NOT_FOUND")) {
+          return NextResponse.json({ error: "المخزون غير كافٍ أو الدواء غير موجود" }, { status: 400 });
+        }
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      const newStock = data?.[0]?.new_stock ?? null;
       return NextResponse.json({ success: true, newStock });
     }
 

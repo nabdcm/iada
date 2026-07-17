@@ -43,9 +43,11 @@ export async function POST(req: Request) {
       sale_id: sale.id, medicine_id: it.medicine_id, medicine_name: it.medicine_name, qty: it.qty, unit_price: it.unit_price,
     }));
     const { error: itemsError } = await supabaseAdmin.from("pharmacy_sale_items").insert(saleItems);
-    if (itemsError) console.error("sale items error:", itemsError);
+    if (itemsError) {
+      await supabaseAdmin.from("pharmacy_sales").delete().eq("id", sale.id);
+      return NextResponse.json({ error: `فشل حفظ بنود البيع: ${itemsError.message}` }, { status: 400 });
+    }
 
-    // 3. تخفيض المخزون لكل دواء
     // 3. تخفيض المخزون لكل دواء (عملية atomic تمنع تعارض العمليات المتزامنة)
     const stockErrors: string[] = [];
     for (const it of items) {
