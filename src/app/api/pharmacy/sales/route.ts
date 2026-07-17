@@ -12,6 +12,23 @@ export async function POST(req: Request) {
   try {
     const { user_id, items, total, discount, payment_method, patient_name, prescription_id, cashier, date } = await req.json();
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "items required" }, { status: 400 });
+
+    // 0. التحقق من كفاية المخزون قبل أي إدخال
+    for (const it of items) {
+      const { data: med, error: medError } = await supabaseAdmin
+        .from("pharmacy_medicines")
+        .select("stock, name")
+        .eq("id", it.medicine_id)
+        .eq("user_id", user_id)
+        .single();
+      if (medError || !med) {
+        return NextResponse.json({ error: `الدواء غير موجود: ${it.medicine_name || it.medicine_id}` }, { status: 400 });
+      }
+      if (med.stock < it.qty) {
+        return NextResponse.json({ error: `المخزون غير كافٍ لـ ${med.name}: المتوفر ${med.stock} والمطلوب ${it.qty}` }, { status: 400 });
+      }
+    }
 
     // 1. إنشاء السجل الرئيسي
     const { data: sale, error: saleError } = await supabaseAdmin
@@ -30,9 +47,9 @@ export async function POST(req: Request) {
 
     // 3. تخفيض المخزون لكل دواء
     for (const it of items) {
-      const { data: med } = await supabaseAdmin.from("pharmacy_medicines").select("stock").eq("id", it.medicine_id).single();
+      const { data: med } = await supabaseAdmin.from("pharmacy_medicines").select("stock").eq("id", it.medicine_id).eq("user_id", user_id).single();
       if (med) {
-        await supabaseAdmin.from("pharmacy_medicines").update({ stock: Math.max(0, med.stock - it.qty) }).eq("id", it.medicine_id);
+        await supabaseAdmin.from("pharmacy_medicines").update({ stock: med.stock - it.qty }).eq("id", it.medicine_id).eq("user_id", user_id);
       }
     }
 
