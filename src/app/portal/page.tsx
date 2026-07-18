@@ -214,7 +214,17 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
         document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
       }
       // ── التحقق من نوع الحساب وتوجيه كل نوع للمسار الصحيح ──
-      const accountType = authData?.user?.user_metadata?.account_type;
+      // metadata أولاً، ثم fallback من جدول clinics (حسابات الصيدلية القديمة بلا account_type)
+      let accountType: string | undefined = authData?.user?.user_metadata?.account_type;
+      if (!accountType && authData?.user?.id) {
+        const { data: clinicRow } = await supabase
+          .from("clinics")
+          .select("account_type, plan")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+        accountType = clinicRow?.account_type
+          ?? (clinicRow?.plan === "pharmacy" ? "pharmacy" : "clinic");
+      }
       if (accountType === "pharmacy") {
         window.location.href = redirectTo && redirectTo.startsWith("/pharmacy") ? redirectTo : "/pharmacy";
       } else {

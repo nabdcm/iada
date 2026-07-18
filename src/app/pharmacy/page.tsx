@@ -1913,7 +1913,7 @@ export default function PharmacyPage() {
   // إذا لم تكن هناك جلسة → أعد التوجيه لصفحة الـ login
   if(!currentUser && !loading) {
     if (typeof window !== 'undefined') {
-      window.location.href = '/pharmacy/login';
+      window.location.href = '/portal?type=pharmacy';
     }
     return (
       <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f7f9fc',fontFamily:"'Rubik',sans-serif"}}>
