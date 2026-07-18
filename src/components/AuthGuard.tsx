@@ -20,8 +20,16 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
     let cancelled = false;
 
     async function check() {
-      // getSession يقرأ من localStorage أولاً ويجدد تلقائياً إن انتهى
-      const { data: { session } } = await supabase.auth.getSession();
+      // getSession يقرأ من التخزين المحلي أولاً ويجدد تلقائياً إن انتهى
+      // إعادة المحاولة حتى 3 مرات — فشل الشبكة المؤقت عند فتح التطبيق
+      // يجب ألا يؤدي لتسجيل الخروج
+      let session = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data } = await supabase.auth.getSession();
+        session = data.session;
+        if (session || cancelled) break;
+        await new Promise(r => setTimeout(r, 700));
+      }
 
       if (cancelled) return;
 
@@ -37,13 +45,14 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
 
     check();
 
-    // الاستماع لتغييرات الجلسة (logout من تبويب آخر إلخ)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // الاستماع لتغييرات الجلسة — التوجيه للدخول فقط عند خروج صريح
+    // (SIGNED_OUT) وليس عند أي غياب مؤقت للجلسة (فشل تجديد لحظي إلخ)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
-      if (!session) {
+      if (event === "SIGNED_OUT") {
         document.cookie = "nabd-session=; path=/; max-age=0; SameSite=Lax";
         setStatus("redirect");
-      } else {
+      } else if (session) {
         const maxAge = 400 * 24 * 60 * 60;
         document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
         setStatus("ok");

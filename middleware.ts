@@ -55,12 +55,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── التحقق من الـ cookie البسيط ────────────────────────────
-  // هذا الـ cookie يُكتب من AuthGuard بعد التحقق من localStorage
-  // إذا لم يوجد → وجّه لصفحة الدخول (AuthGuard سيعيد الكتابة عند الدخول)
+  // ── التحقق من الجلسة ──────────────────────────────────────
+  // نقبل إمّا cookie الـ nabd-session أو أي cookie جلسة من Supabase
+  // (sb-*-auth-token) — لأن سفاري/iOS يحذف الكوكيز المكتوبة من JS
+  // بعد 7 أيام، بينما كوكيز Supabase تتجدد تلقائياً.
   const sessionCookie = request.cookies.get("nabd-session")?.value;
+  const hasSupabaseSession = request.cookies
+    .getAll()
+    .some(c => c.name.startsWith("sb-") && c.name.includes("auth-token") && c.value);
 
-  if (!sessionCookie) {
+  if (!sessionCookie && !hasSupabaseSession) {
     const loginUrl = new URL("/portal", request.url);
     loginUrl.searchParams.set("type", isPharmacyProtected ? "pharmacy" : "clinic");
     loginUrl.searchParams.set("redirect", pathname);
