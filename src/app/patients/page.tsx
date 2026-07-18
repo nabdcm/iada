@@ -1887,7 +1887,7 @@ export default function PatientsPage() {
           .fab-add{display:flex!important}
           .desktop-add-btn{display:none!important}
           .refresh-btn-text{display:none!important}
-          .filters-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+          .filters-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important}
           .filters-scroll::-webkit-scrollbar{display:none}
           .stat-mini{padding:12px!important;border-radius:12px!important}
           .stat-icon{display:none!important}
