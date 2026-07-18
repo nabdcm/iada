@@ -688,7 +688,18 @@ export default function DashboardPage() {
         .appt-row-v2{transition:background .18s ease}
         .appt-row-v2:hover{background:${BRAND.bg}}
         .drag-grip:active{cursor:grabbing}
+        .main-content{margin-${isAr?"right":"left"}:${sidebarWidth}px}
         @media(max-width:860px){
+          .main-content{margin-right:0!important;margin-left:0!important;padding:0 14px 110px!important}
+          .hero-card{margin:14px 0 18px!important;padding:18px 18px!important;border-radius:18px!important}
+          .hero-inner{gap:10px!important}
+          .stats-grid-v2{margin-bottom:18px!important}
+          .qa-grid{margin-bottom:0!important}
+          .sections-grid{gap:14px!important}
+          .doctor-filter-bar{padding:12px 14px!important;border-radius:14px!important}
+          .qa-btn div div:last-child{display:none!important}
+          .qa-btn{padding:12px 14px!important;gap:10px!important;border-radius:14px!important}
+          .qa-btn > div:first-child{width:40px!important;height:40px!important;border-radius:12px!important}
           .stats-grid-v2{grid-template-columns:repeat(2,1fr)!important;gap:12px!important}
           .stat-card-v2{padding:16px!important;border-radius:16px!important}
           .stat-card-v2-value{font-size:24px!important}
@@ -712,14 +723,13 @@ export default function DashboardPage() {
           onCollapse={(c: boolean) => setSidebarWidth(c ? 70 : 240)}
         />
 
-        <main className="main-fade" style={{
-          [isAr ? "marginRight" : "marginLeft"]: sidebarWidth,
+        <main className="main-fade main-content" style={{
           padding: "0 28px 40px", minHeight: "100vh",
           transition: "margin .3s cubic-bezier(.4,0,.2,1)",
         }}>
 
           {/* ─── HERO HEADER بتدرج الهوية ─── */}
-          <div style={{
+          <div className="hero-card" style={{
             margin: "20px 0 24px",
             background: `linear-gradient(120deg, ${BRAND.primaryDark} 0%, ${BRAND.primary} 55%, ${BRAND.primaryLight} 100%)`,
             borderRadius: 24, padding: "26px 30px",
@@ -819,7 +829,7 @@ export default function DashboardPage() {
 
           {/* ─── DOCTOR FILTER (خطط مشتركة) ─── */}
           {isSharedPlan(plan) && doctors.length > 0 && (
-            <div style={{
+            <div className="doctor-filter-bar" style={{
               background: "#fff", borderRadius: 18, padding: "14px 20px",
               border: `1.5px solid ${BRAND.border}`, boxShadow: "0 4px 16px rgba(8,99,186,.05)",
               marginBottom: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
