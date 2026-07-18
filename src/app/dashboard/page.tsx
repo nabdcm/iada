@@ -399,7 +399,7 @@ export default function DashboardPage() {
 
     // plan
     const { data: profileData } = await supabase
-      .from("profiles").select("plan, max_doctors").eq("id", userId).maybeSingle();
+      .from("clinics").select("plan, max_doctors").eq("user_id", userId).maybeSingle();
     const fetchedPlan = ((profileData?.plan as PlanType | undefined) ?? "basic");
     setPlan(fetchedPlan);
     const fetchedMax: number =
