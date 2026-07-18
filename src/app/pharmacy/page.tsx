@@ -84,7 +84,7 @@ function BarcodeNotif({n}:{n:ScanNotif}) {
 // ══════════════════════════════════════════════════════════════
 // 💳 بطاقة نتيجة المسح — تظهر على كل الأجهزة بعد قراءة الباركود
 // ══════════════════════════════════════════════════════════════
-function ScanResultCard({code,med,isAr,onClose,onAddNew}:{code:string;med:Medicine|null;isAr:boolean;onClose:()=>void;onAddNew:(code:string)=>void}) {
+function ScanResultCard({code,med,isAr,onClose,onAddNew,onSell,onReturn}:{code:string;med:Medicine|null;isAr:boolean;onClose:()=>void;onAddNew:(code:string)=>void;onSell:(med:Medicine)=>void;onReturn:(med:Medicine)=>void}) {
   useEffect(()=>{ const t=setTimeout(onClose, med?9000:20000); return()=>clearTimeout(t); },[onClose,med]);
   const cat = med?CAT[med.category]:null;
   const low = med? med.stock<med.min_stock : false;
@@ -124,9 +124,13 @@ function ScanResultCard({code,med,isAr,onClose,onAddNew}:{code:string;med:Medici
             ))}
           </div>
           {(low||expired)&&<div style={{margin:"0 20px 14px",background:expired?"rgba(231,76,60,.09)":"rgba(230,126,34,.09)",border:`1.5px solid ${expired?"#e74c3c55":"#e67e2255"}`,borderRadius:11,padding:"8px 12px",fontSize:12,fontWeight:700,color:expired?"#c0392b":"#a04000"}}>{expired?(isAr?"🚫 هذا الدواء منتهي الصلاحية":"🚫 Expired medicine"):(isAr?"⚠️ المخزون منخفض":"⚠️ Low stock")}</div>}
-          <div style={{padding:"0 20px 16px",display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{padding:"0 20px 12px",display:"flex",gap:8,alignItems:"center"}}>
             <div style={{flex:1,background:"#f7f9fc",border:"1px solid #e8ecf0",borderRadius:9,padding:"6px 10px",fontFamily:"monospace",fontSize:12,letterSpacing:1.2,color:"#0863ba",fontWeight:700,direction:"ltr",textAlign:"center"}}>{code}</div>
             <BarcodeSVG code={code} w={96} h={34}/>
+          </div>
+          <div style={{padding:"0 20px 18px",display:"flex",gap:9}}>
+            <button onClick={()=>onSell(med)} style={{flex:1.4,padding:"13px",background:"linear-gradient(135deg,#8e44ad,#7a35a0)",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 5px 18px rgba(142,68,173,.35)"}}>🛒 {isAr?"بيع":"Sell"}</button>
+            <button onClick={()=>onReturn(med)} style={{flex:1,padding:"13px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"2px solid rgba(230,126,34,.35)",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>↩️ {isAr?"إعادة":"Return"}</button>
           </div>
         </>) : (<>
           {/* باركود غير مسجّل */}
@@ -841,12 +845,12 @@ function AlertsTab({lang,medicines,alerts,markAll,markOne}:{lang:Lang;medicines:
 // ══════════════════════════════════════════════════════════════
 // 🗄️ تبويب المخزون
 // ══════════════════════════════════════════════════════════════
-function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId,broadcastScan,remoteScan,openCamera,pendingAddBarcode,onPendingConsumed}:{
+function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId,broadcastScan,remoteScan,openCamera,pendingAddBarcode,onPendingConsumed,pendingReturnBarcode,onPendingReturnConsumed}:{
   lang:Lang;medicines:Medicine[];setMedicines:React.Dispatch<React.SetStateAction<Medicine[]>>;
   barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;
   showNotif:(n:ScanNotif,ms?:number)=>void;addLog:(l:Omit<StockLog,"id">)=>void;currentUser:User;
   userId:string|null;broadcastScan:(code:string,mode:string)=>void;remoteScan:ScanEvent|null;openCamera:()=>void;
-  pendingAddBarcode?:string;onPendingConsumed?:()=>void;
+  pendingAddBarcode?:string;onPendingConsumed?:()=>void;pendingReturnBarcode?:string;onPendingReturnConsumed?:()=>void;
 }) {
   const isAr=lang==="ar";
   const [search,setSearch]=useState(""); const [catF,setCatF]=useState<"all"|"low"|MedCat>("all");
@@ -882,6 +886,15 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
     if(pendingAddBarcode){ setUnknownBarcode(pendingAddBarcode); setEditMed(null); setShowModal(true); onPendingConsumed?.(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[pendingAddBarcode]);
+
+  // زر "إعادة" من بطاقة المسح → افتح نافذة إضافة مخزون (مرتجع) للدواء
+  useEffect(()=>{
+    if(!pendingReturnBarcode) return;
+    const med=medicines.find(m=>m.barcode===pendingReturnBarcode);
+    if(med) setAdj({med,mode:"in"});
+    onPendingReturnConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[pendingReturnBarcode]);
 
   const filtered=useMemo(()=>{
     let l=medicines;
@@ -1400,7 +1413,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
 // ══════════════════════════════════════════════════════════════
 // 💰 تبويب المبيعات
 // ══════════════════════════════════════════════════════════════
-function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,showNotif,currentUser,addLog,userId,onRefresh,broadcastScan,remoteScan,openCamera,onAddNewMedicine}:{lang:Lang;medicines:Medicine[];sales:Sale[];setSales:React.Dispatch<React.SetStateAction<Sale[]>>;barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;showNotif:(n:ScanNotif,ms?:number)=>void;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;userId:string|null;onRefresh:()=>void;broadcastScan:(code:string,mode:string)=>void;remoteScan:ScanEvent|null;openCamera:()=>void;onAddNewMedicine?:(barcode:string)=>void}) {
+function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,showNotif,currentUser,addLog,userId,onRefresh,broadcastScan,remoteScan,openCamera,onAddNewMedicine,pendingSaleBarcode,onPendingSaleConsumed}:{lang:Lang;medicines:Medicine[];sales:Sale[];setSales:React.Dispatch<React.SetStateAction<Sale[]>>;barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;showNotif:(n:ScanNotif,ms?:number)=>void;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;userId:string|null;onRefresh:()=>void;broadcastScan:(code:string,mode:string)=>void;remoteScan:ScanEvent|null;openCamera:()=>void;onAddNewMedicine?:(barcode:string)=>void;pendingSaleBarcode?:string;onPendingSaleConsumed?:()=>void}) {
   const isAr=lang==="ar";
   const [showForm,setShowForm]=useState(false); const [items,setItems]=useState<SaleItem[]>([]);
   const [mQ,setMQ]=useState(""); const [discount,setDiscount]=useState(0); const [payment,setPayment]=useState<"cash"|"card"|"insurance">("cash");
@@ -1438,6 +1451,15 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
     if(remoteScan.mode==="sale"||remoteScan.mode==="query"){ handleScan(remoteScan.code); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[remoteScan]);
+
+  // باركود قادم من بطاقة المسح (زر بيع) → أضفه للفاتورة مباشرة
+  useEffect(()=>{
+    if(!pendingSaleBarcode) return;
+    const med=medicines.find(m=>m.barcode===pendingSaleBarcode);
+    if(med) addToSale(med);
+    onPendingSaleConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[pendingSaleBarcode]);
 
   const itemsDiscount=items.reduce((s,i)=>s+(i.item_discount||0)*i.qty,0);
   const subtotal=items.reduce((s,i)=>s+i.qty*i.unit_price,0);
@@ -1916,6 +1938,8 @@ export default function PharmacyPage() {
   const [showCamera,setShowCamera]=useState(false);
   const [showMore,setShowMore]=useState(false);
   const [pendingAddBarcode,setPendingAddBarcode]=useState<string>("");
+  const [pendingSaleBarcode,setPendingSaleBarcode]=useState<string>("");
+  const [pendingReturnBarcode,setPendingReturnBarcode]=useState<string>("");
   const [scanCard,setScanCard]=useState<{code:string;med:Medicine|null}|null>(null);
   const onRemoteScan=useCallback((ev:ScanEvent)=>{ setRemoteScan(ev); },[]);
   const { online:rtOnline, peers:rtPeers, broadcastScan }=usePharmacyChannel(supabase,supabaseUserId,onRemoteScan);
@@ -1928,6 +1952,7 @@ export default function PharmacyPage() {
   // عند أي حدث مسح (كاميرا محلية أو جهاز آخر) → أظهر بطاقة النتيجة على هذا الجهاز
   useEffect(()=>{
     if(!remoteScan) return;
+    if(remoteScan.device==="cam-live") return; // كاميرا البيع المستمرة: تضاف مباشرة بدون بطاقة
     const med=medicines.find(m=>m.barcode===remoteScan.code)||null;
     setScanCard({code:remoteScan.code,med});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2139,9 +2164,9 @@ export default function PharmacyPage() {
               </div>
             ):(
               <>
-                {activeTab==="inventory"    &&<InventoryTab     lang={lang} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} pendingAddBarcode={pendingAddBarcode} onPendingConsumed={()=>setPendingAddBarcode("")}/>}
+                {activeTab==="inventory"    &&<InventoryTab     lang={lang} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} pendingAddBarcode={pendingAddBarcode} onPendingConsumed={()=>setPendingAddBarcode("")} pendingReturnBarcode={pendingReturnBarcode} onPendingReturnConsumed={()=>setPendingReturnBarcode("")}/>}
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
-                {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} onAddNewMedicine={(bc)=>{setPendingAddBarcode(bc);setActiveTab("inventory");}}/>}
+                {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} onAddNewMedicine={(bc)=>{setPendingAddBarcode(bc);setActiveTab("inventory");}} pendingSaleBarcode={pendingSaleBarcode} onPendingSaleConsumed={()=>setPendingSaleBarcode("")}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="reorder"      &&<ReorderTab       lang={lang} userId={supabaseUserId} suppliers={suppliers} currentUser={currentUser} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={supabaseUserId} currentUser={currentUser}/>}
@@ -2158,14 +2183,16 @@ export default function PharmacyPage() {
         {scanCard&&currentUser&&(
           <ScanResultCard code={scanCard.code} med={scanCard.med} isAr={isAr}
             onClose={()=>setScanCard(null)}
-            onAddNew={(bc)=>{setScanCard(null);setPendingAddBarcode(bc);setActiveTab("inventory");}}/>
+            onAddNew={(bc)=>{setScanCard(null);setPendingAddBarcode(bc);setActiveTab("inventory");}}
+            onSell={(m)=>{setScanCard(null);setPendingSaleBarcode(m.barcode);setActiveTab("sales");}}
+            onReturn={(m)=>{setScanCard(null);setPendingReturnBarcode(m.barcode);setActiveTab("inventory");}}/>
         )}
         {showCamera&&currentUser&&(
-          <CameraScanner lang={lang} onClose={()=>setShowCamera(false)}
+          <CameraScanner lang={lang} continuous={activeTab==="sales"} onClose={()=>setShowCamera(false)}
             onScan={(code)=>{
               const mode=activeTab==="sales"?"sale":activeTab==="inventory"?(barcodeMode||"query"):"query";
               broadcastScan(code,mode);
-              setRemoteScan({code,mode,device:"local-camera",ts:Date.now()});
+              setRemoteScan({code,mode,device:activeTab==="sales"?"cam-live":"local-camera",ts:Date.now()});
             }}/>
         )}
       </div>

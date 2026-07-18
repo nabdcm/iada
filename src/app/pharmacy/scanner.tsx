@@ -11,9 +11,11 @@ type ScannerProps = {
   onClose: () => void;
   lang: "ar" | "en";
   title?: string;
+  /** وضع مستمر (فورم البيع): لا تُغلق الكاميرا بعد المسح، كل قراءة تُضاف مباشرة */
+  continuous?: boolean;
 };
 
-export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
+export function CameraScanner({ onScan, onClose, lang, title, continuous = false }: ScannerProps) {
   const isAr = lang === "ar";
   const containerId = "nabd-qr-reader";
   const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void; getState?: () => number } | null>(null);
@@ -25,6 +27,9 @@ export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
   const doneRef = useRef(false); // منع أي معالجة بعد أول مسح ناجح
   const onScanRef = useRef(onScan);   onScanRef.current = onScan;
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
+  const continuousRef = useRef(continuous); continuousRef.current = continuous;
+  const [lastAdded, setLastAdded] = useState<string>("");
+  const [scanCount, setScanCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,9 +43,15 @@ export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
       const now = Date.now();
       if (decodedText === lastScan.current.code && now - lastScan.current.at < 1500) return;
       lastScan.current = { code: decodedText, at: now };
-      doneRef.current = true;
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(60);
       const code = decodedText.trim();
+      if (continuousRef.current) {
+        // وضع البيع المستمر: أضف مباشرة وواصل المسح دون إغلاق
+        onScanRef.current(code);
+        setLastAdded(code); setScanCount(c => c + 1);
+        return;
+      }
+      doneRef.current = true;
       // أوقف الكاميرا فورًا ثم أغلق النافذة تلقائيًا وبلّغ بالنتيجة
       const s = scannerRef.current;
       const finish = () => { onScanRef.current(code); onCloseRef.current(); };
@@ -133,7 +144,7 @@ export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)" }} onClick={onClose} />
       <div style={{ position: "relative", background: "#111", borderRadius: 22, padding: "18px", width: "min(96vw,420px)", boxShadow: "0 24px 80px rgba(0,0,0,.5)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>📷 {title || (isAr ? "مسح الباركود" : "Scan Barcode")}</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>📷 {title || (continuous ? (isAr ? "مسح البيع المستمر" : "Live Sale Scan") : (isAr ? "مسح الباركود" : "Scan Barcode"))}</h2>
           <button onClick={onClose} style={{ border: "none", background: "rgba(255,255,255,.12)", color: "#fff", cursor: "pointer", fontSize: 18, width: 34, height: 34, borderRadius: "50%" }}>✕</button>
         </div>
         {error ? (
@@ -148,6 +159,20 @@ export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
             <div style={{ textAlign: "center", marginTop: 12, fontSize: 12, color: ready ? "#4ade80" : "#888", fontWeight: 600 }}>
               {ready ? (isAr ? "● وجّه الكاميرا نحو باركود الدواء" : "● Point at the barcode") : starting ? (isAr ? "جارِ تشغيل الكاميرا..." : "Starting camera...") : ""}
             </div>
+            {continuous && scanCount > 0 && (
+              <div key={scanCount} style={{ marginTop: 10, background: "rgba(74,222,128,.14)", border: "1.5px solid rgba(74,222,128,.45)", borderRadius: 11, padding: "9px 13px", display: "flex", alignItems: "center", gap: 9, animation: "barcodeIn .3s ease both" }}>
+                <span style={{ fontSize: 17 }}>✅</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#4ade80" }}>{isAr ? "أُضيف للفاتورة" : "Added to sale"} ({scanCount})</div>
+                  <div style={{ fontSize: 10, color: "#9fdcb6", fontFamily: "monospace", letterSpacing: 1, direction: "ltr" }}>{lastAdded}</div>
+                </div>
+              </div>
+            )}
+            {continuous && (
+              <button onClick={onClose} style={{ width: "100%", marginTop: 12, padding: "12px", background: "linear-gradient(135deg,#8e44ad,#7a35a0)", color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 800, fontFamily: "'Rubik',sans-serif", boxShadow: "0 5px 18px rgba(142,68,173,.4)" }}>
+                {isAr ? "✔ إنهاء المسح والعودة للفاتورة" : "✔ Done — back to sale"}
+              </button>
+            )}
           </>
         )}
       </div>
