@@ -695,7 +695,7 @@ export default function SharedSidebar({
             position: "fixed",
             bottom: "calc(14px + env(safe-area-inset-bottom, 0px))",
             left: 12, right: 12,
-            background: "rgba(5,88,168,0.92)",
+            background: "linear-gradient(135deg, rgba(8,99,186,0.94), rgba(5,88,168,0.92) 50%, rgba(4,64,124,0.94))",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
             border: "1px solid rgba(255,255,255,0.18)",
