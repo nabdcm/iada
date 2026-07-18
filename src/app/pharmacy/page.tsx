@@ -963,23 +963,54 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
   const outCount=medicines.filter(m=>m.stock===0).length;
   const expCount=medicines.filter(m=>isSoon(medExpiry(m))||isExp(medExpiry(m))).length;
 
+  const totalValue=medicines.reduce((t,m)=>t+m.stock*(m.avg_cost||m.purchase_price||0),0);
+  const fmtNum=(n:number)=>n>=1000000?(n/1000000).toFixed(1)+"M":n>=1000?(n/1000).toFixed(1)+"K":String(Math.round(n));
+
   return (
     <div>
-      <div style={{background:"#fff",borderRadius:13,padding:"11px 15px",border:"1.5px solid #eef0f3",marginBottom:11,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",boxShadow:"0 2px 8px rgba(8,99,186,.04)"}}>
-        <span style={{fontSize:12,fontWeight:700,color:"#888",flexShrink:0}}>{isAr?"الماسح:":"Scanner:"}</span>
-        {([["inventory",isAr?"بحث":"Search",Icons.search,"#0863ba"],["stock_in",isAr?"إضافة":"In",Icons.stockIn,"#27ae60"],["stock_out",isAr?"خصم":"Out",Icons.stockOut,"#e67e22"]] as [BarcodeMode,string,(p:{size?:number})=>React.JSX.Element,string][]).map(([m,label,Ic,color])=>(
-          <button key={m!} onClick={()=>setBarcodeMode(barcodeMode===m?null:m)}
-            style={{padding:"7px 13px",borderRadius:9,border:`1.5px solid ${barcodeMode===m?color:color+"40"}`,background:barcodeMode===m?color:"#fff",color:barcodeMode===m?"#fff":color,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,transition:"all .2s",boxShadow:barcodeMode===m?`0 3px 10px ${color}40`:"none"}}>
-            <Ic size={15}/> {label}
+      {/* ═══ رأس الصفحة ═══ */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:14,flexWrap:"wrap",marginBottom:16}}>
+        <div>
+          <h1 style={{fontSize:"clamp(19px,3vw,24px)",fontWeight:800,color:"#1a2840",letterSpacing:"-.4px",marginBottom:3}}>{isAr?"إدارة المخزون":"Inventory"}</h1>
+          <p style={{fontSize:12.5,color:"#8a94a3",fontWeight:500}}>{isAr?`${medicines.length} صنف مسجّل · متابعة الكميات والصلاحيات لحظياً`:`${medicines.length} items · live stock & expiry tracking`}</p>
+        </div>
+        <div style={{display:"flex",gap:9,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>setShowLog(true)} className="inv-ghost-btn"><Icons.log size={16}/> <span className="hide-xs">{isAr?"سجل الحركة":"Log"}</span></button>
+          <button onClick={()=>{if(!barcodeMode)setBarcodeMode("inventory");openCamera();}} className="inv-ghost-btn"><Icons.camera size={16}/> <span className="hide-xs">{isAr?"كاميرا":"Camera"}</span></button>
+          <button onClick={()=>{setEditMed(null);setShowModal(true);}} style={{display:"flex",alignItems:"center",gap:7,padding:"12px 22px",background:"linear-gradient(135deg,#0863ba,#0a4f96)",color:"#fff",border:"none",borderRadius:13,fontFamily:"'Rubik',sans-serif",fontSize:13.5,fontWeight:800,cursor:"pointer",boxShadow:"0 8px 22px rgba(8,99,186,.32)",transition:"all .18s"}}>
+            <Icons.plus size={17}/> {isAr?"إضافة دواء":"Add Medicine"}
           </button>
-        ))}
-        <button onClick={()=>{if(!barcodeMode)setBarcodeMode("inventory");openCamera();}} title={isAr?"مسح بالكاميرا حسب الوضع المختار":"Camera scan"} style={{padding:"6px 13px",borderRadius:9,border:"2px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.06)",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}><Icons.camera size={15}/> {isAr?"كاميرا":"Camera"}</button>
-        <button onClick={()=>setShowLog(true)} style={{marginRight:"auto",padding:"6px 13px",borderRadius:9,border:"1.5px solid #eef0f3",background:"#f7f9fc",color:"#666",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Icons.log size={15}/> {isAr?"سجل الحركة":"Movement Log"}</button>
+        </div>
       </div>
 
-      {/* تنبيه: باركود ممسوح غير مسجّل → زر إضافته كدواء جديد */}
+      {/* ═══ بطاقات إحصائية ═══ */}
+      <div className="inv-stats" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+        {([
+          {k:"all" as const,label:isAr?"إجمالي الأصناف":"Total Items",val:String(medicines.length),sub:isAr?"صنف في المخزون":"in inventory",c:"#0863ba",Ic:Icons.box},
+          {k:null,label:isAr?"قيمة المخزون":"Stock Value",val:fmtNum(totalValue),sub:isAr?"ر.س بالتكلفة":"SAR at cost",c:"#1e8449",Ic:Icons.reports},
+          {k:"low" as const,label:isAr?"مخزون منخفض":"Low Stock",val:String(lowCount),sub:isAr?"يحتاج إعادة طلب":"needs reorder",c:"#d35400",Ic:Icons.stockOut},
+          {k:"expiring" as const,label:isAr?"قارب الانتهاء":"Expiring",val:String(expCount),sub:isAr?"خلال ٣٠ يوماً":"within 30 days",c:"#c0392b",Ic:Icons.alerts},
+        ]).map((st,i)=>{
+          const active=st.k!==null&&statusF===st.k&&st.k!=="all"||st.k==="all"&&statusF==="all"&&false;
+          return (
+            <button key={i} onClick={()=>{if(st.k)setStatusF(st.k==="all"?"all":st.k);}} className="inv-stat-card" style={{textAlign:"start",border:`1.5px solid ${active?st.c:"#edf1f6"}`,cursor:st.k?"pointer":"default",background:"#fff",borderRadius:16,padding:"16px 17px",position:"relative",overflow:"hidden",fontFamily:"'Rubik',sans-serif",boxShadow:active?`0 8px 24px ${st.c}22`:"0 2px 10px rgba(20,40,70,.05)",transition:"all .2s"}}>
+              <span style={{position:"absolute",insetInlineStart:0,top:14,bottom:14,width:3.5,borderRadius:4,background:st.c,opacity:.85}}/>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div>
+                  <div style={{fontSize:11.5,fontWeight:700,color:"#8a94a3",marginBottom:7}}>{st.label}</div>
+                  <div style={{fontSize:26,fontWeight:800,color:"#1a2840",lineHeight:1,letterSpacing:"-.5px"}}>{st.val}</div>
+                  <div style={{fontSize:10.5,color:"#aab3bf",fontWeight:600,marginTop:5}}>{st.sub}</div>
+                </div>
+                <span style={{width:40,height:40,borderRadius:12,background:`${st.c}10`,color:st.c,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><st.Ic size={19}/></span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* تنبيه: باركود ممسوح غير مسجّل */}
       {unknownBarcode&&(
-        <div style={{background:"linear-gradient(135deg,rgba(230,126,34,.1),rgba(230,126,34,.04))",border:"1.5px solid rgba(230,126,34,.35)",borderRadius:13,padding:"13px 16px",marginBottom:11,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",animation:"slideUp .3s ease"}}>
+        <div style={{background:"#fff",borderInlineStart:"4px solid #e67e22",border:"1.5px solid #f5dcc2",borderRadius:14,padding:"13px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",animation:"slideUp .3s ease",boxShadow:"0 4px 16px rgba(230,126,34,.1)"}}>
           <div style={{display:"flex",alignItems:"center",gap:11}}>
             <span style={{width:40,height:40,borderRadius:11,background:"rgba(230,126,34,.12)",color:"#d35400",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.scan size={20}/></span>
             <div>
@@ -988,22 +1019,34 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
             </div>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>{setEditMed(null);setShowModal(true);}} style={{padding:"10px 18px",background:"#27ae60",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 13px rgba(39,174,96,.3)",whiteSpace:"nowrap"}}>{isAr?"＋ إضافة كدواء جديد":"＋ Add as new"}</button>
+            <button onClick={()=>{setEditMed(null);setShowModal(true);}} style={{display:"flex",alignItems:"center",gap:6,padding:"10px 18px",background:"#27ae60",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 13px rgba(39,174,96,.3)",whiteSpace:"nowrap"}}><Icons.plus size={15}/> {isAr?"إضافة كدواء جديد":"Add as new"}</button>
             <button onClick={()=>setUnknownBarcode("")} style={{padding:"10px 14px",background:"#fff",color:"#999",border:"1.5px solid #eee",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,cursor:"pointer"}}>{isAr?"تجاهل":"Dismiss"}</button>
           </div>
         </div>
       )}
 
-      <div style={{background:"#fff",borderRadius:13,padding:"15px 17px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 8px rgba(8,99,186,.04)",marginBottom:11}}>
-        <div style={{display:"flex",gap:10,marginBottom:13,alignItems:"center"}}>
-          <div style={{flex:1,display:"flex",alignItems:"center",gap:9,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:11,padding:"12px 15px"}}>
-            <span style={{color:"#9aa8b6",display:"flex"}}><Icons.search size={16}/></span>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={isAr?"بحث بالاسم أو الباركود...":"Name or barcode..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:14,width:"100%",direction:isAr?"rtl":"ltr"}}/>
-            {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb"}}>✕</button>}
+      {/* ═══ شريط الأدوات: بحث + فلاتر + ماسح ═══ */}
+      <div style={{background:"#fff",borderRadius:16,padding:"15px 17px",border:"1.5px solid #edf1f6",boxShadow:"0 2px 10px rgba(20,40,70,.05)",marginBottom:14}}>
+        <div className="inv-toolbar" style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{flex:"1 1 240px",display:"flex",alignItems:"center",gap:10,background:"#f6f8fb",border:"1.5px solid #e8edf3",borderRadius:12,padding:"12px 15px",transition:"border-color .15s"}}>
+            <span style={{color:"#9aa8b6",display:"flex"}}><Icons.search size={17}/></span>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={isAr?"ابحث بالاسم أو الباركود أو الشركة...":"Search name, barcode, manufacturer..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13.5,width:"100%",direction:isAr?"rtl":"ltr",color:"#1a2840"}}/>
+            {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",color:"#9aa8b6",display:"flex"}}><Icons.close size={14}/></button>}
           </div>
-          <button onClick={()=>{setEditMed(null);setShowModal(true);}} className="btn-primary-lg" style={{background:"#0863ba",boxShadow:"0 4px 16px rgba(8,99,186,.35)"}}>＋ {isAr?"إضافة دواء":"Add Medicine"}</button>
+          <select value={catF} onChange={e=>setCatF(e.target.value as "all"|MedCat)} style={{padding:"12px 14px",border:"1.5px solid #e8edf3",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:600,color:catF==="all"?"#7a8794":"#0863ba",background:catF==="all"?"#f6f8fb":"rgba(8,99,186,.05)",outline:"none",cursor:"pointer",minWidth:160,direction:isAr?"rtl":"ltr"}}>
+            <option value="all">{isAr?"كل الفئات":"All categories"}</option>
+            {Object.entries(CAT).map(([k,v])=>(<option key={k} value={k}>{isAr?v.ar:v.en}</option>))}
+          </select>
+          <div style={{display:"flex",alignItems:"center",gap:2,background:"#f6f8fb",borderRadius:12,padding:3,border:"1.5px solid #e8edf3"}} title={isAr?"وضع الماسح":"Scanner mode"}>
+            {([["inventory",isAr?"بحث":"Find",Icons.search,"#0863ba"],["stock_in",isAr?"إدخال":"In",Icons.stockIn,"#27ae60"],["stock_out",isAr?"إخراج":"Out",Icons.stockOut,"#e67e22"]] as [BarcodeMode,string,(p:{size?:number})=>React.JSX.Element,string][]).map(([m,label,Ic,color])=>(
+              <button key={m!} onClick={()=>setBarcodeMode(barcodeMode===m?null:m)} title={label}
+                style={{padding:"9px 12px",borderRadius:9,border:"none",background:barcodeMode===m?color:"transparent",color:barcodeMode===m?"#fff":"#7a8794",cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"'Rubik',sans-serif",fontSize:11.5,fontWeight:700,transition:"all .15s",boxShadow:barcodeMode===m?`0 3px 10px ${color}45`:"none"}}>
+                <Ic size={15}/><span className="hide-xs">{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div style={{display:"flex",gap:9,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:9,flexWrap:"wrap",alignItems:"center",marginTop:12}}>
           <div style={{display:"flex",background:"#f2f5f9",borderRadius:11,padding:3,gap:2}}>
             {([["all",isAr?"الكل":"All",null],["low",isAr?"منخفض":"Low",lowCount],["out",isAr?"نافد":"Out",outCount],["expiring",isAr?"قارب الانتهاء":"Expiring",expCount]] as [string,string,number|null][]).map(([k,label,cnt])=>(
               <button key={k} onClick={()=>setStatusF(k as typeof statusF)} style={{padding:"8px 14px",border:"none",borderRadius:9,cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:statusF===k?700:600,background:statusF===k?"#fff":"transparent",color:statusF===k?"#0863ba":"#7a8794",boxShadow:statusF===k?"0 2px 8px rgba(8,99,186,.12)":"none",transition:"all .15s",display:"flex",alignItems:"center",gap:5}}>
@@ -1011,31 +1054,44 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
               </button>
             ))}
           </div>
-          <select value={catF} onChange={e=>setCatF(e.target.value as "all"|MedCat)} style={{padding:"9px 13px",border:"1.5px solid #e0e7ef",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:600,color:catF==="all"?"#7a8794":"#0863ba",background:"#fff",outline:"none",cursor:"pointer",minWidth:150,direction:isAr?"rtl":"ltr"}}>
-            <option value="all">{isAr?"كل الفئات":"All categories"}</option>
-            {Object.entries(CAT).map(([k,v])=>(<option key={k} value={k}>{isAr?v.ar:v.en}</option>))}
-          </select>
-          {(catF!=="all"||statusF!=="all")&&<button onClick={()=>{setCatF("all");setStatusF("all");}} style={{padding:"8px 12px",border:"none",background:"none",cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,color:"#e74c3c"}}>{isAr?"مسح الفلاتر ✕":"Clear ✕"}</button>}
+          {(catF!=="all"||statusF!=="all"||search)&&(
+            <button onClick={()=>{setCatF("all");setStatusF("all");setSearch("");}} style={{display:"flex",alignItems:"center",gap:5,padding:"8px 12px",border:"none",background:"none",cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,color:"#e74c3c"}}><Icons.close size={12}/>{isAr?"مسح الفلاتر":"Clear filters"}</button>
+          )}
+          <span style={{marginInlineStart:"auto",fontSize:11.5,color:"#9aa8b6",fontWeight:600}}>{isAr?`${filtered.length} نتيجة`:`${filtered.length} results`}</span>
         </div>
       </div>
 
-      {/* جدول ديسكتوب */}
-      <div className="desktop-table" style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",boxShadow:"0 2px 14px rgba(8,99,186,.05)",overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 1fr .9fr 190px",padding:"13px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3"}}>
-          {[isAr?"الدواء":"Medicine",isAr?"الباركود":"Barcode",isAr?"الفئة":"Cat",isAr?"السعر":"Price",isAr?"المخزون":"Stock","",isAr?"إجراءات":"Actions"].map((h,i)=>(<div key={i} style={{fontSize:11,fontWeight:800,color:"#9aa2ab",textTransform:"uppercase",letterSpacing:.6}}>{h}</div>))}
+      {/* ═══ جدول ديسكتوب ═══ */}
+      <div className="desktop-table" style={{background:"#fff",borderRadius:18,border:"1.5px solid #edf1f6",boxShadow:"0 4px 22px rgba(20,40,70,.06)",overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"2.2fr 1.2fr 1.1fr .9fr .9fr .8fr 196px",padding:"14px 22px",background:"#f8fafc",borderBottom:"1.5px solid #edf1f6"}}>
+          {[isAr?"الدواء":"Medicine",isAr?"الباركود":"Barcode",isAr?"الفئة":"Category",isAr?"السعر":"Price",isAr?"المخزون":"Stock",isAr?"الحالة":"Status",isAr?"إجراءات":"Actions"].map((h,i)=>(<div key={i} style={{fontSize:10.5,fontWeight:800,color:"#9aa2ab",textTransform:"uppercase",letterSpacing:.7}}>{h}</div>))}
         </div>
-        {filtered.length===0?(<div style={{textAlign:"center",padding:"36px",color:"#ccc"}}><div style={{fontSize:30,marginBottom:7}}>📦</div><div>{isAr?"لا نتائج":"No results"}</div></div>)
-        :filtered.map(m=>{
-          const cat=CAT[m.category]; const expired=isExp(medExpiry(m)); const lit=litId===m.id;
+        {filtered.length===0?(
+          <div style={{textAlign:"center",padding:"56px 20px",color:"#b8c0c9"}}>
+            <div style={{width:60,height:60,margin:"0 auto 14px",borderRadius:18,background:"#f2f5f9",color:"#9aa8b6",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.box size={28}/></div>
+            <div style={{fontSize:14,fontWeight:700,color:"#7a8794",marginBottom:4}}>{isAr?"لا توجد نتائج مطابقة":"No matching results"}</div>
+            <div style={{fontSize:12,color:"#aab3bf"}}>{isAr?"جرّب تعديل البحث أو الفلاتر":"Try adjusting search or filters"}</div>
+          </div>
+        ):filtered.map(m=>{
+          const cat=CAT[m.category]; const expired=isExp(medExpiry(m)); const soon=isSoon(medExpiry(m)); const lit=litId===m.id;
           return (
-            <div key={m.id} className="inv-row" style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 1fr .9fr 190px",padding:"14px 20px",alignItems:"center",borderBottom:"1px solid #f0f2f5",background:lit?"rgba(8,99,186,.07)":expired?"rgba(231,76,60,.025)":"",outline:lit?"2px solid #0863ba":"none",transition:"all .2s"}}>
-              <div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div>{m.manufacturer&&<div style={{fontSize:10,color:"#bbb",marginTop:1}}>{m.manufacturer}</div>}{expired&&<div style={{fontSize:10,color:"#e74c3c",fontWeight:700}}>🚫 {isAr?"منتهي":"EXPIRED"}</div>}{!expired&&medExpiry(m)&&<div style={{fontSize:10,color:isSoon(medExpiry(m))?"#e67e22":"#aaa",fontWeight:isSoon(medExpiry(m))?700:400,marginTop:1}}>{isSoon(medExpiry(m))?"⏳ ":"📅 "}{isAr?"أقرب انتهاء":"Exp"}: {medExpiry(m)}{m.batches&&m.batches.length>1?` · ${m.batches.length} ${isAr?"دفعات":"batches"}`:""}</div>}</div>
-              <div><div style={{background:"#f7f9fc",borderRadius:7,padding:"2px 7px",border:"1px solid #e8ecf0",display:"inline-flex"}}><span style={{fontSize:10,color:"#0863ba",fontFamily:"monospace",letterSpacing:.7}}>{m.barcode}</span></div></div>
-              <div><span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{isAr?cat.ar:cat.en}</span></div>
-              <div style={{fontSize:13,fontWeight:700,color:"#2e7d32"}}>{m.sell_price}<span style={{fontSize:10,color:"#aaa",fontWeight:400}}> {isAr?"ر.س":"SAR"}</span></div>
-              <div style={{fontSize:13,fontWeight:700,color:m.stock<m.min_stock?"#e67e22":"#353535"}}>{m.stock}<span style={{fontSize:10,color:"#aaa",fontWeight:400}}> {isAr?m.unit:"u"}</span></div>
+            <div key={m.id} className="inv-row" style={{display:"grid",gridTemplateColumns:"2.2fr 1.2fr 1.1fr .9fr .9fr .8fr 196px",padding:"15px 22px",alignItems:"center",borderBottom:"1px solid #f2f5f9",background:lit?"rgba(8,99,186,.07)":expired?"rgba(231,76,60,.025)":"",outline:lit?"2px solid #0863ba":"none",transition:"all .2s"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
+                <span style={{width:38,height:38,borderRadius:11,background:`${cat.color}0e`,color:cat.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:14,fontWeight:800}}>{(isAr?m.name_ar:(m.name_en||m.name_ar)).slice(0,1)}</span>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:13.5,fontWeight:700,color:"#1a2840",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{isAr?m.name_ar:m.name_en||m.name_ar}</div>
+                  <div style={{display:"flex",gap:8,alignItems:"center",marginTop:2,flexWrap:"wrap"}}>
+                    {m.manufacturer&&<span style={{fontSize:10.5,color:"#aab3bf"}}>{m.manufacturer}</span>}
+                    {medExpiry(m)&&<span style={{fontSize:10,fontWeight:expired||soon?700:500,color:expired?"#e74c3c":soon?"#e67e22":"#aab3bf"}}>{expired?(isAr?"منتهي · ":"Expired · "):soon?(isAr?"قريب · ":"Soon · "):""}{medExpiry(m)}</span>}
+                  </div>
+                </div>
+              </div>
+              <div><span style={{background:"#f6f8fb",borderRadius:7,padding:"3px 8px",border:"1px solid #e8edf3",fontSize:10,color:"#5a7189",fontFamily:"monospace",letterSpacing:.7,direction:"ltr",display:"inline-block"}}>{m.barcode}</span></div>
+              <div><span style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:`${cat.color}0e`,color:cat.color}}><span style={{width:6,height:6,borderRadius:"50%",background:cat.color}}/>{isAr?cat.ar:cat.en}</span></div>
+              <div style={{fontSize:13.5,fontWeight:800,color:"#1a2840"}}>{m.sell_price}<span style={{fontSize:10,color:"#aab3bf",fontWeight:500}}> {isAr?"ر.س":"SAR"}</span></div>
+              <div style={{fontSize:13.5,fontWeight:800,color:m.stock===0?"#c0392b":m.stock<m.min_stock?"#d35400":"#1a2840"}}>{m.stock}<span style={{fontSize:10,color:"#aab3bf",fontWeight:500}}> {isAr?m.unit:"u"}</span></div>
               <div><SBadge s={m.stock} m={m.min_stock} lang={lang}/></div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:6}}>
                 <button onClick={()=>setAdj({med:m,mode:"in"})} className="action-icon-btn" title={isAr?"إضافة مخزون":"Stock in"} style={{color:"#27ae60",borderColor:"rgba(39,174,96,.3)"}}><Icons.stockIn size={16}/></button>
                 <button onClick={()=>setAdj({med:m,mode:"out"})} className="action-icon-btn" title={isAr?"خصم مخزون":"Stock out"} style={{color:"#e67e22",borderColor:"rgba(230,126,34,.3)"}}><Icons.stockOut size={16}/></button>
                 <button onClick={()=>{setEditMed(m);setShowModal(true);}} className="action-icon-btn" title={isAr?"تعديل":"Edit"} style={{color:"#0863ba",borderColor:"rgba(8,99,186,.25)"}}><Icons.edit size={15}/></button>
@@ -1046,33 +1102,44 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
         })}
       </div>
 
-      {/* كروت موبايل */}
+      {/* ═══ كروت موبايل ═══ */}
       <div className="mobile-cards" style={{display:"none"}}>
-        {filtered.map(m=>{const cat=CAT[m.category];const lit=litId===m.id;const expired=isExp(medExpiry(m));return(
-          <div key={m.id} style={{background:lit?"rgba(8,99,186,.05)":"#fff",borderRadius:14,padding:"14px",border:`1.5px solid ${lit?"#0863ba":expired?"rgba(231,76,60,.3)":"#eef0f3"}`,marginBottom:9,boxShadow:"0 2px 9px rgba(8,99,186,.05)",transition:"all .2s"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div><span style={{fontSize:10,fontWeight:600,padding:"1px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{isAr?cat.ar:cat.en}</span></div><SBadge s={m.stock} m={m.min_stock} lang={lang}/></div>
-            <div style={{background:"#f7f9fc",borderRadius:9,padding:"6px 10px",marginBottom:7,display:"flex",alignItems:"center",gap:8}}><BarcodeSVG code={m.barcode} w={90} h={30}/><span style={{fontFamily:"monospace",fontSize:9,color:"#0863ba",letterSpacing:.7}}>{m.barcode}</span></div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:9}}>
-              <div style={{background:"#f7f9fc",borderRadius:8,padding:"7px",textAlign:"center"}}><div style={{fontSize:10,color:"#aaa",marginBottom:2}}>{isAr?"سعر البيع":"Price"}</div><div style={{fontSize:14,fontWeight:700,color:"#2e7d32"}}>{m.sell_price}</div></div>
-              <div style={{background:"#f7f9fc",borderRadius:8,padding:"7px",textAlign:"center"}}><div style={{fontSize:10,color:"#aaa",marginBottom:2}}>{isAr?"المخزون":"Stock"}</div><div style={{fontSize:14,fontWeight:700,color:m.stock<m.min_stock?"#e67e22":"#353535"}}>{m.stock}</div></div>
+        {filtered.length===0&&(
+          <div style={{textAlign:"center",padding:"46px 20px",color:"#b8c0c9",background:"#fff",borderRadius:16,border:"1.5px solid #edf1f6"}}>
+            <div style={{width:54,height:54,margin:"0 auto 12px",borderRadius:16,background:"#f2f5f9",color:"#9aa8b6",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.box size={25}/></div>
+            <div style={{fontSize:13.5,fontWeight:700,color:"#7a8794"}}>{isAr?"لا توجد نتائج":"No results"}</div>
+          </div>
+        )}
+        {filtered.map(m=>{const cat=CAT[m.category];const lit=litId===m.id;const expired=isExp(medExpiry(m));const soon=isSoon(medExpiry(m));return(
+          <div key={m.id} style={{background:"#fff",borderRadius:16,padding:"15px",border:`1.5px solid ${lit?"#0863ba":expired?"rgba(231,76,60,.3)":"#edf1f6"}`,marginBottom:11,boxShadow:lit?"0 6px 20px rgba(8,99,186,.14)":"0 2px 10px rgba(20,40,70,.05)",transition:"all .2s"}}>
+            <div style={{display:"flex",gap:11,alignItems:"flex-start",marginBottom:11}}>
+              <span style={{width:42,height:42,borderRadius:12,background:`${cat.color}0e`,color:cat.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:16,fontWeight:800}}>{(isAr?m.name_ar:(m.name_en||m.name_ar)).slice(0,1)}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                  <div style={{fontSize:14.5,fontWeight:800,color:"#1a2840",lineHeight:1.3}}>{isAr?m.name_ar:m.name_en||m.name_ar}</div>
+                  <SBadge s={m.stock} m={m.min_stock} lang={lang}/>
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginTop:4,flexWrap:"wrap"}}>
+                  <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:10.5,fontWeight:600,color:cat.color}}><span style={{width:5,height:5,borderRadius:"50%",background:cat.color}}/>{isAr?cat.ar:cat.en}</span>
+                  {m.manufacturer&&<span style={{fontSize:10.5,color:"#aab3bf"}}>· {m.manufacturer}</span>}
+                </div>
+              </div>
             </div>
-            {m.batches&&m.batches.length>0&&(
-              <div style={{background:"#fafbfd",borderRadius:9,padding:"7px 9px",marginBottom:9,border:"1px solid #eef0f3"}}>
-                <div style={{fontSize:10,color:"#888",fontWeight:700,marginBottom:5}}>{isAr?`الدفعات (${m.batches.length})`:`Batches (${m.batches.length})`}</div>
-                {m.batches.slice().sort((a,b)=>(a.expiry_date||"9999").localeCompare(b.expiry_date||"9999")).map(b=>(
-                  <div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10,padding:"2px 0",color:"#666"}}>
-                    <span>{b.batch_no?`#${b.batch_no}`:(isAr?"—":"—")}</span>
-                    <span style={{color:isExp(b.expiry_date)?"#e74c3c":isSoon(b.expiry_date)?"#e67e22":"#999"}}>{b.expiry_date||(isAr?"بلا صلاحية":"no exp")}</span>
-                    <span style={{fontWeight:700,color:"#353535"}}>{b.qty} {isAr?m.unit:"u"}</span>
-                  </div>
-                ))}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:11}}>
+              <div style={{background:"#f6f8fb",borderRadius:11,padding:"9px 6px",textAlign:"center"}}><div style={{fontSize:9.5,color:"#9aa8b6",fontWeight:700,marginBottom:3}}>{isAr?"سعر البيع":"Price"}</div><div style={{fontSize:15,fontWeight:800,color:"#1a2840"}}>{m.sell_price}</div></div>
+              <div style={{background:"#f6f8fb",borderRadius:11,padding:"9px 6px",textAlign:"center"}}><div style={{fontSize:9.5,color:"#9aa8b6",fontWeight:700,marginBottom:3}}>{isAr?"المخزون":"Stock"}</div><div style={{fontSize:15,fontWeight:800,color:m.stock===0?"#c0392b":m.stock<m.min_stock?"#d35400":"#1a2840"}}>{m.stock}</div></div>
+              <div style={{background:expired?"rgba(231,76,60,.07)":soon?"rgba(230,126,34,.07)":"#f6f8fb",borderRadius:11,padding:"9px 6px",textAlign:"center"}}><div style={{fontSize:9.5,color:"#9aa8b6",fontWeight:700,marginBottom:3}}>{isAr?"الصلاحية":"Expiry"}</div><div style={{fontSize:11,fontWeight:800,color:expired?"#c0392b":soon?"#d35400":"#5a7189",direction:"ltr"}}>{medExpiry(m)||"—"}</div></div>
+            </div>
+            {m.batches&&m.batches.length>1&&(
+              <div style={{background:"#fafbfd",borderRadius:10,padding:"7px 10px",marginBottom:10,border:"1px solid #edf1f6",fontSize:10.5,color:"#7a8794",fontWeight:600}}>
+                {isAr?`${m.batches.length} دفعات مخزنة · أقربها ${m.nearest_expiry||"—"}`:`${m.batches.length} batches · nearest ${m.nearest_expiry||"—"}`}
               </div>
             )}
-            <div style={{display:"flex",gap:5}}>
-              <button onClick={()=>setAdj({med:m,mode:"in"})} style={{flex:1,padding:"9px",border:"1.5px solid rgba(39,174,96,.3)",borderRadius:10,background:"rgba(39,174,96,.07)",color:"#27ae60",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.stockIn size={17}/></button>
-              <button onClick={()=>setAdj({med:m,mode:"out"})} style={{flex:1,padding:"9px",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:10,background:"rgba(230,126,34,.07)",color:"#e67e22",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.stockOut size={17}/></button>
-              <button onClick={()=>{setEditMed(m);setShowModal(true);}} style={{flex:1,padding:"9px",border:"1.5px solid #d0e4f7",borderRadius:10,background:"rgba(8,99,186,.05)",color:"#0863ba",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.edit size={16}/></button>
-              <button onClick={()=>setDelId(m.id)} style={{flex:1,padding:"9px",border:"1.5px solid rgba(231,76,60,.3)",borderRadius:10,background:"rgba(231,76,60,.06)",color:"#e74c3c",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.trash size={16}/></button>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>setAdj({med:m,mode:"in"})} style={{flex:1,padding:"10px",border:"1.5px solid rgba(39,174,96,.25)",borderRadius:11,background:"rgba(39,174,96,.06)",color:"#27ae60",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.stockIn size={17}/></button>
+              <button onClick={()=>setAdj({med:m,mode:"out"})} style={{flex:1,padding:"10px",border:"1.5px solid rgba(230,126,34,.25)",borderRadius:11,background:"rgba(230,126,34,.06)",color:"#e67e22",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.stockOut size={17}/></button>
+              <button onClick={()=>{setEditMed(m);setShowModal(true);}} style={{flex:1,padding:"10px",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:11,background:"rgba(8,99,186,.05)",color:"#0863ba",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.edit size={16}/></button>
+              <button onClick={()=>setDelId(m.id)} style={{flex:1,padding:"10px",border:"1.5px solid rgba(231,76,60,.25)",borderRadius:11,background:"rgba(231,76,60,.05)",color:"#e74c3c",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.trash size={16}/></button>
             </div>
           </div>
         );})}
@@ -2101,6 +2168,11 @@ export default function PharmacyPage() {
         @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
         .main-anim{animation:fadeUp .35s ease both}
         .inv-row:hover{background:#fafbff!important}
+        .inv-ghost-btn{display:flex;align-items:center;gap:6px;padding:11px 15px;border:1.5px solid #e4e9f0;border-radius:12px;background:#fff;color:#5a6472;font-family:'Rubik',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .18s;box-shadow:0 1px 4px rgba(20,40,70,.04)}
+        .inv-ghost-btn:hover{border-color:#a4c4e4;color:#0863ba;background:rgba(8,99,186,.04)}
+        .inv-stat-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(20,40,70,.1)!important}
+        @media(max-width:1080px){.inv-stats{grid-template-columns:repeat(2,1fr)!important}}
+        @media(max-width:480px){.hide-xs{display:none}.inv-stats{gap:9px!important}}
         .action-icon-btn{width:40px;height:40px;border-radius:10px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
         .action-icon-btn:hover{border-color:#a4c4e4;background:rgba(8,99,186,.06);transform:translateY(-1px)}
         .filter-chip{padding:8px 15px;border-radius:20px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:12.5px;font-family:'Rubik',sans-serif;font-weight:600;color:#888;transition:all .2s;white-space:nowrap;flex-shrink:0}
