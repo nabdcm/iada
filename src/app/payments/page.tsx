@@ -694,6 +694,43 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
 }
 
 // ─── سلايدر البطاقات للموبايل ─────────────────────────────
+
+// ─── PasswordPromptModal: حالة الإدخال داخلية لمنع إعادة رندر الصفحة الثقيلة مع كل حرف ───
+function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, onSuccess, onClose }: {
+  isAr: boolean; icon: string; title: string; desc: string; confirmLabel: string;
+  expected: string; onSuccess: () => void; onClose: () => void;
+}) {
+  const [val, setVal] = useState("");
+  const [err, setErr] = useState(false);
+  const submit = () => {
+    if (val.trim() === (expected ?? "").trim()) { onSuccess(); }
+    else setErr(true);
+  };
+  return (
+    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
+      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
+        <div style={{ width:60,height:60,borderRadius:18,background:"linear-gradient(135deg,#0863ba,#3d8fd6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 14px",boxShadow:"0 8px 20px rgba(8,99,186,.3)" }}>{icon}</div>
+        <h3 style={{ fontSize:16,fontWeight:800,color:"#1c2b3a",marginBottom:8 }}>{title}</h3>
+        <p style={{ fontSize:13,color:"#8a97a6",marginBottom:20 }}>{desc}</p>
+        <input
+          type="password" inputMode="text" value={val} autoFocus
+          autoComplete="off" name="pw-prompt"
+          onChange={e=>{ setVal(e.target.value); if(err) setErr(false); }}
+          onKeyDown={e=>{ if(e.key==="Enter" && !e.nativeEvent.isComposing){ e.preventDefault(); submit(); } }}
+          placeholder={isAr?"كلمة السر...":"Password..."}
+          style={{ width:"100%",padding:"13px 16px",border:err?"2px solid #c0392b":"1.5px solid #e6edf5",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:16,outline:"none",boxSizing:"border-box",marginBottom:err?8:16,textAlign:"center",letterSpacing:3,direction:"ltr",background:"#f8fbfe" }}
+        />
+        {err && <p style={{ color:"#c0392b",fontSize:12,marginBottom:16,fontWeight:600 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
+        <div style={{ display:"flex",gap:10 }}>
+          <button onClick={submit} style={{ flex:1,padding:"13px",background:"linear-gradient(135deg,#0863ba,#3d8fd6)",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(8,99,186,.3)" }}>{confirmLabel}</button>
+          <button onClick={onClose} style={{ flex:1,padding:"13px",background:"#f4f8fc",color:"#8a97a6",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHidden, onReveal }: {
   stats: any; methodStats: any[]; methodIcon: any; tr: any; isAr: boolean;
   numbersHidden: boolean; onReveal: () => void;
@@ -2053,7 +2090,7 @@ ${doctorSettlementRows}
         .tx-row:last-child{border-bottom:none}
         .tx-row:hover{background:#fafbff}
         .filter-chip{padding:7px 16px;border-radius:20px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;font-family:'Rubik',sans-serif;font-weight:500;color:#888;transition:all .2s;white-space:nowrap;flex-shrink:0}
-        .filter-chip.active{background:#0863ba;color:#fff;border-color:#0863ba}
+        .filter-chip.active{background:linear-gradient(135deg,#0863ba,#3d8fd6);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(8,99,186,.3)}
         .filter-chip:hover:not(.active){border-color:#a4c4e4;color:#0863ba}
         .icon-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
         .icon-btn:hover{border-color:#a4c4e4;background:rgba(8,99,186,.06)}
@@ -2242,7 +2279,8 @@ ${doctorSettlementRows}
 
             {/* ── شريط الخطة المشتركة ── */}
             {isSharedClinicPlan(plan) && (
-              <div style={{ marginBottom:20,padding:"14px 20px",background:"linear-gradient(135deg,rgba(14,124,106,.06),rgba(181,69,27,.06))",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
+              <div style={{ marginBottom:20,padding:"16px 22px",background:"#fff",border:"1.5px solid #e6edf5",borderRadius:18,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,boxShadow:"0 4px 20px rgba(8,99,186,.06)",position:"relative",overflow:"hidden" }}>
+                <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:"linear-gradient(90deg,#0891b2,#0891b255)" }}/>
                 <div style={{ display:"flex",alignItems:"center",gap:12 }}>
                   <div style={{ width:38,height:38,background:"rgba(14,124,106,.12)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="🏥" /></div>
                   <div>
@@ -2365,7 +2403,7 @@ ${doctorSettlementRows}
             {/* ── FINANCIAL SUMMARY ROW ── */}
             <div className="fin-summary-grid">
               {/* الرصيد الصافي */}
-              <div style={{ background: stats.netBalance >= 0 ? "linear-gradient(135deg,#1b5e20,#2e7d32)" : "linear-gradient(135deg,#b71c1c,#c0392b)",borderRadius:16,padding:"20px 24px",color:"#fff",position:"relative",overflow:"hidden",boxShadow: stats.netBalance >= 0 ? "0 4px 24px rgba(46,125,50,.25)":"0 4px 24px rgba(192,57,43,.25)" }}>
+              <div style={{ background: stats.netBalance >= 0 ? "linear-gradient(135deg,#1b5e20,#2e7d32)" : "linear-gradient(135deg,#b71c1c,#c0392b)",borderRadius:18,padding:"20px 24px",color:"#fff",position:"relative",overflow:"hidden",boxShadow: stats.netBalance >= 0 ? "0 10px 28px rgba(46,125,50,.3)":"0 10px 28px rgba(192,57,43,.3)" }}>
                 <div style={{ position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <div style={{ fontSize:12,fontWeight:600,opacity:.8 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
@@ -2376,7 +2414,8 @@ ${doctorSettlementRows}
                 <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
               </div>
               {/* إجمالي السحوبات */}
-              <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",border:"1.5px solid rgba(192,57,43,.15)",position:"relative",overflow:"hidden",boxShadow:"0 2px 12px rgba(192,57,43,.06)" }}>
+              <div style={{ background:"#fff",borderRadius:18,padding:"20px 24px",border:"1.5px solid #e6edf5",position:"relative",overflow:"hidden",boxShadow:"0 4px 20px rgba(8,99,186,.06)" }}>
+                <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:"linear-gradient(90deg,#c0392b,#c0392b55)" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalWithdrawals}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
@@ -2389,7 +2428,8 @@ ${doctorSettlementRows}
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{withdrawals.length} {isAr?"عملية سحب":"withdrawals"}</div>
               </div>
               {/* مصروفات العيادة */}
-              <div style={{ background:"#fff",borderRadius:16,padding:"20px 24px",border:"1.5px solid rgba(123,45,139,.15)",position:"relative",overflow:"hidden",boxShadow:"0 2px 12px rgba(123,45,139,.06)" }}>
+              <div style={{ background:"#fff",borderRadius:18,padding:"20px 24px",border:"1.5px solid #e6edf5",position:"relative",overflow:"hidden",boxShadow:"0 4px 20px rgba(8,99,186,.06)" }}>
+                <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:"linear-gradient(90deg,#7b2d8b,#7b2d8b55)" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalExpenses}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
@@ -2409,7 +2449,7 @@ ${doctorSettlementRows}
               {/* LEFT: Table */}
               <div style={{ minWidth:0 }}>
                 {/* Search + Filter */}
-                <div style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
+                <div style={{ background:"#fff",borderRadius:18,padding:"16px 18px",border:"1.5px solid #e6edf5",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",boxShadow:"0 4px 20px rgba(8,99,186,.06)" }}>
                   <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
                     <span style={{ color:"#bbb",fontSize:14 }}><AppIcon glyph="🔍" /></span>
                     <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr.search}
@@ -2424,14 +2464,14 @@ ${doctorSettlementRows}
                 </div>
 
                 {/* Table / Cards */}
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"hidden" }}>
+                <div style={{ background:"#fff",borderRadius:20,border:"1.5px solid #e6edf5",boxShadow:"0 4px 24px rgba(8,99,186,.07)",overflow:"hidden" }}>
                   <div style={{ padding:"16px 20px",borderBottom:"1.5px solid #f5f7fa",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
                     <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>{tr.table.title}</h3>
                     <span style={{ fontSize:12,color:"#aaa" }}>{filtered.length} {tr.stats.transactions}</span>
                   </div>
 
                   {/* Header row — desktop only */}
-                  <div className="desktop-table-header" style={{ gridTemplateColumns: isSharedClinicPlan(plan) ? "110px 1fr 120px 110px 90px 90px 90px 40px" : "110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"#f9fafb",borderBottom:"1.5px solid #eef0f3",gap:0 }}>
+                  <div className="desktop-table-header" style={{ gridTemplateColumns: isSharedClinicPlan(plan) ? "110px 1fr 120px 110px 90px 90px 90px 40px" : "110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"linear-gradient(180deg,#f7fafd,#f1f6fb)",borderBottom:"1.5px solid #e6edf5",gap:0 }}>
                     {[
                       tr.table.date, tr.table.patient,
                       ...(isSharedClinicPlan(plan) ? [isAr ? "الطبيب" : "Doctor"] : []),
@@ -2657,7 +2697,8 @@ ${doctorSettlementRows}
 
                 {/* إيرادات حسب الطبيب — للخطط المشتركة فقط */}
                 {isSharedClinicPlan(plan) && doctorRevenueStats.length > 0 && (
-                  <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(8,145,178,.2)",padding:"18px 18px",boxShadow:"0 2px 16px rgba(8,145,178,.06)",marginBottom:16 }}>
+                  <div style={{ background:"#fff",borderRadius:18,border:"1.5px solid #e6edf5",padding:"18px 18px",boxShadow:"0 4px 20px rgba(8,99,186,.06)",marginBottom:16,position:"relative",overflow:"hidden" }}>
+                    <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:"linear-gradient(90deg,#0891b2,#0891b255)" }}/>
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                       <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
                         <span style={{ fontSize:16 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></span>
@@ -2701,7 +2742,8 @@ ${doctorSettlementRows}
                 )}
 
                 {/* Pending Dues */}
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",padding:"18px",boxShadow:"0 2px 16px rgba(8,99,186,.06)",minWidth:0,overflow:"hidden" }}>
+                <div style={{ background:"#fff",borderRadius:18,border:"1.5px solid #e6edf5",padding:"18px",boxShadow:"0 4px 20px rgba(8,99,186,.06)",minWidth:0,overflow:"hidden",position:"relative" }}>
+                  <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:"linear-gradient(90deg,#e67e22,#e67e2255)" }}/>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
                     <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
                       <span style={{ width:8,height:8,borderRadius:"50%",background:"#e67e22",display:"inline-block",animation:"pulse 2s infinite" }}/>
@@ -2826,58 +2868,26 @@ ${doctorSettlementRows}
 
         {/* Reveal Numbers Modal */}
         {showRevealModal&&(
-          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
-            <div onClick={()=>{setShowRevealModal(false);setRevealPasswordInput("");setRevealPasswordError(false);}} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
-            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
-              <div style={{ fontSize:44,marginBottom:12 }}><AppIcon glyph="👁" /></div>
-              <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{isAr?"إظهار الأرقام":"Show Numbers"}</h3>
-              <p style={{ fontSize:13,color:"#888",marginBottom:20 }}>{isAr?"أدخل كلمة السر لرؤية الأرقام":"Enter password to view numbers"}</p>
-              <input
-                type="password"
-                value={revealPasswordInput}
-                onChange={e=>{setRevealPasswordInput(e.target.value);setRevealPasswordError(false);}}
-                onKeyDown={e=>{ if(e.key==="Enter"&&!e.nativeEvent.isComposing){ e.preventDefault(); handleRevealNumbers(); } }}
-                placeholder={isAr?"كلمة السر...":"Password..."}
-                autoFocus
-                autoComplete="new-password"
-                name="reveal-numbers-pw"
-                style={{ width:"100%",padding:"12px 16px",border:revealPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:revealPasswordError?8:16,textAlign:"center",letterSpacing:4,direction:"ltr" }}
-              />
-              {revealPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
-              <div style={{ display:"flex",gap:10 }}>
-                <button onClick={handleRevealNumbers} style={{ flex:1,padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer" }}>{isAr?"عرض":"Show"}</button>
-                <button onClick={()=>{setShowRevealModal(false);setRevealPasswordInput("");setRevealPasswordError(false);}} style={{ flex:1,padding:"13px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
-              </div>
-            </div>
-          </div>
+          <PasswordPromptModal
+            isAr={isAr} icon="👁" expected={paymentsLockPassword}
+            title={isAr?"إظهار الأرقام":"Show Numbers"}
+            desc={isAr?"أدخل كلمة السر لرؤية الأرقام":"Enter password to view numbers"}
+            confirmLabel={isAr?"عرض":"Show"}
+            onSuccess={()=>{ setNumbersHidden(false); setShowRevealModal(false); }}
+            onClose={()=>setShowRevealModal(false)}
+          />
         )}
 
         {/* Monthly Report Password Modal */}
         {showMonthlyReportPasswordModal&&(
-          <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
-            <div onClick={()=>{setShowMonthlyReportPasswordModal(false);setMonthlyReportPasswordInput("");setMonthlyReportPasswordError(false);}} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
-            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
-              <div style={{ fontSize:44,marginBottom:12 }}><AppIcon glyph="🔒" /></div>
-              <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{isAr?"التقرير الشهري محمي":"Monthly Report Protected"}</h3>
-              <p style={{ fontSize:13,color:"#888",marginBottom:20 }}>{isAr?"أدخل كلمة سر صفحة المدفوعات لإصدار التقرير الشهري":"Enter payments page password to export monthly report"}</p>
-              <input
-                type="password"
-                value={monthlyReportPasswordInput}
-                onChange={e=>{setMonthlyReportPasswordInput(e.target.value);setMonthlyReportPasswordError(false);}}
-                onKeyDown={e=>{ if(e.key==="Enter"&&!e.nativeEvent.isComposing){ e.preventDefault(); handleMonthlyReportPassword(); } }}
-                placeholder={isAr?"كلمة السر...":"Password..."}
-                autoFocus
-                autoComplete="new-password"
-                name="monthly-report-pw"
-                style={{ width:"100%",padding:"12px 16px",border:monthlyReportPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:monthlyReportPasswordError?8:16,textAlign:"center",letterSpacing:4,direction:"ltr" }}
-              />
-              {monthlyReportPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
-              <div style={{ display:"flex",gap:10 }}>
-                <button onClick={handleMonthlyReportPassword} style={{ flex:1,padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer" }}>{isAr?"إصدار التقرير":"Export Report"}</button>
-                <button onClick={()=>{setShowMonthlyReportPasswordModal(false);setMonthlyReportPasswordInput("");setMonthlyReportPasswordError(false);}} style={{ flex:1,padding:"13px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,cursor:"pointer" }}>{isAr?"إلغاء":"Cancel"}</button>
-              </div>
-            </div>
-          </div>
+          <PasswordPromptModal
+            isAr={isAr} icon="🔒" expected={paymentsLockPassword}
+            title={isAr?"التقرير الشهري محمي":"Monthly Report Protected"}
+            desc={isAr?"أدخل كلمة سر صفحة المدفوعات لإصدار التقرير الشهري":"Enter payments page password to export monthly report"}
+            confirmLabel={isAr?"إصدار التقرير":"Export Report"}
+            onSuccess={()=>{ setShowMonthlyReportPasswordModal(false); exportPDF(); }}
+            onClose={()=>setShowMonthlyReportPasswordModal(false)}
+          />
         )}
 
         {/* Withdraw Modal */}
