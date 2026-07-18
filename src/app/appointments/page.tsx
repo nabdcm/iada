@@ -1741,6 +1741,8 @@ export default function AppointmentsPage() {
     today:     todayAppts.length,
     completed: monthAppts.filter(a=>a.status==="completed").length,
     pending:   appointments.filter(a=>a.status==="scheduled"&&a.date>=todayKey).length,
+    cancelled: monthAppts.filter(a=>a.status==="cancelled").length,
+    noShow:    monthAppts.filter(a=>a.status==="no-show").length,
   };
 
   const getPatientName  = (pid: number) => patients.find(p=>p.id===pid)?.name ?? "—";
@@ -1809,7 +1811,20 @@ export default function AppointmentsPage() {
         .timeline-scroll{overflow-y:auto;max-height:calc(100vh - 300px)}
         .timeline-scroll::-webkit-scrollbar{width:4px}
         .timeline-scroll::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
-        @media(max-width:768px){.appt-main-content{margin-right:0!important;margin-left:0!important;padding:0 14px 48px!important;width:100%!important}}
+        .flip-card{cursor:pointer}
+        .flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.4,0,.2,1);animation:autoFlip 14s cubic-bezier(.4,0,.2,1) infinite}
+        .flip-card.flipped .flip-inner{animation:none;transform:rotateY(180deg)}
+        .flip-card:hover .flip-inner{animation-play-state:paused}
+        @keyframes autoFlip{0%,38%{transform:rotateY(0)}46%,88%{transform:rotateY(180deg)}96%,100%{transform:rotateY(360deg)}}
+        .flip-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:18px;padding:16px 18px;overflow:hidden;box-shadow:0 4px 20px rgba(8,99,186,.07);display:flex;flex-direction:column;justify-content:center}
+        .flip-back{transform:rotateY(180deg)}
+        .hero-glass-btn:hover{background:rgba(255,255,255,.24)!important}
+        @media(max-width:768px){.appt-main-content{margin-right:0!important;margin-left:0!important;padding:0 14px 48px!important;width:100%!important}
+          .hero-card{margin:14px 0 18px!important;padding:18px 18px!important;border-radius:18px!important}
+          .hero-inner{gap:10px!important}
+          .page-title{font-size:19px!important}
+          .page-sub{font-size:11.5px!important}
+          .flip-face{padding:12px 14px!important;border-radius:14px!important}}
         @media(min-width:769px){.appt-main-content{margin-${isAr?'right':'left'}:${sidebarWidth}px}}
       `}</style>
 
@@ -1818,120 +1833,90 @@ export default function AppointmentsPage() {
 
         <main className="appt-main-content" style={{ padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", transition:"margin .3s" }}>
 
-          {/* TOP BAR */}
-          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"18px 0 14px",borderBottom:"1.5px solid #eef0f3",marginBottom:20 }}>
-            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between", paddingLeft:isMobile&&!isAr?52:0, paddingRight:isMobile&&isAr?52:0 }}>
+          {/* ─── HERO HEADER ─── */}
+          <div className="hero-card" style={{ margin:"20px 0 24px",background:"linear-gradient(120deg, #054a8c 0%, #0863ba 55%, #3d8fd6 100%)",borderRadius:24,padding:"26px 30px",position:"relative",overflow:"hidden",boxShadow:"0 12px 36px rgba(8,99,186,.26)" }}>
+            <div style={{ position:"absolute",top:-60,insetInlineEnd:-40,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,.07)" }}/>
+            <div style={{ position:"absolute",bottom:-80,insetInlineEnd:130,width:170,height:170,borderRadius:"50%",background:"rgba(255,255,255,.05)" }}/>
+            <div className="hero-inner" style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap" }}>
               <div style={{ display:"flex",alignItems:"center",gap:12 }}>
                 <div>
-                  <h1 style={{ fontSize:isMobile?17:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
-                  {!isMobile&&<p style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>}
+                  <h1 className="page-title" style={{ fontSize:24,fontWeight:800,color:"#fff" }}>{tr.page.title}</h1>
+                  <p className="page-sub" style={{ fontSize:12.5,color:"rgba(255,255,255,.85)",marginTop:5,fontWeight:500 }}>{tr.page.sub}</p>
                 </div>
-                {/* بادج عدد الطلبات المعلقة — فقط للاحترافية والشاملة */}
                 {canAccess("payments", plan) && pendingAppointments.length > 0 && (
-                  <div style={{ display:"flex",alignItems:"center",gap:5,background:"rgba(230,126,34,.1)",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:20,padding:"4px 10px",animation:"pendingPulse 2s ease infinite" }}>
-                    <span style={{ fontSize:14 }}><AppIcon glyph="🔔" /></span>
-                    <span style={{ fontSize:12,fontWeight:700,color:"#e67e22" }}>{pendingAppointments.length}</span>
+                  <div style={{ display:"flex",alignItems:"center",gap:5,background:"rgba(255,255,255,.16)",border:"1.5px solid rgba(255,255,255,.3)",borderRadius:20,padding:"4px 12px",animation:"pendingPulse 2s ease infinite" }}>
+                    <span style={{ fontSize:13 }}>🔔</span>
+                    <span style={{ fontSize:12,fontWeight:800,color:"#fff" }}>{pendingAppointments.length}</span>
                   </div>
                 )}
               </div>
-              <div style={{ display:"flex",gap:isMobile?6:10,alignItems:"center" }}>
-                {/* رابط الحجز — فقط للاحترافية والشاملة */}
+              <div style={{ display:"flex",gap:isMobile?6:10,alignItems:"center",flexWrap:"wrap" }}>
                 {canAccess("payments", plan) && (
-                  <button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                    <AppIcon glyph="🔗" /> {isAr?"رابط الحجز":"Booking Link"}
+                  <button onClick={()=>setShareModal(true)} className="hero-glass-btn" style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 16px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",backdropFilter:"blur(4px)",transition:"all .2s" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    {!isMobile && (isAr?"رابط الحجز":"Booking Link")}
                   </button>
                 )}
-                {/* زر شاشة قاعة الانتظار — يفتح لوحة التحكم الجديدة بالدور */}
-                <button
-                  onClick={() => window.open("/waiting-room", "_blank")}
-                  title={isAr?"شاشة تحكم قاعة الانتظار":"Waiting Room Control"}
-                  style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#555",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .25s" }}
-                >
-                  {isMobile?"🖥️":`${isAr?"شاشة الانتظار":"Display"}`}
+                <button onClick={() => window.open("/waiting-room", "_blank")} title={isAr?"شاشة تحكم قاعة الانتظار":"Waiting Room Control"} className="hero-glass-btn" style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 16px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",backdropFilter:"blur(4px)",transition:"all .2s" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                  {!isMobile && (isAr?"شاشة الانتظار":"Display")}
                 </button>
-                {/* زر التحديث */}
-                <button
-                  onClick={() => { loadPatients(); loadAppointments(); }}
-                  title={isAr?"تحديث البيانات":"Refresh"}
-                  style={{ position:"relative",display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 10px":"9px 14px",background:"#fff",color:"#666",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                >
-                  <AppIcon glyph="🔄" />{!isMobile&&<span>{isAr?"تحديث":"Refresh"}</span>}
+                <button onClick={() => { loadPatients(); loadAppointments(); }} title={isAr?"تحديث البيانات":"Refresh"} className="hero-glass-btn" style={{ position:"relative",display:"flex",alignItems:"center",gap:6,padding:"9px 14px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",backdropFilter:"blur(4px)",transition:"all .2s" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  {!isMobile && <span>{isAr?"تحديث":"Refresh"}</span>}
                   {pendingAppointments.length > 0 && (
-                    <span style={{ position:"absolute",top:-6,right:isAr?undefined:-6,left:isAr?-6:undefined,background:"#e67e22",color:"#fff",borderRadius:20,padding:"1px 6px",fontSize:10,fontWeight:800,lineHeight:1.6,minWidth:18,textAlign:"center" }}>
-                      {pendingAppointments.length}
-                    </span>
+                    <span style={{ position:"absolute",top:-6,right:isAr?undefined:-6,left:isAr?-6:undefined,background:"#e67e22",color:"#fff",borderRadius:20,padding:"1px 6px",fontSize:10,fontWeight:800,lineHeight:1.6,minWidth:18,textAlign:"center" }}>{pendingAppointments.length}</span>
                   )}
                 </button>
-                <button onClick={()=>setAddModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 12px":"9px 18px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
+                <button onClick={()=>setAddModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 14px":"11px 22px",background:"#fff",color:"#0863ba",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:14,fontWeight:800,cursor:"pointer",boxShadow:"0 6px 18px rgba(0,0,0,.18)",transition:"all .2s" }}>
                   ＋ {isMobile?(isAr?"موعد":"Add"):tr.addAppointment}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* STATS */}
-          <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:isMobile?8:12,marginBottom:20,animation:"fadeUp .4s ease" }}>
+          {/* STATS — 6 بطاقات قلاّبة */}
+          <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(6,1fr)",gap:isMobile?10:14,marginBottom:20,animation:"fadeUp .4s ease",perspective:"1200px" }}>
             {[
-              { label:tr.stats.total,     value:stats.total,     icon:"📅", color:"#0863ba" },
-              { label:tr.stats.today,     value:stats.today,     icon:"🕐", color:"#e67e22" },
-              { label:tr.stats.completed, value:stats.completed, icon:"✅", color:"#2e7d32" },
-              { label:tr.stats.pending,   value:stats.pending,   icon:"⏳", color:"#7b2d8b" },
-            ].map((s,i) => (
-              <div key={i} style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)",position:"relative",overflow:"hidden" }}>
-                <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:s.color,borderRadius:"14px 14px 0 0" }}/>
-                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
-                  <span style={{ fontSize:20 }}><AppIcon glyph={s.icon} /></span>
-                  <span style={{ fontSize:10,fontWeight:700,color:s.color,background:`${s.color}14`,padding:"3px 9px",borderRadius:20 }}>{s.label}</span>
+              { label:tr.stats.total,     value:String(stats.total),     color:"#0863ba", back:isAr?"إجمالي مواعيد هذا الشهر":"All appointments this month",
+                svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> },
+              { label:tr.stats.today,     value:String(stats.today),     color:"#e67e22", back:isAr?"المواعيد المجدولة اليوم":"Appointments scheduled today",
+                svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> },
+              { label:tr.stats.completed, value:String(stats.completed), color:"#2e7d32", back:isAr?`${stats.total?Math.round((stats.completed/stats.total)*100):0}% من مواعيد الشهر`:`${stats.total?Math.round((stats.completed/stats.total)*100):0}% of this month`,
+                svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
+              { label:tr.stats.pending,   value:String(stats.pending),   color:"#7b2d8b", back:isAr?"مواعيد قادمة بانتظار التنفيذ":"Upcoming scheduled visits",
+                svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7b2d8b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg> },
+              { label:isAr?"ملغاة":"Cancelled", value:String(stats.cancelled), color:"#c0392b", back:isAr?`منها ${stats.noShow} لم يحضروا`:`incl. ${stats.noShow} no-shows`,
+                svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg> },
+              { label:tr.stats.occupancy, value:`${occupancyPct}%`, color:occupancyColor, back:isAr?"نسبة إشغال ساعات اليوم":"Share of today's hours booked", progress:occupancyPct,
+                svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={occupancyColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg> },
+            ].map((c,i) => (
+              <div key={i} className="flip-card" style={{ animationDelay:`${i*1.6}s`, height:isMobile?110:126 }}
+                onClick={e=>{ const el=e.currentTarget; el.classList.toggle("flipped"); }}>
+                <div className="flip-inner" style={{ animationDelay:`${i*1.6}s` }}>
+                  {/* الوجه الأمامي */}
+                  <div className="flip-face" style={{ background:"#fff",border:"1.5px solid #e6edf5" }}>
+                    <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:`linear-gradient(90deg, ${c.color}, ${c.color}55)` }}/>
+                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:isMobile?8:12 }}>
+                      <div style={{ width:isMobile?34:40,height:isMobile?34:40,borderRadius:12,background:`${c.color}12`,display:"flex",alignItems:"center",justifyContent:"center" }}>{c.svg}</div>
+                    </div>
+                    <div style={{ fontSize:isMobile?22:26,fontWeight:800,color:"#1c2b3a",lineHeight:1,fontVariantNumeric:"tabular-nums" }}>{c.value}</div>
+                    <div style={{ fontSize:isMobile?10.5:12,color:"#8a97a6",marginTop:6,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{c.label}</div>
+                  </div>
+                  {/* الوجه الخلفي */}
+                  <div className="flip-face flip-back" style={{ background:`linear-gradient(135deg, ${c.color}, ${c.color}bb)` }}>
+                    <div style={{ fontSize:isMobile?20:24,fontWeight:800,color:"#fff",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:8 }}>{c.value}</div>
+                    <div style={{ fontSize:isMobile?10.5:12,color:"rgba(255,255,255,.92)",fontWeight:600,lineHeight:1.5 }}>{c.back}</div>
+                    {typeof c.progress === "number" && (
+                      <div style={{ marginTop:10,height:5,borderRadius:3,background:"rgba(255,255,255,.25)",overflow:"hidden" }}>
+                        <div style={{ height:"100%",width:`${c.progress}%`,background:"#fff",borderRadius:3 }}/>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div style={{ fontSize:28,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
               </div>
             ))}
-            {/* Occupancy */}
-            <div style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)",position:"relative",overflow:"hidden" }}>
-              <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:occupancyColor,borderRadius:"14px 14px 0 0" }}/>
-              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
-                <span style={{ fontSize:20 }}><AppIcon glyph="🏥" /></span>
-                <span style={{ fontSize:9,fontWeight:700,color:occupancyColor,background:`${occupancyColor}14`,padding:"3px 7px",borderRadius:20,textAlign:"center",lineHeight:1.3 }}>{tr.stats.occupancy}</span>
-              </div>
-              <div style={{ fontSize:28,fontWeight:900,color:occupancyColor,lineHeight:1,marginBottom:6 }}>{occupancyPct}%</div>
-              <div style={{ height:5,background:"#f0f2f5",borderRadius:10,overflow:"hidden" }}>
-                <div style={{ height:"100%",width:`${occupancyPct}%`,background:occupancyColor,borderRadius:10,transition:"width 1s ease" }}/>
-              </div>
-            </div>
           </div>
-
-          {/* بانر الخطة المشتركة — معلومات الأطباء */}
-          {isSharedPlan(plan) && doctors.length > 0 && (
-            <div style={{
-              background:"linear-gradient(135deg, rgba(109,40,217,.06) 0%, rgba(91,33,182,.04) 100%)",
-              border:"1.5px solid rgba(109,40,217,.18)",
-              borderRadius:14,
-              padding:"12px 18px",
-              marginBottom:16,
-              display:"flex",
-              alignItems:"center",
-              gap:12,
-              flexWrap:"wrap",
-              animation:"fadeUp .4s ease",
-            }}>
-              <div style={{ width:36,height:36,borderRadius:10,background:"rgba(109,40,217,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></div>
-              <div style={{ flex:1,minWidth:0 }}>
-                <div style={{ fontSize:12,fontWeight:700,color:"#6d28d9",marginBottom:4 }}>
-                  {isAr ? `خطة مشتركة · ${doctors.length} أطباء مسجلين` : `Shared Plan · ${doctors.length} registered doctors`}
-                  <span style={{ marginInlineStart:8,fontSize:10,fontWeight:600,color:"#888" }}>
-                    ({isAr ? `الحد الأقصى: ${SHARED_PLAN_DOCTOR_LIMITS[plan] ?? "∞"}` : `Max: ${SHARED_PLAN_DOCTOR_LIMITS[plan] ?? "∞"}`})
-                  </span>
-                </div>
-                <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-                  {doctors.map(d => (
-                    <span key={d.id} style={{ fontSize:11,fontWeight:600,color:"#6d28d9",background:"rgba(109,40,217,.08)",border:"1px solid rgba(109,40,217,.15)",borderRadius:20,padding:"2px 10px" }}>
-                      {d.name}{d.specialty ? ` · ${d.specialty}` : ""}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ════ قسم طلبات الحجز المعلقة — فقط للاحترافية والشاملة ════ */}
           {canAccess("payments", plan) && (
