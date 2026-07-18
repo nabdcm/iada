@@ -108,7 +108,7 @@ function ScanResultCard({code,med,isAr,onClose,onAddNew,onSell,onReturn}:{code:s
         {med ? (<>
           {/* رأس البطاقة */}
           <div style={{background:"linear-gradient(135deg,#0863ba,#0a4f96)",padding:"18px 20px 16px",color:"#fff",position:"relative"}}>
-            <button onClick={onClose} style={{position:"absolute",top:12,insetInlineEnd:12,width:30,height:30,borderRadius:"50%",border:"none",background:"rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:14}}>✕</button>
+            <button type="button" onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();onClose();}} style={{position:"absolute",top:10,insetInlineEnd:10,width:36,height:36,borderRadius:"50%",border:"none",background:"rgba(255,255,255,.2)",color:"#fff",cursor:"pointer",fontSize:15,zIndex:5,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             <div style={{fontSize:11,opacity:.75,fontWeight:600,letterSpacing:.5,marginBottom:4}}>{isAr?"✓ تم مسح الباركود":"✓ Barcode scanned"}</div>
             <div style={{fontSize:19,fontWeight:800,lineHeight:1.3}}>{isAr?med.name_ar:(med.name_en||med.name_ar)}</div>
             {med.manufacturer&&<div style={{fontSize:11,opacity:.7,marginTop:2}}>{med.manufacturer}</div>}
@@ -147,7 +147,7 @@ function ScanResultCard({code,med,isAr,onClose,onAddNew,onSell,onReturn}:{code:s
         </>) : (<>
           {/* باركود غير مسجّل */}
           <div style={{background:"linear-gradient(135deg,#e67e22,#cf6a12)",padding:"18px 20px 16px",color:"#fff",position:"relative"}}>
-            <button onClick={onClose} style={{position:"absolute",top:12,insetInlineEnd:12,width:30,height:30,borderRadius:"50%",border:"none",background:"rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:14}}>✕</button>
+            <button type="button" onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();onClose();}} style={{position:"absolute",top:10,insetInlineEnd:10,width:36,height:36,borderRadius:"50%",border:"none",background:"rgba(255,255,255,.2)",color:"#fff",cursor:"pointer",fontSize:15,zIndex:5,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             <div style={{fontSize:26,marginBottom:5}}>📦</div>
             <div style={{fontSize:17,fontWeight:800}}>{isAr?"باركود غير مسجّل":"Unregistered barcode"}</div>
             <div style={{fontSize:12,opacity:.8,marginTop:3}}>{isAr?"هذا الكود غير موجود في المخزون":"This code is not in your inventory"}</div>
@@ -2289,7 +2289,7 @@ export default function PharmacyPage() {
 
         {scanCard&&currentUser&&(
           <ScanResultCard code={scanCard.code} med={scanCard.med} isAr={isAr}
-            onClose={()=>setScanCard(null)}
+            onClose={()=>{setScanCard(null);setRemoteScan(null);}}
             onAddNew={(bc)=>{setScanCard(null);setPendingAddBarcode(bc);setActiveTab("inventory");}}
             onSell={(m)=>{setScanCard(null);setPendingSaleBarcode(m.barcode);setActiveTab("sales");}}
             onReturn={(m)=>{setScanCard(null);setPendingReturnBarcode(m.barcode);setActiveTab("inventory");}}/>
