@@ -702,6 +702,7 @@ function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, 
 }) {
   const [val, setVal] = useState("");
   const [err, setErr] = useState(false);
+  const [ro, setRo] = useState(true); // readOnly حتى أول focus — يمنع الملء التلقائي
   const submit = () => {
     if (val.trim() === (expected ?? "").trim()) { onSuccess(); }
     else setErr(true);
@@ -713,9 +714,14 @@ function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, 
         <div style={{ width:60,height:60,borderRadius:18,background:"linear-gradient(135deg,#0863ba,#3d8fd6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 14px",boxShadow:"0 8px 20px rgba(8,99,186,.3)" }}>{icon}</div>
         <h3 style={{ fontSize:16,fontWeight:800,color:"#1c2b3a",marginBottom:8 }}>{title}</h3>
         <p style={{ fontSize:13,color:"#8a97a6",marginBottom:20 }}>{desc}</p>
+        {/* حقول وهمية لامتصاص الملء التلقائي من المتصفح */}
+        <input type="text" name="fake-user" autoComplete="username" style={{ position:"absolute",opacity:0,height:0,width:0,pointerEvents:"none" }} tabIndex={-1} aria-hidden="true" />
+        <input type="password" name="fake-pw" autoComplete="current-password" style={{ position:"absolute",opacity:0,height:0,width:0,pointerEvents:"none" }} tabIndex={-1} aria-hidden="true" />
         <input
           type="password" inputMode="text" value={val} autoFocus
-          autoComplete="off" name="pw-prompt"
+          autoComplete="one-time-code" name={`pw-${Math.random().toString(36).slice(2)}`}
+          readOnly={ro} onFocus={()=>setRo(false)}
+          data-lpignore="true" data-1p-ignore="true" data-form-type="other"
           onChange={e=>{ setVal(e.target.value); if(err) setErr(false); }}
           onKeyDown={e=>{ if(e.key==="Enter" && !e.nativeEvent.isComposing){ e.preventDefault(); submit(); } }}
           placeholder={isAr?"كلمة السر...":"Password..."}
