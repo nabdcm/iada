@@ -226,7 +226,7 @@ function PrintModal({invoice,sale,lang,cashierName,onClose}:{invoice?:PurchInvoi
         <div style={{padding:"18px 22px",borderBottom:"1.5px solid #eef0f3",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>{isAr?"معاينة الطباعة":"Print Preview"}</h2>
           <div style={{display:"flex",gap:10}}>
-            <button onClick={doPrint} style={{display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(8,99,186,.3)",display:"flex",alignItems:"center",gap:6}}><Icons.print size={15}/> {isAr?"طباعة":"Print"}</button>
+            <button onClick={doPrint} style={{display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 12px rgba(8,99,186,.3)"}}><Icons.print size={15}/> {isAr?"طباعة":"Print"}</button>
             <button onClick={onClose} style={{width:34,height:34,borderRadius:10,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
           </div>
         </div>
