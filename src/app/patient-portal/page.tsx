@@ -203,190 +203,6 @@ function calcAge(dob: string | null): number | null {
   return age;
 }
 
-// ─── Login Screen ─────────────────────────────────────────
-function LoginScreen({ lang, onLogin }: { lang: Lang; onLogin: (master: MasterPatient) => void }) {
-  const t = T[lang].login;
-  const isAr = lang === "ar";
-  const [phone, setPhone] = useState("");
-  const [mrn, setMrn] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleLogin = async () => {
-    setError("");
-    if (!phone.trim() || !mrn.trim()) return;
-    setLoading(true);
-
-    try {
-      // البحث في master_patients عن المريض بالهاتف والـ MRN
-      const { data, error: dbError } = await supabase
-        .from("master_patients")
-        .select("name, phone, mrn")
-        .eq("phone", phone.trim())
-        .eq("mrn", mrn.trim().toUpperCase())
-        .maybeSingle();
-
-      if (dbError || !data) {
-        setError(t.error);
-      } else {
-        onLogin(data as MasterPatient);
-      }
-    } catch {
-      setError(t.error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{
-      minHeight: "100dvh",
-      background: "linear-gradient(135deg, #0f1b35 0%, #0863ba 60%, #05a0c4 100%)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      fontFamily: "Rubik, sans-serif",
-      direction: isAr ? "rtl" : "ltr",
-      padding: "20px",
-      position: "relative",
-      overflow: "hidden",
-    }}>
-      {/* Background pattern */}
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.06,
-        backgroundImage: `radial-gradient(circle at 25px 25px, white 2px, transparent 0)`,
-        backgroundSize: "50px 50px",
-      }} />
-      <div style={{
-        position: "absolute", top: -100, right: -100, width: 400, height: 400,
-        borderRadius: "50%", background: "rgba(255,255,255,0.05)",
-      }} />
-      <div style={{
-        position: "absolute", bottom: -80, left: -80, width: 300, height: 300,
-        borderRadius: "50%", background: "rgba(255,255,255,0.04)",
-      }} />
-
-      {/* Card */}
-      <div style={{
-        width: "100%", maxWidth: 420, background: "rgba(255,255,255,0.97)",
-        borderRadius: 24, padding: "36px 32px", boxShadow: "0 25px 80px rgba(0,0,0,0.35)",
-        position: "relative", zIndex: 1,
-      }}>
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28, justifyContent: "center" }}>
-          <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 44, height: 44, borderRadius: 12 }} />
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#0863ba", lineHeight: 1 }}>
-              {isAr ? "نبض | NABD" : "NABD | نبض"}
-            </div>
-            <div style={{ fontSize: 12, color: "#888", fontWeight: 500, marginTop: 2 }}>
-              {T[lang].appSub}
-            </div>
-          </div>
-        </div>
-
-        <h1 style={{
-          fontSize: 18, fontWeight: 800, color: "#1a1a2e",
-          margin: "0 0 8px", textAlign: "center", lineHeight: 1.4,
-        }}>{t.title}</h1>
-        <p style={{
-          fontSize: 13, color: "#888", textAlign: "center",
-          margin: "0 0 28px", lineHeight: 1.6,
-        }}>{t.subtitle}</p>
-
-        {/* Phone Field */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: "#555", display: "block", marginBottom: 7 }}>
-            {t.phone}
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder={t.phonePh}
-            onKeyDown={e => e.key === "Enter" && handleLogin()}
-            style={{
-              width: "100%", padding: "13px 16px", border: "2px solid #e8eaed",
-              borderRadius: 12, fontFamily: "Rubik, sans-serif", fontSize: 15,
-              outline: "none", direction: "ltr", boxSizing: "border-box",
-              transition: "border-color .2s",
-              background: "#fafbfc",
-            }}
-            onFocus={e => (e.target as HTMLInputElement).style.borderColor = "#0863ba"}
-            onBlur={e => (e.target as HTMLInputElement).style.borderColor = "#e8eaed"}
-          />
-        </div>
-
-        {/* MRN Field */}
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: "#555", display: "block", marginBottom: 7 }}>
-            {t.mrn}
-          </label>
-          <input
-            type="text"
-            value={mrn}
-            onChange={e => setMrn(e.target.value)}
-            placeholder={t.mrnPh}
-            onKeyDown={e => e.key === "Enter" && handleLogin()}
-            style={{
-              width: "100%", padding: "13px 16px", border: "2px solid #e8eaed",
-              borderRadius: 12, fontFamily: "Rubik, sans-serif", fontSize: 15,
-              outline: "none", direction: "ltr", boxSizing: "border-box",
-              transition: "border-color .2s", background: "#fafbfc",
-              letterSpacing: "0.5px",
-            }}
-            onFocus={e => (e.target as HTMLInputElement).style.borderColor = "#0863ba"}
-            onBlur={e => (e.target as HTMLInputElement).style.borderColor = "#e8eaed"}
-          />
-          <p style={{ fontSize: 11, color: "#bbb", margin: "6px 0 0", lineHeight: 1.5 }}>
-            {t.helpText}
-          </p>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div style={{
-            background: "#fef0f0", border: "1.5px solid #fca5a5",
-            borderRadius: 10, padding: "10px 14px", fontSize: 13,
-            color: "#dc2626", fontWeight: 500, marginBottom: 16,
-          }}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        {/* Login Button */}
-        <button
-          onClick={handleLogin}
-          disabled={loading || !phone.trim() || !mrn.trim()}
-          style={{
-            width: "100%", padding: "14px",
-            background: loading || !phone.trim() || !mrn.trim()
-              ? "#c5d8f0"
-              : "linear-gradient(135deg, #0863ba, #05a0c4)",
-            color: "#fff", border: "none", borderRadius: 12,
-            fontFamily: "Rubik, sans-serif", fontSize: 16, fontWeight: 700,
-            cursor: loading || !phone.trim() || !mrn.trim() ? "not-allowed" : "pointer",
-            marginTop: error ? 0 : 16,
-            boxShadow: loading ? "none" : "0 6px 20px rgba(8,99,186,0.35)",
-            transition: "all .2s",
-            letterSpacing: "0.3px",
-          }}
-        >
-          {loading ? t.logging : t.login}
-        </button>
-
-        {/* Lang Toggle */}
-        <div style={{ textAlign: "center", marginTop: 20 }}>
-          <span style={{ fontSize: 12, color: "#bbb" }}>
-            {isAr ? "English version coming soon" : "النسخة العربية قريباً"}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Clinic Card ─────────────────────────────────────────────
 function ClinicCard({ record, lang, isExpanded, onToggle }: {
   record: ClinicRecord;
@@ -959,22 +775,22 @@ export default function PatientPortalPage() {
   const [lang] = useState<Lang>("ar");
   const [master, setMaster] = useState<MasterPatient | null>(null);
 
-  // استعادة الجلسة عند تحديث الصفحة
+  // استعادة الجلسة عند تحديث الصفحة — وإلا التوجيه لبوابة الدخول الموحدة
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem("nabd_patient");
-      if (saved) setMaster(JSON.parse(saved));
+      if (saved) {
+        setMaster(JSON.parse(saved));
+        return;
+      }
     } catch { /* ignore */ }
+    window.location.href = "/portal?type=patient";
   }, []);
-
-  const handleLogin = (m: MasterPatient) => {
-    try { sessionStorage.setItem("nabd_patient", JSON.stringify(m)); } catch { /* ignore */ }
-    setMaster(m);
-  };
 
   const handleLogout = () => {
     try { sessionStorage.removeItem("nabd_patient"); } catch { /* ignore */ }
     setMaster(null);
+    window.location.href = "/portal?type=patient";
   };
 
   return master ? (
@@ -984,6 +800,15 @@ export default function PatientPortalPage() {
       onLogout={handleLogout}
     />
   ) : (
-    <LoginScreen lang={lang} onLogin={handleLogin} />
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "#f8fafc", fontFamily: "'Rubik', sans-serif",
+    }}>
+      <div style={{
+        width: 40, height: 40, border: "3px solid #e2e8f0", borderTopColor: "#0863ba",
+        borderRadius: "50%", animation: "spin .7s linear infinite",
+      }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
   );
 }

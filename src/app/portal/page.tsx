@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
@@ -174,9 +175,10 @@ function PatientLoginForm({ lang, tr }: { lang: Lang; tr: LoginTranslation }) {
 }
 
 // ─── Clinic / Pharmacy login (email + password) ───────────────
-function ClinicLoginForm({ lang, tr }: {
+function ClinicLoginForm({ lang, tr, redirectTo }: {
   lang: Lang;
   tr: LoginTranslation;
+  redirectTo?: string;
 }) {
   const isAr = lang === "ar";
   const [email, setEmail]     = useState("");
@@ -206,12 +208,17 @@ function ClinicLoginForm({ lang, tr }: {
         setLoading(false);
         return;
       }
+      // كتابة cookie الجلسة حتى يسمح الـ middleware بالمرور
+      if (authData?.session?.access_token) {
+        const maxAge = 365 * 24 * 60 * 60;
+        document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
+      }
       // ── التحقق من نوع الحساب وتوجيه كل نوع للمسار الصحيح ──
       const accountType = authData?.user?.user_metadata?.account_type;
       if (accountType === "pharmacy") {
-        window.location.href = "/pharmacy";
+        window.location.href = redirectTo && redirectTo.startsWith("/pharmacy") ? redirectTo : "/pharmacy";
       } else {
-        window.location.href = "/dashboard";
+        window.location.href = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : "/dashboard";
       }
     } catch {
       setError(tr.errors.network);
@@ -282,8 +289,16 @@ function AboutModal({ tr, isAr, onClose }: {
 
 // ─── Main page ────────────────────────────────────────────────
 function PortalPageContent() {
+  const searchParams = useSearchParams();
+  const typeParam    = searchParams.get("type");
+  const initialPortal: Portal =
+    typeParam === "pharmacy" || typeParam === "patient" || typeParam === "clinic"
+      ? typeParam
+      : "clinic";
+  const redirectTo = searchParams.get("redirect") ?? "";
+
   const [lang, setLang]         = useState<Lang>("ar");
-  const [portal, setPortal]     = useState<Portal>("clinic");
+  const [portal, setPortal]     = useState<Portal>(initialPortal);
   const [showAbout, setAbout]   = useState(false);
   const isAr = lang === "ar";
   const tr   = T[lang];
@@ -745,7 +760,7 @@ function PortalPageContent() {
             {portal === "patient" ? (
               <PatientLoginForm lang={lang} tr={tr.login} />
             ) : (
-              <ClinicLoginForm lang={lang} tr={tr.login} />
+              <ClinicLoginForm lang={lang} tr={tr.login} redirectTo={redirectTo} />
             )}
           </div>
         </div>
