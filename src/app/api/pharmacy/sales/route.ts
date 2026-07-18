@@ -11,7 +11,8 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { user_id, items, total, discount, payment_method, patient_name, prescription_id, cashier, date } = await req.json();
+    const { user_id, items, total, discount, payment_method, patient_name, prescription_id, cashier, date,
+            paid_cash, paid_card, paid_insurance, coupon_code, coupon_discount } = await req.json();
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
     if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "items required" }, { status: 400 });
 
@@ -40,7 +41,10 @@ export async function POST(req: Request) {
     // 1. إنشاء السجل الرئيسي
     const { data: sale, error: saleError } = await supabaseAdmin
       .from("pharmacy_sales")
-      .insert({ user_id, date: date || new Date().toISOString().slice(0, 10), total, discount: discount || 0, payment_method, patient_name: patient_name || null, prescription_id: prescription_id || null, cashier })
+      .insert({ user_id, date: date || new Date().toISOString().slice(0, 10), total, discount: discount || 0,
+        payment_method, patient_name: patient_name || null, prescription_id: prescription_id || null, cashier,
+        paid_cash: paid_cash || 0, paid_card: paid_card || 0, paid_insurance: paid_insurance || 0,
+        coupon_code: coupon_code || "", coupon_discount: coupon_discount || 0 })
       .select()
       .single();
     if (saleError) return NextResponse.json({ error: saleError.message }, { status: 400 });
@@ -48,9 +52,9 @@ export async function POST(req: Request) {
     // 2. إضافة البنود (unit_cost يُحدّث لاحقًا بالتكلفة الفعلية للدفعات المصروفة حسب FEFO)
     const { data: insertedItems, error: itemsError } = await supabaseAdmin
       .from("pharmacy_sale_items")
-      .insert(items.map((it: { medicine_id: number; medicine_name: string; qty: number; unit_price: number }) => ({
+      .insert(items.map((it: { medicine_id: number; medicine_name: string; qty: number; unit_price: number; item_discount?: number }) => ({
         sale_id: sale.id, medicine_id: it.medicine_id, medicine_name: it.medicine_name,
-        qty: it.qty, unit_price: it.unit_price, unit_cost: 0,
+        qty: it.qty, unit_price: it.unit_price, unit_cost: 0, item_discount: it.item_discount || 0,
       })))
       .select();
     if (itemsError || !insertedItems) {

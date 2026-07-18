@@ -35,9 +35,9 @@ type RxItem = { id?:number; medicine_name:string; dosage:string; duration:string
 type Prescription = { id:string; mrn:string; patient_name:string; doctor_name:string; doctor_id:number; created_at:string; items:RxItem[]; notes?:string; dispensed:boolean; dispensed_at?:string; dispensed_by?:string; status?:RxStatus; priority?:RxPriority; patient_id?:number; source?:string };
 type Interaction = { id:number; drug_a:string; drug_b:string; severity:"mild"|"moderate"|"severe"; description:string; is_seed:boolean; med_a?:string; med_b?:string };
 type AllergyHit = { medicine:string; allergen:string };
-type SaleItem = { id?:number; medicine_id:number; medicine_name:string; qty:number; unit_price:number; returned_qty?:number };
+type SaleItem = { id?:number; medicine_id:number; medicine_name:string; qty:number; unit_price:number; returned_qty?:number; item_discount?:number };
 type SaleReturn = { id:number; sale_id:number; date:string; reason?:string; total_refund:number; created_by:string };
-type Sale = { id:number; date:string; items:SaleItem[]; total:number; payment_method:"cash"|"card"|"insurance"; prescription_id?:string; patient_name?:string; discount:number; cashier:string; returns?:SaleReturn[] };
+type Sale = { id:number; date:string; items:SaleItem[]; total:number; payment_method:"cash"|"card"|"insurance"; prescription_id?:string; patient_name?:string; discount:number; cashier:string; returns?:SaleReturn[]; paid_cash?:number; paid_card?:number; paid_insurance?:number; coupon_code?:string; coupon_discount?:number };
 type ScanNotif = { type:"success"|"error"|"info"|"warning"; message:string; sub?:string }|null;
 type SysAlert = { id:number; type:"low_stock"|"expiring"|"out_of_stock"; medicine_id:number; medicine_name:string; detail:string; date:string; read:boolean };
 
@@ -1291,6 +1291,10 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   const [returnSale,setReturnSale]=useState<Sale|null>(null); const [retQty,setRetQty]=useState<{[id:number]:number}>({}); const [retReason,setRetReason]=useState("");
   const [showClose,setShowClose]=useState(false); const [closeData,setCloseData]=useState<{closed:boolean;closing?:{cash_sales:number;card_sales:number;insurance_sales:number;cash_returns:number;expected_cash:number;counted_cash:number;difference:number;closed_by:string};preview?:{cash_sales:number;card_sales:number;insurance_sales:number;cash_returns:number;expected_cash:number}}|null>(null);
   const [countedCash,setCountedCash]=useState(""); const [closeNotes,setCloseNotes]=useState("");
+  // ميزة 18: دفع متعدد | ميزة 19: كوبون
+  const [multiPay,setMultiPay]=useState(false); const [payCash,setPayCash]=useState(0); const [payCard,setPayCard]=useState(0);
+  const [coupon,setCoupon]=useState(""); const [couponVal,setCouponVal]=useState(0);
+  const searchRef=useRef<HTMLInputElement|null>(null);
 
   const mRes=mQ.trim()?medicines.filter(m=>(m.name_ar+m.name_en).toLowerCase().includes(mQ.toLowerCase())||m.barcode.includes(mQ)).slice(0,6):[];
 
@@ -1307,14 +1311,43 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
 
   useBarcode(handleScan,barcodeMode==="sale");
 
-  const subtotal=items.reduce((s,i)=>s+i.qty*i.unit_price,0); const total=Math.max(0,subtotal-discount);
+  const itemsDiscount=items.reduce((s,i)=>s+(i.item_discount||0)*i.qty,0);
+  const subtotal=items.reduce((s,i)=>s+i.qty*i.unit_price,0);
+  const total=Math.max(0,subtotal-itemsDiscount-discount-couponVal);
+  const payedTotal=payCash+payCard;
+
+  // ميزة 17: اختصارات لوحة المفاتيح
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      // F2: بيع جديد | F4: الماسح | Esc: إغلاق النموذج | Ctrl+Enter أو F9: إتمام
+      if(e.key==="F2"){e.preventDefault();setShowForm(true);setTimeout(()=>searchRef.current?.focus(),50);}
+      else if(e.key==="F4"){e.preventDefault();setBarcodeMode(barcodeMode==="sale"?null:"sale");if(barcodeMode!=="sale")setShowForm(true);}
+      else if(e.key==="Escape"&&showForm){setShowForm(false);setItems([]);setDiscount(0);setPName("");setRxId("");setBarcodeMode(null);setMultiPay(false);setPayCash(0);setPayCard(0);setCoupon("");setCouponVal(0);}
+      else if((e.key==="F9"||(e.ctrlKey&&e.key==="Enter"))&&showForm&&items.length>0){e.preventDefault();complete();}
+    };
+    window.addEventListener("keydown",onKey);
+    return ()=>window.removeEventListener("keydown",onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[showForm,items,barcodeMode,total,payCash,payCard,multiPay,discount,couponVal]);
 
   const complete=async()=>{
     if(items.length===0) return;
+    // ميزة 18: تحقق أن مجموع الدفع المتعدد يساوي الإجمالي
+    if(multiPay&&Math.abs(payedTotal-total)>0.01){
+      showNotif({type:"error",message:isAr?`مجموع الدفع (${payedTotal}) لا يساوي الإجمالي (${total})`:`Split (${payedTotal}) ≠ total (${total})`},3000); return;
+    }
     const cashier=isAr?currentUser.name_ar:currentUser.name_en;
     const date=new Date().toISOString().slice(0,10);
+    // طريقة الدفع الفعلية: mixed عند الدفع المتعدد بقيمتين، وإلا المفردة
+    const effectiveMethod=multiPay?(payCash>0&&payCard>0?"cash":payCard>0?"card":"cash"):payment;
+    const payload={user_id:userId,items,total,discount:discount+itemsDiscount,payment_method:effectiveMethod,
+      patient_name:pName||null,prescription_id:rxId||null,cashier,date,
+      paid_cash:multiPay?payCash:(payment==="cash"?total:0),
+      paid_card:multiPay?payCard:(payment==="card"?total:0),
+      paid_insurance:multiPay?0:(payment==="insurance"?total:0),
+      coupon_code:coupon||"",coupon_discount:couponVal||0};
     if(userId){
-      const res=await fetch("/api/pharmacy/sales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,items,total,discount,payment_method:payment,patient_name:pName||null,prescription_id:rxId||null,cashier,date})});
+      const res=await fetch("/api/pharmacy/sales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const json=await res.json();
       if(json.success){
         setSales(prev=>[json.sale,...prev]);
@@ -1323,12 +1356,13 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
         onRefresh();
       } else { showNotif({type:"error",message:json.error||"Error"},3000); return; }
     } else {
-      const ns:Sale={id:Math.max(0,...sales.map(s=>s.id))+1,date,items,total,payment_method:payment,discount,patient_name:pName||undefined,prescription_id:rxId||undefined,cashier};
+      const ns:Sale={id:Math.max(0,...sales.map(s=>s.id))+1,date,items,total,payment_method:effectiveMethod,discount:discount+itemsDiscount,patient_name:pName||undefined,prescription_id:rxId||undefined,cashier,coupon_code:coupon,coupon_discount:couponVal};
       setSales(prev=>[ns,...prev]);
       items.forEach(it=>addLog({medicine_id:it.medicine_id,medicine_name:it.medicine_name,type:"sale",qty:it.qty,date,user:cashier,ref:`SALE-${ns.id}`}));
       setPrintSale(ns);
     }
     setItems([]); setDiscount(0); setPayment("cash"); setPName(""); setRxId(""); setShowForm(false); setBarcodeMode(null);
+    setMultiPay(false); setPayCash(0); setPayCard(0); setCoupon(""); setCouponVal(0);
   };
 
   const openReturn=(s:Sale)=>{
@@ -1392,24 +1426,56 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
       {showForm&&(
         <div style={{background:"#fff",borderRadius:15,border:`2px solid ${barcodeMode==="sale"?"#8e44ad":"rgba(8,99,186,.2)"}`,boxShadow:"0 4px 22px rgba(8,99,186,.1)",padding:"19px",marginBottom:14,animation:"slideUp .3s ease"}}>
           {barcodeMode==="sale"&&<div style={{background:"rgba(142,68,173,.07)",border:"1.5px solid rgba(142,68,173,.25)",borderRadius:9,padding:"9px 13px",marginBottom:12,display:"flex",alignItems:"center",gap:9}}><span style={{fontSize:19}}>▐▌▌▐▌</span><div style={{fontSize:12,fontWeight:800,color:"#8e44ad"}}>{isAr?"الماسح نشط — امسح الباركود":"Scanner Active — Scan barcode"}</div><span style={{marginRight:"auto",fontSize:17}}>📡</span></div>}
-          <h3 style={{fontSize:14,fontWeight:800,color:"#353535",marginBottom:13}}>🛒 {isAr?"بيع جديد":"New Sale"}</h3>
+          <h3 style={{fontSize:14,fontWeight:800,color:"#353535",marginBottom:13,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>🛒 {isAr?"بيع جديد":"New Sale"}<span style={{fontSize:10,fontWeight:500,color:"#bbb"}}>{isAr?"F2 بيع · F4 ماسح · Enter إضافة · F9 إتمام · Esc إلغاء":"F2 new · F4 scan · Enter add · F9 complete · Esc cancel"}</span></h3>
           <div style={{position:"relative",marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",gap:7,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:9,padding:"8px 11px"}}><span>💊</span><input value={mQ} onChange={e=>setMQ(e.target.value)} placeholder={isAr?"بحث أو رقم باركود...":"Search or barcode..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/>{mQ&&<button onClick={()=>setMQ("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb"}}>✕</button>}</div>
+            <div style={{display:"flex",alignItems:"center",gap:7,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:9,padding:"8px 11px"}}><span>💊</span><input ref={searchRef} value={mQ} onChange={e=>setMQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&mRes.length>0){e.preventDefault();addToSale(mRes[0]);}}} placeholder={isAr?"بحث أو رقم باركود... (Enter لإضافة الأول)":"Search or barcode... (Enter to add)"} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/>{mQ&&<button onClick={()=>setMQ("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb"}}>✕</button>}</div>
             {mRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:11,boxShadow:"0 8px 30px rgba(0,0,0,.11)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:3}}>{mRes.map(m=>(<div key={m.id} onClick={()=>addToSale(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><div><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{fontSize:9,color:"#aaa",marginRight:7,fontFamily:"monospace"}}>{m.barcode}</span></div><span style={{color:"#27ae60",fontWeight:700,fontSize:12}}>{m.sell_price} {isAr?"ر.س":"SAR"}</span></div>))}</div>}
           </div>
-          {items.length>0&&<div style={{background:"#f7f9fc",borderRadius:11,padding:"11px",marginBottom:12}}>{items.map((it,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:7,marginBottom:i<items.length-1?7:0,background:flashId===it.medicine_id?"rgba(8,99,186,.09)":"transparent",borderRadius:7,padding:"3px 5px",transition:"background .35s"}}><div style={{flex:1,fontSize:13,fontWeight:600,color:"#353535"}}>{it.medicine_name}</div><div style={{display:"flex",alignItems:"center",gap:3}}><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>-</button><span style={{fontSize:13,fontWeight:700,minWidth:22,textAlign:"center"}}>{it.qty}</span><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>+</button></div><div style={{fontSize:12,fontWeight:700,color:"#27ae60",minWidth:50,textAlign:"center"}}>{(it.qty*it.unit_price).toFixed(0)}</div><button onClick={()=>setItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:15}}>✕</button></div>))}</div>}
+          {items.length>0&&<div style={{background:"#f7f9fc",borderRadius:11,padding:"11px",marginBottom:12}}>{items.map((it,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:7,marginBottom:i<items.length-1?9:0,background:flashId===it.medicine_id?"rgba(8,99,186,.09)":"transparent",borderRadius:7,padding:"3px 5px",transition:"background .35s",flexWrap:"wrap"}}><div style={{flex:1,minWidth:120,fontSize:13,fontWeight:600,color:"#353535"}}>{it.medicine_name}</div><div style={{display:"flex",alignItems:"center",gap:3}}><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>-</button><span style={{fontSize:13,fontWeight:700,minWidth:22,textAlign:"center"}}>{it.qty}</span><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>+</button></div><div style={{display:"flex",alignItems:"center",gap:2,background:"#fff",border:"1.5px solid #f0e0d0",borderRadius:6,padding:"1px 5px"}} title={isAr?"خصم للوحدة":"Per-unit discount"}><span style={{fontSize:10,color:"#e67e22"}}>−</span><input type="number" min={0} max={it.unit_price} value={it.item_discount||0} onChange={e=>setItems(p=>p.map((x,xi)=>xi===i?{...x,item_discount:Math.max(0,Math.min(x.unit_price,Number(e.target.value)))}:x))} style={{width:38,border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:11,textAlign:"center",color:"#e67e22"}}/></div><div style={{fontSize:12,fontWeight:700,color:"#27ae60",minWidth:50,textAlign:"center"}}>{(it.qty*(it.unit_price-(it.item_discount||0))).toFixed(0)}</div><button onClick={()=>setItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:15}}>✕</button></div>))}</div>}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:11}}>
-            <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"خصم":"Discount"}</label><input type="number" min={0} value={discount} onChange={e=>setDiscount(Number(e.target.value))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
-            <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"طريقة الدفع":"Payment"}</label><select value={payment} onChange={e=>setPayment(e.target.value as any)} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",background:"#fafbfc",direction:isAr?"rtl":"ltr"}}>{Object.entries(pm).map(([k,v])=><option key={k} value={k}>{pi[k]} {v}</option>)}</select></div>
+            <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"خصم إجمالي":"Discount"}</label><input type="number" min={0} value={discount} onChange={e=>setDiscount(Number(e.target.value))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
+            <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"كوبون خصم":"Coupon"}</label>
+              <div style={{display:"flex",gap:4}}>
+                <input value={coupon} onChange={e=>setCoupon(e.target.value)} placeholder={isAr?"الرمز":"Code"} style={{flex:1,minWidth:0,padding:"8px 9px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",direction:"ltr"}}/>
+                <input type="number" min={0} value={couponVal} onChange={e=>setCouponVal(Math.max(0,Number(e.target.value)))} title={isAr?"قيمة الكوبون":"Coupon value"} style={{width:60,padding:"8px 7px",border:"1.5px solid #d0e0f0",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",textAlign:"center",color:"#8e44ad",fontWeight:700}}/>
+              </div>
+            </div>
+          </div>
+          {/* ميزة 18: الدفع المتعدد */}
+          <div style={{marginBottom:11}}>
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+              <label style={{fontSize:11,fontWeight:700,color:"#888"}}>{isAr?"طريقة الدفع":"Payment"}</label>
+              <button onClick={()=>{setMultiPay(!multiPay);if(!multiPay){setPayCash(total);setPayCard(0);}}} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`1.5px solid ${multiPay?"#8e44ad":"#e0e7ef"}`,background:multiPay?"rgba(142,68,173,.08)":"#fff",color:multiPay?"#8e44ad":"#888",cursor:"pointer",fontFamily:"'Rubik',sans-serif"}}>{multiPay?(isAr?"✓ دفع مقسّم":"✓ Split"):(isAr?"دفع مقسّم":"Split pay")}</button>
+            </div>
+            {!multiPay?(
+              <select value={payment} onChange={e=>setPayment(e.target.value as "cash"|"card"|"insurance")} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",background:"#fafbfc",direction:isAr?"rtl":"ltr"}}>{Object.entries(pm).map(([k,v])=><option key={k} value={k}>{pi[k]} {v}</option>)}</select>
+            ):(
+              <div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+                  <div><label style={{fontSize:10,color:"#aaa",display:"block",marginBottom:3}}>💵 {isAr?"نقداً":"Cash"}</label><input type="number" min={0} value={payCash} onChange={e=>setPayCash(Math.max(0,Number(e.target.value)))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
+                  <div><label style={{fontSize:10,color:"#aaa",display:"block",marginBottom:3}}>💳 {isAr?"بطاقة":"Card"}</label><input type="number" min={0} value={payCard} onChange={e=>setPayCard(Math.max(0,Number(e.target.value)))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
+                </div>
+                <button onClick={()=>{setPayCash(total-payCard>=0?total-payCard:0);}} style={{marginTop:5,fontSize:10,color:"#0863ba",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>{isAr?"املأ الباقي نقداً":"Fill rest cash"}</button>
+                <div style={{marginTop:6,fontSize:11,fontWeight:700,textAlign:"center",color:Math.abs(payedTotal-total)<0.01?"#27ae60":"#e74c3c"}}>{isAr?"مجموع المدفوع":"Paid"}: {payedTotal} / {total} {Math.abs(payedTotal-total)<0.01?"✅":(payedTotal<total?`(${isAr?"ناقص":"short"} ${(total-payedTotal).toFixed(0)})`:`(${isAr?"زائد":"over"} ${(payedTotal-total).toFixed(0)})`)}</div>
+              </div>
+            )}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
             <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"اسم المريض":"Patient"}</label><input value={pName} onChange={e=>setPName(e.target.value)} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
             <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"رقم الوصفة":"Rx ID"}</label><input value={rxId} onChange={e=>setRxId(e.target.value)} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:"ltr"}}/></div>
           </div>
-          <div style={{background:"linear-gradient(135deg,rgba(8,99,186,.08),rgba(8,99,186,.03))",borderRadius:11,padding:"12px 15px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,fontWeight:700,color:"#353535"}}>{isAr?"المجموع النهائي":"Final Total"}</span><span style={{fontSize:21,fontWeight:800,color:"#0863ba"}}>{total}<span style={{fontSize:12,fontWeight:400,color:"#aaa"}}> {isAr?"ر.س":"SAR"}</span></span></div>
+          <div style={{background:"linear-gradient(135deg,rgba(8,99,186,.08),rgba(8,99,186,.03))",borderRadius:11,padding:"12px 15px",marginBottom:12}}>
+            {(itemsDiscount>0||discount>0||couponVal>0)&&<div style={{fontSize:11,color:"#888",marginBottom:6}}>
+              <div style={{display:"flex",justifyContent:"space-between"}}><span>{isAr?"المجموع الفرعي":"Subtotal"}</span><span>{subtotal.toFixed(0)}</span></div>
+              {itemsDiscount>0&&<div style={{display:"flex",justifyContent:"space-between",color:"#e67e22"}}><span>{isAr?"خصم الأصناف":"Item discounts"}</span><span>−{itemsDiscount.toFixed(0)}</span></div>}
+              {discount>0&&<div style={{display:"flex",justifyContent:"space-between",color:"#e67e22"}}><span>{isAr?"خصم إجمالي":"Discount"}</span><span>−{discount.toFixed(0)}</span></div>}
+              {couponVal>0&&<div style={{display:"flex",justifyContent:"space-between",color:"#8e44ad"}}><span>{isAr?"كوبون":"Coupon"} {coupon&&`(${coupon})`}</span><span>−{couponVal.toFixed(0)}</span></div>}
+            </div>}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,fontWeight:700,color:"#353535"}}>{isAr?"المجموع النهائي":"Final Total"}</span><span style={{fontSize:21,fontWeight:800,color:"#0863ba"}}>{total}<span style={{fontSize:12,fontWeight:400,color:"#aaa"}}> {isAr?"ر.س":"SAR"}</span></span></div>
+          </div>
           <div style={{display:"flex",gap:9}}>
             <button onClick={complete} disabled={items.length===0} style={{flex:1,padding:"12px",background:items.length===0?"#ccc":"#27ae60",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:items.length===0?"not-allowed":"pointer",boxShadow:items.length===0?"none":"0 4px 13px rgba(39,174,96,.3)"}}>✅ {isAr?"إتمام البيع":"Complete"}</button>
-            <button onClick={()=>{setShowForm(false);setItems([]);setDiscount(0);setPName("");setRxId("");setBarcodeMode(null);}} style={{padding:"12px 17px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
+            <button onClick={()=>{setShowForm(false);setItems([]);setDiscount(0);setPName("");setRxId("");setBarcodeMode(null);setMultiPay(false);setPayCash(0);setPayCard(0);setCoupon("");setCouponVal(0);}} style={{padding:"12px 17px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
           </div>
         </div>
       )}
@@ -1524,6 +1590,65 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
   const topCat=Object.entries(catS).sort((a,b)=>b[1]-a[1]); const maxC=topCat[0]?.[1]||1;
   const medS:{[k:number]:number}={}; sales.forEach(s=>s.items.forEach(it=>{medS[it.medicine_id]=(medS[it.medicine_id]||0)+it.qty;}));
   const topMeds=Object.entries(medS).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,qty])=>({...medicines.find(m=>m.id===Number(id))!,soldQty:qty})).filter(Boolean);
+
+  // ═══ ميزة 26: تحليل ABC — تصنيف الأصناف حسب مساهمتها في الإيراد ═══
+  const abc=useMemo(()=>{
+    const rev:Record<number,{name:string;revenue:number;qty:number}>={};
+    sales.forEach(s=>s.items.forEach(it=>{
+      const net=it.qty*(it.unit_price-(it.item_discount||0));
+      if(!rev[it.medicine_id])rev[it.medicine_id]={name:it.medicine_name,revenue:0,qty:0};
+      rev[it.medicine_id].revenue+=net; rev[it.medicine_id].qty+=it.qty;
+    }));
+    const rows=Object.entries(rev).map(([id,v])=>({medicine_id:Number(id),...v})).sort((a,b)=>b.revenue-a.revenue);
+    const totalRevenue=rows.reduce((s,r)=>s+r.revenue,0)||1;
+    let cum=0;
+    return rows.map(r=>{cum+=r.revenue;const cumPct=(cum/totalRevenue)*100;
+      const cls:"A"|"B"|"C"=cumPct<=80?"A":cumPct<=95?"B":"C";
+      return {...r,pct:(r.revenue/totalRevenue)*100,cumPct,cls};});
+  },[sales]);
+  const abcSummary=useMemo(()=>{const g={A:{count:0,rev:0},B:{count:0,rev:0},C:{count:0,rev:0}};
+    abc.forEach(r=>{g[r.cls].count++;g[r.cls].rev+=r.revenue;});return g;},[abc]);
+
+  // ═══ ميزة 25: تصدير CSV (متوافق مع Excel، بترميز UTF-8 BOM للعربية) ═══
+  const downloadCSV=(filename:string,rows:(string|number)[][])=>{
+    const csv=rows.map(r=>r.map(c=>{const s=String(c??"");return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;}).join(",")).join("\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");
+    a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+  };
+  const exportSalesReport=()=>{
+    const rows:(string|number)[][]=[[isAr?"رقم":"ID",isAr?"التاريخ":"Date",isAr?"المريض":"Patient",isAr?"عدد الأصناف":"Items",isAr?"الخصم":"Discount",isAr?"الكوبون":"Coupon",isAr?"نقدي":"Cash",isAr?"بطاقة":"Card",isAr?"تأمين":"Insurance",isAr?"الإجمالي":"Total",isAr?"الكاشير":"Cashier"]];
+    sales.forEach(s=>rows.push([s.id,s.date,s.patient_name||"",s.items.length,s.discount||0,s.coupon_discount||0,s.paid_cash??(s.payment_method==="cash"?s.total:0),s.paid_card??(s.payment_method==="card"?s.total:0),s.paid_insurance??(s.payment_method==="insurance"?s.total:0),s.total,s.cashier]));
+    downloadCSV(`sales-report-${new Date().toISOString().slice(0,10)}.csv`,rows);
+  };
+  const exportProfitReport=()=>{
+    if(!profit)return;
+    const rows:(string|number)[][]=[[isAr?"الصنف":"Item",isAr?"الكمية":"Qty",isAr?"الإيراد":"Revenue",isAr?"التكلفة":"Cost",isAr?"الربح":"Profit",isAr?"الهامش%":"Margin%"]];
+    profit.byMedicine.forEach(m=>rows.push([m.medicine_name,m.qty_sold,m.revenue.toFixed(2),m.cost.toFixed(2),m.profit.toFixed(2),m.margin.toFixed(1)]));
+    rows.push([isAr?"الإجمالي":"Total","",profit.totals.revenue.toFixed(2),profit.totals.cost.toFixed(2),profit.totals.profit.toFixed(2),profit.totals.margin.toFixed(1)]);
+    downloadCSV(`profit-report-${new Date().toISOString().slice(0,10)}.csv`,rows);
+  };
+  const exportABC=()=>{
+    const rows:(string|number)[][]=[[isAr?"الصنف":"Item",isAr?"الكمية":"Qty",isAr?"الإيراد":"Revenue","%",isAr?"التراكمي%":"Cumulative%",isAr?"التصنيف":"Class"]];
+    abc.forEach(r=>rows.push([r.name,r.qty,r.revenue.toFixed(2),r.pct.toFixed(1),r.cumPct.toFixed(1),r.cls]));
+    downloadCSV(`abc-analysis-${new Date().toISOString().slice(0,10)}.csv`,rows);
+  };
+  // ═══ ميزة 30: تصدير محاسبي عام (قيد يومية مبسّط متوافق مع برامج المحاسبة) ═══
+  const exportAccounting=()=>{
+    const rows:(string|number)[][]=[["Date","Reference","Account","Description","Debit","Credit"]];
+    sales.forEach(s=>{
+      const ref=`SALE-${s.id}`;
+      const cash=s.paid_cash??(s.payment_method==="cash"?s.total:0);
+      const card=s.paid_card??(s.payment_method==="card"?s.total:0);
+      const ins=s.paid_insurance??(s.payment_method==="insurance"?s.total:0);
+      if(cash>0)rows.push([s.date,ref,"Cash","Pharmacy sale",cash.toFixed(2),"0.00"]);
+      if(card>0)rows.push([s.date,ref,"Card/Bank","Pharmacy sale",card.toFixed(2),"0.00"]);
+      if(ins>0)rows.push([s.date,ref,"Insurance Receivable","Pharmacy sale",ins.toFixed(2),"0.00"]);
+      rows.push([s.date,ref,"Sales Revenue","Pharmacy sale","0.00",s.total.toFixed(2)]);
+    });
+    downloadCSV(`accounting-export-${new Date().toISOString().slice(0,10)}.csv`,rows);
+  };
+
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:11,marginBottom:15}}>
@@ -1531,6 +1656,50 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
           <div key={i} style={{background:s.bg,borderRadius:13,padding:"15px",border:`1.5px solid ${s.c}25`}}><div style={{fontSize:22,marginBottom:5}}>{s.ic}</div><div style={{fontSize:20,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div><div style={{fontSize:11,color:s.c,opacity:.7,marginTop:3,fontWeight:600}}>{s.l}</div></div>
         ))}
       </div>
+
+      {/* ميزة 25 + 30: تصدير التقارير للمحاسب */}
+      <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"14px 16px",marginBottom:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
+        <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>📤 {isAr?"تصدير التقارير":"Export Reports"}</h3>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {[
+            {l:isAr?"📊 تقرير المبيعات":"📊 Sales",fn:exportSalesReport,c:"#0863ba"},
+            {l:isAr?"📈 تقرير الربحية":"📈 Profit",fn:exportProfitReport,c:"#27ae60"},
+            {l:isAr?"🔤 تحليل ABC":"🔤 ABC",fn:exportABC,c:"#8e44ad"},
+            {l:isAr?"🧮 تصدير محاسبي":"🧮 Accounting",fn:exportAccounting,c:"#2c3e50"},
+          ].map((b,i)=>(
+            <button key={i} onClick={b.fn} disabled={sales.length===0} style={{padding:"9px 14px",border:`1.5px solid ${b.c}33`,borderRadius:10,background:`${b.c}0d`,color:b.c,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:sales.length===0?"not-allowed":"pointer",opacity:sales.length===0?.5:1}}>{b.l}</button>
+          ))}
+        </div>
+        <div style={{fontSize:10,color:"#bbb",marginTop:8}}>{isAr?"ملفات CSV متوافقة مع Excel وبرامج المحاسبة (ترميز UTF-8)":"Excel & accounting-software compatible CSV (UTF-8)"}</div>
+      </div>
+
+      {/* ميزة 26: تحليل ABC */}
+      {abc.length>0&&(
+        <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginBottom:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
+          <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>🔤 {isAr?"تحليل ABC لحركة المخزون":"ABC Inventory Analysis"}</h3>
+          <div style={{fontSize:10,color:"#bbb",marginBottom:12}}>{isAr?"تصنيف الأصناف حسب مساهمتها في الإيراد: A الأهم (حتى 80%)، B (حتى 95%)، C الباقي":"By revenue contribution: A (top 80%), B (to 95%), C (rest)"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:9,marginBottom:14}}>
+            {([["A","#27ae60"],["B","#e67e22"],["C","#95a5a6"]] as [("A"|"B"|"C"),string][]).map(([cls,c])=>(
+              <div key={cls} style={{background:`${c}0e`,border:`1.5px solid ${c}30`,borderRadius:11,padding:"11px",textAlign:"center"}}>
+                <div style={{fontSize:18,fontWeight:800,color:c}}>{isAr?"فئة ":"Class "}{cls}</div>
+                <div style={{fontSize:12,color:"#666",marginTop:3}}>{abcSummary[cls].count} {isAr?"صنف":"items"}</div>
+                <div style={{fontSize:11,color:c,fontWeight:700,marginTop:2}}>{abcSummary[cls].rev.toFixed(0)} {isAr?"ر.س":"SAR"}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"2fr .8fr 1fr .8fr .6fr",padding:"6px 0",borderBottom:"1.5px solid #eef0f3",fontSize:10,fontWeight:800,color:"#9aa2ab",textTransform:"uppercase"}}>
+            <div>{isAr?"الصنف":"Item"}</div><div>{isAr?"الكمية":"Qty"}</div><div>{isAr?"الإيراد":"Revenue"}</div><div>{isAr?"التراكمي":"Cumul."}</div><div>{isAr?"الفئة":"Class"}</div>
+          </div>
+          {abc.slice(0,20).map(r=>{const c=r.cls==="A"?"#27ae60":r.cls==="B"?"#e67e22":"#95a5a6";
+            return(<div key={r.medicine_id} style={{display:"grid",gridTemplateColumns:"2fr .8fr 1fr .8fr .6fr",padding:"8px 0",borderBottom:"1px solid #f7f9fc",fontSize:12,alignItems:"center"}}>
+              <div style={{fontWeight:600,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
+              <div style={{color:"#888"}}>{r.qty}</div>
+              <div style={{color:"#555"}}>{r.revenue.toFixed(0)}</div>
+              <div style={{color:"#aaa",fontSize:11}}>{r.cumPct.toFixed(0)}%</div>
+              <div><span style={{fontSize:11,fontWeight:800,padding:"2px 9px",borderRadius:20,background:c,color:"#fff"}}>{r.cls}</span></div>
+            </div>);})}
+        </div>
+      )}
 
       {profit&&profit.byMedicine.length>0&&(
         <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginBottom:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
