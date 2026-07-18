@@ -1,13 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { CameraScanner, usePharmacyChannel, type ScanEvent } from "./scanner";
 import { DesktopSidebar, MobilePillNav, MoreSheet, TAB_META, Icons, type TabKey } from "./nav";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from "@/lib/supabase";
 
 // ============================================================
 // NABD - نبض | Pharmacy v3
