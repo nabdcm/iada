@@ -49,8 +49,8 @@ const CAT:{[k:string]:{ar:string;en:string;color:string;icon:string}} = {
 };
 
 const ROLE:{[k:string]:{ar:string;en:string;color:string;tabs:string[]}} = {
-  pharmacist:{ar:"صيدلاني",en:"Pharmacist",color:"#0863ba",tabs:["inventory","prescriptions","sales","alerts"]},
-  manager:   {ar:"مدير",   en:"Manager",   color:"#8e44ad",tabs:["inventory","prescriptions","sales","suppliers","reports","alerts"]},
+  pharmacist:{ar:"صيدلاني",en:"Pharmacist",color:"#0863ba",tabs:["inventory","prescriptions","sales","reorder","alerts"]},
+  manager:   {ar:"مدير",   en:"Manager",   color:"#8e44ad",tabs:["inventory","prescriptions","sales","suppliers","reorder","reports","alerts"]},
   doctor:    {ar:"طبيب",   en:"Doctor",    color:"#27ae60",tabs:["prescriptions","alerts"]},
 };
 
@@ -520,6 +520,227 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
 // ══════════════════════════════════════════════════════════════
 // 🔔 تبويب التنبيهات
 // ══════════════════════════════════════════════════════════════
+// ══════════════ تبويب إعادة الطلب: توقع النفاد + أوامر شراء مقترحة + أفضل مورد ══════════════
+type SupPrice = { supplier_id:number; supplier_name:string; unit_price:number; last_date:string };
+type ReorderRow = {
+  medicine_id:number; name_ar:string; name_en:string; unit:string;
+  stock:number; min_stock:number; avg_cost:number;
+  daily_rate:number; days_left:number|null; reorder_point:number;
+  needs_reorder:boolean; suggested_qty:number;
+  best_supplier:SupPrice|null; supplier_prices:SupPrice[]; est_cost:number|null;
+};
+
+function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;userId:string|null;suppliers:Supplier[];currentUser:User;onRefresh:()=>void}) {
+  const isAr=lang==="ar";
+  const [win,setWin]=useState(90);
+  const [rows,setRows]=useState<ReorderRow[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [meta,setMeta]=useState<{lead_time_days:number;cover_days:number}|null>(null);
+  const [onlyNeeds,setOnlyNeeds]=useState(true);
+  const [expanded,setExpanded]=useState<number|null>(null);
+  const [cart,setCart]=useState<Record<number,{qty:number;supplier_id:number}>>({});
+  const [creating,setCreating]=useState(false);
+  const [msg,setMsg]=useState("");
+
+  const load=useCallback(async()=>{
+    if(!userId) return;
+    setLoading(true);
+    try{
+      const res=await fetch(`/api/pharmacy/reorder?user_id=${userId}&window=${win}`);
+      const json=await res.json();
+      setRows(json.analysis||[]);
+      setMeta({lead_time_days:json.lead_time_days,cover_days:json.cover_days});
+    }catch{setRows([]);}
+    setLoading(false);
+  },[userId,win]);
+  useEffect(()=>{load();},[load]);
+
+  const shown=onlyNeeds?rows.filter(r=>r.needs_reorder):rows;
+  const inCart=(id:number)=>cart[id]!==undefined;
+
+  const toggleCart=(r:ReorderRow)=>{
+    setCart(prev=>{
+      const n={...prev};
+      if(n[r.medicine_id]) delete n[r.medicine_id];
+      else n[r.medicine_id]={qty:r.suggested_qty||1,supplier_id:r.best_supplier?.supplier_id||suppliers[0]?.id||0};
+      return n;
+    });
+  };
+  const setCartQty=(id:number,qty:number)=>setCart(p=>({...p,[id]:{...p[id],qty:Math.max(1,qty)}}));
+  const setCartSup=(id:number,sid:number)=>setCart(p=>({...p,[id]:{...p[id],supplier_id:sid}}));
+
+  // تجميع السلة حسب المورد → إنشاء فاتورة شراء لكل مورد
+  const createOrders=async()=>{
+    if(!userId||Object.keys(cart).length===0) return;
+    setCreating(true); setMsg("");
+    const bySupplier:Record<number,{medicine_id:number;medicine_name:string;qty:number;unit_price:number}[]>={};
+    for(const [midStr,c] of Object.entries(cart)){
+      const mid=Number(midStr); const r=rows.find(x=>x.medicine_id===mid); if(!r||!c.supplier_id) continue;
+      const sp=r.supplier_prices.find(s=>s.supplier_id===c.supplier_id);
+      (bySupplier[c.supplier_id] ||= []).push({
+        medicine_id:mid, medicine_name:isAr?r.name_ar:r.name_en,
+        qty:c.qty, unit_price:sp?.unit_price ?? r.avg_cost ?? 0,
+      });
+    }
+    let created=0;
+    for(const [sidStr,items] of Object.entries(bySupplier)){
+      const sid=Number(sidStr); const sup=suppliers.find(s=>s.id===sid);
+      const total=items.reduce((s,x)=>s+x.qty*x.unit_price,0);
+      const res=await fetch("/api/pharmacy/invoices",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"add",user_id:userId,supplier_id:sid,supplier_name:sup?.name||"",
+          date:new Date().toISOString().slice(0,10),items,total,paid:0,status:"pending",
+          notes:isAr?"أمر شراء مقترح تلقائيًا":"Auto-suggested purchase order",
+          created_by:isAr?currentUser.name_ar:currentUser.name_en})});
+      const json=await res.json(); if(json.success) created++;
+    }
+    setCreating(false); setCart({});
+    setMsg(isAr?`✅ تم إنشاء ${created} فاتورة شراء`:`✅ Created ${created} purchase invoice(s)`);
+    onRefresh(); load();
+    setTimeout(()=>setMsg(""),4000);
+  };
+
+  const cartCount=Object.keys(cart).length;
+  const cartTotal=Object.entries(cart).reduce((s,[mid,c])=>{
+    const r=rows.find(x=>x.medicine_id===Number(mid));
+    const sp=r?.supplier_prices.find(x=>x.supplier_id===c.supplier_id);
+    return s+(c.qty*(sp?.unit_price??r?.avg_cost??0));
+  },0);
+
+  const urgency=(r:ReorderRow)=>{
+    if(r.days_left===null) return {c:"#7f8c8d",bg:"rgba(127,140,141,.1)",t:isAr?"لا بيانات":"No data"};
+    if(r.days_left<=(meta?.lead_time_days||7)) return {c:"#e74c3c",bg:"rgba(231,76,60,.1)",t:isAr?"عاجل":"Urgent"};
+    if(r.days_left<=14) return {c:"#e67e22",bg:"rgba(230,126,34,.1)",t:isAr?"قريبًا":"Soon"};
+    return {c:"#27ae60",bg:"rgba(39,174,96,.1)",t:isAr?"جيد":"OK"};
+  };
+
+  return (
+    <div style={{background:"#fff",borderRadius:16,padding:"20px",boxShadow:"0 3px 16px rgba(8,99,186,.06)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h2 style={{fontSize:16,fontWeight:800,color:"#353535"}}>🔄 {isAr?"التوقع وإعادة الطلب":"Forecast & Reorder"}</h2>
+          <p style={{fontSize:11,color:"#aaa",marginTop:3}}>
+            {isAr?`توقع النفاد بناءً على معدل الاستهلاك (آخر ${win} يوم) · مهلة توريد ${meta?.lead_time_days||7} يوم`:`Depletion forecast · last ${win} days · lead time ${meta?.lead_time_days||7}d`}
+          </p>
+        </div>
+        <div style={{display:"flex",gap:7,alignItems:"center"}}>
+          <div style={{display:"flex",background:"#f2f5f9",borderRadius:9,padding:2}}>
+            {[30,60,90].map(w=>(
+              <button key={w} onClick={()=>setWin(w)} style={{padding:"6px 12px",border:"none",borderRadius:7,cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,background:win===w?"#0863ba":"transparent",color:win===w?"#fff":"#888"}}>{w}{isAr?"ي":"d"}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {msg&&<div style={{background:"rgba(39,174,96,.1)",border:"1px solid rgba(39,174,96,.3)",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#27ae60",fontWeight:700}}>{msg}</div>}
+
+      <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center",flexWrap:"wrap"}}>
+        <button onClick={()=>setOnlyNeeds(!onlyNeeds)} style={{padding:"7px 13px",border:`1.5px solid ${onlyNeeds?"#0863ba":"#e0e7ef"}`,borderRadius:9,cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:600,background:onlyNeeds?"rgba(8,99,186,.07)":"#fff",color:onlyNeeds?"#0863ba":"#888"}}>
+          {onlyNeeds?(isAr?"✓ يحتاج طلب فقط":"✓ Needs reorder only"):(isAr?"عرض الكل":"Show all")}
+        </button>
+        <span style={{fontSize:12,color:"#aaa"}}>{shown.length} {isAr?"صنف":"items"}</span>
+      </div>
+
+      {loading?(
+        <div style={{textAlign:"center",padding:"40px",color:"#ccc"}}>{isAr?"⏳ جاري التحليل...":"⏳ Analyzing..."}</div>
+      ):shown.length===0?(
+        <div style={{textAlign:"center",padding:"40px",color:"#ccc"}}>
+          <div style={{fontSize:30,marginBottom:8}}>✅</div>
+          <div>{isAr?"لا توجد أصناف تحتاج إعادة طلب":"Nothing needs reordering"}</div>
+          {onlyNeeds&&<div style={{fontSize:11,marginTop:6}}>{isAr?"أو لا يوجد سجل مبيعات كافٍ للتوقع بعد":"Or not enough sales history yet"}</div>}
+        </div>
+      ):(
+        <div style={{display:"flex",flexDirection:"column",gap:9}}>
+          {shown.map(r=>{
+            const u=urgency(r); const open=expanded===r.medicine_id; const chosen=cart[r.medicine_id];
+            return (
+              <div key={r.medicine_id} style={{border:`1.5px solid ${inCart(r.medicine_id)?"#0863ba":"#eef0f3"}`,borderRadius:12,padding:"12px 14px",background:inCart(r.medicine_id)?"rgba(8,99,186,.03)":"#fff"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
+                  <div style={{flex:1,minWidth:180}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?r.name_ar:r.name_en}</span>
+                      <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:u.bg,color:u.c}}>{u.t}</span>
+                    </div>
+                    <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap",fontSize:11,color:"#888"}}>
+                      <span>{isAr?"المخزون":"Stock"}: <strong style={{color:r.stock<=r.reorder_point?"#e67e22":"#353535"}}>{r.stock}</strong> {isAr?r.unit:""}</span>
+                      <span>{isAr?"استهلاك يومي":"Daily"}: <strong style={{color:"#0863ba"}}>{r.daily_rate}</strong></span>
+                      <span>{isAr?"يكفي لـ":"Days left"}: <strong style={{color:u.c}}>{r.days_left===null?(isAr?"—":"—"):`${r.days_left} ${isAr?"يوم":"d"}`}</strong></span>
+                      <span>{isAr?"نقطة الطلب":"ROP"}: <strong>{r.reorder_point}</strong></span>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    {r.needs_reorder&&<div style={{textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#aaa"}}>{isAr?"مقترح":"Suggest"}</div>
+                      <div style={{fontSize:16,fontWeight:800,color:"#0863ba"}}>{r.suggested_qty}</div>
+                    </div>}
+                    <button onClick={()=>toggleCart(r)} disabled={!r.needs_reorder&&r.suggested_qty===0} style={{padding:"8px 14px",border:"none",borderRadius:9,cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,background:inCart(r.medicine_id)?"#e74c3c":"#0863ba",color:"#fff",whiteSpace:"nowrap"}}>
+                      {inCart(r.medicine_id)?(isAr?"إزالة":"Remove"):(isAr?"＋ للطلب":"＋ Order")}
+                    </button>
+                  </div>
+                </div>
+
+                {/* أفضل مورد + توسيع المقارنة */}
+                <div style={{marginTop:10,paddingTop:10,borderTop:"1px dashed #eef0f3"}}>
+                  {r.best_supplier?(
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                      <div style={{fontSize:12,color:"#555"}}>
+                        🏆 {isAr?"أفضل سعر":"Best price"}: <strong style={{color:"#27ae60"}}>{r.best_supplier.supplier_name}</strong> — {r.best_supplier.unit_price} {isAr?"ر.س":"SAR"}
+                        {r.est_cost!==null&&inCart(r.medicine_id)&&<span style={{color:"#aaa"}}> · {isAr?"تكلفة الطلب":"Est"}: {(chosen.qty*(r.supplier_prices.find(s=>s.supplier_id===chosen.supplier_id)?.unit_price??r.best_supplier.unit_price)).toFixed(0)}</span>}
+                      </div>
+                      {r.supplier_prices.length>1&&<button onClick={()=>setExpanded(open?null:r.medicine_id)} style={{background:"none",border:"none",cursor:"pointer",color:"#0863ba",fontSize:11,fontWeight:700,fontFamily:"'Rubik',sans-serif"}}>{open?(isAr?"إخفاء المقارنة ▲":"Hide ▲"):(isAr?`قارن ${r.supplier_prices.length} موردين ▼`:`Compare ${r.supplier_prices.length} ▼`)}</button>}
+                    </div>
+                  ):(
+                    <div style={{fontSize:11,color:"#bbb"}}>{isAr?"لا يوجد سعر مورد مسجّل — أضف فاتورة شراء لهذا الصنف أولاً":"No supplier price yet"}</div>
+                  )}
+
+                  {open&&r.supplier_prices.length>1&&(
+                    <div style={{marginTop:8,background:"#fafbfd",borderRadius:9,padding:"8px 10px"}}>
+                      {r.supplier_prices.map((sp,i)=>(
+                        <div key={sp.supplier_id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11,padding:"4px 0",borderBottom:i<r.supplier_prices.length-1?"1px solid #eef0f3":"none"}}>
+                          <span style={{color:i===0?"#27ae60":"#666",fontWeight:i===0?700:400}}>{i===0?"🏆 ":""}{sp.supplier_name}</span>
+                          <span style={{color:"#999",fontSize:10}}>{sp.last_date}</span>
+                          <span style={{fontWeight:700,color:i===0?"#27ae60":"#353535"}}>{sp.unit_price} {isAr?"ر.س":"SAR"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* تحكم بالكمية والمورد عند الإضافة للسلة */}
+                  {inCart(r.medicine_id)&&(
+                    <div style={{marginTop:10,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",background:"rgba(8,99,186,.05)",borderRadius:9,padding:"8px 10px"}}>
+                      <span style={{fontSize:11,color:"#888",fontWeight:600}}>{isAr?"الكمية":"Qty"}:</span>
+                      <input type="number" min={1} value={chosen.qty} onChange={e=>setCartQty(r.medicine_id,Number(e.target.value))} style={{width:70,padding:"5px 8px",border:"1.5px solid #d0e4f7",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:12,textAlign:"center",outline:"none"}}/>
+                      <span style={{fontSize:11,color:"#888",fontWeight:600}}>{isAr?"المورد":"Supplier"}:</span>
+                      <select value={chosen.supplier_id} onChange={e=>setCartSup(r.medicine_id,Number(e.target.value))} style={{padding:"5px 8px",border:"1.5px solid #d0e4f7",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",background:"#fff"}}>
+                        {r.supplier_prices.length>0?r.supplier_prices.map(sp=>(
+                          <option key={sp.supplier_id} value={sp.supplier_id}>{sp.supplier_name} ({sp.unit_price})</option>
+                        )):suppliers.map(s=>(<option key={s.id} value={s.id}>{s.name}</option>))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* شريط السلة السفلي */}
+      {cartCount>0&&(
+        <div style={{position:"sticky",bottom:0,marginTop:16,background:"#0863ba",borderRadius:12,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,boxShadow:"0 -4px 16px rgba(8,99,186,.2)"}}>
+          <div style={{color:"#fff"}}>
+            <div style={{fontSize:13,fontWeight:700}}>{cartCount} {isAr?"صنف في أمر الشراء":"items in order"}</div>
+            <div style={{fontSize:11,opacity:.85}}>{isAr?"إجمالي تقديري":"Est total"}: {cartTotal.toFixed(0)} {isAr?"ر.س":"SAR"}</div>
+          </div>
+          <button onClick={createOrders} disabled={creating} style={{padding:"10px 20px",border:"none",borderRadius:10,cursor:creating?"wait":"pointer",fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:800,background:"#fff",color:"#0863ba"}}>
+            {creating?(isAr?"⏳ جاري الإنشاء...":"⏳ Creating..."):(isAr?"🧾 إنشاء فواتير الشراء":"🧾 Create Purchase Orders")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function AlertsTab({lang,medicines,alerts,markAll,markOne}:{lang:Lang;medicines:Medicine[];alerts:SysAlert[];markAll:()=>void;markOne:(id:number)=>void}) {
   const isAr=lang==="ar";
   const unread=alerts.filter(a=>!a.read).length;
@@ -1289,12 +1510,14 @@ export default function PharmacyPage() {
   const isAr=lang==="ar";
   const allowedTabs=ROLE[currentUser.role].tabs;
   const pendingRx=prescriptions.filter(p=>!p.dispensed).length;
+  const reorderCount=medicines.filter(m=>m.stock<=(m.min_stock||0)).length;
 
   const tabDef:[string,string,number|null][]=[
     ["inventory",    isAr?"🗄️ المخزون":"🗄️ Inventory",null],
     ["prescriptions",isAr?"📋 الوصفات":"📋 Prescriptions",pendingRx>0?pendingRx:null],
     ["sales",        isAr?"💰 المبيعات":"💰 Sales",null],
     ["suppliers",    isAr?"🏭 الموردون":"🏭 Suppliers",null],
+    ["reorder",      isAr?"🔄 إعادة الطلب":"🔄 Reorder",reorderCount>0?reorderCount:null],
     ["reports",      isAr?"📊 التقارير":"📊 Reports",null],
     ["alerts",       isAr?"🔔 التنبيهات":"🔔 Alerts",unread>0?unread:null],
   ].filter(([k])=>allowedTabs.includes(k as string)) as [string,string,number|null][];
@@ -1404,6 +1627,7 @@ export default function PharmacyPage() {
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
+                {activeTab==="reorder"      &&<ReorderTab       lang={lang} userId={supabaseUserId} suppliers={suppliers} currentUser={currentUser} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={supabaseUserId} currentUser={currentUser}/>}
                 {activeTab==="alerts"       &&<AlertsTab        lang={lang} medicines={medicines} alerts={alerts} markAll={markAll} markOne={markOne}/>}
               </>
