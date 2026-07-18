@@ -355,7 +355,7 @@ export default function PatientTrackingPage() {
 
   return (
     <>
-      <style>{"@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Rubik',sans-serif;background:#f7f9fc}.pt-root{direction:"+(isAr?"rtl":"ltr")+";min-height:100vh;background:#f7f9fc}.log-row{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .18s;box-shadow:0 2px 10px rgba(8,99,186,.04)}.log-row:hover{border-color:rgba(8,99,186,.3);box-shadow:0 4px 18px rgba(8,99,186,.1);transform:translateY(-1px)}.link-card{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;margin-bottom:10px;box-shadow:0 2px 10px rgba(8,99,186,.04)}.tb{padding:8px 20px;border-radius:20px;border:1.5px solid #eef0f3;background:#f7f9fc;font-family:'Rubik',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:#888;transition:all .18s}.tb.act{background:rgba(8,99,186,.08);border-color:rgba(8,99,186,.3);color:#0863ba}.wab{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;background:#25D366;color:#fff;font-family:'Rubik',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-radius:8px}.wab:hover{background:#1eb858}@keyframes fiu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fiu .4s cubic-bezier(.4,0,.2,1) both}@keyframes pls{0%,100%{opacity:1}50%{opacity:.5}}.pls{animation:pls 1.5s ease infinite}@media(max-width:768px){.mpt{margin-left:0!important;margin-right:0!important;padding:70px 14px 40px!important}}"}</style>
+      <style>{"@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Rubik',sans-serif;background:#f7f9fc}.pt-root{direction:"+(isAr?"rtl":"ltr")+";min-height:100vh;background:#f7f9fc}.log-row{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .18s;box-shadow:0 2px 10px rgba(8,99,186,.04)}.log-row:hover{border-color:rgba(8,99,186,.3);box-shadow:0 4px 18px rgba(8,99,186,.1);transform:translateY(-1px)}.link-card{background:#fff;border-radius:14px;padding:16px 18px;border:1.5px solid #eef0f3;margin-bottom:10px;box-shadow:0 2px 10px rgba(8,99,186,.04)}.tb{padding:8px 20px;border-radius:20px;border:1.5px solid #eef0f3;background:#f7f9fc;font-family:'Rubik',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:#888;transition:all .18s}.tb.act{background:rgba(8,99,186,.08);border-color:rgba(8,99,186,.3);color:#0863ba}.wab{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;background:#25D366;color:#fff;font-family:'Rubik',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-radius:8px}.wab:hover{background:#1eb858}@keyframes fiu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fiu .4s cubic-bezier(.4,0,.2,1) both}@keyframes pls{0%,100%{opacity:1}50%{opacity:.5}}.pls{animation:pls 1.5s ease infinite}@media(max-width:768px){.hero-card{margin:0 0 18px!important;padding:18px 18px!important;border-radius:18px!important}.hero-inner{gap:10px!important}.page-title{font-size:19px!important}.page-sub{font-size:11.5px!important}.mpt{margin-left:0!important;margin-right:0!important;padding:70px 14px 40px!important}}"}</style>
       <div className="pt-root">
         <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="tracking" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
         <main className="mpt" style={{[isAr?"marginRight":"marginLeft"]:sidebarWidth,padding:"32px 28px",minHeight:"100vh"}}>
@@ -390,30 +390,42 @@ export default function PatientTrackingPage() {
           )}
 
           {!loading&&canAccess("tracking",plan)&&(<>
-            <div className="fu" style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
-              <div>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-                  <h1 style={{fontSize:24,fontWeight:800,color:"#353535"}}>{isAr?"متابعة المرضى":"Patient Tracking"}</h1>
-                  <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 12px",borderRadius:20,background:am.color+"15",border:"1.5px solid "+am.color+"30",fontSize:12,fontWeight:700,color:am.color}}>{am.icon} {isAr?am.ar:am.en}</span>
+            {/* ─── HERO HEADER ─── */}
+            <div className="hero-card fu" style={{margin:"0 0 24px",background:"linear-gradient(120deg, #054a8c 0%, #0863ba 55%, #3d8fd6 100%)",borderRadius:24,padding:"26px 30px",position:"relative",overflow:"hidden",boxShadow:"0 12px 36px rgba(8,99,186,.26)"}}>
+              <div style={{position:"absolute",top:-60,insetInlineEnd:-40,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,.07)"}}/>
+              <div style={{position:"absolute",bottom:-80,insetInlineEnd:130,width:170,height:170,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
+              <div className="hero-inner" style={{position:"relative",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap"}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <h1 className="page-title" style={{fontSize:24,fontWeight:800,color:"#fff"}}>{isAr?"متابعة المرضى":"Patient Tracking"}</h1>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 12px",borderRadius:20,background:"rgba(255,255,255,.16)",border:"1px solid rgba(255,255,255,.25)",fontSize:12,fontWeight:700,color:"#fff",backdropFilter:"blur(4px)"}}>{am.icon} {isAr?am.ar:am.en}</span>
+                  </div>
+                  <p className="page-sub" style={{fontSize:12.5,color:"rgba(255,255,255,.85)",marginTop:5,fontWeight:500}}>
+                    {isAr?"نظام التتبع:":"Tracking:"} {tm.icon} {isAr?tm.ar:tm.en} · {isAr?"محدد تلقائياً":"Auto-set"}
+                  </p>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#888"}}>
-                  <span>{isAr?"نظام التتبع:":"Tracking:"}</span>
-                  <span style={{fontWeight:700,color:tm.color}}>{tm.icon} {isAr?tm.ar:tm.en}</span>
-                  <span style={{color:"#ccc"}}>—</span>
-                  <span>{isAr?"محدد تلقائياً":"Auto-set"}</span>
-                </div>
+                <button onClick={()=>setShowCreate(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"11px 22px",borderRadius:12,border:"none",background:"#fff",color:"#0863ba",fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 6px 18px rgba(0,0,0,.18)",transition:"all .2s"}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  {isAr?"إنشاء رابط متابعة":"Create Tracking Link"}
+                </button>
               </div>
-              <button onClick={()=>setShowCreate(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"11px 20px",borderRadius:12,border:"none",background:"#0863ba",color:"#fff",fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.3)"}}>
-                <span style={{fontSize:16}}><AppIcon glyph="🔗" /></span>{isAr?"إنشاء رابط متابعة":"Create Tracking Link"}
-              </button>
             </div>
             <div className="fu" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,marginBottom:26}}>
-              {[{icon:"📋",l:isAr?"تقارير اليوم":"Today's Reports",v:todayN,c:"#0863ba"},{icon:"🔗",l:isAr?"روابط نشطة":"Active Links",v:actN,c:"#2e7d32"},{icon:"⚠️",l:isAr?"لم يسجّلوا":"Not Logged",v:Math.max(actN-todayN,0),c:"#e67e22"},{icon:"📝",l:isAr?"إجمالي التقارير":"Total Reports",v:dailyLogs.length,c:"#8e44ad"}].map((s,i)=>(
-                <div key={i} style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)",position:"relative",overflow:"hidden"}}>
-                  <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c,borderRadius:"14px 14px 0 0"}}/>
-                  <div style={{fontSize:22,marginBottom:8}}><AppIcon glyph={s.icon} /></div>
-                  <div style={{fontSize:26,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
-                  <div style={{fontSize:12,color:"#888",fontWeight:500}}>{s.l}</div>
+              {[
+                {l:isAr?"تقارير اليوم":"Today's Reports",v:todayN,c:"#0863ba",
+                 svg:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>},
+                {l:isAr?"روابط نشطة":"Active Links",v:actN,c:"#2e7d32",
+                 svg:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>},
+                {l:isAr?"لم يسجّلوا":"Not Logged",v:Math.max(actN-todayN,0),c:"#e67e22",
+                 svg:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#e67e22" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>},
+                {l:isAr?"إجمالي التقارير":"Total Reports",v:dailyLogs.length,c:"#8e44ad",
+                 svg:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>},
+              ].map((s,i)=>(
+                <div key={i} style={{background:"#fff",borderRadius:18,padding:"18px 20px",border:"1.5px solid #e6edf5",boxShadow:"0 4px 20px rgba(8,99,186,.06)",position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:`linear-gradient(90deg, ${s.c}, ${s.c}55)`}}/>
+                  <div style={{width:40,height:40,borderRadius:12,background:`${s.c}12`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:12}}>{s.svg}</div>
+                  <div style={{fontSize:26,fontWeight:800,color:"#1c2b3a",lineHeight:1,marginBottom:6,fontVariantNumeric:"tabular-nums"}}>{s.v}</div>
+                  <div style={{fontSize:12,color:"#8a97a6",fontWeight:600}}>{s.l}</div>
                 </div>
               ))}
             </div>

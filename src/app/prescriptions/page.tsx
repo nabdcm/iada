@@ -754,6 +754,7 @@ export default function PrescriptionsPage() {
         direction: isAr ? "rtl" : "ltr",
         fontFamily: "Rubik, sans-serif",
       }}>
+        <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
         {/* ── شاشة "غير متاح في خطتك" ── */}
         {!loading && !canAccess("prescriptions", plan) && (
@@ -786,25 +787,19 @@ export default function PrescriptionsPage() {
         {/* ── المحتوى الرئيسي — للشاملة فقط ── */}
         {canAccess("prescriptions", plan) && (<>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <h1 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 800, color: "#1a1a2e", marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: isMobile ? 22 : 28 }}><AppIcon glyph="💊" /></span> {tr.title}
-            </h1>
-            <p style={{ fontSize: 13, color: "#888", fontWeight: 400 }}>{tr.subtitle}</p>
+        {/* ─── HERO HEADER ─── */}
+        <div className="hero-card" style={{ margin:"0 0 24px",background:"linear-gradient(120deg, #054a8c 0%, #0863ba 55%, #3d8fd6 100%)",borderRadius:24,padding:"26px 30px",position:"relative",overflow:"hidden",boxShadow:"0 12px 36px rgba(8,99,186,.26)" }}>
+          <div style={{ position:"absolute",top:-60,insetInlineEnd:-40,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,.07)" }}/>
+          <div style={{ position:"absolute",bottom:-80,insetInlineEnd:130,width:170,height:170,borderRadius:"50%",background:"rgba(255,255,255,.05)" }}/>
+          <div className="hero-inner" style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap" }}>
+            <div>
+              <h1 className="page-title" style={{ fontSize:isMobile?19:24,fontWeight:800,color:"#fff" }}>{tr.title}</h1>
+              <p className="page-sub" style={{ fontSize:isMobile?11.5:12.5,color:"rgba(255,255,255,.85)",marginTop:5,fontWeight:500 }}>{tr.subtitle}</p>
+            </div>
+            <button onClick={openNew} style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#fff",color:"#0863ba",border:"none",borderRadius:12,cursor:"pointer",fontSize:14,fontWeight:800,fontFamily:"Rubik,sans-serif",boxShadow:"0 6px 18px rgba(0,0,0,.18)",whiteSpace:"nowrap",transition:"all .2s" }}>
+              <span style={{ fontSize:18 }}>＋</span> {tr.newPrescription}
+            </button>
           </div>
-          <button onClick={openNew} style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "10px 20px",
-            background: "linear-gradient(135deg, #0863ba, #1a7fd4)",
-            border: "none", borderRadius: 12, cursor: "pointer",
-            color: "#fff", fontSize: 14, fontWeight: 700,
-            fontFamily: "Rubik,sans-serif",
-            boxShadow: "0 4px 14px rgba(8,99,186,.35)",
-            whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 18 }}>+</span> {tr.newPrescription}
-          </button>
         </div>
 
         {/* Search bar */}
@@ -832,18 +827,24 @@ export default function PrescriptionsPage() {
           )}
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>
+        {/* Stats v2 */}
+        <div style={{ display:"grid",gridTemplateColumns:isMobile?"1fr 1fr 1fr":"repeat(3,minmax(0,240px))",gap:14,marginBottom:26 }}>
           {[
-            { icon: "📋", value: String(prescriptions.length), label: tr.prescriptionCount, color: "#0863ba", bg: "rgba(8,99,186,.08)" },
-            { icon: "👥", value: String(new Set(prescriptions.map(r => r.patient_id)).size), label: tr.patient, color: "#2e7d32", bg: "rgba(46,125,50,.08)" },
-            { icon: "💊", value: String(prescriptions.reduce((s, r) => s + r.medications.length, 0)), label: tr.medications_count, color: "#7b2d8b", bg: "rgba(123,45,139,.08)" },
-          ].map((s, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", background: "#fff", borderRadius: 12, border: "1.5px solid #eef0f3", boxShadow: "0 2px 8px rgba(8,99,186,.05)" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}><AppIcon glyph={s.icon} /></div>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{loading ? "—" : s.value}</div>
-                <div style={{ fontSize: 11, color: "#aaa", fontWeight: 500, marginTop: 2 }}>{s.label}</div>
+            { value:String(prescriptions.length), label:tr.prescriptionCount, color:"#0863ba",
+              svg:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg> },
+            { value:String(new Set(prescriptions.map(r => r.patient_id)).size), label:tr.patient, color:"#2e7d32",
+              svg:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+            { value:String(prescriptions.reduce((s, r) => s + r.medications.length, 0)), label:tr.medications_count, color:"#7b2d8b",
+              svg:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7b2d8b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 20.5L3.5 13.5a4.95 4.95 0 1 1 7-7l7 7a4.95 4.95 0 1 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg> },
+          ].map((c, i) => (
+            <div key={i} style={{ background:"#fff",borderRadius:18,padding:isMobile?"14px 14px":"16px 20px",border:"1.5px solid #e6edf5",boxShadow:"0 4px 20px rgba(8,99,186,.06)",position:"relative",overflow:"hidden",animation:`fadeUp .45s ${i*70}ms ease both` }}>
+              <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:`linear-gradient(90deg, ${c.color}, ${c.color}55)` }}/>
+              <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                <div style={{ width:40,height:40,borderRadius:12,background:`${c.color}12`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{c.svg}</div>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:22,fontWeight:800,color:"#1c2b3a",lineHeight:1,fontVariantNumeric:"tabular-nums" }}>{loading ? "—" : c.value}</div>
+                  <div style={{ fontSize:11,color:"#8a97a6",fontWeight:600,marginTop:5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{c.label}</div>
+                </div>
               </div>
             </div>
           ))}
