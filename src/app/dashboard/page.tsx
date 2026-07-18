@@ -410,10 +410,10 @@ export default function DashboardPage() {
     let doctorList: Doctor[] = [];
     if (isSharedPlan(fetchedPlan)) {
       const { data: doctorsData } = await supabase
-        .from("clinic_doctors")
-        .select("id, name, name_en, color")
+        .from("doctors")
+        .select("id, name, color")
         .eq("user_id", userId).eq("is_active", true)
-        .order("created_at", { ascending: true });
+        .order("id", { ascending: true });
       doctorList = (doctorsData ?? []) as Doctor[];
       setDoctors(doctorList);
       setActiveDoctorCount(doctorList.length);
