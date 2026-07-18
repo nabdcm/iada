@@ -4,7 +4,7 @@
 // الموبايل: Bottom Navigation Bar بدلاً من زر الهامبرغر
 // ============================================================
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import NotificationBell from "@/components/NotificationBell";
@@ -243,6 +243,39 @@ export default function SharedSidebar({
   const [pushLoading,  setPushLoading]  = useState(false);
   const [selfUserId,   setSelfUserId]   = useState<string>("");
   const [unreadMsgs,   setUnreadMsgs]   = useState(0);
+
+  // ─── Pill nav: drag-to-scroll + auto-center active pill ────
+  const pillScrollRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({ dragging: false, moved: false, startX: 0, startScroll: 0 });
+
+  const onPillPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = pillScrollRef.current;
+    if (!el) return;
+    dragState.current = { dragging: true, moved: false, startX: e.clientX, startScroll: el.scrollLeft };
+  };
+  const onPillPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = pillScrollRef.current;
+    if (!el || !dragState.current.dragging) return;
+    const dx = e.clientX - dragState.current.startX;
+    if (Math.abs(dx) > 6) dragState.current.moved = true;
+    if (dragState.current.moved) el.scrollLeft = dragState.current.startScroll - dx;
+  };
+  const onPillPointerUp = () => {
+    dragState.current.dragging = false;
+    // إبقاء moved لحظة قصيرة حتى لا ينطلق click بعد السحب
+    setTimeout(() => { dragState.current.moved = false; }, 60);
+  };
+
+  useEffect(() => {
+    if (!isMobile) return;
+    const el = pillScrollRef.current;
+    if (!el) return;
+    const active = el.querySelector<HTMLElement>(`[data-pill-key="${activePage}"]`);
+    if (active) {
+      const offset = active.offsetLeft - (el.clientWidth - active.offsetWidth) / 2;
+      el.scrollTo({ left: offset, behavior: "smooth" });
+    }
+  }, [activePage, isMobile]);
 
   // ─── جلب هوية المستخدم الحالي (الطبيب) داخلياً ────────────
   useEffect(() => {
@@ -651,118 +684,159 @@ export default function SharedSidebar({
           </div>
         </div>
 
-        {/* ── Bottom Navigation Bar ── */}
+        {/* ── Pill Navigation Bar (scrollable) ── */}
+        <style>{`
+          .nabd-pill-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+          .nabd-pill-scroll::-webkit-scrollbar { display: none; }
+          @keyframes nabdPillIn { from { transform: scale(.92); opacity:.6 } to { transform: scale(1); opacity:1 } }
+        `}</style>
         <nav
           style={{
             position: "fixed",
             bottom: 0, left: 0, right: 0,
-            height: 72,
             background: BN_BG,
             borderTop: "1px solid rgba(255,255,255,0.12)",
-            display: "flex", alignItems: "stretch",
+            display: "flex", alignItems: "center",
             zIndex: 58,
             boxShadow: "0 -4px 24px rgba(5,88,168,0.35)",
-            // Safe area for iPhone home indicator
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >
-          {/* Back button — only on inner pages */}
+          {/* Back — fixed at edge */}
           {canGoBack && (
             <button
               onClick={handleBack}
               style={{
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                gap: 3, flex: 1, border: "none", background: "transparent",
-                color: BN_IDLE, cursor: "pointer", fontFamily: "Rubik, sans-serif",
-                fontSize: 10, fontWeight: 500, padding: "8px 4px",
-                transition: "color .18s",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 44, height: 44, margin: "10px 4px 10px 10px",
+                marginInlineStart: 10, marginInlineEnd: 4,
+                border: "1px solid rgba(255,255,255,0.15)", borderRadius: "50%",
+                background: "rgba(255,255,255,0.08)",
+                color: BN_IDLE, cursor: "pointer", flexShrink: 0,
+                transition: "all .18s",
               }}
+              aria-label={tr.back}
             >
-              <span style={{ display: "flex", alignItems: "center" }}>
-                {isAr ? Icons.backRtl : Icons.back}
-              </span>
-              {tr.back}
+              {isAr ? Icons.backRtl : Icons.back}
             </button>
           )}
 
-          {/* Main nav items */}
-          {MAIN_NAV.map(item => {
-            const isActive = item.key === activePage;
-            const isLocked = !planLoading && !canAccess(item.key, plan);
-            const iconKey  = item.iconLg as keyof typeof Icons;
-            const icon     = Icons[iconKey];
-            return (
-              <a
-                key={item.key}
-                href={isLocked ? undefined : item.href}
-                onClick={e => { if (isLocked) e.preventDefault(); }}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 3, flex: 1, textDecoration: "none",
-                  color: isLocked ? "rgba(255,255,255,0.2)" : (isActive ? BN_ACTIVE : BN_IDLE),
-                  fontFamily: "Rubik, sans-serif",
-                  fontSize: 10, fontWeight: isActive ? 700 : 500,
-                  padding: "8px 4px",
-                  position: "relative",
-                  transition: "color .18s",
-                  cursor: isLocked ? "not-allowed" : "pointer",
-                }}
-              >
-                {isActive && (
-                  <div style={{
-                    position: "absolute",
-                    top: 0, left: "50%", transform: "translateX(-50%)",
-                    width: 32, height: 3, background: BN_INDICATOR,
-                    borderRadius: "0 0 4px 4px",
-                  }} />
-                )}
-                <span style={{ display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.75 }}>
-                  {icon}
-                </span>
-                <span style={{ lineHeight: 1 }}>
-                  {isLocked ? "🔒" : (tr as Record<string,string>)[item.key]}
-                </span>
-              </a>
-            );
-          })}
+          {/* Scrollable pills */}
+          <div
+            ref={pillScrollRef}
+            className="nabd-pill-scroll"
+            onPointerDown={onPillPointerDown}
+            onPointerMove={onPillPointerMove}
+            onPointerUp={onPillPointerUp}
+            onPointerLeave={onPillPointerUp}
+            style={{
+              flex: 1, minWidth: 0,
+              display: "flex", alignItems: "center", gap: 8,
+              overflowX: "auto",
+              padding: "12px 10px",
+              scrollBehavior: dragState.current.dragging ? "auto" : "smooth",
+              WebkitOverflowScrolling: "touch",
+              touchAction: "pan-x",
+              maskImage: "linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%)",
+              WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%)",
+              cursor: dragState.current.dragging ? "grabbing" : "grab",
+            }}
+          >
+            {[...MAIN_NAV.map(i => ({ key: i.key, href: i.href, iconKey: i.iconLg })),
+              ...SECONDARY_NAV.map(i => ({ key: i.key, href: i.href, iconKey: i.icon }))
+            ].map(item => {
+              const isActive  = item.key === activePage;
+              const isLocked  = !planLoading && !canAccess(item.key, plan);
+              const icon      = Icons[item.iconKey as keyof typeof Icons] ?? Icons.dashboard;
+              const showBadge = item.key === "messages" && unreadMsgs > 0;
+              return (
+                <a
+                  key={item.key}
+                  data-pill-key={item.key}
+                  href={isLocked ? undefined : item.href}
+                  onClick={e => {
+                    if (isLocked || dragState.current.moved) { e.preventDefault(); return; }
+                  }}
+                  draggable={false}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 7,
+                    padding: isActive ? "10px 16px" : "10px 13px",
+                    borderRadius: 999,
+                    textDecoration: "none",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    userSelect: "none",
+                    background: isActive
+                      ? "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(230,244,255,0.95))"
+                      : "rgba(255,255,255,0.09)",
+                    border: isActive
+                      ? "1px solid rgba(255,255,255,0.9)"
+                      : "1px solid rgba(255,255,255,0.14)",
+                    color: isLocked
+                      ? "rgba(255,255,255,0.25)"
+                      : isActive ? "#0558a8" : BN_IDLE,
+                    boxShadow: isActive ? "0 4px 14px rgba(0,0,0,0.25)" : "none",
+                    fontFamily: "Rubik, sans-serif",
+                    fontSize: 12.5, fontWeight: isActive ? 700 : 500,
+                    position: "relative",
+                    transition: "background .22s, color .22s, box-shadow .22s, padding .22s",
+                    animation: isActive ? "nabdPillIn .22s ease" : undefined,
+                    cursor: isLocked ? "not-allowed" : "pointer",
+                    opacity: isLocked ? 0.55 : 1,
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", transform: "scale(.85)", position: "relative" }}>
+                    {icon}
+                    {showBadge && (
+                      <span style={{
+                        position: "absolute", top: -5, [isAr ? "left" : "right"]: -7,
+                        minWidth: 15, height: 15, padding: "0 3px",
+                        borderRadius: "50%", background: "#e53935",
+                        color: "#fff", fontSize: 9, fontWeight: 700,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        border: `1.5px solid ${isActive ? "#fff" : "#0558a8"}`, lineHeight: 1,
+                      }}>
+                        {unreadMsgs > 9 ? "9+" : unreadMsgs}
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ lineHeight: 1 }}>
+                    {(tr as Record<string,string>)[item.key]}{isLocked ? " 🔒" : ""}
+                  </span>
+                </a>
+              );
+            })}
+          </div>
 
-          {/* More button */}
+          {/* More — fixed at edge */}
           <button
             onClick={() => setMoreOpen(o => !o)}
             style={{
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 3, flex: 1, border: "none", background: "transparent",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 44, height: 44,
+              marginInlineStart: 4, marginInlineEnd: 10,
+              border: moreOpen ? "1px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "50%",
+              background: moreOpen ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)",
               color: isMoreActive || moreOpen ? BN_ACTIVE : BN_IDLE,
-              cursor: "pointer", fontFamily: "Rubik, sans-serif",
-              fontSize: 10, fontWeight: isMoreActive || moreOpen ? 700 : 500,
-              padding: "8px 4px", position: "relative",
-              transition: "color .18s",
+              cursor: "pointer", flexShrink: 0, position: "relative",
+              transition: "all .18s",
             }}
+            aria-label={tr.more}
           >
-            {(isMoreActive || moreOpen) && (
-              <div style={{
-                position: "absolute",
-                top: 0, left: "50%", transform: "translateX(-50%)",
-                width: 32, height: 3, background: BN_INDICATOR,
-                borderRadius: "0 0 4px 4px",
-              }} />
+            {Icons.more}
+            {unreadMsgs > 0 && (
+              <span style={{
+                position: "absolute", top: 2, [isAr ? "left" : "right"]: 0,
+                minWidth: 14, height: 14, padding: "0 3px",
+                borderRadius: "50%", background: "#e53935",
+                color: "#fff", fontSize: 8, fontWeight: 700,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: "1.5px solid #0558a8", lineHeight: 1,
+              }}>
+                {unreadMsgs > 9 ? "9+" : unreadMsgs}
+              </span>
             )}
-            <span style={{ display: "flex", alignItems: "center", opacity: isMoreActive || moreOpen ? 1 : 0.75, position: "relative" }}>
-              {Icons.more}
-              {unreadMsgs > 0 && (
-                <span style={{
-                  position: "absolute", top: -4, [isAr ? "left" : "right"]: -6,
-                  minWidth: 14, height: 14, padding: "0 3px",
-                  borderRadius: "50%", background: "#e53935",
-                  color: "#fff", fontSize: 8, fontWeight: 700,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  border: "1.5px solid #0558a8", lineHeight: 1,
-                }}>
-                  {unreadMsgs > 9 ? "9+" : unreadMsgs}
-                </span>
-              )}
-            </span>
-            {tr.more}
           </button>
         </nav>
       </>
