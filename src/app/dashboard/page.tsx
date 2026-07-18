@@ -347,6 +347,47 @@ export default function DashboardPage() {
   const [maxDoctors, setMaxDoctors] = useState(0);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
 
+  // ── تثبيت التطبيق (PWA) ──
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallPopup, setShowInstallPopup] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem("nabd_install_dismissed");
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+      if (standalone || dismissed) return;
+      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      setIsIOS(ios);
+      if (ios) {
+        // iOS لا يدعم beforeinstallprompt — نعرض التعليمات بعد ثوانٍ
+        const t = setTimeout(() => setShowInstallPopup(true), 2500);
+        return () => clearTimeout(t);
+      }
+      const handler = (e: Event) => {
+        e.preventDefault();
+        setInstallPrompt(e);
+        setShowInstallPopup(true);
+      };
+      window.addEventListener("beforeinstallprompt", handler);
+      return () => window.removeEventListener("beforeinstallprompt", handler);
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") setShowInstallPopup(false);
+    setInstallPrompt(null);
+    try { localStorage.setItem("nabd_install_dismissed", "1"); } catch { /* ignore */ }
+  };
+
+  const dismissInstall = () => {
+    setShowInstallPopup(false);
+    try { localStorage.setItem("nabd_install_dismissed", "1"); } catch { /* ignore */ }
+  };
+
   // drag & drop order
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -677,6 +718,7 @@ export default function DashboardPage() {
         *{margin:0;padding:0;box-sizing:border-box}
         .main-fade{animation:fadeIn .4s ease}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes installUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
         .qa-btn{transition:transform .22s cubic-bezier(.4,0,.2,1),box-shadow .22s ease}
         .qa-btn:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(8,99,186,.18)!important}
         .qa-btn:active{transform:translateY(-1px)}
@@ -863,6 +905,44 @@ export default function DashboardPage() {
           </div>
 
         </main>
+
+        {/* ─── بوب أب تثبيت التطبيق ─── */}
+        {showInstallPopup && (
+          <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:16 }}>
+            <div onClick={dismissInstall} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)" }}/>
+            <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:24,maxWidth:400,width:"100%",padding:"28px 26px",textAlign:"center",boxShadow:"0 24px 80px rgba(8,99,186,.3)",animation:"installUp .35s cubic-bezier(.4,0,.2,1)",marginBottom:20 }}>
+              <div style={{ width:68,height:68,borderRadius:20,background:"linear-gradient(135deg,#054a8c,#3d8fd6)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:"0 10px 26px rgba(8,99,186,.35)" }}>
+                <img src="/Logo_Nabd.svg" alt="نبض" style={{ width:38,height:38,filter:"brightness(0) invert(1)" }}/>
+              </div>
+              <h3 style={{ fontSize:18,fontWeight:800,color:BRAND.ink,marginBottom:8 }}>
+                {isAr?"ثبّت تطبيق نبض":"Install NABD App"}
+              </h3>
+              <p style={{ fontSize:13,color:BRAND.muted,lineHeight:1.8,marginBottom:20 }}>
+                {isAr
+                  ? "أضف نبض إلى شاشتك الرئيسية للوصول السريع، وتجربة أسرع بملء الشاشة، وإشعارات فورية."
+                  : "Add NABD to your home screen for quick access, a faster full-screen experience, and instant notifications."}
+              </p>
+              {isIOS ? (
+                <div style={{ background:BRAND.sky,borderRadius:14,padding:"14px 16px",textAlign:"start",marginBottom:16 }}>
+                  <div style={{ fontSize:12.5,fontWeight:700,color:BRAND.primary,marginBottom:8 }}>{isAr?"للتثبيت على آيفون:":"To install on iPhone:"}</div>
+                  <div style={{ fontSize:12,color:BRAND.ink,lineHeight:2 }}>
+                    {isAr?"١. اضغط زر المشاركة":"1. Tap the Share button"} <svg style={{ verticalAlign:"middle" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={BRAND.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> {isAr?"في شريط Safari السفلي":"in Safari's bottom bar"}<br/>
+                    {isAr?"٢. اختر \"إضافة إلى الشاشة الرئيسية\"":"2. Choose \"Add to Home Screen\""}<br/>
+                    {isAr?"٣. اضغط \"إضافة\"":"3. Tap \"Add\""}
+                  </div>
+                </div>
+              ) : (
+                <button onClick={handleInstall} style={{ width:"100%",padding:"14px",background:"linear-gradient(135deg,#0863ba,#3d8fd6)",color:"#fff",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:800,cursor:"pointer",boxShadow:"0 6px 18px rgba(8,99,186,.35)",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {isAr?"تثبيت التطبيق الآن":"Install App Now"}
+                </button>
+              )}
+              <button onClick={dismissInstall} style={{ width:"100%",padding:"11px",background:"none",color:BRAND.muted,border:"none",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
+                {isAr?"لاحقاً":"Maybe later"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
