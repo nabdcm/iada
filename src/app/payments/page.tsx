@@ -1,7 +1,7 @@
 "use client";
 
 import AppIcon from "@/components/AppIcon";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { type CSSProperties, useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Payment } from "@/lib/supabase";
@@ -702,7 +702,6 @@ function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, 
 }) {
   const [val, setVal] = useState("");
   const [err, setErr] = useState(false);
-  const [ro, setRo] = useState(true); // readOnly حتى أول focus — يمنع الملء التلقائي
   const submit = () => {
     if (val.trim() === (expected ?? "").trim()) { onSuccess(); }
     else setErr(true);
@@ -714,18 +713,15 @@ function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, 
         <div style={{ width:60,height:60,borderRadius:18,background:"linear-gradient(135deg,#0863ba,#3d8fd6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 14px",boxShadow:"0 8px 20px rgba(8,99,186,.3)" }}>{icon}</div>
         <h3 style={{ fontSize:16,fontWeight:800,color:"#1c2b3a",marginBottom:8 }}>{title}</h3>
         <p style={{ fontSize:13,color:"#8a97a6",marginBottom:20 }}>{desc}</p>
-        {/* حقول وهمية لامتصاص الملء التلقائي من المتصفح */}
-        <input type="text" name="fake-user" autoComplete="username" style={{ position:"absolute",opacity:0,height:0,width:0,pointerEvents:"none" }} tabIndex={-1} aria-hidden="true" />
-        <input type="password" name="fake-pw" autoComplete="current-password" style={{ position:"absolute",opacity:0,height:0,width:0,pointerEvents:"none" }} tabIndex={-1} aria-hidden="true" />
+        {/* type="text" مع إخفاء بصري للأحرف — المتصفح لا يملأ حقول النص تلقائياً أبداً */}
         <input
-          type="password" inputMode="text" value={val} autoFocus
-          autoComplete="one-time-code" name={`pw-${Math.random().toString(36).slice(2)}`}
-          readOnly={ro} onFocus={()=>setRo(false)}
-          data-lpignore="true" data-1p-ignore="true" data-form-type="other"
+          type="text" value={val}
+          autoComplete="off" spellCheck={false} autoCorrect="off" autoCapitalize="off"
+          name="npx-code" data-lpignore="true" data-1p-ignore="true"
           onChange={e=>{ setVal(e.target.value); if(err) setErr(false); }}
           onKeyDown={e=>{ if(e.key==="Enter" && !e.nativeEvent.isComposing){ e.preventDefault(); submit(); } }}
           placeholder={isAr?"كلمة السر...":"Password..."}
-          style={{ width:"100%",padding:"13px 16px",border:err?"2px solid #c0392b":"1.5px solid #e6edf5",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:16,outline:"none",boxSizing:"border-box",marginBottom:err?8:16,textAlign:"center",letterSpacing:3,direction:"ltr",background:"#f8fbfe" }}
+          style={{ width:"100%",padding:"13px 16px",border:err?"2px solid #c0392b":"1.5px solid #e6edf5",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:16,outline:"none",boxSizing:"border-box",marginBottom:err?8:16,textAlign:"center",letterSpacing:3,direction:"ltr",background:"#f8fbfe",WebkitTextSecurity:"disc",textSecurity:"disc" } as CSSProperties}
         />
         {err && <p style={{ color:"#c0392b",fontSize:12,marginBottom:16,fontWeight:600 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
         <div style={{ display:"flex",gap:10 }}>
