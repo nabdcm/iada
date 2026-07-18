@@ -334,13 +334,17 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     try {
       const cleanPhone = form.phone.trim();
 
-      // ── تحقق إذا المريض مسجل مسبقاً في هذه العيادة (بالهاتف) ──
-      const { data: existingPatient } = await supabase
-        .from("patients")
-        .select("id")
-        .eq("user_id", clinicId)
-        .eq("phone", cleanPhone)
-        .maybeSingle();
+      // ── تحقق إذا المريض مسجل مسبقاً في هذه العيادة (بالهاتف) — عبر API آمن ──
+      let existingPatient: { id: number } | null = null;
+      try {
+        const checkRes = await fetch("/api/book-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clinicId, phone: cleanPhone }),
+        });
+        const checkJson = await checkRes.json();
+        if (checkJson?.id) existingPatient = { id: checkJson.id };
+      } catch { /* ignore */ }
 
       // ── إنشاء الموعد بـ guest fields — المريض لا يُضاف حتى تتم الموافقة ──
       // إذا كان المريض مسجلاً مسبقاً: نربط patient_id فوراً

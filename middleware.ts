@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room"];
 const PHARMACY_PROTECTED = ["/pharmacy"];
+const PATIENT_PROTECTED = ["/patient-portal"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -42,6 +43,15 @@ export async function middleware(request: NextRequest) {
       }
     } catch {
       return NextResponse.next();
+    }
+    return NextResponse.next();
+  }
+
+  // ── حماية بوابة المريض بجلسة cookie الخاصة بها ─────────────
+  if (PATIENT_PROTECTED.some(p => pathname.startsWith(p))) {
+    const patientCookie = request.cookies.get("nabd_patient_session")?.value;
+    if (!patientCookie) {
+      return NextResponse.redirect(new URL("/portal?type=patient", request.url));
     }
     return NextResponse.next();
   }

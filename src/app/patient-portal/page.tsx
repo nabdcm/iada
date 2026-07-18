@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 
 // ============================================================
 // NABD - نبض | Patient Portal — بوابة المريض
@@ -438,70 +437,13 @@ function PatientDashboard({ master, lang, onLogout }: {
     (async () => {
       setLoading(true);
       try {
-        // 1) جلب جميع سجلات هذا المريض من patients بالهاتف
-        const { data: patientsData, error: pErr } = await supabase
-          .from("patients")
-          .select("*")
-          .eq("phone", master.phone);
-
-        if (pErr) console.error("patients fetch error:", pErr);
-        if (!patientsData || patientsData.length === 0) {
-          setLoading(false);
+        const res = await fetch("/api/patient-records");
+        if (res.status === 401) {
+          window.location.href = "/portal?type=patient";
           return;
         }
-
-        // 2) جلب بيانات العيادات بـ user_id
-        const userIds = [...new Set((patientsData as any[]).map((p: any) => p.user_id).filter(Boolean))];
-        const clinicsMap: Record<string, any> = {};
-
-        if (userIds.length > 0) {
-          const { data: clinicsData } = await supabase
-            .from("clinics")
-            .select("user_id, name, clinic_type, owner")
-            .in("user_id", userIds);
-
-          (clinicsData ?? []).forEach((c: any) => {
-            clinicsMap[c.user_id] = c;
-          });
-        }
-
-        // 3) جلب الملفات الطبية من patient_profiles
-        const patientIds = (patientsData as any[]).map((p: any) => p.id);
-        const { data: profilesData } = await supabase
-          .from("patient_profiles")
-          .select("patient_id, medical_fields, xrays")
-          .in("patient_id", patientIds);
-
-        const profilesMap: Record<number, any> = {};
-        (profilesData ?? []).forEach((pr: any) => {
-          profilesMap[pr.patient_id] = pr;
-        });
-
-        // 4) بناء قائمة السجلات النهائية
-        const built: ClinicRecord[] = (patientsData as any[]).map((p: any) => {
-          const clinic = clinicsMap[p.user_id] ?? {};
-          const prof = profilesMap[p.id] ?? {};
-
-          return {
-            clinic_name: clinic?.name ?? "—",
-            clinic_type: (clinic?.clinic_type || "other") as ClinicType,
-            doctor_name: clinic?.owner ?? "—",
-            patient_id: p.id,
-            mrn: master.mrn,
-            medical_fields: prof.medical_fields ?? {},
-            xrays: prof.xrays ?? [],
-            patient_info: {
-              name: p.name,
-              phone: p.phone,
-              gender: p.gender,
-              date_of_birth: p.date_of_birth,
-              has_diabetes: p.has_diabetes,
-              has_hypertension: p.has_hypertension,
-              notes: p.notes,
-            },
-          } satisfies ClinicRecord;
-        });
-
+        const json = await res.json();
+        const built: ClinicRecord[] = (json.records ?? []) as ClinicRecord[];
         setRecords(built);
         if (built.length > 0) setPatientInfo(built[0].patient_info);
       } catch (e) {
@@ -775,20 +717,25 @@ export default function PatientPortalPage() {
   const [lang] = useState<Lang>("ar");
   const [master, setMaster] = useState<MasterPatient | null>(null);
 
-  // استعادة الجلسة عند تحديث الصفحة — وإلا التوجيه لبوابة الدخول الموحدة
+  // استعادة الجلسة من cookie الخادم — وإلا التوجيه لبوابة الدخول الموحدة
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("nabd_patient");
-      if (saved) {
-        setMaster(JSON.parse(saved));
-        return;
-      }
-    } catch { /* ignore */ }
-    window.location.href = "/portal?type=patient";
+    (async () => {
+      try {
+        const res = await fetch("/api/patient-records");
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.patient) {
+            setMaster(json.patient as MasterPatient);
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+      window.location.href = "/portal?type=patient";
+    })();
   }, []);
 
-  const handleLogout = () => {
-    try { sessionStorage.removeItem("nabd_patient"); } catch { /* ignore */ }
+  const handleLogout = async () => {
+    try { await fetch("/api/patient-logout", { method: "POST" }); } catch { /* ignore */ }
     setMaster(null);
     window.location.href = "/portal?type=patient";
   };

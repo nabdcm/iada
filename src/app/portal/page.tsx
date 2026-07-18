@@ -130,21 +130,16 @@ function PatientLoginForm({ lang, tr }: { lang: Lang; tr: LoginTranslation }) {
     setLoading(true);
     setError("");
     try {
-      // استعلام مباشر على جدول master_patients — نفس منطق صفحة بوابة المريض الأساسية
-      const { data, error: dbErr } = await supabase
-        .from("master_patients")
-        .select("name, phone, mrn")
-        .eq("phone", phone.trim())
-        .eq("mrn", mrn.trim().toUpperCase())
-        .maybeSingle();
-
-      if (dbErr || !data) {
+      const res = await fetch("/api/patient-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phone.trim(), mrn: mrn.trim().toUpperCase() }),
+      });
+      if (!res.ok) {
         setError(tr.errors.patient);
         setLoading(false);
         return;
       }
-      // حفظ جلسة المريض والانتقال لبوابته
-      try { sessionStorage.setItem("nabd_patient", JSON.stringify(data)); } catch { /* ignore */ }
       window.location.href = "/patient-portal";
     } catch {
       setError(tr.errors.network);
