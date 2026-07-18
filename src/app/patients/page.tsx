@@ -1645,6 +1645,8 @@ export default function PatientsPage() {
   const [search,         setSearch]         = useState("");
   const [filter,         setFilter]         = useState("all");
   const [showHidden,     setShowHidden]     = useState(false);
+  const [page,           setPage]           = useState(1);
+  const PAGE_SIZE = 10;
   const [openMenuId,     setOpenMenuId]     = useState<number|null>(null);
   const [addModal,       setAddModal]       = useState(false);
   const [editPatient,    setEditPatient]    = useState<Patient|null>(null);
@@ -1736,6 +1738,8 @@ export default function PatientsPage() {
     return ()=>window.removeEventListener("click",handler);
   },[]);
 
+  useEffect(()=>{ setPage(1); },[search,filter,showHidden]);
+
   const filtered = patients.filter(p=>{
     if (!showHidden&&p.is_hidden) return false;
     const q=search.toLowerCase();
@@ -1748,6 +1752,10 @@ export default function PatientsPage() {
 
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paged      = filtered.slice((safePage-1)*PAGE_SIZE, safePage*PAGE_SIZE);
 
   const visibleAll  = patients.filter(p=>!p.is_hidden);
   const _now        = new Date();
@@ -2027,7 +2035,7 @@ export default function PatientsPage() {
                   <div style={{ fontSize:40,marginBottom:12 }}><AppIcon glyph="🔍" /></div>
                   <div style={{ fontSize:15,fontWeight:600 }}>{search?tr.noResults:tr.noPatients}</div>
                 </div>
-              ):filtered.map(p=>(
+              ):paged.map(p=>(
                 <PatientCard key={p.id} p={p} lang={lang} isAr={isAr} calcAge={calcAge} clinicType={clinicType}
                   onEdit={()=>setEditPatient(p)} onDelete={()=>setDeletePatient(p)}
                   onToggleHide={()=>toggleHide(p.id)} onWhatsApp={()=>p.phone&&openWhatsApp(p.phone)}
@@ -2061,7 +2069,7 @@ export default function PatientsPage() {
                     <div style={{ fontSize:40,marginBottom:12 }}><AppIcon glyph="🔍" /></div>
                     <div style={{ fontSize:15,fontWeight:600 }}>{search?tr.noResults:tr.noPatients}</div>
                   </div>
-                ):filtered.map(p=>(
+                ):paged.map(p=>(
                   <div key={p.id} className="patient-row" style={{ display:"grid",gridTemplateColumns:"200px 130px 90px 140px 1fr",gap:0,padding:"13px 20px",alignItems:"center",opacity:p.is_hidden?0.5:1,animation:animIds.includes(p.id)?"rowIn .4s ease":undefined }}>
                     {/* الاسم */}
                     <div style={{ display:"flex",alignItems:"center",gap:10,minWidth:0 }}>
@@ -2128,8 +2136,39 @@ export default function PatientsPage() {
               </div>
             </div>
 
-            <div style={{ textAlign:"center",marginTop:14,fontSize:12,color:"#bbb" }}>
-              {isAr?`عرض ${filtered.length} من ${patients.filter(p=>showHidden||!p.is_hidden).length} مريض`:`Showing ${filtered.length} of ${patients.filter(p=>showHidden||!p.is_hidden).length} patients`}
+            {totalPages > 1 && (
+              <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:20,flexWrap:"wrap" }}>
+                <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={safePage===1}
+                  style={{ width:36,height:36,borderRadius:10,border:"1.5px solid #e6edf5",background:"#fff",cursor:safePage===1?"not-allowed":"pointer",opacity:safePage===1?0.4:1,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Rubik,sans-serif" }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform:isAr?"none":"scaleX(-1)" }}><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                {(() => {
+                  const pages: (number|string)[] = [];
+                  for (let i=1;i<=totalPages;i++){
+                    if (i===1||i===totalPages||Math.abs(i-safePage)<=1) pages.push(i);
+                    else if (pages[pages.length-1]!=="…") pages.push("…");
+                  }
+                  return pages.map((pg,idx)=> pg==="…" ? (
+                    <span key={`e${idx}`} style={{ color:"#b3bdc9",fontSize:13,padding:"0 2px" }}>…</span>
+                  ) : (
+                    <button key={pg} onClick={()=>setPage(pg as number)}
+                      style={{ minWidth:36,height:36,padding:"0 8px",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",fontVariantNumeric:"tabular-nums",
+                        border:pg===safePage?"none":"1.5px solid #e6edf5",
+                        background:pg===safePage?"linear-gradient(135deg,#0863ba,#3d8fd6)":"#fff",
+                        color:pg===safePage?"#fff":"#8a97a6",
+                        boxShadow:pg===safePage?"0 4px 12px rgba(8,99,186,.3)":"none",transition:"all .2s" }}>
+                      {pg}
+                    </button>
+                  ));
+                })()}
+                <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={safePage===totalPages}
+                  style={{ width:36,height:36,borderRadius:10,border:"1.5px solid #e6edf5",background:"#fff",cursor:safePage===totalPages?"not-allowed":"pointer",opacity:safePage===totalPages?0.4:1,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Rubik,sans-serif" }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform:isAr?"scaleX(-1)":"none" }}><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            )}
+            <div style={{ textAlign:"center",marginTop:12,fontSize:12,color:"#b3bdc9" }}>
+              {isAr?`عرض ${paged.length} من ${filtered.length} مريض`:`Showing ${paged.length} of ${filtered.length} patients`}
             </div>
           </div>
         </main>
