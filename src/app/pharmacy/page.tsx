@@ -1073,14 +1073,27 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   );
 }
 
-function ReportsTab({lang,medicines,sales,userId}:{lang:Lang;medicines:Medicine[];sales:Sale[];userId:string|null}) {
+function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicines:Medicine[];sales:Sale[];userId:string|null;currentUser:User}) {
   const isAr=lang==="ar";
   const [profit,setProfit]=useState<{byMedicine:{medicine_id:number;medicine_name:string;qty_sold:number;revenue:number;cost:number;profit:number;margin:number}[];totals:{revenue:number;cost:number;profit:number;margin:number}}|null>(null);
+  const [lockedUntil,setLockedUntil]=useState<string|null>(null);
+  const [lockDate,setLockDate]=useState(""); const [lockMsg,setLockMsg]=useState("");
 
   useEffect(()=>{
     if(!userId) return;
     fetch(`/api/pharmacy/profitability?user_id=${userId}`).then(r=>r.json()).then(setProfit);
+    fetch(`/api/pharmacy/period-lock?user_id=${userId}`).then(r=>r.json()).then(j=>setLockedUntil(j.lock?.locked_until||"1900-01-01"));
   },[userId,sales.length]);
+
+  const closePeriod=async()=>{
+    if(!userId||!lockDate){ return; }
+    const closed_by=isAr?currentUser.name_ar:currentUser.name_en;
+    const res=await fetch("/api/pharmacy/period-lock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,locked_until:lockDate,closed_by})});
+    const json=await res.json();
+    if(json.success){ setLockedUntil(json.locked_until); setLockMsg(isAr?"تم إقفال الفترة بنجاح":"Period closed successfully"); setLockDate(""); }
+    else setLockMsg(json.error||"Error");
+    setTimeout(()=>setLockMsg(""),4000);
+  };
 
   const totalRev=sales.reduce((s,x)=>s+x.total,0);
   const totalProfit=profit?.totals.profit ?? null;
@@ -1125,6 +1138,20 @@ function ReportsTab({lang,medicines,sales,userId}:{lang:Lang;medicines:Medicine[
         <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:13,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"الأكثر مبيعاً":"Best Selling"}</h3>
         {topMeds.map((m,i)=>(<div key={m.id} style={{display:"flex",alignItems:"center",gap:11,padding:"9px 0",borderBottom:i<topMeds.length-1?"1px solid #f0f2f5":"none"}}><div style={{width:26,height:26,borderRadius:7,background:"#0863ba",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,flexShrink:0}}>{i+1}</div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div><div style={{fontSize:9,color:"#aaa",fontFamily:"monospace"}}>{m.barcode}</div></div><div style={{fontSize:12,fontWeight:700,color:"#0863ba"}}>{m.soldQty} {isAr?"وحدة":"units"}</div></div>))}
         {topMeds.length===0&&<div style={{textAlign:"center",padding:"18px",color:"#ccc",fontSize:12}}>{isAr?"لا بيانات":"No data"}</div>}
+      </div>
+
+      <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginTop:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
+        <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>🔒 {isAr?"إقفال الفترة المحاسبية":"Period Closing"}</h3>
+        <div style={{fontSize:10,color:"#bbb",marginBottom:12}}>{isAr?"يمنع أي تعديل أو إضافة بأثر رجعي للتواريخ المقفلة":"Prevents retroactive edits or additions for locked dates"}</div>
+        <div style={{background:"#f7f9fc",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:12,color:"#888"}}>{isAr?"مقفل حتى تاريخ":"Locked through"}</span>
+          <span style={{fontSize:14,fontWeight:800,color:"#0863ba"}}>{lockedUntil&&lockedUntil!=="1900-01-01"?lockedUntil:(isAr?"لا يوجد إقفال بعد":"No closing yet")}</span>
+        </div>
+        <div style={{display:"flex",gap:9}}>
+          <input type="date" value={lockDate} onChange={e=>setLockDate(e.target.value)} style={{flex:1,padding:"9px 12px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/>
+          <button onClick={closePeriod} disabled={!lockDate} style={{padding:"9px 18px",background:lockDate?"#2c3e50":"#ccc",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:lockDate?"pointer":"not-allowed",whiteSpace:"nowrap"}}>🔒 {isAr?"إقفال حتى هذا التاريخ":"Close through date"}</button>
+        </div>
+        {lockMsg&&<div style={{marginTop:9,fontSize:12,fontWeight:600,color:lockMsg.includes("نجاح")||lockMsg.includes("success")?"#27ae60":"#e74c3c"}}>{lockMsg}</div>}
       </div>
     </div>
   );
@@ -1350,7 +1377,7 @@ export default function PharmacyPage() {
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
-                {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={userId}/>}
+                {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={userId} currentUser={currentUser}/>}
                 {activeTab==="alerts"       &&<AlertsTab        lang={lang} medicines={medicines} alerts={alerts} markAll={markAll} markOne={markOne}/>}
               </>
             )}

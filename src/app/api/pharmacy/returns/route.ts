@@ -1,6 +1,7 @@
 // src/app/api/pharmacy/returns/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getLockedUntil } from "../period-lock/route";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,8 +22,13 @@ export async function POST(req: Request) {
 
       // 1. التحقق أن البيعة تخص هذا المستخدم
       const { data: sale, error: saleError } = await supabaseAdmin
-        .from("pharmacy_sales").select("id").eq("id", sale_id).eq("user_id", user_id).single();
+        .from("pharmacy_sales").select("id, date").eq("id", sale_id).eq("user_id", user_id).single();
       if (saleError || !sale) return NextResponse.json({ error: "البيعة غير موجودة" }, { status: 404 });
+
+      const lockedUntil = await getLockedUntil(user_id);
+      if (sale.date <= lockedUntil) {
+        return NextResponse.json({ error: `لا يمكن إرجاع بيعة من فترة مقفلة محاسبيًا (حتى ${lockedUntil})` }, { status: 403 });
+      }
 
       // 2. التحقق من كل بند: الكمية المرتجعة لا تتجاوز (المباع - المرتجع سابقًا)
       for (const it of items as ReturnItemInput[]) {

@@ -1,6 +1,7 @@
 // src/app/api/pharmacy/invoices/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getLockedUntil } from "../period-lock/route";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,6 +17,11 @@ export async function POST(req: Request) {
     if (action === "add") {
       if (items !== undefined && !Array.isArray(items)) {
         return NextResponse.json({ error: "items يجب أن تكون مصفوفة" }, { status: 400 });
+      }
+      const invDate = fields.date || new Date().toISOString().slice(0, 10);
+      const lockedUntil = await getLockedUntil(user_id);
+      if (invDate <= lockedUntil) {
+        return NextResponse.json({ error: `هذه الفترة مقفلة محاسبيًا حتى ${lockedUntil}` }, { status: 403 });
       }
 
       // 1. الرأس
@@ -62,6 +68,13 @@ export async function POST(req: Request) {
     }
 
     if (action === "delete") {
+      const { data: existing } = await supabaseAdmin.from("pharmacy_purchase_invoices").select("date").eq("id", id).eq("user_id", user_id).single();
+      if (existing) {
+        const lockedUntil = await getLockedUntil(user_id);
+        if (existing.date <= lockedUntil) {
+          return NextResponse.json({ error: `لا يمكن حذف فاتورة بفترة مقفلة (حتى ${lockedUntil})` }, { status: 403 });
+        }
+      }
       const { error } = await supabaseAdmin.from("pharmacy_purchase_invoices").delete().eq("id", id).eq("user_id", user_id);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       return NextResponse.json({ success: true });

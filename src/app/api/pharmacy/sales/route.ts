@@ -1,6 +1,7 @@
 // src/app/api/pharmacy/sales/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getLockedUntil } from "../period-lock/route";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,12 @@ export async function POST(req: Request) {
     const { user_id, items, total, discount, payment_method, patient_name, prescription_id, cashier, date } = await req.json();
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
     if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "items required" }, { status: 400 });
+
+    const saleDate = date || new Date().toISOString().slice(0, 10);
+    const lockedUntil = await getLockedUntil(user_id);
+    if (saleDate <= lockedUntil) {
+      return NextResponse.json({ error: `هذه الفترة مقفلة محاسبيًا حتى ${lockedUntil}، لا يمكن إضافة عمليات بيع بتاريخ سابق أو مساوٍ` }, { status: 403 });
+    }
 
     // 0. التحقق من كفاية المخزون قبل أي إدخال + التقاط تكلفة الوحدة الحالية (WAC) لحساب الربح لاحقًا
     const costByMedicine: Record<number, number> = {};
