@@ -24,7 +24,7 @@ interface Patient {
   created_at?: string;
 }
 
-type XRayImage = { id: string; url: string; type: string; date: string; note: string; name: string };
+type XRayImage = { id: string; url: string | null; type: string; date: string; note: string; name: string; storage_path?: string | null };
 
 interface PatientProfile {
   medical_fields: Record<string, string>;
@@ -119,6 +119,10 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
+    if (file.size > 1024 * 1024) {
+      alert("حجم الصورة يتجاوز 1 ميغابايت — الرجاء ضغطها أو اختيار صورة أصغر");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       setPendingImg({
@@ -159,7 +163,7 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
       {pendingImg ? (
         <div style={{ borderRadius:14,border:"2px solid #0863ba",background:"#f0f6ff",padding:14,display:"flex",flexDirection:"column",gap:12 }}>
           <div style={{ fontSize:12,fontWeight:700,color:"#0863ba" }}>🩻 معاينة الصورة — تأكد قبل الحفظ</div>
-          <img src={pendingImg.url} alt={pendingImg.name} style={{ width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,background:"#000",border:"1.5px solid #dde4f0" }}/>
+          <img src={pendingImg.url ?? ""} alt={pendingImg.name} style={{ width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,background:"#000",border:"1.5px solid #dde4f0" }}/>
           <div style={{ fontSize:11,color:"#555" }}><span style={{ fontWeight:700 }}>الملف:</span> {pendingImg.name}</div>
           <div style={{ display:"flex",gap:10 }}>
             <button onClick={confirmSave} disabled={saving}
@@ -192,7 +196,7 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
           {xrays.map(img=>(
             <div key={img.id} onClick={()=>setPreview(img)} style={{ borderRadius:12,overflow:"hidden",border:"1.5px solid #eef0f3",background:"#fff",boxShadow:"0 2px 8px rgba(0,0,0,.06)",cursor:"pointer" }}>
               <div style={{ position:"relative",aspectRatio:"4/3",overflow:"hidden",background:"#f0f2f5" }}>
-                <img src={img.url} alt={img.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
+                <img src={img.url ?? ""} alt={img.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
                 <button onClick={e=>{e.stopPropagation();onChange(xrays.filter(x=>x.id!==img.id));}} style={{ position:"absolute",top:4,right:4,width:22,height:22,borderRadius:"50%",background:"rgba(0,0,0,.5)",border:"none",cursor:"pointer",color:"#fff",fontSize:11 }}>✕</button>
               </div>
               <div style={{ padding:"8px 10px" }}>
@@ -209,7 +213,7 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
         <div style={{ position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"center",justifyContent:"center" }} onClick={()=>setPreview(null)}>
           <div style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative",zIndex:1,maxWidth:"90vw",maxHeight:"90vh",display:"flex",flexDirection:"column",gap:12 }} onClick={e=>e.stopPropagation()}>
-            <img src={preview.url} alt={preview.name} style={{ maxWidth:"100%",maxHeight:"80vh",borderRadius:12,objectFit:"contain" }}/>
+            <img src={preview.url ?? ""} alt={preview.name} style={{ maxWidth:"100%",maxHeight:"80vh",borderRadius:12,objectFit:"contain" }}/>
             <div style={{ background:"rgba(255,255,255,.1)",backdropFilter:"blur(10px)",borderRadius:10,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
               <div><div style={{ color:"#fff",fontSize:13,fontWeight:700 }}>{XRAY_TYPES[preview.type]}</div><div style={{ color:"rgba(255,255,255,.6)",fontSize:11 }}>{preview.date}{preview.note&&` — ${preview.note}`}</div></div>
               <button onClick={()=>setPreview(null)} style={{ background:"rgba(255,255,255,.2)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:16,width:32,height:32 }}>✕</button>

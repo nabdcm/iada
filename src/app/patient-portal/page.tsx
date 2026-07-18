@@ -82,7 +82,7 @@ type ClinicRecord = {
   patient_id: number;
   mrn: string;
   medical_fields: Record<string, string>;
-  xrays: { id: string; url: string; type: string; date: string; note: string; name: string }[];
+  xrays: { id: string; url: string | null; type: string; date: string; note: string; name: string; storage_path?: string | null }[];
   patient_info: {
     name: string;
     phone: string;
@@ -389,7 +389,7 @@ function ClinicCard({ record, lang, isExpanded, onToggle }: {
                           overflow: "hidden", background: "#f0f2f5",
                         }}>
                           <img
-                            src={img.url} alt={img.name}
+                            src={img.url ?? ""} alt={img.name}
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                           />
                         </div>

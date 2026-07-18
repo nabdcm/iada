@@ -375,7 +375,7 @@ type PatientForm = {
 type ToothStatus = "healthy"|"filled"|"crown"|"missing"|"extraction"|"root_canal"|"bridge"|"implant"|"fractured"|"decayed";
 type ToothData   = { status:ToothStatus; notes:string };
 type DentalChart = Record<number, ToothData>;
-type XRayImage   = { id:string; url:string; type:string; date:string; note:string; name:string };
+type XRayImage   = { id:string; url:string|null; type:string; date:string; note:string; name:string; storage_path?:string|null };
 type PatientProfile = {
   medical_fields: Record<string,string>;
   dental_chart: DentalChart;
@@ -830,10 +830,18 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
   const [preview,     setPreview]     = useState<XRayImage|null>(null);
   // حالة الصورة المُعلَّقة — تنتظر تأكيد الحفظ
   const [pendingImg,  setPendingImg]  = useState<XRayImage|null>(null);
+  const [pendingFile, setPendingFile] = useState<File|null>(null);
   const [saving,      setSaving]      = useState(false);
+  const MAX_XRAY_SIZE = 1024 * 1024; // 1MB
 
   const handleFile = (file:File) => {
     if (!file.type.startsWith("image/")) return;
+    if (file.size > MAX_XRAY_SIZE) {
+      alert(isAr ? "حجم الصورة يتجاوز 1 ميغابايت — الرجاء ضغطها أو اختيار صورة أصغر" : "Image exceeds 1MB — please compress or choose a smaller file");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setPendingFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
       const img:XRayImage = {
@@ -852,19 +860,56 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
   };
 
   const confirmSave = async () => {
-    if (!pendingImg) return;
+    if (!pendingImg || !pendingFile) return;
     setSaving(true);
-    // نُحدِّث نوع وملاحظة الصورة بأحدث قيمة من الفورم
-    const finalImg:XRayImage = { ...pendingImg, type:newType, note:newNote };
-    onChange([finalImg, ...xrays]);
-    setPendingImg(null);
-    setNewNote("");
-    setSaving(false);
+    try {
+      const ext  = pendingFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `uploads/${pendingImg.id}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const { error } = await supabase.storage.from("xrays").upload(path, pendingFile, { contentType: pendingFile.type });
+      if (error) {
+        alert(isAr ? `فشل رفع الصورة: ${error.message}` : `Upload failed: ${error.message}`);
+        setSaving(false);
+        return;
+      }
+      // نُحدِّث نوع وملاحظة الصورة بأحدث قيمة من الفورم — نحفظ مسار التخزين بدل base64
+      const finalImg:XRayImage = { ...pendingImg, url:null, storage_path:path, type:newType, note:newNote };
+      onChange([finalImg, ...xrays]);
+      setPendingImg(null);
+      setPendingFile(null);
+      setNewNote("");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const cancelPending = () => {
     setPendingImg(null);
+    setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  // تحويل storage_path إلى روابط موقّتة للعرض (الـ bucket خاص)
+  const [resolved, setResolved] = useState<Record<string,string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const need = xrays.filter(x => x.storage_path && !resolved[x.id]);
+      if (need.length === 0) return;
+      const entries: Record<string,string> = {};
+      for (const x of need) {
+        const { data } = await supabase.storage.from("xrays").createSignedUrl(x.storage_path!, 3600);
+        if (data?.signedUrl) entries[x.id] = data.signedUrl;
+      }
+      if (!cancelled && Object.keys(entries).length) setResolved(prev => ({ ...prev, ...entries }));
+    })();
+    return () => { cancelled = true; };
+  }, [xrays]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const imgSrc = (x:XRayImage): string => resolved[x.id] ?? x.url ?? "";
+
+  const removeXray = (img:XRayImage) => {
+    if (img.storage_path) supabase.storage.from("xrays").remove([img.storage_path]).catch(()=>{});
+    onChange(xrays.filter(x=>x.id!==img.id));
   };
 
   return (
@@ -890,7 +935,7 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
           <div style={{ fontSize:12,fontWeight:700,color:"#0863ba",marginBottom:2 }}>
             🩻 {isAr?"معاينة الصورة — تأكد قبل الحفظ":"Preview — confirm before saving"}
           </div>
-          <img src={pendingImg.url} alt={pendingImg.name}
+          <img src={pendingImg.url ?? ""} alt={pendingImg.name}
             style={{ width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,background:"#000",border:"1.5px solid #dde4f0" }}/>
           <div style={{ fontSize:11,color:"#555" }}>
             <span style={{ fontWeight:700 }}>{isAr?"الملف:":"File:"}</span> {pendingImg.name}
@@ -927,8 +972,8 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
           {xrays.map(img=>(
             <div key={img.id} onClick={()=>setPreview(img)} style={{ borderRadius:12,overflow:"hidden",border:"1.5px solid #eef0f3",background:"#fff",boxShadow:"0 2px 8px rgba(0,0,0,.06)",cursor:"pointer" }}>
               <div style={{ position:"relative",aspectRatio:"4/3",overflow:"hidden",background:"#f0f2f5" }}>
-                <img src={img.url} alt={img.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
-                <button onClick={e=>{e.stopPropagation();onChange(xrays.filter(x=>x.id!==img.id));}} style={{ position:"absolute",top:4,right:4,width:22,height:22,borderRadius:"50%",background:"rgba(0,0,0,.5)",border:"none",cursor:"pointer",color:"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
+                <img src={imgSrc(img)} alt={img.name} style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
+                <button onClick={e=>{e.stopPropagation();removeXray(img);}} style={{ position:"absolute",top:4,right:4,width:22,height:22,borderRadius:"50%",background:"rgba(0,0,0,.5)",border:"none",cursor:"pointer",color:"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
               </div>
               <div style={{ padding:"8px 10px" }}>
                 <div style={{ fontSize:11,fontWeight:700,color:"#0863ba" }}>{(t.xrayTypes as Record<string,string>)[img.type]??img.type}</div>
@@ -943,7 +988,7 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
         <div style={{ position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"center",justifyContent:"center" }} onClick={()=>setPreview(null)}>
           <div style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative",zIndex:1,maxWidth:"90vw",maxHeight:"90vh",display:"flex",flexDirection:"column",gap:12 }} onClick={e=>e.stopPropagation()}>
-            <img src={preview.url} alt={preview.name} style={{ maxWidth:"100%",maxHeight:"80vh",borderRadius:12,objectFit:"contain" }}/>
+            <img src={imgSrc(preview)} alt={preview.name} style={{ maxWidth:"100%",maxHeight:"80vh",borderRadius:12,objectFit:"contain" }}/>
             <div style={{ background:"rgba(255,255,255,.1)",backdropFilter:"blur(10px)",borderRadius:10,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
               <div><div style={{ color:"#fff",fontSize:13,fontWeight:700 }}>{(t.xrayTypes as Record<string,string>)[preview.type]}</div><div style={{ color:"rgba(255,255,255,.6)",fontSize:11 }}>{preview.date}{preview.note&&` — ${preview.note}`}</div></div>
               <button onClick={()=>setPreview(null)} style={{ background:"rgba(255,255,255,.2)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:16,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>

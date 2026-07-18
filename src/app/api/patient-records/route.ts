@@ -47,6 +47,18 @@ export async function GET(req: NextRequest) {
     (clinicsData ?? []).forEach(c => { clinicsMap[c.user_id] = c; });
 
     // 3) الملفات الطبية
+    // توقيع روابط الأشعة المخزّنة في Storage (bucket خاص)
+    type XrayEntry = { id?:string; url?:string|null; storage_path?:string|null } & Record<string, unknown>;
+    const signXrays = async (xr: unknown[]): Promise<XrayEntry[]> => {
+      const arr = (Array.isArray(xr) ? xr : []) as XrayEntry[];
+      return Promise.all(arr.map(async (x) => {
+        if (x?.storage_path) {
+          const { data } = await supabaseAdmin.storage.from("xrays").createSignedUrl(x.storage_path, 3600);
+          return { ...x, url: data?.signedUrl ?? x.url ?? null };
+        }
+        return x;
+      }));
+    };
     const patientIds = patients.map(p => p.id);
     const { data: profilesData } = await supabaseAdmin
       .from("patient_profiles")
@@ -55,7 +67,7 @@ export async function GET(req: NextRequest) {
     const profilesMap: Record<number, { medical_fields?: Record<string, string>; xrays?: unknown[] }> = {};
     (profilesData ?? []).forEach(pr => { profilesMap[pr.patient_id] = pr; });
 
-    const records = patients.map(p => {
+    const records = await Promise.all(patients.map(async p => {
       const clinic = clinicsMap[p.user_id] ?? {};
       const prof   = profilesMap[p.id] ?? {};
       return {
@@ -65,7 +77,7 @@ export async function GET(req: NextRequest) {
         patient_id:  p.id,
         mrn:         master.mrn,
         medical_fields: prof.medical_fields ?? {},
-        xrays:          prof.xrays ?? [],
+        xrays:          await signXrays(prof.xrays ?? []),
         patient_info: {
           name: p.name, phone: p.phone, gender: p.gender,
           date_of_birth: p.date_of_birth,
@@ -73,7 +85,7 @@ export async function GET(req: NextRequest) {
           notes: p.notes,
         },
       };
-    });
+    }));
 
     return NextResponse.json({ ok: true, patient: master, records });
   } catch {

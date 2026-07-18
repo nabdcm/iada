@@ -128,9 +128,20 @@ export async function POST(req: Request) {
         .eq("patient_id", patientId)
         .maybeSingle();
 
+      // توقيع روابط الأشعة المخزّنة في Storage (bucket خاص)
+      type XrayEntry = { id?:string; url?:string|null; storage_path?:string|null } & Record<string, unknown>;
+      const rawXrays = (Array.isArray(profile?.xrays) ? profile!.xrays : []) as XrayEntry[];
+      const signedXrays = await Promise.all(rawXrays.map(async (x) => {
+        if (x?.storage_path) {
+          const { data } = await supabaseAdmin.storage.from("xrays").createSignedUrl(x.storage_path, 3600);
+          return { ...x, url: data?.signedUrl ?? x.url ?? null };
+        }
+        return x;
+      }));
+
       return NextResponse.json({
         profile: profile
-          ? { medical_fields: profile.medical_fields ?? {}, extra_form_fields: profile.extra_form_fields ?? {}, xrays: profile.xrays ?? [] }
+          ? { medical_fields: profile.medical_fields ?? {}, extra_form_fields: profile.extra_form_fields ?? {}, xrays: signedXrays }
           : { medical_fields: {}, extra_form_fields: {}, xrays: [] },
       });
     }
@@ -199,12 +210,41 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (!patient) return BAD_REQUEST;
 
+      // تحويل أي صورة base64 جديدة إلى Storage — مع حد أقصى 1MB لكل صورة
+      const MAX_XRAY_BYTES = 1024 * 1024;
+      type XraySaveEntry = { id?:string; url?:string|null; storage_path?:string|null } & Record<string, unknown>;
+      const processedXrays: XraySaveEntry[] = [];
+      for (const raw of xrays as XraySaveEntry[]) {
+        if (typeof raw?.url === "string" && raw.url.startsWith("data:image")) {
+          const [meta, b64] = raw.url.split(",");
+          if (!b64) return BAD_REQUEST;
+          const buf = Buffer.from(b64, "base64");
+          if (buf.length > MAX_XRAY_BYTES) {
+            return NextResponse.json({ error: "file_too_large" }, { status: 413 });
+          }
+          const mime = meta.match(/data:(image\/[a-z+]+)/)?.[1] ?? "image/jpeg";
+          const ext  = mime.split("/")[1].replace("jpeg", "jpg");
+          const path = `ra/${patientId}/${raw.id ?? Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+          const { error: upErr } = await supabaseAdmin.storage.from("xrays")
+            .upload(path, buf, { contentType: mime, upsert: true });
+          if (upErr) {
+            console.error("[restricted-access] xray upload error:", upErr);
+            return NextResponse.json({ error: "server_error" }, { status: 500 });
+          }
+          processedXrays.push({ ...raw, url: null, storage_path: path });
+        } else {
+          // إزالة أي روابط موقّتة موقّعة قبل الحفظ — نحتفظ بمسار التخزين فقط
+          if (raw?.storage_path) processedXrays.push({ ...raw, url: null });
+          else processedXrays.push(raw);
+        }
+      }
+
       const { error: upsertError } = await supabaseAdmin
         .from("patient_profiles")
         .upsert({
           patient_id: patientId,
           user_id: clinicId,
-          xrays,
+          xrays: processedXrays,
           updated_at: new Date().toISOString(),
         }, { onConflict: "patient_id" });
 
