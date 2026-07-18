@@ -2287,60 +2287,6 @@ ${doctorSettlementRows}
 
           <div style={{ paddingTop:24 }}>
 
-            {/* ── شريط الخطة المشتركة ── */}
-            {isSharedClinicPlan(plan) && (
-              <div style={{ marginBottom:20,padding:"16px 22px",background:"#fff",border:"1.5px solid #e6edf5",borderRadius:18,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,boxShadow:"0 4px 20px rgba(8,99,186,.06)",position:"relative",overflow:"hidden" }}>
-                <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:"linear-gradient(90deg,#0891b2,#0891b255)" }}/>
-                <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                  <div style={{ width:38,height:38,background:"rgba(14,124,106,.12)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="🏥" /></div>
-                  <div>
-                    <div style={{ fontSize:13,fontWeight:800,color:PLAN_BADGE[plan].color }}>
-                      {PLAN_BADGE[plan].label[lang as "ar"|"en"]}
-                      {" · "}
-                      <span style={{ fontSize:11,fontWeight:500,color:"#888" }}>
-                        {tr.sharedClinic.planLimits[plan as keyof typeof tr.sharedClinic.planLimits] ?? `${CLINIC_PLAN_DOCTOR_LIMITS[plan] ?? "?"} ${isAr?"أطباء":"doctors"}`}
-                      </span>
-                    </div>
-                    <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>
-                      {isAr
-                        ? `${doctors.length} ${isAr?"طبيب مسجّل":"registered"} · ${tr.sharedClinic.planPricing[plan as keyof typeof tr.sharedClinic.planPricing] ?? ""}`
-                        : `${doctors.length} registered doctor(s) · ${tr.sharedClinic.planPricing[plan as keyof typeof tr.sharedClinic.planPricing] ?? ""}`}
-                    </div>
-                  </div>
-                </div>
-                {/* فلتر سريع بالطبيب */}
-                {doctors.length > 0 && (
-                  <div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
-                    <span style={{ fontSize:12,color:"#888",fontWeight:600 }}>
-                      {tr.sharedClinic.filterByDoctor}:
-                    </span>
-                    <button
-                      onClick={() => setSelectedDoctor(null)}
-                      style={{ padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Rubik,sans-serif",
-                        borderColor: selectedDoctor===null ? "#0891b2" : "#e0e0e0",
-                        background: selectedDoctor===null ? "rgba(8,145,178,.1)" : "#fff",
-                        color: selectedDoctor===null ? "#0891b2" : "#888",
-                      }}>
-                      {tr.sharedClinic.allDoctors}
-                    </button>
-                    {doctors.map(doc => (
-                      <button key={doc.id}
-                        onClick={() => setSelectedDoctor(selectedDoctor===doc.id ? null : doc.id)}
-                        style={{ padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Rubik,sans-serif",display:"flex",alignItems:"center",gap:5,
-                          borderColor: selectedDoctor===doc.id ? "#0891b2" : "#e0e0e0",
-                          background: selectedDoctor===doc.id ? "rgba(8,145,178,.1)" : "#fff",
-                          color: selectedDoctor===doc.id ? "#0891b2" : "#888",
-                        }}>
-                        <div style={{ width:16,height:16,borderRadius:4,background:doc.color||"#0891b2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:"#fff" }}>
-                          {getInitials(doc.name)}
-                        </div>
-                        {isAr ? "د. " : "Dr. "}{doc.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
             <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:16,marginBottom:24 }}>
               {/* Monthly Revenue - big card */}
               <div className="stat-big" style={{ gridColumn:"span 1",animation:"fadeUp .4s 0ms ease both" }}>
@@ -2470,6 +2416,20 @@ ${doctorSettlementRows}
                     {Object.entries(tr.filter as Record<string, string>).map(([k, v]) => (
                       <button key={k} className={`filter-chip${filter===k?" active":""}`} onClick={()=>setFilter(k)}>{v}</button>
                     ))}
+                    {isSharedClinicPlan(plan) && doctors.length > 0 && (
+                      <>
+                        <span style={{ width:1,alignSelf:"stretch",background:"#e6edf5",margin:"0 2px" }}/>
+                        <button className={`filter-chip${selectedDoctor===null?" active":""}`} onClick={()=>setSelectedDoctor(null)}>{tr.sharedClinic.allDoctors}</button>
+                        {doctors.map(doc => (
+                          <button key={doc.id} onClick={()=>setSelectedDoctor(selectedDoctor===doc.id ? null : doc.id)}
+                            className={`filter-chip${selectedDoctor===doc.id?" active":""}`}
+                            style={{ display:"flex",alignItems:"center",gap:6 }}>
+                            <span style={{ width:8,height:8,borderRadius:"50%",background:selectedDoctor===doc.id?"#fff":(doc.color||"#0891b2"),flexShrink:0 }}/>
+                            {isAr ? "د. " : "Dr. "}{doc.name}
+                          </button>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
 
