@@ -765,7 +765,6 @@ export default function DashboardPage() {
                     }}
                   />
                 </div>
-                <NotificationBell userId={currentUserId} lang={lang} variant="dark" />
               </div>
             </div>
           </div>
