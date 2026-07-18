@@ -119,7 +119,12 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
         const config = {
           fps: 15, qrbox: qrboxFn, aspectRatio: 1.3333, disableFlip: false,
           // دقة أعلى = قراءة أدق للباركود الخطي
-          videoConstraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+          videoConstraints: {
+            facingMode: "environment",
+            width: { ideal: 1920, max: 3840 }, height: { ideal: 1080, max: 2160 },
+            // تركيز مستمر + تقريب خفيف إن دعمه الجهاز — يحسّن قراءة الخطوط الرفيعة
+            advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+          },
         } as Record<string, unknown>;
 
         // محاولة الكاميرا الخلفية أولًا، ثم أي كاميرا كاحتياط
