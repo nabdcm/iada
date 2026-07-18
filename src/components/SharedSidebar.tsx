@@ -876,7 +876,6 @@ export default function SharedSidebar({
           minHeight: "100vh",
           background: "linear-gradient(180deg,#044d96 0%,#0558a8 45%,#0b6ec7 100%)",
           display: "flex", flexDirection: "column",
-          overflow: "hidden",
           transition: "width .3s cubic-bezier(.4,0,.2,1)",
           position: "fixed", top: 0,
           right: isAr ? 0 : undefined, left: isAr ? undefined : 0,
@@ -886,9 +885,11 @@ export default function SharedSidebar({
             : "4px 0 32px rgba(5,88,168,.45)",
         }}
       >
-        {/* زخارف */}
-        <div style={{ position:"absolute", top:-70, insetInlineStart:-50, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,.05)", pointerEvents:"none" }}/>
-        <div style={{ position:"absolute", bottom:120, insetInlineEnd:-70, width:180, height:180, borderRadius:"50%", background:"rgba(255,255,255,.04)", pointerEvents:"none" }}/>
+        {/* زخارف — طبقة خلفية مقصوصة لا تؤثر على القوائم المنبثقة */}
+        <div style={{ position:"absolute", inset:0, overflow:"hidden", pointerEvents:"none", zIndex:0 }}>
+          <div style={{ position:"absolute", top:-70, insetInlineStart:-50, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,.05)" }}/>
+          <div style={{ position:"absolute", bottom:120, insetInlineEnd:-70, width:180, height:180, borderRadius:"50%", background:"rgba(255,255,255,.04)" }}/>
+        </div>
 
         {/* ── Header / Logo ── */}
         <div style={{
