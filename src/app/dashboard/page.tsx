@@ -1,146 +1,133 @@
 "use client";
 
-import AppIcon from "@/components/AppIcon";
-import { useState, useEffect, type JSX } from "react";
+import { useState, useEffect, useCallback, type JSX, type DragEvent } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
 
 // ============================================================
-// NABD - نبض | Dashboard Page — Real Data from Supabase
+// NABD - نبض | Dashboard v2 — إعادة تصميم كاملة
+// بطاقات قابلة للسحب · بدون أي بيانات مالية · هوية لونية أقوى
 // ============================================================
+
+const BRAND = {
+  primary: "#0863ba",
+  primaryDark: "#054a8c",
+  primaryLight: "#3d8fd6",
+  sky: "#eaf3fc",
+  green: "#2e7d32",
+  purple: "#7b2d8b",
+  orange: "#e67e22",
+  teal: "#16a085",
+  ink: "#1c2b3a",
+  muted: "#8a97a6",
+  border: "#e6edf5",
+  bg: "#f4f8fc",
+};
 
 const t = {
   ar: {
-    appName: "نبض", appSub: "إدارة العيادة",
-    nav: {
-      dashboard: "لوحة المعلومات", patients: "المرضى",
-      appointments: "المواعيد", payments: "المدفوعات",
-      prescriptions: "الوصفات الطبية", tracking: "متابعة المرضى",
-      settings: "الإعدادات", admin: "لوحة المدير",
-    },
     header: {
       greeting_morning: "صباح الخير", greeting_afternoon: "مساء الخير",
       greeting_evening: "مساء النور", subtitle: "إليك ملخص نشاط العيادة اليوم",
       search: "بحث...",
+      dragHint: "اسحب البطاقات لإعادة ترتيبها",
+      resetLayout: "استعادة الترتيب الافتراضي",
     },
     stats: {
       todayAppointments: "مواعيد اليوم", totalPatients: "إجمالي المرضى",
-      monthRevenue: "إيرادات الشهر", pendingPayments: "مدفوعات معلّقة",
+      monthVisits: "زيارات هذا الشهر", newPatients: "مرضى جدد",
       completed: "مكتمل", remaining: "متبقي",
-      newThisMonth: "جديد هذا الشهر", vs_last: "مقارنةً بالشهر الماضي",
-      unpaid: "غير مسدّد",
+      thisMonth: "هذا الشهر", dailyAvg: "متوسط يومي",
     },
     quickActions: {
-      title: "إجراءات سريعة", newAppointment: "موعد جديد",
-      addPatient: "إضافة مريض", recordPayment: "تسجيل دفعة",
-      viewReports: "عرض التقارير",
+      title: "إجراءات سريعة",
+      newAppointment: "موعد جديد", newAppointmentSub: "حجز موعد لمريض",
+      addPatient: "إضافة مريض", addPatientSub: "تسجيل ملف جديد",
+      prescriptions: "وصفة طبية", prescriptionsSub: "إنشاء وصفة",
+      tracking: "متابعة مريض", trackingSub: "خطط المتابعة",
     },
     todaySchedule: {
       title: "مواعيد اليوم", viewAll: "عرض الكل",
-      noAppointments: "لا توجد مواعيد اليوم",
-      statuses: { scheduled: "محدد", completed: "مكتمل", cancelled: "ملغي", "no-show": "لم يحضر" },
+      noAppointments: "لا توجد مواعيد اليوم", relax: "يوم هادئ ✨",
+      statuses: { scheduled: "محدد", completed: "مكتمل", cancelled: "ملغي", "no-show": "لم يحضر" } as Record<string, string>,
+      now: "الآن",
     },
-    topPatients: { title: "أكثر المرضى زيارةً", visits: "زيارة" },
-    weekChart: {
-      title: "المواعيد هذا الأسبوع",
-      days: ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
+    topPatients: { title: "أكثر المرضى زيارةً", visits: "زيارة", empty: "لا توجد بيانات" },
+    weekChart: { title: "المواعيد هذا الأسبوع", days: ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"], total: "الإجمالي" },
+    patientStats: {
+      title: "إحصائيات المرضى",
+      apptThisMonth: "مواعيد هذا الشهر", dailyAvgLabel: "متوسط يومي",
+      newPatientsMonth: "مرضى جدد هذا الشهر", totalPatientsLabel: "إجمالي المرضى",
+      activeDoctors: "الأطباء النشطون",
     },
-    signOut: "تسجيل الخروج", clinic: "العيادة",
-    loading: "جاري التحميل...", currency: "ل.س",
-    monthlyVisits: "إجمالي الزيارات", dailyAvg: "متوسط يومي",
-    monthlySummary: "ملخص الشهر",
-    patientStats: "إحصائيات المرضى",
-    apptThisMonth: "مواعيد هذا الشهر",
-    dailyAvgLabel: "متوسط يومي",
-    newPatientsMonth: "مرضى جدد هذا الشهر",
-    totalPatientsLabel: "إجمالي المرضى",
-    todayBreakdown: "توزيع مواعيد اليوم",
-    noData: "لا توجد بيانات",
-    collapseMenu: "طي القائمة",
-    expandMenu: "توسيع القائمة",
-    sharedClinicPlan: "خطة عيادة مشتركة",
-    doctorsCount: "عدد الأطباء",
-    maxDoctors: "الحد الأقصى للأطباء",
-    activeDoctors: "الأطباء النشطون",
-    filterByDoctor: "تصفية حسب الطبيب",
-    allDoctors: "كل الأطباء",
-    doctorLabel: "الطبيب",
-    sharedBadge: "مشتركة",
-    todayByDoctor: "مواعيد اليوم حسب الطبيب",
-    patientsAssigned: "المرضى المخصصون",
+    filterByDoctor: "تصفية حسب الطبيب", allDoctors: "كل الأطباء",
+    loading: "جاري التحميل...", noData: "لا توجد بيانات",
   },
   en: {
-    appName: "NABD", appSub: "Clinic Manager",
-    nav: {
-      dashboard: "Dashboard", patients: "Patients",
-      appointments: "Appointments", payments: "Payments",
-      prescriptions: "Prescriptions", tracking: "Patient Tracking",
-      settings: "Settings", admin: "Admin Panel",
-    },
     header: {
       greeting_morning: "Good Morning", greeting_afternoon: "Good Afternoon",
       greeting_evening: "Good Evening", subtitle: "Here's your clinic activity summary for today",
       search: "Search...",
+      dragHint: "Drag cards to reorder",
+      resetLayout: "Reset default layout",
     },
     stats: {
       todayAppointments: "Today's Appointments", totalPatients: "Total Patients",
-      monthRevenue: "Monthly Revenue", pendingPayments: "Pending Payments",
+      monthVisits: "Visits This Month", newPatients: "New Patients",
       completed: "Completed", remaining: "Remaining",
-      newThisMonth: "New this month", vs_last: "vs last month",
-      unpaid: "Unpaid",
+      thisMonth: "this month", dailyAvg: "daily avg",
     },
     quickActions: {
-      title: "Quick Actions", newAppointment: "New Appointment",
-      addPatient: "Add Patient", recordPayment: "Record Payment",
-      viewReports: "View Reports",
+      title: "Quick Actions",
+      newAppointment: "New Appointment", newAppointmentSub: "Book a patient slot",
+      addPatient: "Add Patient", addPatientSub: "Register new record",
+      prescriptions: "Prescription", prescriptionsSub: "Create prescription",
+      tracking: "Track Patient", trackingSub: "Follow-up plans",
     },
     todaySchedule: {
       title: "Today's Schedule", viewAll: "View All",
-      noAppointments: "No appointments today",
-      statuses: { scheduled: "Scheduled", completed: "Completed", cancelled: "Cancelled", "no-show": "No Show" },
+      noAppointments: "No appointments today", relax: "Quiet day ✨",
+      statuses: { scheduled: "Scheduled", completed: "Completed", cancelled: "Cancelled", "no-show": "No Show" } as Record<string, string>,
+      now: "Now",
     },
-    topPatients: { title: "Most Visited Patients", visits: "visits" },
-    weekChart: {
-      title: "Appointments This Week",
-      days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    topPatients: { title: "Most Visited Patients", visits: "visits", empty: "No data yet" },
+    weekChart: { title: "Appointments This Week", days: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], total: "Total" },
+    patientStats: {
+      title: "Patient Stats",
+      apptThisMonth: "Appointments this month", dailyAvgLabel: "Daily average",
+      newPatientsMonth: "New patients this month", totalPatientsLabel: "Total patients",
+      activeDoctors: "Active Doctors",
     },
-    signOut: "Sign Out", clinic: "Clinic",
-    loading: "Loading...", currency: "SYP",
-    monthlyVisits: "Total Visits", dailyAvg: "Daily Average",
-    monthlySummary: "Monthly Summary",
-    patientStats: "Patient Stats",
-    apptThisMonth: "Appointments this month",
-    dailyAvgLabel: "Daily average",
-    newPatientsMonth: "New patients this month",
-    totalPatientsLabel: "Total patients",
-    todayBreakdown: "Today's appointment breakdown",
-    noData: "No data yet",
-    collapseMenu: "Collapse",
-    expandMenu: "Expand",
-    sharedClinicPlan: "Shared Clinic Plan",
-    doctorsCount: "Doctors Count",
-    maxDoctors: "Max Doctors",
-    activeDoctors: "Active Doctors",
-    filterByDoctor: "Filter by Doctor",
-    allDoctors: "All Doctors",
-    doctorLabel: "Doctor",
-    sharedBadge: "Shared",
-    todayByDoctor: "Today's Appointments by Doctor",
-    patientsAssigned: "Assigned Patients",
+    filterByDoctor: "Filter by Doctor", allDoctors: "All Doctors",
+    loading: "Loading...", noData: "No data yet",
   },
 } as const;
 
 type Lang = "ar" | "en";
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
+
+const isSharedPlan = (plan: PlanType) =>
+  ["shared_basic", "shared_pro", "shared_enterprise"].includes(plan);
+
+const PLAN_ACCESS: Record<string, string[]> = {
+  prescriptions: ["enterprise", "shared_enterprise"],
+  tracking:      ["enterprise", "shared_enterprise"],
+};
+const canAccess = (feature: string, plan: PlanType) =>
+  PLAN_ACCESS[feature] ? (PLAN_ACCESS[feature] ?? []).includes(plan) : true;
+
+const SHARED_PLAN_DEFAULT_MAX: Record<string, number> = {
+  shared_basic: 2, shared_pro: 3, shared_enterprise: 5,
+};
 
 const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a085","#2980b9","#8e44ad"];
-const getColor    = (id: number) => AVATAR_COLORS[Math.abs(id ?? 0) % AVATAR_COLORS.length] ?? "#0863ba";
-const getInitials = (name: string) => (name || "?").split(" ").slice(0,2).map(w => w[0] ?? "").join("").toUpperCase() || "?";
+const getColor = (id: number) => AVATAR_COLORS[Math.abs(id ?? 0) % AVATAR_COLORS.length] ?? BRAND.primary;
+const getInitials = (name: string) =>
+  (name || "?").split(" ").slice(0, 2).map(w => w[0] ?? "").join("").toUpperCase() || "?";
 
-// ── Force Western (Latin) numerals regardless of locale ─────
-const toWestern = (val: string | number): string => {
-  return String(val).replace(/[0-9]/g, (d) => String("0123456789".indexOf(d)));
-};
+const toWestern = (val: string | number): string =>
+  String(val).replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 
 function getGreetingKey(): "greeting_morning" | "greeting_afternoon" | "greeting_evening" {
   const h = new Date().getHours();
@@ -149,117 +136,146 @@ function getGreetingKey(): "greeting_morning" | "greeting_afternoon" | "greeting
   return "greeting_evening";
 }
 
-// ─── Plan access rules ────────────────────────────────────
-const PLAN_ACCESS: Record<string, string[]> = {
-  payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
-  prescriptions:    ["enterprise", "shared_enterprise"],
-  tracking:         ["enterprise", "shared_enterprise"],
-  xrays:            ["enterprise", "shared_enterprise"],
-  clinicManagement: ["basic", "pro", "enterprise", "shared_basic", "shared_pro", "shared_enterprise"],
+// ─── SVG Icons (بدل الإيموجي — مظهر أنظف) ─────────────────
+const Ico = {
+  calendar: (c: string, s = 22) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>
+    </svg>
+  ),
+  users: (c: string, s = 22) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  activity: (c: string, s = 22) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  ),
+  userPlus: (c: string, s = 22) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/>
+    </svg>
+  ),
+  rx: (c: string, s = 22) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>
+    </svg>
+  ),
+  heart: (c: string, s = 22) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/>
+    </svg>
+  ),
+  grip: (c: string, s = 16) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill={c}>
+      <circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
+      <circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>
+      <circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>
+    </svg>
+  ),
+  search: (c: string, s = 16) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+    </svg>
+  ),
+  arrow: (c: string, s = 14) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+  ),
 };
 
-// خطط فردية: basic | pro | enterprise
-// خطط مشتركة: shared_basic (2 أطباء) | shared_pro (3 أطباء) | shared_enterprise (5 أطباء+)
-type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
-
-const isSharedPlan = (plan: PlanType) =>
-  ["shared_basic", "shared_pro", "shared_enterprise"].includes(plan);
-
-// الحد الافتراضي للأطباء — الأدمن يستطيع تعديله لكل عيادة
-const SHARED_PLAN_DEFAULT_MAX: Record<string, number> = {
-  shared_basic:      2,
-  shared_pro:        3,
-  shared_enterprise: 5,
+// ─── Types ────────────────────────────────────────────────
+type Appt = {
+  id: number; patient_id: number; date: string; time: string;
+  duration?: number; type?: string; status: string; doctor_id?: string | null;
+  patientName: string; doctorName: string;
 };
+type TopPatient = { id: number; name: string; count: number };
+type Doctor = { id: string; name: string; name_en?: string; color?: string };
+type PatientRow = { id: number; name: string; created_at?: string | null; doctor_id?: string | null };
+type ApptRow = { id: number; patient_id: number; date: string | null; time: string | null; duration?: number | null; type?: string | null; status: string; doctor_id?: string | null };
 
-const canAccess = (feature: string, plan: PlanType) =>
-  PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
-
-// Safe accessor — falls back to "basic" badge if plan value is unexpected
-const getPlanBadge = (plan: PlanType) => PLAN_BADGE[plan] ?? PLAN_BADGE["basic"];
-
-const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string; isShared?: boolean }> = {
-  basic:             { label:{ ar:"الأساسية",           en:"Basic"           }, color:"#0863ba" },
-  pro:               { label:{ ar:"الاحترافية",         en:"Professional"    }, color:"#7b2d8b" },
-  enterprise:        { label:{ ar:"الشاملة",            en:"Comprehensive"   }, color:"#e67e22" },
-  shared_basic:      { label:{ ar:"مشتركة - أساسية",   en:"Shared Basic"    }, color:"#0e7c6a", isShared:true },
-  shared_pro:        { label:{ ar:"مشتركة - احترافية", en:"Shared Pro"      }, color:"#b5451b", isShared:true },
-  shared_enterprise: { label:{ ar:"مشتركة - شاملة",    en:"Shared Enterprise"}, color:"#4a1480", isShared:true },
-};
-
-// ─── Sidebar ──────────────────────────────────────────────
-
-// ─── StatCard ─────────────────────────────────────────────
-function StatCard({ icon, label, value, sub, subColor, accent, delay = 0, loading = false }: {
-  icon: string; label: string; value: string; sub?: string;
-  subColor?: string; accent: string; delay?: number; loading?: boolean;
+// ─── StatCard v2 — تدرج لوني وشريط تقدم ──────────────────
+function StatCard({ icon, label, value, sub, accent, accentSoft, delay, loading, progress }: {
+  icon: JSX.Element; label: string; value: string; sub?: string;
+  accent: string; accentSoft: string; delay: number; loading: boolean; progress?: number;
 }) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
-
+  const [show, setShow] = useState(false);
+  useEffect(() => { const id = setTimeout(() => setShow(true), delay); return () => clearTimeout(id); }, [delay]);
   return (
-    <div className="stat-card-inner" style={{
-      background:"#fff", borderRadius:16, padding:24,
-      boxShadow:"0 2px 16px rgba(8,99,186,.07)", border:"1.5px solid #eef0f3",
-      opacity:visible?1:0, transform:visible?"translateY(0)":"translateY(16px)",
-      transition:"all .5s cubic-bezier(.4,0,.2,1)", position:"relative", overflow:"hidden",
+    <div className="stat-card-v2" style={{
+      background: "#fff", borderRadius: 20, padding: "20px 22px",
+      border: `1.5px solid ${BRAND.border}`,
+      boxShadow: "0 4px 20px rgba(8,99,186,.06)",
+      opacity: show ? 1 : 0, transform: show ? "translateY(0)" : "translateY(12px)",
+      transition: "opacity .5s ease, transform .5s cubic-bezier(.4,0,.2,1)",
+      position: "relative", overflow: "hidden",
     }}>
-      <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:accent,borderRadius:"16px 16px 0 0" }} />
-      <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16 }}>
-        <div style={{ width:44,height:44,borderRadius:12,background:`${accent}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph={icon} /></div>
+      <div style={{
+        position: "absolute", top: 0, insetInlineStart: 0, width: "100%", height: 4,
+        background: `linear-gradient(90deg, ${accent}, ${accent}55)`,
+      }} />
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{
+          width: 46, height: 46, borderRadius: 14, background: accentSoft,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>{icon}</div>
+        {typeof progress === "number" && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: accent, background: accentSoft, padding: "4px 10px", borderRadius: 20 }}>
+            {toWestern(Math.round(progress))}%
+          </span>
+        )}
       </div>
-      {loading ? (
-        <div style={{ width:70,height:30,borderRadius:8,background:"#f0f2f5",animation:"pulse 1.5s ease infinite",marginBottom:6 }} />
-      ) : (
-        <div
-          className="stat-card-value"
-          style={{ fontSize:28,fontWeight:800,color:accent,lineHeight:1,marginBottom:6,fontVariantNumeric:"tabular-nums" }}
-        >
-          {toWestern(value)}
-        </div>
-      )}
-      <div style={{ fontSize:13,color:"#888",marginBottom:6,fontWeight:500 }}>{label}</div>
-      {sub && !loading && (
-        <div style={{ fontSize:12,color:subColor||"#2e7d32",fontWeight:600 }}>
-          {toWestern(sub)}
+      <div className="stat-card-v2-value" style={{ fontSize: 30, fontWeight: 800, color: BRAND.ink, lineHeight: 1, fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>
+        {loading ? <span style={{ color: BRAND.border }}>—</span> : toWestern(value)}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: BRAND.muted, marginBottom: sub ? 8 : 0 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11.5, fontWeight: 600, color: accent }}>{toWestern(sub)}</div>}
+      {typeof progress === "number" && (
+        <div style={{ marginTop: 10, height: 5, borderRadius: 3, background: BRAND.bg, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(progress, 100)}%`, background: `linear-gradient(90deg, ${accent}, ${accent}99)`, borderRadius: 3, transition: "width .9s cubic-bezier(.4,0,.2,1)" }} />
         </div>
       )}
     </div>
   );
 }
 
-// ─── WeekChart ────────────────────────────────────────────
+// ─── WeekChart v2 ─────────────────────────────────────────
 function WeekChart({ lang, data }: { lang: Lang; data: number[] }) {
-  const tr    = t[lang];
-  const max   = Math.max(...data, 1);
+  const tr = t[lang];
+  const max = Math.max(...data, 1);
   const today = new Date().getDay();
-
+  const total = data.reduce((a, b) => a + b, 0);
   return (
-    <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
-      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24 }}>
-        <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>{tr.weekChart.title}</h3>
-        <span style={{ fontSize:12,color:"#aaa" }}>{lang==="ar"?"هذا الأسبوع":"This week"}</span>
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <span style={{ fontSize: 12, color: BRAND.muted, fontWeight: 600 }}>
+          {tr.weekChart.total}: <span style={{ color: BRAND.primary, fontWeight: 800 }}>{toWestern(total)}</span>
+        </span>
       </div>
-      <div className="week-chart-bar-area" style={{ display:"flex",alignItems:"flex-end",gap:8,height:100,justifyContent:"space-between" }}>
+      <div className="week-chart-bar-area" style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 110 }}>
         {data.map((val, i) => {
           const isToday = i === today;
           return (
-            <div key={i} style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
-              <div style={{ fontSize:10,color:isToday?"#0863ba":"#ccc",fontWeight:isToday?700:400,fontVariantNumeric:"tabular-nums" }}>
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div style={{ fontSize: 10.5, color: isToday ? BRAND.primary : "#c3ccd6", fontWeight: isToday ? 800 : 500, fontVariantNumeric: "tabular-nums" }}>
                 {toWestern(val)}
               </div>
-              <div style={{ width:"100%",position:"relative",height:80,display:"flex",alignItems:"flex-end" }}>
+              <div style={{ width: "100%", height: 82, display: "flex", alignItems: "flex-end" }}>
                 <div style={{
-                  width:"100%", borderRadius:6,
-                  height:`${Math.max((val/max)*100, val>0?8:2)}%`,
-                  background:isToday?"linear-gradient(180deg,#0863ba,#a4c4e4)":"#eef0f3",
-                  transition:"height .8s cubic-bezier(.4,0,.2,1)",
+                  width: "100%", borderRadius: 8,
+                  height: `${Math.max((val / max) * 100, val > 0 ? 10 : 3)}%`,
+                  background: isToday
+                    ? `linear-gradient(180deg, ${BRAND.primary}, ${BRAND.primaryLight})`
+                    : "#e9eff7",
+                  boxShadow: isToday ? "0 4px 12px rgba(8,99,186,.35)" : "none",
+                  transition: "height .8s cubic-bezier(.4,0,.2,1)",
                 }} />
               </div>
-              <div className="week-chart-day" style={{ fontSize:10,color:isToday?"#0863ba":"#bbb",fontWeight:isToday?700:400,whiteSpace:"nowrap" }}>
+              <div className="week-chart-day" style={{ fontSize: 10, color: isToday ? BRAND.primary : "#b3bdc9", fontWeight: isToday ? 800 : 500, whiteSpace: "nowrap" }}>
                 {tr.weekChart.days[i]}
               </div>
             </div>
@@ -270,779 +286,596 @@ function WeekChart({ lang, data }: { lang: Lang; data: number[] }) {
   );
 }
 
-// ─── Main Dashboard ───────────────────────────────────────
+// ─── Draggable Section wrapper ────────────────────────────
+function DraggableCard({ id, title, children, onDragStart, onDragOver, onDrop, dragging, dragOver, badge }: {
+  id: string; title: string; children: JSX.Element | JSX.Element[];
+  onDragStart: (id: string) => void;
+  onDragOver: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDrop: (id: string) => void;
+  dragging: boolean; dragOver: boolean;
+  badge?: JSX.Element | null;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={() => onDragStart(id)}
+      onDragOver={e => onDragOver(e, id)}
+      onDrop={() => onDrop(id)}
+      className="section-card-v2"
+      style={{
+        background: "#fff", borderRadius: 20, padding: 24,
+        border: dragOver ? `2px dashed ${BRAND.primary}` : `1.5px solid ${BRAND.border}`,
+        boxShadow: dragging ? "0 16px 40px rgba(8,99,186,.22)" : "0 4px 20px rgba(8,99,186,.06)",
+        opacity: dragging ? 0.55 : 1,
+        transform: dragging ? "scale(.985)" : "scale(1)",
+        transition: "box-shadow .25s ease, opacity .25s ease, transform .25s ease, border .15s ease",
+        cursor: "default",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span className="drag-grip" style={{ cursor: "grab", display: "flex", opacity: .45 }} title="اسحب">
+            {Ico.grip(BRAND.muted)}
+          </span>
+          <h3 style={{ fontSize: 15, fontWeight: 800, color: BRAND.ink }}>{title}</h3>
+        </div>
+        {badge ?? null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────
+const DEFAULT_ORDER = ["today", "week", "stats", "top"];
+
 export default function DashboardPage() {
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang] = useState<Lang>("ar");
-  const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const isAr = lang === "ar";
+  const tr = t[lang];
 
-  // ── popup الإشعارات — يظهر مرة واحدة فقط ────────────────
-  useEffect(() => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-    if (Notification.permission !== "default") return; // تم الرد مسبقاً
-    const shown = localStorage.getItem("nabd_push_prompt");
-    if (shown) return;
-    const timer = setTimeout(() => setShowPushPrompt(true), 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handlePushPromptAccept = async () => {
-    setShowPushPrompt(false);
-    localStorage.setItem("nabd_push_prompt", "1");
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") return;
-      const reg = await navigator.serviceWorker.ready;
-      const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BG73PZ28jKm8MniGKb0DJCG45VDuUBJdAJNNRX9VwPr1YD-y4o0vXy4BJRHL1qYoCIKOhuRfHE0QKLca7fq-ZQc";
-      const b64 = (s: string) => { const p = "=".repeat((4-s.length%4)%4); const b = (s+p).replace(/-/g,"+").replace(/_/g,"/"); return Uint8Array.from(window.atob(b), c => c.charCodeAt(0)); };
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
-      const j = sub.toJSON(); const k = j.keys as {p256dh:string;auth:string};
-      if (currentUserId) {
-        await supabase.from("push_subscriptions").upsert({ user_id: currentUserId, endpoint: j.endpoint!, p256dh: k.p256dh, auth: k.auth }, { onConflict: "user_id,endpoint" });
-      }
-    } catch(e) { console.warn("push:", e); }
-  };
-
-  const handlePushPromptDismiss = () => {
-    setShowPushPrompt(false);
-    localStorage.setItem("nabd_push_prompt", "1");
-  };
-  const tr   = t[lang];
-
-  const [loadingStats, setLoadingStats] = useState(true);
+  // data
   const [plan, setPlan] = useState<PlanType>("basic");
-
-  // Fix hydration mismatch (React error #418): date/time computed client-side only
-  const [greetingKey, setGreetingKey] = useState<"greeting_morning"|"greeting_afternoon"|"greeting_evening">("greeting_morning");
-  const [dateStr, setDateStr]         = useState("");
-  const [daysElapsed, setDaysElapsed] = useState(1);
-
-  useEffect(() => {
-    const now = new Date();
-    setGreetingKey(getGreetingKey());
-    setDateStr(now.toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
-      weekday: "long", year: "numeric", month: "long", day: "numeric",
-    }));
-    setDaysElapsed(now.getDate());
-  }, [lang]);
-
-  // Shared clinic plan: doctors
-  const [doctors, setDoctors] = useState<{ id: string; name: string; name_en?: string; color?: string }[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [totalPatients, setTotalPatients] = useState(0);
+  const [newThisMonth, setNewThisMonth] = useState(0);
+  const [todayTotal, setTodayTotal] = useState(0);
+  const [todayCompleted, setTodayCompleted] = useState(0);
+  const [todayAppointments, setTodayAppointments] = useState<Appt[]>([]);
+  const [weekData, setWeekData] = useState<number[]>([0,0,0,0,0,0,0]);
+  const [monthTotalVisits, setMonthTotalVisits] = useState(0);
+  const [topPatients, setTopPatients] = useState<TopPatient[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [activeDoctorCount, setActiveDoctorCount] = useState(0);
   const [maxDoctors, setMaxDoctors] = useState(0);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
 
-  // Patients
-  const [totalPatients, setTotalPatients] = useState(0);
-  const [newThisMonth,  setNewThisMonth]  = useState(0);
+  // drag & drop order
+  const [order, setOrder] = useState<string[]>(DEFAULT_ORDER);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
-  // Appointments
-  const [todayTotal,        setTodayTotal]        = useState(0);
-  const [todayCompleted,    setTodayCompleted]    = useState(0);
-  const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
-  const [weekData,          setWeekData]          = useState<number[]>([0,0,0,0,0,0,0]);
-  const [monthTotalVisits,  setMonthTotalVisits]  = useState(0);
-
-  // Payments
-  const [monthRevenue,  setMonthRevenue]  = useState(0);
-  const [pendingAmount, setPendingAmount] = useState(0);
-  const [pendingCount,  setPendingCount]  = useState(0);
-
-  // Top patients
-  const [topPatients, setTopPatients] = useState<{ id:number; name:string; visits:number }[]>([]);
-
-  const statusColors: Record<string, { bg:string; color:string }> = {
-    scheduled: { bg:"rgba(8,99,186,.1)",    color:"#0863ba" },
-    completed:  { bg:"rgba(46,125,50,.1)",   color:"#2e7d32" },
-    cancelled:  { bg:"rgba(192,57,43,.1)",   color:"#c0392b" },
-    "no-show":  { bg:"rgba(120,120,120,.1)", color:"#888"    },
-  };
-
-  // ── Load ──────────────────────────────────────────────
-  useEffect(() => { loadDashboard(); }, []);
-
-  async function loadDashboard() {
-    setLoadingStats(true);
+  useEffect(() => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
-      setCurrentUserId(userId);
-
-      // ── Clinic plan ──
-      const { data: clinicData } = await supabase
-        .from("clinics").select("plan, max_doctors").eq("user_id", userId).single();
-      const fetchedPlan = (clinicData?.plan ?? "basic") as PlanType;
-      if (clinicData?.plan) setPlan(fetchedPlan);
-      // max_doctors: يُقرأ من قاعدة البيانات (الأدمن يضبطه) مع fallback للافتراضي
-      const fetchedMax = clinicData?.max_doctors ?? SHARED_PLAN_DEFAULT_MAX[fetchedPlan] ?? 0;
-      setMaxDoctors(fetchedMax);
-
-      // ── Doctors (only for shared clinic plans) ──
-      let doctorList: { id: string; name: string; name_en?: string; color?: string }[] = [];
-      if (isSharedPlan(fetchedPlan)) {
-        const { data: doctorsData } = await supabase
-          .from("clinic_doctors")
-          .select("id, name, name_en, color")
-          .eq("user_id", userId)
-          .eq("is_active", true)
-          .order("created_at", { ascending: true });
-        doctorList = doctorsData ?? [];
-        setDoctors(doctorList);
-        setActiveDoctorCount(doctorList.length);
+      const saved = localStorage.getItem("nabd_dash_order_v2");
+      if (saved) {
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.every(x => typeof x === "string")
+            && DEFAULT_ORDER.every(k => (parsed as string[]).includes(k))) {
+          setOrder(parsed as string[]);
+        }
       }
+    } catch { /* ignore */ }
+  }, []);
 
-      const localNow   = new Date();
-      const yyyy       = localNow.getFullYear();
-      const mm         = String(localNow.getMonth() + 1).padStart(2, "0");
-      const dd         = String(localNow.getDate()).padStart(2, "0");
-      const todayISO   = `${yyyy}-${mm}-${dd}`;
-      const monthStart = `${yyyy}-${mm}-01`;
-
-      // ── Patients ──
-      const { data: patientsData } = await supabase
-        .from("patients").select("id, name, created_at, doctor_id")
-        .eq("user_id", userId).eq("is_hidden", false);
-      const patients = patientsData ?? [];
-      setTotalPatients(patients.length);
-      setNewThisMonth(patients.filter(p => (p.created_at ?? "") >= monthStart).length);
-
-      const patientMap: Record<number, string> = {};
-      patients.forEach(p => { patientMap[p.id] = p.name; });
-
-      // ── Appointments ──
-      const { data: apptsData } = await supabase
-        .from("appointments")
-        .select("id, patient_id, date, time, duration, type, status, doctor_id")
-        .eq("user_id", userId);
-      const appts = apptsData ?? [];
-
-      const todayAppts = appts
-        .filter(a => a.date === todayISO)
-        .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
-
-      const doctorMap: Record<string, string> = {};
-      doctorList.forEach(d => { doctorMap[String(d.id)] = d.name; });
-
-      setTodayTotal(todayAppts.length);
-      setTodayCompleted(todayAppts.filter(a => a.status === "completed").length);
-      setTodayAppointments(todayAppts.map(a => ({
-        ...a,
-        patientName: patientMap[a.patient_id] ?? (lang === "ar" ? "مريض" : "Patient"),
-        doctorName:  a.doctor_id ? (doctorMap[String(a.doctor_id)] ?? "") : "",
-      })));
-
-      const weekStart = new Date(localNow);
-      weekStart.setDate(localNow.getDate() - localNow.getDay());
-      weekStart.setHours(0,0,0,0);
-      const wc = [0,0,0,0,0,0,0];
-      appts.forEach(a => {
-        if (!a.date) return;
-        const d = new Date(a.date + "T00:00:00");
-        const diff = Math.round((d.getTime() - weekStart.getTime()) / 86400000);
-        if (diff >= 0 && diff <= 6) wc[diff]++;
-      });
-      setWeekData(wc);
-      setMonthTotalVisits(appts.filter(a => (a.date ?? "") >= monthStart).length);
-
-      // ── Payments ──
-      const { data: paymentsData } = await supabase
-        .from("payments").select("id, amount, status, date")
-        .eq("user_id", userId);
-      const payments = paymentsData ?? [];
-
-      setMonthRevenue(
-        payments
-          .filter(p => p.status === "paid" && (p.date ?? "") >= monthStart)
-          .reduce((s, p) => s + (Number(p.amount) || 0), 0)
-      );
-      const pending = payments.filter(p => p.status === "pending");
-      setPendingCount(pending.length);
-      setPendingAmount(pending.reduce((s, p) => s + (Number(p.amount) || 0), 0));
-
-      // ── Top patients ──
-      const visitCount: Record<number, number> = {};
-      appts.forEach(a => {
-        if (!a.patient_id) return;
-        visitCount[a.patient_id] = (visitCount[a.patient_id] || 0) + 1;
-      });
-      const sorted = Object.entries(visitCount)
-        .sort((a, b) => Number(b[1]) - Number(a[1]))
-        .slice(0, 4)
-        .map(([pid, count]) => ({
-          id:     Number(pid),
-          name:   patientMap[Number(pid)] ?? (lang === "ar" ? "مريض" : "Patient"),
-          visits: count as number,
-        }));
-      setTopPatients(sorted);
-
-    } catch (err) {
-      console.error("Dashboard load error:", err);
-    } finally {
-      setLoadingStats(false);
-    }
-  }
-
-  // Always format currency/numbers with Western digits
-  const fmtCurrency = (n: number) => {
-    const formatted = n.toLocaleString("en-US");
-    return lang === "ar" ? `${formatted} ${tr.currency}` : `${formatted} ${tr.currency}`;
+  const saveOrder = (next: string[]) => {
+    setOrder(next);
+    try { localStorage.setItem("nabd_dash_order_v2", JSON.stringify(next)); } catch { /* ignore */ }
   };
 
-  const dailyAvg    = daysElapsed > 0 ? (monthTotalVisits / daysElapsed).toFixed(1) : "0";
+  const handleDragStart = (id: string) => setDragId(id);
+  const handleDragOver = (e: DragEvent<HTMLDivElement>, id: string) => {
+    e.preventDefault();
+    if (id !== overId) setOverId(id);
+  };
+  const handleDrop = (targetId: string) => {
+    if (!dragId || dragId === targetId) { setDragId(null); setOverId(null); return; }
+    const next = [...order];
+    const from = next.indexOf(dragId);
+    const to = next.indexOf(targetId);
+    if (from < 0 || to < 0) { setDragId(null); setOverId(null); return; }
+    next.splice(from, 1);
+    next.splice(to, 0, dragId);
+    saveOrder(next);
+    setDragId(null); setOverId(null);
+  };
+  const resetLayout = () => saveOrder([...DEFAULT_ORDER]);
 
-  // ── Render ────────────────────────────────────────────
+  // ─── Load data (نفس منطق الجلب السابق — بدون أي مالية) ──
+  const loadData = useCallback(async () => {
+    setLoadingStats(true);
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    if (!user) { setLoadingStats(false); return; }
+    const userId = user.id;
+    setCurrentUserId(userId);
+
+    // plan
+    const { data: profileData } = await supabase
+      .from("profiles").select("plan, max_doctors").eq("id", userId).maybeSingle();
+    const fetchedPlan = ((profileData?.plan as PlanType | undefined) ?? "basic");
+    setPlan(fetchedPlan);
+    const fetchedMax: number =
+      (profileData?.max_doctors as number | null | undefined) ??
+      SHARED_PLAN_DEFAULT_MAX[fetchedPlan] ?? 0;
+    setMaxDoctors(fetchedMax);
+
+    let doctorList: Doctor[] = [];
+    if (isSharedPlan(fetchedPlan)) {
+      const { data: doctorsData } = await supabase
+        .from("clinic_doctors")
+        .select("id, name, name_en, color")
+        .eq("user_id", userId).eq("is_active", true)
+        .order("created_at", { ascending: true });
+      doctorList = (doctorsData ?? []) as Doctor[];
+      setDoctors(doctorList);
+      setActiveDoctorCount(doctorList.length);
+    }
+
+    const localNow = new Date();
+    const yyyy = localNow.getFullYear();
+    const mm = String(localNow.getMonth() + 1).padStart(2, "0");
+    const dd = String(localNow.getDate()).padStart(2, "0");
+    const todayISO = `${yyyy}-${mm}-${dd}`;
+    const monthStart = `${yyyy}-${mm}-01`;
+
+    // patients
+    const { data: patientsData } = await supabase
+      .from("patients").select("id, name, created_at, doctor_id")
+      .eq("user_id", userId).eq("is_hidden", false);
+    const patients: PatientRow[] = (patientsData ?? []) as PatientRow[];
+    setTotalPatients(patients.length);
+    setNewThisMonth(patients.filter(p => (p.created_at ?? "") >= monthStart).length);
+    const patientMap: Record<number, string> = {};
+    patients.forEach(p => { patientMap[p.id as number] = p.name as string; });
+
+    // appointments
+    const { data: apptsData } = await supabase
+      .from("appointments")
+      .select("id, patient_id, date, time, duration, type, status, doctor_id")
+      .eq("user_id", userId);
+    const appts: ApptRow[] = (apptsData ?? []) as ApptRow[];
+
+    const doctorMap: Record<string, string> = {};
+    doctorList.forEach(d => { doctorMap[String(d.id)] = d.name; });
+
+    const filtered = selectedDoctorId
+      ? appts.filter(a => String(a.doctor_id ?? "") === selectedDoctorId)
+      : appts;
+
+    const todayAppts = filtered
+      .filter(a => a.date === todayISO)
+      .sort((a, b) => ((a.time as string) ?? "").localeCompare((b.time as string) ?? ""));
+
+    setTodayTotal(todayAppts.length);
+    setTodayCompleted(todayAppts.filter(a => a.status === "completed").length);
+    setTodayAppointments(todayAppts.map(a => ({
+      id: a.id as number,
+      patient_id: a.patient_id as number,
+      date: a.date as string,
+      time: (a.time as string) ?? "",
+      duration: (a.duration as number | undefined) ?? undefined,
+      type: (a.type as string | undefined) ?? undefined,
+      status: a.status as string,
+      doctor_id: (a.doctor_id as string | null | undefined) ?? null,
+      patientName: patientMap[a.patient_id as number] ?? (isAr ? "مريض" : "Patient"),
+      doctorName: a.doctor_id ? (doctorMap[String(a.doctor_id)] ?? "") : "",
+    })));
+
+    // week
+    const weekStart = new Date(localNow);
+    weekStart.setDate(localNow.getDate() - localNow.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const wc = [0,0,0,0,0,0,0];
+    filtered.forEach(a => {
+      if (!a.date) return;
+      const d = new Date((a.date as string) + "T00:00:00");
+      const diff = Math.round((d.getTime() - weekStart.getTime()) / 86400000);
+      if (diff >= 0 && diff <= 6) wc[diff] = (wc[diff] ?? 0) + 1;
+    });
+    setWeekData(wc);
+    setMonthTotalVisits(filtered.filter(a => ((a.date as string) ?? "") >= monthStart).length);
+
+    // top patients
+    const counts: Record<number, number> = {};
+    filtered.forEach(a => {
+      const pid = a.patient_id as number;
+      counts[pid] = (counts[pid] ?? 0) + 1;
+    });
+    const top = Object.entries(counts)
+      .map(([pid, count]) => ({ id: Number(pid), name: patientMap[Number(pid)] ?? "?", count }))
+      .filter(p => p.name !== "?")
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    setTopPatients(top);
+
+    setLoadingStats(false);
+  }, [selectedDoctorId, isAr]);
+
+  useEffect(() => { void loadData(); }, [loadData]);
+
+  const greetingKey = getGreetingKey();
+  const dateStr = new Date().toLocaleDateString(isAr ? "ar-SY" : "en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  const dailyAvg = (monthTotalVisits / Math.max(new Date().getDate(), 1)).toFixed(1);
+  const todayProgress = todayTotal > 0 ? (todayCompleted / todayTotal) * 100 : 0;
+
+  const statusStyle = (s: string): { bg: string; color: string } => {
+    switch (s) {
+      case "completed": return { bg: "rgba(46,125,50,.1)", color: BRAND.green };
+      case "cancelled": return { bg: "rgba(192,57,43,.1)", color: "#c0392b" };
+      case "no-show":   return { bg: "rgba(0,0,0,.06)", color: "#777" };
+      default:          return { bg: "rgba(8,99,186,.1)", color: BRAND.primary };
+    }
+  };
+
+  // ─── Sections (draggable) ───────────────────────────────
+  const sections: Record<string, JSX.Element> = {
+    today: (
+      <DraggableCard
+        key="today" id="today" title={tr.todaySchedule.title}
+        onDragStart={handleDragStart} onDragOver={handleDragOver} onDrop={handleDrop}
+        dragging={dragId === "today"} dragOver={overId === "today" && dragId !== "today"}
+        badge={
+          <a href="/appointments" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: BRAND.primary, textDecoration: "none", background: BRAND.sky, padding: "6px 14px", borderRadius: 20 }}>
+            {tr.todaySchedule.viewAll}
+            <span style={{ transform: isAr ? "scaleX(-1)" : "none", display: "flex" }}>{Ico.arrow(BRAND.primary)}</span>
+          </a>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {loadingStats ? (
+            <div style={{ padding: "28px 0", textAlign: "center", color: BRAND.muted, fontSize: 13 }}>{tr.loading}</div>
+          ) : todayAppointments.length === 0 ? (
+            <div style={{ padding: "32px 0", textAlign: "center" }}>
+              <div style={{ fontSize: 34, marginBottom: 8 }}>🌤️</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: BRAND.ink, marginBottom: 2 }}>{tr.todaySchedule.noAppointments}</div>
+              <div style={{ fontSize: 12, color: BRAND.muted }}>{tr.todaySchedule.relax}</div>
+            </div>
+          ) : todayAppointments.slice(0, 6).map((appt, idx) => {
+            const sc = statusStyle(appt.status);
+            return (
+              <div key={appt.id} className="appt-row-v2" style={{
+                display: "flex", alignItems: "center", gap: 14, padding: "13px 10px",
+                borderRadius: 14,
+                borderBottom: idx < Math.min(todayAppointments.length, 6) - 1 ? `1px solid ${BRAND.bg}` : "none",
+              }}>
+                <div style={{
+                  minWidth: 52, textAlign: "center", background: BRAND.sky, borderRadius: 10,
+                  padding: "7px 4px", fontSize: 12.5, fontWeight: 800, color: BRAND.primary, fontVariantNumeric: "tabular-nums",
+                }}>
+                  {toWestern(appt.time.slice(0, 5))}
+                </div>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+                  background: `${getColor(appt.patient_id)}18`, color: getColor(appt.patient_id),
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13, fontWeight: 800,
+                }}>{getInitials(appt.patientName)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: BRAND.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {appt.patientName}
+                  </div>
+                  <div style={{ fontSize: 11, color: BRAND.muted, marginTop: 2, display: "flex", gap: 8 }}>
+                    {appt.type ? <span>{appt.type}</span> : null}
+                    {appt.doctorName ? <span style={{ color: BRAND.purple }}>· {appt.doctorName}</span> : null}
+                  </div>
+                </div>
+                <div style={{ padding: "5px 12px", borderRadius: 20, background: sc.bg, color: sc.color, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                  {tr.todaySchedule.statuses[appt.status] ?? appt.status}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </DraggableCard>
+    ),
+
+    week: (
+      <DraggableCard
+        key="week" id="week" title={tr.weekChart.title}
+        onDragStart={handleDragStart} onDragOver={handleDragOver} onDrop={handleDrop}
+        dragging={dragId === "week"} dragOver={overId === "week" && dragId !== "week"}
+      >
+        <WeekChart lang={lang} data={weekData} />
+      </DraggableCard>
+    ),
+
+    stats: (
+      <DraggableCard
+        key="stats" id="stats" title={tr.patientStats.title}
+        onDragStart={handleDragStart} onDragOver={handleDragOver} onDrop={handleDrop}
+        dragging={dragId === "stats"} dragOver={overId === "stats" && dragId !== "stats"}
+      >
+        <div className="patient-stats-grid-v2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {(isSharedPlan(plan) ? [
+            { label: tr.patientStats.apptThisMonth, value: String(monthTotalVisits), color: BRAND.primary },
+            { label: tr.patientStats.dailyAvgLabel, value: dailyAvg, color: BRAND.green },
+            { label: tr.patientStats.activeDoctors, value: `${activeDoctorCount}/${maxDoctors}`, color: BRAND.purple },
+            { label: tr.patientStats.totalPatientsLabel, value: String(totalPatients), color: BRAND.orange },
+          ] : [
+            { label: tr.patientStats.apptThisMonth, value: String(monthTotalVisits), color: BRAND.primary },
+            { label: tr.patientStats.dailyAvgLabel, value: dailyAvg, color: BRAND.green },
+            { label: tr.patientStats.newPatientsMonth, value: String(newThisMonth), color: BRAND.purple },
+            { label: tr.patientStats.totalPatientsLabel, value: String(totalPatients), color: BRAND.orange },
+          ]).map((s, i) => (
+            <div key={i} style={{
+              background: `linear-gradient(135deg, ${s.color}0d, ${s.color}05)`,
+              borderRadius: 14, padding: "16px 18px", border: `1.5px solid ${s.color}22`,
+            }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: s.color, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+                {loadingStats ? "—" : toWestern(s.value)}
+              </div>
+              <div style={{ fontSize: 11.5, color: BRAND.muted, fontWeight: 600, marginTop: 7 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </DraggableCard>
+    ),
+
+    top: (
+      <DraggableCard
+        key="top" id="top" title={tr.topPatients.title}
+        onDragStart={handleDragStart} onDragOver={handleDragOver} onDrop={handleDrop}
+        dragging={dragId === "top"} dragOver={overId === "top" && dragId !== "top"}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {loadingStats ? (
+            <div style={{ padding: "20px 0", textAlign: "center", color: BRAND.muted, fontSize: 13 }}>{tr.loading}</div>
+          ) : topPatients.length === 0 ? (
+            <div style={{ padding: "24px 0", textAlign: "center", color: BRAND.muted, fontSize: 13 }}>{tr.topPatients.empty}</div>
+          ) : topPatients.map((p, i) => {
+            const maxCount = topPatients[0]?.count ?? 1;
+            return (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px" }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: i === 0 ? BRAND.orange : "#c3ccd6", minWidth: 18, fontVariantNumeric: "tabular-nums" }}>
+                  {toWestern(i + 1)}
+                </span>
+                <div style={{
+                  width: 34, height: 34, borderRadius: "50%",
+                  background: `${getColor(p.id)}18`, color: getColor(p.id),
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, fontWeight: 800, flexShrink: 0,
+                }}>{getInitials(p.name)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: BRAND.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                  <div style={{ height: 4, borderRadius: 2, background: BRAND.bg, marginTop: 6, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${(p.count / maxCount) * 100}%`, background: `linear-gradient(90deg, ${getColor(p.id)}, ${getColor(p.id)}88)`, borderRadius: 2 }} />
+                  </div>
+                </div>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: BRAND.muted, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+                  {toWestern(p.count)} {tr.topPatients.visits}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </DraggableCard>
+    ),
+  };
+
+  // ─── Quick actions (بدون أي إجراء مالي) ─────────────────
+  const quickActions = [
+    { icon: Ico.calendar("#fff", 20), label: tr.quickActions.newAppointment, sub: tr.quickActions.newAppointmentSub, grad: `linear-gradient(135deg, ${BRAND.primary}, ${BRAND.primaryLight})`, href: "/appointments", feature: null as string | null },
+    { icon: Ico.userPlus("#fff", 20), label: tr.quickActions.addPatient, sub: tr.quickActions.addPatientSub, grad: "linear-gradient(135deg, #2e7d32, #4caf50)", href: "/patients", feature: null as string | null },
+    { icon: Ico.rx("#fff", 20), label: tr.quickActions.prescriptions, sub: tr.quickActions.prescriptionsSub, grad: "linear-gradient(135deg, #7b2d8b, #a855c7)", href: "/prescriptions", feature: "prescriptions" as string | null },
+    { icon: Ico.heart("#fff", 20), label: tr.quickActions.tracking, sub: tr.quickActions.trackingSub, grad: "linear-gradient(135deg, #16a085, #2ecc9a)", href: "/patient-tracking", feature: "tracking" as string | null },
+  ].filter(a => !a.feature || canAccess(a.feature, plan));
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Rubik',sans-serif;background:#f7f9fc;color:#353535}
-        ::-webkit-scrollbar{width:6px}
-        ::-webkit-scrollbar-track{background:#f0f0f0}
-        ::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
-        .main-fade{animation:fadeUp .5s ease both}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-        .action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px 12px;border-radius:14px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;transition:all .2s;text-decoration:none;font-family:'Rubik',sans-serif}
-        .action-btn:hover{border-color:#a4c4e4;background:rgba(8,99,186,.04);transform:translateY(-2px);box-shadow:0 6px 20px rgba(8,99,186,.1)}
-        .action-btn-icon{font-size:22px;width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center}
-        .action-btn-label{font-size:12px;font-weight:600;color:#555;text-align:center}
-        .appt-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #f0f2f5;transition:background .15s}
-        .appt-row:last-child{border-bottom:none}
-        .appt-row:hover{background:#fafbfc;border-radius:10px;padding-left:8px;padding-right:8px}
-        .top-patient-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f2f5}
-        .top-patient-row:last-child{border-bottom:none}
-        @media(max-width:768px){
-          .stats-grid{grid-template-columns:1fr 1fr!important;gap:12px!important}
-          .middle-grid{grid-template-columns:1fr!important;gap:16px!important}
-          .bottom-grid{grid-template-columns:1fr!important;gap:16px!important}
-          .main-content{margin-left:0!important;margin-right:0!important;padding:0 12px 60px!important}
-          .topbar-inner{padding-left:56px!important;padding-right:8px!important}
-          .topbar-inner[dir="rtl"]{padding-right:56px!important;padding-left:8px!important;direction:rtl}
-          .stat-card-value{font-size:20px!important}
-          .stat-card-inner{padding:16px!important}
-          .quick-actions-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important}
-          .action-btn{padding:12px 6px!important;border-radius:12px!important}
-          .action-btn-icon{width:40px!important;height:40px!important;font-size:18px!important;border-radius:10px!important}
-          .action-btn-label{font-size:11px!important}
-          .week-chart-bar-area{height:70px!important}
-          .week-chart-day{font-size:9px!important}
-          .appt-row{gap:10px!important;padding:12px 0!important}
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box}
+        .main-fade{animation:fadeIn .4s ease}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .qa-btn{transition:transform .22s cubic-bezier(.4,0,.2,1),box-shadow .22s ease}
+        .qa-btn:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(8,99,186,.18)!important}
+        .qa-btn:active{transform:translateY(-1px)}
+        .appt-row-v2{transition:background .18s ease}
+        .appt-row-v2:hover{background:${BRAND.bg}}
+        .drag-grip:active{cursor:grabbing}
+        @media(max-width:860px){
+          .stats-grid-v2{grid-template-columns:repeat(2,1fr)!important;gap:12px!important}
+          .stat-card-v2{padding:16px!important;border-radius:16px!important}
+          .stat-card-v2-value{font-size:24px!important}
+          .qa-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
+          .qa-btn{padding:14px!important}
+          .sections-grid{grid-template-columns:1fr!important}
+          .section-card-v2{padding:18px!important;border-radius:16px!important}
           .search-input-wrap{display:none!important}
-          .topbar-notification{margin-left:auto!important}
-          .topbar-greeting h1{font-size:17px!important}
-          .topbar-greeting p{font-size:11px!important}
-          .section-card{padding:16px!important;border-radius:14px!important}
-          .patient-stats-grid{grid-template-columns:1fr 1fr!important;gap:10px!important}
+          .hero-inner h1{font-size:19px!important}
+          .hero-inner p{font-size:11.5px!important}
+          .week-chart-bar-area{height:88px!important}
+          .week-chart-day{font-size:9px!important}
+          .patient-stats-grid-v2{gap:10px!important}
         }
       `}</style>
 
-      <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
-        <SharedSidebar lang={lang} setLang={setLang} activePage="dashboard" plan={plan} planLoading={loadingStats} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
+      <div style={{ fontFamily: "'Rubik',sans-serif", direction: isAr ? "rtl" : "ltr", minHeight: "100vh", background: BRAND.bg }}>
+        <SharedSidebar
+          lang={lang} setLang={setLang} activePage="dashboard"
+          plan={plan} planLoading={loadingStats}
+          onCollapse={(c: boolean) => setSidebarWidth(c ? 70 : 240)}
+        />
 
-        <main
-          className="main-fade main-content"
-          style={{
-            [isAr?"marginRight":"marginLeft"]: sidebarWidth,
-            padding:"0 32px 40px", minHeight:"100vh",
-            transition:"margin .3s cubic-bezier(.4,0,.2,1)",
-          }}
-        >
+        <main className="main-fade" style={{
+          [isAr ? "marginRight" : "marginLeft"]: sidebarWidth,
+          padding: "0 28px 40px", minHeight: "100vh",
+          transition: "margin .3s cubic-bezier(.4,0,.2,1)",
+        }}>
 
-          {/* TOP BAR */}
-          <div style={{ position:"sticky",top:0,zIndex:40,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
-            <div className="topbar-inner" dir={isAr?"rtl":"ltr"} style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-              <div className="topbar-greeting">
-                <h1 style={{ fontSize:22,fontWeight:800,color:"#353535",marginBottom:2 }}>
-                  {tr.header[greetingKey]} <AppIcon glyph="👋" />
+          {/* ─── HERO HEADER بتدرج الهوية ─── */}
+          <div style={{
+            margin: "20px 0 24px",
+            background: `linear-gradient(120deg, ${BRAND.primaryDark} 0%, ${BRAND.primary} 55%, ${BRAND.primaryLight} 100%)`,
+            borderRadius: 24, padding: "26px 30px",
+            position: "relative", overflow: "hidden",
+            boxShadow: "0 12px 36px rgba(8,99,186,.28)",
+          }}>
+            {/* زخارف */}
+            <div style={{ position: "absolute", top: -60, insetInlineEnd: -40, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,.07)" }} />
+            <div style={{ position: "absolute", bottom: -80, insetInlineEnd: 120, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,.05)" }} />
+
+            <div className="hero-inner" style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <h1 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 5 }}>
+                  {tr.header[greetingKey]} 👋
                 </h1>
-                <p style={{ fontSize:13,color:"#aaa",fontWeight:400 }}>
-                  {toWestern(dateStr)}
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,.85)", fontWeight: 500 }}>
+                  {toWestern(dateStr)} · {tr.header.subtitle}
                 </p>
               </div>
-              <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                <div className="search-input-wrap" style={{ display:"flex",alignItems:"center",gap:8,background:"#fff",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
-                  <span style={{ color:"#aaa",fontSize:14 }}><AppIcon glyph="🔍" /></span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div className="search-input-wrap" style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: "rgba(255,255,255,.14)", border: "1.5px solid rgba(255,255,255,.22)",
+                  borderRadius: 12, padding: "9px 14px", backdropFilter: "blur(6px)",
+                }}>
+                  {Ico.search("rgba(255,255,255,.8)")}
                   <input
                     placeholder={tr.header.search}
-                    style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:160,direction:isAr?"rtl":"ltr" }}
+                    style={{
+                      border: "none", outline: "none", background: "none",
+                      fontFamily: "Rubik,sans-serif", fontSize: 13, color: "#fff", width: 150,
+                      direction: isAr ? "rtl" : "ltr",
+                    }}
                   />
                 </div>
-                <div className="topbar-notification">
-                  <NotificationBell userId={currentUserId} lang={lang} variant="dark" />
-                </div>
+                <NotificationBell userId={currentUserId} lang={lang} variant="dark" />
               </div>
             </div>
           </div>
 
-          <div style={{ paddingTop:28 }}>
+          {/* ─── STAT CARDS (بدون مالية) ─── */}
+          <div className="stats-grid-v2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 24 }}>
+            <StatCard
+              icon={Ico.calendar(BRAND.primary)} accent={BRAND.primary} accentSoft={BRAND.sky}
+              delay={0} loading={loadingStats}
+              label={tr.stats.todayAppointments} value={String(todayTotal)}
+              sub={`${toWestern(todayCompleted)} ${tr.stats.completed} · ${toWestern(todayTotal - todayCompleted)} ${tr.stats.remaining}`}
+              progress={todayProgress}
+            />
+            <StatCard
+              icon={Ico.users(BRAND.green)} accent={BRAND.green} accentSoft="rgba(46,125,50,.09)"
+              delay={80} loading={loadingStats}
+              label={tr.stats.totalPatients} value={String(totalPatients)}
+              sub={newThisMonth > 0 ? `+${toWestern(newThisMonth)} ${tr.stats.thisMonth}` : undefined}
+            />
+            <StatCard
+              icon={Ico.activity(BRAND.purple)} accent={BRAND.purple} accentSoft="rgba(123,45,139,.09)"
+              delay={160} loading={loadingStats}
+              label={tr.stats.monthVisits} value={String(monthTotalVisits)}
+              sub={`${toWestern(dailyAvg)} ${tr.stats.dailyAvg}`}
+            />
+            <StatCard
+              icon={Ico.userPlus(BRAND.teal)} accent={BRAND.teal} accentSoft="rgba(22,160,133,.09)"
+              delay={240} loading={loadingStats}
+              label={tr.stats.newPatients} value={String(newThisMonth)}
+              sub={tr.stats.thisMonth}
+            />
+          </div>
 
-            {/* STATS */}
-            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:18,marginBottom:28 }}>
-              <StatCard
-                icon="📅" accent="#0863ba" delay={0} loading={loadingStats}
-                label={tr.stats.todayAppointments}
-                value={String(todayTotal)}
-                sub={`${todayCompleted} ${tr.stats.completed} · ${todayTotal - todayCompleted} ${tr.stats.remaining}`}
-                subColor="#0863ba"
-              />
-              <StatCard
-                icon="👥" accent="#2e7d32" delay={80} loading={loadingStats}
-                label={tr.stats.totalPatients}
-                value={String(totalPatients)}
-                sub={newThisMonth > 0 ? `+${newThisMonth} ${tr.stats.newThisMonth}` : undefined}
-                subColor="#2e7d32"
-              />
-            </div>
-
-            {/* QUICK ACTIONS */}
-            <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:"20px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
-              <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",marginBottom:16 }}>{tr.quickActions.title}</h3>
-              <div className="quick-actions-grid" style={{ display:"grid",gridTemplateColumns:`repeat(${canAccess("payments",plan)?3:2},1fr)`,gap:12 }}>
-                {[
-                  { icon:"📅", label:tr.quickActions.newAppointment, color:"#0863ba", bg:"rgba(8,99,186,.08)",   href:"/appointments",  feature: null },
-                  { icon:"👤", label:tr.quickActions.addPatient,      color:"#2e7d32", bg:"rgba(46,125,50,.08)",  href:"/patients",      feature: null },
-                  { icon:"💳", label:tr.quickActions.recordPayment,   color:"#e67e22", bg:"rgba(230,126,34,.08)", href:"/payments",      feature: "payments" },
-                ].filter(a => !a.feature || canAccess(a.feature, plan)).map(a => (
-                  <a key={a.label} href={a.href} className="action-btn">
-                    <div className="action-btn-icon" style={{ background:a.bg,color:a.color }}><AppIcon glyph={a.icon} /></div>
-                    <span className="action-btn-label" style={{ color:a.color }}>{a.label}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            {/* SHARED PLAN: Doctor filter bar */}
-            {isSharedPlan(plan) && doctors.length > 0 && (
-              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:"16px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" }}>
-                  <div style={{ display:"flex",alignItems:"center",gap:6,marginInlineEnd:8 }}>
-                    <span style={{ fontSize:18 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></span>
-                    <span style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{tr.filterByDoctor}</span>
-                    <span style={{ fontSize:11,color:"#aaa",marginInlineStart:4 }}>
-                      ({toWestern(activeDoctorCount)}/{toWestern(maxDoctors)} {isAr?"طبيب":"drs"})
-                    </span>
+          {/* ─── QUICK ACTIONS ─── */}
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: BRAND.ink, marginBottom: 12, paddingInlineStart: 4 }}>
+              {tr.quickActions.title}
+            </h3>
+            <div className="qa-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${quickActions.length},1fr)`, gap: 14 }}>
+              {quickActions.map(a => (
+                <a key={a.label} href={a.href} className="qa-btn" style={{
+                  display: "flex", alignItems: "center", gap: 14,
+                  background: "#fff", borderRadius: 18, padding: "16px 18px",
+                  border: `1.5px solid ${BRAND.border}`,
+                  boxShadow: "0 4px 16px rgba(8,99,186,.05)",
+                  textDecoration: "none",
+                }}>
+                  <div style={{
+                    width: 46, height: 46, borderRadius: 14, background: a.grad,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    boxShadow: "0 6px 14px rgba(0,0,0,.14)",
+                  }}>{a.icon}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: BRAND.ink, whiteSpace: "nowrap" }}>{a.label}</div>
+                    <div style={{ fontSize: 11, color: BRAND.muted, fontWeight: 500, marginTop: 2, whiteSpace: "nowrap" }}>{a.sub}</div>
                   </div>
-                  {/* All doctors button */}
-                  <button
-                    onClick={() => setSelectedDoctorId(null)}
-                    style={{
-                      padding:"6px 16px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
-                      background: selectedDoctorId === null ? "#353535" : "#f0f4fa",
-                      color: selectedDoctorId === null ? "#fff" : "#555",
-                      border: selectedDoctorId === null ? "none" : "1.5px solid #eef0f3",
-                      transition:"all .18s",
-                    }}
-                  >
-                    {tr.allDoctors} ({toWestern(todayAppointments.length)})
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* ─── DOCTOR FILTER (خطط مشتركة) ─── */}
+          {isSharedPlan(plan) && doctors.length > 0 && (
+            <div style={{
+              background: "#fff", borderRadius: 18, padding: "14px 20px",
+              border: `1.5px solid ${BRAND.border}`, boxShadow: "0 4px 16px rgba(8,99,186,.05)",
+              marginBottom: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+            }}>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: BRAND.ink, marginInlineEnd: 4 }}>
+                {tr.filterByDoctor}
+                <span style={{ fontSize: 10.5, color: BRAND.muted, fontWeight: 500, marginInlineStart: 6 }}>
+                  ({toWestern(activeDoctorCount)}/{toWestern(maxDoctors)})
+                </span>
+              </span>
+              <button onClick={() => setSelectedDoctorId(null)} style={{
+                padding: "6px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                fontFamily: "Rubik,sans-serif",
+                background: selectedDoctorId === null ? BRAND.primary : BRAND.bg,
+                color: selectedDoctorId === null ? "#fff" : BRAND.muted,
+                border: "none", transition: "all .2s ease",
+              }}>{tr.allDoctors}</button>
+              {doctors.map((d, i) => {
+                const active = selectedDoctorId === String(d.id);
+                const c = d.color ?? AVATAR_COLORS[i % AVATAR_COLORS.length] ?? BRAND.primary;
+                return (
+                  <button key={d.id} onClick={() => setSelectedDoctorId(String(d.id))} style={{
+                    display: "flex", alignItems: "center", gap: 7,
+                    padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    fontFamily: "Rubik,sans-serif",
+                    background: active ? c : BRAND.bg,
+                    color: active ? "#fff" : BRAND.muted,
+                    border: "none", transition: "all .2s ease",
+                  }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: active ? "#fff" : c }} />
+                    {isAr ? d.name : (d.name_en || d.name)}
                   </button>
-                  {/* Per-doctor buttons — كل طبيب بلونه الخاص */}
-                  {doctors.map(doc => {
-                    const docColor = doc.color || getPlanBadge(plan).color;
-                    const docAppts = todayAppointments.filter(a => String(a.doctor_id) === String(doc.id));
-                    const isSelected = selectedDoctorId === doc.id;
-                    return (
-                      <button
-                        key={doc.id}
-                        onClick={() => setSelectedDoctorId(doc.id)}
-                        style={{
-                          padding:"6px 16px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
-                          background: isSelected ? docColor : "#f0f4fa",
-                          color: isSelected ? "#fff" : "#555",
-                          border: isSelected ? `1.5px solid ${docColor}` : "1.5px solid #eef0f3",
-                          transition:"all .18s",
-                          display:"flex",alignItems:"center",gap:6,
-                        }}
-                      >
-                        <span style={{ width:8,height:8,borderRadius:"50%",background:isSelected?"rgba(255,255,255,.7)":docColor,display:"inline-block",flexShrink:0 }}/>
-                        <span>{isAr ? doc.name : (doc.name_en || doc.name)}</span>
-                        <span style={{
-                          background: isSelected ? "rgba(255,255,255,0.25)" : `${docColor}20`,
-                          color: isSelected ? "#fff" : docColor,
-                          borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:700,
-                        }}>
-                          {toWestern(docAppts.length)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* MIDDLE: Schedule + Week Chart */}
-            <div className="middle-grid" style={{ display:"grid",gridTemplateColumns:"1fr 320px",gap:20,marginBottom:28 }}>
-
-              {/* Today's Schedule */}
-              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
-                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20 }}>
-                  <h3 style={{ fontSize:15,fontWeight:700,color:"#353535" }}>
-                    {tr.todaySchedule.title}
-                    {isSharedPlan(plan) && selectedDoctorId !== null && (
-                      <span style={{ fontSize:12,color:getPlanBadge(plan).color,marginInlineStart:8,fontWeight:500 }}>
-                        — {doctors.find(d=>d.id===selectedDoctorId)?.name}
-                      </span>
-                    )}
-                  </h3>
-                  <a href="/appointments" style={{ fontSize:12,color:"#0863ba",textDecoration:"none",fontWeight:600 }}>{tr.todaySchedule.viewAll} →</a>
-                </div>
-
-                {loadingStats ? (
-                  <div style={{ padding:"40px 0",textAlign:"center",color:"#ccc" }}>
-                    <div style={{ fontSize:32,marginBottom:10,animation:"pulse 1.5s ease infinite" }}><AppIcon glyph="📅" /></div>
-                    <div style={{ fontSize:13 }}>{tr.loading}</div>
-                  </div>
-                ) : (() => {
-                  const filteredAppts = isSharedPlan(plan) && selectedDoctorId !== null
-                    ? todayAppointments.filter(a => String(a.doctor_id) === String(selectedDoctorId))
-                    : todayAppointments;
-                  if (filteredAppts.length === 0) return (
-                    <div style={{ textAlign:"center",padding:"40px 20px",color:"#ccc" }}>
-                      <div style={{ fontSize:36,marginBottom:10 }}><AppIcon glyph="📭" /></div>
-                      <div style={{ fontSize:13,fontWeight:600 }}>{tr.todaySchedule.noAppointments}</div>
-                    </div>
-                  );
-                  return filteredAppts.map((appt, idx) => {
-                    const sc = statusColors[appt.status] ?? statusColors.scheduled;
-                    return (
-                      <div key={appt.id ?? idx} className="appt-row">
-                        <div style={{ width:52,textAlign:"center",flexShrink:0 }}>
-                          <div style={{ fontSize:14,fontWeight:700,color:"#0863ba",fontVariantNumeric:"tabular-nums" }}>
-                            {appt.time?.slice(0,5) ?? "—"}
-                          </div>
-                          {appt.duration && (
-                            <div style={{ fontSize:10,color:"#bbb",fontVariantNumeric:"tabular-nums" }}>
-                              {toWestern(appt.duration)}m
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ width:2,height:40,background:sc.color,borderRadius:4,flexShrink:0,opacity:.4 }} />
-                        <div style={{ width:36,height:36,borderRadius:10,flexShrink:0,background:getColor(appt.patient_id??idx+1),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700 }}>
-                          {getInitials(appt.patientName)}
-                        </div>
-                        <div style={{ flex:1,minWidth:0 }}>
-                          <div style={{ fontSize:13,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{appt.patientName}</div>
-                          {/* Show doctor name only in clinic plans when viewing all doctors */}
-                          {isSharedPlan(plan) && selectedDoctorId === null && appt.doctorName ? (
-                            <div style={{ fontSize:11,color:getPlanBadge(plan).color,marginTop:2,fontWeight:500 }}>
-                              <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {appt.doctorName}
-                            </div>
-                          ) : appt.type ? (
-                            <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{appt.type}</div>
-                          ) : null}
-                        </div>
-                        <div style={{ padding:"4px 10px",borderRadius:20,background:sc.bg,color:sc.color,fontSize:11,fontWeight:600,flexShrink:0 }}>
-                          {tr.todaySchedule.statuses[appt.status as keyof typeof tr.todaySchedule.statuses] ?? appt.status}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-
-              {/* Week Chart */}
-              <WeekChart lang={lang} data={weekData} />
+                );
+              })}
             </div>
+          )}
 
-            {/* BOTTOM: Patient Stats + Top Patients */}
-            <div className="bottom-grid" style={{ display:"grid",gridTemplateColumns:"1fr 300px",gap:20 }}>
-
-              {/* Patient Stats */}
-              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
-                <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",marginBottom:20 }}>{tr.patientStats}</h3>
-
-                <div className="patient-stats-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20 }}>
-                  {(isSharedPlan(plan) ? [
-                    { label:tr.apptThisMonth,     value:String(monthTotalVisits), color:getPlanBadge(plan).color, bg:`${getPlanBadge(plan).color}10`, icon:"📅" },
-                    { label:tr.dailyAvgLabel,      value:dailyAvg,                color:"#2e7d32", bg:"rgba(46,125,50,.06)",  icon:"📊" },
-                    { label:tr.activeDoctors,      value:String(activeDoctorCount), color:"#7b2d8b", bg:"rgba(123,45,139,.06)", icon:"‍" },
-                    { label:tr.totalPatientsLabel, value:String(totalPatients),   color:"#e67e22", bg:"rgba(230,126,34,.06)", icon:"👥" },
-                  ] : [
-                    { label:tr.apptThisMonth,     value:String(monthTotalVisits), color:"#0863ba", bg:"rgba(8,99,186,.06)",   icon:"📅" },
-                    { label:tr.dailyAvgLabel,      value:dailyAvg,                color:"#2e7d32", bg:"rgba(46,125,50,.06)",  icon:"📊" },
-                    { label:tr.newPatientsMonth,   value:String(newThisMonth),    color:"#7b2d8b", bg:"rgba(123,45,139,.06)", icon:"👤" },
-                    { label:tr.totalPatientsLabel, value:String(totalPatients),   color:"#e67e22", bg:"rgba(230,126,34,.06)", icon:"👥" },
-                  ]).map((s,i) => (
-                    <div key={i} style={{ background:s.bg,borderRadius:12,padding:"14px 16px",border:`1.5px solid ${s.color}20` }}>
-                      <div style={{ fontSize:18,marginBottom:6 }}><AppIcon glyph={s.icon} /></div>
-                      <div style={{ fontSize:22,fontWeight:800,color:s.color,lineHeight:1,fontVariantNumeric:"tabular-nums" }}>
-                        {loadingStats ? "—" : toWestern(s.value)}
-                      </div>
-                      <div style={{ fontSize:11,color:"#888",marginTop:4,fontWeight:500 }}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* إحصائية خاصة بالعيادات المشتركة: مواعيد اليوم لكل طبيب */}
-                {isSharedPlan(plan) && !loadingStats && doctors.length > 0 && (
-                  <div style={{ padding:14,background:`${getPlanBadge(plan).color}08`,borderRadius:12,border:`1px solid ${getPlanBadge(plan).color}20`,marginBottom:12 }}>
-                    <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>
-                      {isAr ? "مواعيد اليوم لكل طبيب" : "Today's Appointments per Doctor"}
-                    </div>
-                    {doctors.map((doc, di) => {
-                      const docColor = doc.color || AVATAR_COLORS[di % AVATAR_COLORS.length];
-                      const cnt = todayAppointments.filter(a => String(a.doctor_id) === String(doc.id)).length;
-                      const pct = todayTotal > 0 ? Math.round((cnt / todayTotal) * 100) : 0;
-                      return (
-                        <div key={doc.id} style={{ marginBottom:10 }}>
-                          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
-                            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                              <span style={{ width:8,height:8,borderRadius:"50%",background:docColor,display:"inline-block",flexShrink:0 }}/>
-                              <span style={{ fontSize:12,fontWeight:600,color:"#353535" }}>{isAr ? doc.name : (doc.name_en || doc.name)}</span>
-                            </div>
-                            <span style={{ fontSize:12,fontWeight:700,color:docColor,fontVariantNumeric:"tabular-nums" }}>
-                              {toWestern(cnt)} {isAr?"موعد":"appts"} · {toWestern(pct)}%
-                            </span>
-                          </div>
-                          <div style={{ height:5,background:"#eef0f3",borderRadius:10,overflow:"hidden" }}>
-                            <div style={{ height:"100%",width:`${pct}%`,background:docColor,borderRadius:10,transition:"width .8s ease" }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Today breakdown */}
-                {!loadingStats && todayAppointments.length > 0 && (
-                  <div style={{ padding:16,background:"#f9fafb",borderRadius:12,border:"1px solid #eef0f3" }}>
-                    <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:12 }}>{tr.todayBreakdown}</div>
-                    {Object.entries(
-                      todayAppointments.reduce((acc: Record<string,number>, a) => {
-                        acc[a.status] = (acc[a.status]||0) + 1;
-                        return acc;
-                      }, {})
-                    ).map(([status, countVal]) => {
-                      const count = countVal as number;
-                      const sc    = statusColors[status] ?? statusColors.scheduled;
-                      const pct   = Math.round((count / todayTotal) * 100);
-                      return (
-                        <div key={status} style={{ marginBottom:8 }}>
-                          <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
-                            <span style={{ fontSize:11,color:sc.color,fontWeight:600 }}>
-                              {tr.todaySchedule.statuses[status as keyof typeof tr.todaySchedule.statuses] ?? status}
-                            </span>
-                            <span style={{ fontSize:11,color:"#888",fontVariantNumeric:"tabular-nums" }}>
-                              {toWestern(count)} ({toWestern(pct)}%)
-                            </span>
-                          </div>
-                          <div style={{ height:5,background:"#eef0f3",borderRadius:10,overflow:"hidden" }}>
-                            <div style={{ height:"100%",width:`${pct}%`,background:sc.color,borderRadius:10,transition:"width .8s ease" }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Top Patients */}
-              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3" }}>
-                <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",marginBottom:20 }}>{tr.topPatients.title}</h3>
-
-                {loadingStats ? (
-                  <div style={{ padding:"30px 0",textAlign:"center",color:"#ccc",fontSize:13 }}>{tr.loading}</div>
-                ) : topPatients.length === 0 ? (
-                  <div style={{ padding:"30px 0",textAlign:"center",color:"#ccc",fontSize:13 }}>{tr.noData}</div>
-                ) : (
-                  <>
-                    {topPatients.map((p, i) => {
-                      const maxV = topPatients[0]?.visits || 1;
-                      return (
-                        <div key={p.id} className="top-patient-row">
-                          <div style={{ width:18,height:18,borderRadius:"50%",background:i===0?"#e67e22":i===1?"#888":"#a4c4e4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#fff",fontWeight:700,flexShrink:0 }}>
-                            {toWestern(i+1)}
-                          </div>
-                          <div style={{ width:32,height:32,borderRadius:8,flexShrink:0,background:getColor(p.id),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700 }}>
-                            {getInitials(p.name)}
-                          </div>
-                          <div style={{ flex:1,minWidth:0 }}>
-                            <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{p.name}</div>
-                            <div style={{ marginTop:5,height:4,background:"#f0f2f5",borderRadius:10,overflow:"hidden" }}>
-                              <div style={{ height:"100%",width:`${(p.visits/maxV)*100}%`,background:getColor(p.id),borderRadius:10,transition:"width 1s ease" }} />
-                            </div>
-                          </div>
-                          <div style={{ fontSize:11,color:"#888",fontWeight:600,flexShrink:0,fontVariantNumeric:"tabular-nums" }}>
-                            {toWestern(p.visits)} {tr.topPatients.visits}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    <div style={{ marginTop:20,padding:14,background:"rgba(8,99,186,.04)",borderRadius:10,border:"1px dashed rgba(8,99,186,.2)" }}>
-                      <div style={{ fontSize:11,color:"#888",marginBottom:8,fontWeight:500 }}>{tr.monthlySummary}</div>
-                      {[
-                        { label:tr.monthlyVisits, value:toWestern(monthTotalVisits) },
-                        { label:tr.dailyAvg,      value:toWestern(dailyAvg)         },
-                      ].map(s => (
-                        <div key={s.label} style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
-                          <span style={{ fontSize:12,color:"#aaa" }}>{s.label}</span>
-                          <span style={{ fontSize:12,fontWeight:700,color:"#0863ba",fontVariantNumeric:"tabular-nums" }}>{s.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-            </div>
-
-            {/* SHARED PLAN: ملخص أداء كل طبيب اليوم */}
-            {isSharedPlan(plan) && doctors.length > 0 && !loadingStats && (
-              <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:`1.5px solid ${getPlanBadge(plan).color}30`,marginTop:20 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:20 }}>
-                  <span style={{ fontSize:20 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></span>
-                  <div>
-                    <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",margin:0 }}>{tr.todayByDoctor}</h3>
-                    <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>
-                      {isAr ? `${activeDoctorCount} أطباء نشطون · حد أقصى ${maxDoctors}` : `${activeDoctorCount} active doctors · max ${maxDoctors}`}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12 }}>
-                  {doctors.map((doc, di) => {
-                    const docColor   = doc.color || AVATAR_COLORS[di % AVATAR_COLORS.length];
-                    const docAppts   = todayAppointments.filter(a => String(a.doctor_id) === String(doc.id));
-                    const docDone    = docAppts.filter(a => a.status === "completed").length;
-                    const docPending = docAppts.filter(a => a.status === "scheduled").length;
-                    const pct        = docAppts.length > 0 ? Math.round((docDone / docAppts.length) * 100) : 0;
-                    const isSelected = selectedDoctorId === doc.id;
-                    return (
-                      <div
-                        key={doc.id}
-                        onClick={() => setSelectedDoctorId(isSelected ? null : doc.id)}
-                        style={{
-                          padding:16,borderRadius:14,cursor:"pointer",
-                          border: isSelected ? `2px solid ${docColor}` : `1.5px solid ${docColor}25`,
-                          background: isSelected ? `${docColor}08` : "#fafbfc",
-                          transition:"all .18s",
-                          boxShadow: isSelected ? `0 4px 16px ${docColor}20` : "none",
-                        }}
-                      >
-                        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:14 }}>
-                          <div style={{ width:40,height:40,borderRadius:12,background:docColor,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0,boxShadow:`0 3px 10px ${docColor}40` }}>
-                            {getInitials(doc.name)}
-                          </div>
-                          <div style={{ flex:1,minWidth:0 }}>
-                            <div style={{ fontSize:13,fontWeight:700,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
-                              {isAr ? doc.name : (doc.name_en || doc.name)}
-                            </div>
-                            <div style={{ fontSize:10,color:docColor,fontWeight:600,marginTop:2 }}>{tr.doctorLabel}</div>
-                          </div>
-                          {isSelected && <span style={{ fontSize:16 }}>✓</span>}
-                        </div>
-                        {/* إجمالي المواعيد */}
-                        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
-                          <span style={{ fontSize:11,color:"#888" }}>{tr.stats.todayAppointments}</span>
-                          <span style={{ fontSize:18,fontWeight:800,color:docColor,fontVariantNumeric:"tabular-nums" }}>{toWestern(docAppts.length)}</span>
-                        </div>
-                        {/* شريط التقدم */}
-                        <div style={{ height:6,background:"#eef0f3",borderRadius:10,overflow:"hidden",marginBottom:8 }}>
-                          <div style={{ height:"100%",width:`${pct}%`,background:docColor,borderRadius:10,transition:"width .8s ease" }} />
-                        </div>
-                        {/* تفاصيل */}
-                        <div style={{ display:"flex",justifyContent:"space-between" }}>
-                          <span style={{ fontSize:10,color:"#2e7d32",fontWeight:600,fontVariantNumeric:"tabular-nums" }}>
-                            ✓ {toWestern(docDone)} {isAr?"مكتمل":"done"}
-                          </span>
-                          <span style={{ fontSize:10,color:"#0863ba",fontWeight:600,fontVariantNumeric:"tabular-nums" }}>
-                            ⏳ {toWestern(docPending)} {isAr?"متبقي":"pending"}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+          {/* ─── DRAGGABLE SECTIONS ─── */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingInline: 4 }}>
+            <span style={{ fontSize: 11.5, color: BRAND.muted, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              {Ico.grip(BRAND.muted, 14)} {tr.header.dragHint}
+            </span>
+            {JSON.stringify(order) !== JSON.stringify(DEFAULT_ORDER) && (
+              <button onClick={resetLayout} style={{
+                fontSize: 11, fontWeight: 700, color: BRAND.primary, background: "none",
+                border: "none", cursor: "pointer", fontFamily: "Rubik,sans-serif",
+                textDecoration: "underline",
+              }}>{tr.header.resetLayout}</button>
             )}
-
           </div>
+          <div className="sections-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
+            {order.map(id => sections[id] ?? null)}
+          </div>
+
         </main>
       </div>
-
-      {/* ── Popup الإشعارات ─────────────────────────────────── */}
-      {showPushPrompt && (
-        <div style={{
-          position: "fixed", inset: 0,
-          background: "rgba(0,0,0,.45)",
-          zIndex: 200,
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "center",
-          padding: "0 0 32px",
-          animation: "fadeIn .25s ease",
-        }}>
-          <div style={{
-            background: "#fff",
-            borderRadius: 20,
-            padding: "24px 24px 20px",
-            width: "100%",
-            maxWidth: 400,
-            boxShadow: "0 -4px 40px rgba(0,0,0,.15)",
-            direction: isAr ? "rtl" : "ltr",
-            fontFamily: "Rubik, sans-serif",
-            animation: "slideUp .3s cubic-bezier(.4,0,.2,1)",
-          }}>
-            {/* أيقونة وعنوان */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: 14,
-                background: "linear-gradient(135deg,#0863ba,#0558a8)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 24, flexShrink: 0,
-                boxShadow: "0 4px 12px rgba(8,99,186,.3)",
-              }}><AppIcon glyph="🔔" /></div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#1a2840", lineHeight: 1.2 }}>
-                  {isAr ? "فعّل الإشعارات" : "Enable Notifications"}
-                </div>
-                <div style={{ fontSize: 13, color: "#888", marginTop: 3 }}>
-                  {isAr ? "نبض · إدارة العيادة" : "NABD · Clinic Manager"}
-                </div>
-              </div>
-            </div>
-
-            {/* النص */}
-            <p style={{ fontSize: 14, color: "#555", lineHeight: 1.65, margin: "0 0 20px" }}>
-              {isAr
-                ? "فعّل الإشعارات لتلقي تنبيه فوري عند كل حجز موعد جديد أو طلب يحتاج موافقتك. "
-                : "Enable notifications to get instant alerts for new appointments and approval requests. "}
-            </p>
-
-            {/* الأزرار */}
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={handlePushPromptAccept}
-                style={{
-                  flex: 1, padding: "13px 0", borderRadius: 12,
-                  background: "linear-gradient(135deg,#0863ba,#0558a8)",
-                  color: "#fff", border: "none", cursor: "pointer",
-                  fontSize: 14, fontWeight: 700, fontFamily: "Rubik,sans-serif",
-                  boxShadow: "0 4px 14px rgba(8,99,186,.35)",
-                  transition: "transform .15s, box-shadow .15s",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
-              >
-                {isAr ? "تفعيل الآن" : "Enable Now"}
-              </button>
-              <button
-                onClick={handlePushPromptDismiss}
-                style={{
-                  padding: "13px 20px", borderRadius: 12,
-                  background: "#f5f7fa", color: "#888",
-                  border: "1.5px solid #eef0f3", cursor: "pointer",
-                  fontSize: 14, fontWeight: 500, fontFamily: "Rubik,sans-serif",
-                }}
-              >
-                {isAr ? "لاحقاً" : "Later"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
