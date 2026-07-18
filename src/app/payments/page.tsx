@@ -1901,13 +1901,27 @@ ${doctorSettlementRows}
   };
 
   // ── استخراج فاتورة لدفعة واحدة ───────────────────────────
-  const exportInvoicePDF = (payment: Payment) => {
+  const exportInvoicePDF = (payment: Payment, previewOnly: boolean = false) => {
     const patient = patients.find(x => x.id === payment.patient_id);
     const doctor = isSharedClinicPlan(plan) ? doctors.find(d => d.id === (payment as any).doctor_id) : null;
     const methodMap: Record<string,string> = { cash:"نقداً", card:"بطاقة", transfer:"تحويل" };
     const statusMap: Record<string,string> = { paid:"مدفوع", pending:"معلّق", cancelled:"ملغي" };
     const sessionTypeMap: Record<string,string> = { consultation:"معاينة", session:"جلسة", followup:"مراجعة", other:(payment as any).session_type_other || "أخرى" };
     const invoiceNo = `INV-${payment.id}-${payment.date.replace(/-/g,"")}`;
+
+    // ── محاسبة الطبيب — النسبة والحصص ─────────────────────
+    const rawPct = (payment as any).doctor_share_percentage;
+    const pctNum = rawPct != null && !isNaN(Number(rawPct)) ? Number(rawPct) : null;
+    const doctorShareAmount = pctNum != null ? payment.amount * (pctNum / 100) : null;
+    const clinicShareAmount = doctorShareAmount != null ? payment.amount - doctorShareAmount : null;
+    const doctorSection = doctor ? `
+  <div class="info-box" style="margin-bottom:24px;border-color:#0891b2">
+    <h3 style="color:#0891b2">🩺 محاسبة الطبيب</h3>
+    <div class="info-row"><span>الطبيب المعالج</span><span>د. ${doctor.name}</span></div>
+    <div class="info-row"><span>النسبة المحتسبة للطبيب</span><span>${pctNum != null ? pctNum + " %" : "غير محددة"}</span></div>
+    ${doctorShareAmount != null ? `<div class="info-row"><span>حصة الطبيب</span><span style="color:#2e7d32">${doctorShareAmount.toLocaleString()} ل.س</span></div>
+    <div class="info-row"><span>حصة العيادة</span><span style="color:#0863ba">${clinicShareAmount!.toLocaleString()} ل.س</span></div>` : ""}
+  </div>` : "";
 
     const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -1981,6 +1995,8 @@ ${doctorSettlementRows}
     </tbody>
   </table>
 
+  ${doctorSection}
+
   ${payment.notes ? `<div class="info-box"><h3>ملاحظات</h3><div style="font-size:13px;color:#555">${payment.notes}</div></div>` : ""}
 
   <div class="footer">
@@ -1993,7 +2009,7 @@ ${doctorSettlementRows}
     if (win) {
       win.document.write(html);
       win.document.close();
-      setTimeout(() => { win.focus(); win.print(); }, 500);
+      if (!previewOnly) setTimeout(() => { win.focus(); win.print(); }, 500);
     } else {
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -2491,7 +2507,8 @@ ${doctorSettlementRows}
                                   <span style={{ fontSize:11,color:"#aaa" }}>{methodIcon[p.method]} {tr.methods[p.method]}</span>
                                 </div>
                                 <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                                  <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>🧾</button>
+                                  <button className="icon-btn" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}>👁️</button>
+                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>🧾</button>
                                   <button className="icon-btn" onClick={()=>setDeleteId(p.id)}>🗑️</button>
                                 </div>
                               </div>
@@ -2571,6 +2588,7 @@ ${doctorSettlementRows}
                                 {p.amount.toLocaleString()} ل.س
                               </div>
                               <div style={{ display:"flex",justifyContent:"center",gap:4 }}>
+                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}>👁️</button>
                                 <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>🧾</button>
                                 <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>🗑️</button>
                               </div>
