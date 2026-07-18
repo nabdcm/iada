@@ -797,6 +797,8 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   const [mQ,setMQ]=useState(""); const [discount,setDiscount]=useState(0); const [payment,setPayment]=useState<"cash"|"card"|"insurance">("cash");
   const [pName,setPName]=useState(""); const [rxId,setRxId]=useState(""); const [flashId,setFlashId]=useState<number|null>(null); const [printSale,setPrintSale]=useState<Sale|null>(null);
   const [returnSale,setReturnSale]=useState<Sale|null>(null); const [retQty,setRetQty]=useState<{[id:number]:number}>({}); const [retReason,setRetReason]=useState("");
+  const [showClose,setShowClose]=useState(false); const [closeData,setCloseData]=useState<{closed:boolean;closing?:{cash_sales:number;card_sales:number;insurance_sales:number;cash_returns:number;expected_cash:number;counted_cash:number;difference:number;closed_by:string};preview?:{cash_sales:number;card_sales:number;insurance_sales:number;cash_returns:number;expected_cash:number}}|null>(null);
+  const [countedCash,setCountedCash]=useState(""); const [closeNotes,setCloseNotes]=useState("");
 
   const mRes=mQ.trim()?medicines.filter(m=>(m.name_ar+m.name_en).toLowerCase().includes(mQ.toLowerCase())||m.barcode.includes(mQ)).slice(0,6):[];
 
@@ -858,6 +860,24 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   };
 
   const today=new Date().toISOString().slice(0,10); const todaySales=sales.filter(s=>s.date===today); const todayTotal=todaySales.reduce((s,x)=>s+x.total,0);
+
+  const openClose=async()=>{
+    if(!userId) return;
+    setShowClose(true); setCloseData(null); setCountedCash(""); setCloseNotes("");
+    const res=await fetch(`/api/pharmacy/cash-closing?user_id=${userId}&date=${today}`);
+    const json=await res.json();
+    setCloseData(json);
+  };
+
+  const submitClose=async()=>{
+    if(!userId||!closeData?.preview) return;
+    if(countedCash===""){ showNotif({type:"error",message:isAr?"أدخل المبلغ النقدي المعدود":"Enter counted cash"},2500); return; }
+    const cashier=isAr?currentUser.name_ar:currentUser.name_en;
+    const res=await fetch("/api/pharmacy/cash-closing",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,date:today,counted_cash:Number(countedCash),notes:closeNotes||null,closed_by:cashier})});
+    const json=await res.json();
+    if(json.success){ showNotif({type:"success",message:isAr?"تم تقفيل الصندوق":"Cash drawer closed"},2500); setShowClose(false); }
+    else showNotif({type:"error",message:json.error||"Error"},3500);
+  };
   const pi:{[k:string]:string}={cash:"💵",card:"💳",insurance:"🏥"};
   const pm={cash:isAr?"نقداً":"Cash",card:isAr?"بطاقة":"Card",insurance:isAr?"تأمين":"Insurance"};
 
@@ -874,6 +894,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
           <span style={{fontSize:17}}>▐▌▌▐▌</span>{isAr?"تفعيل الماسح":"Scanner"}{barcodeMode==="sale"&&<span style={{fontSize:10,opacity:.8}}>● {isAr?"نشط":"On"}</span>}
         </button>
         <button onClick={()=>setShowForm(true)} className="btn-primary-lg" style={{background:"#0863ba",boxShadow:"0 4px 16px rgba(8,99,186,.35)"}}>🛒 {isAr?"بيع جديد":"New Sale"}</button>
+        <button onClick={openClose} className="btn-primary-lg" style={{background:"#2c3e50",boxShadow:"0 4px 16px rgba(44,62,80,.35)"}}>🧾 {isAr?"تقفيل الصندوق":"Close Drawer"}</button>
       </div>
 
       {showForm&&(
@@ -936,6 +957,44 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
               <button onClick={submitReturn} className="btn-primary-lg" style={{flex:1,justifyContent:"center",background:"#e67e22",boxShadow:"0 4px 14px rgba(230,126,34,.35)"}}>✅ {isAr?"تأكيد الإرجاع":"Confirm Return"}</button>
               <button onClick={()=>setReturnSale(null)} style={{padding:"13px 22px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:13,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
             </div>
+          </div>
+        </div>
+      )}
+      {showClose&&(
+        <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>setShowClose(false)}/>
+          <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(96vw,440px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>🧾 {isAr?"تقفيل الصندوق":"Close Drawer"} — {today}</h2><button onClick={()=>setShowClose(false)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            {!closeData?(
+              <div style={{textAlign:"center",padding:20,color:"#aaa"}}>{isAr?"جارِ التحميل...":"Loading..."}</div>
+            ):closeData.closed&&closeData.closing?(
+              <div>
+                <div style={{background:closeData.closing.difference===0?"rgba(39,174,96,.08)":"rgba(230,126,34,.08)",border:`1.5px solid ${closeData.closing.difference===0?"rgba(39,174,96,.3)":"rgba(230,126,34,.3)"}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
+                  <div style={{fontSize:12,color:"#888",marginBottom:4}}>{isAr?"تم تقفيل هذا اليوم مسبقًا بواسطة":"Already closed by"} {closeData.closing.closed_by}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:closeData.closing.difference===0?"#27ae60":"#e67e22"}}>{closeData.closing.difference>0?"+":""}{closeData.closing.difference} {isAr?"ر.س":"SAR"}</div>
+                  <div style={{fontSize:11,color:"#999"}}>{isAr?"الفرق (معدود - متوقع)":"Difference (counted - expected)"}</div>
+                </div>
+                {[[isAr?"مبيعات نقدي":"Cash sales",closeData.closing.cash_sales],[isAr?"مبيعات بطاقة":"Card sales",closeData.closing.card_sales],[isAr?"مبيعات تأمين":"Insurance sales",closeData.closing.insurance_sales],[isAr?"مرتجعات نقدية":"Cash returns",-closeData.closing.cash_returns],[isAr?"المتوقع بالدرج":"Expected in drawer",closeData.closing.expected_cash],[isAr?"المعدود فعليًا":"Actually counted",closeData.closing.counted_cash]].map(([label,val],i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<5?"1px solid #f0f2f5":"none",fontSize:13}}><span style={{color:"#888"}}>{label}</span><span style={{fontWeight:700,color:"#353535"}}>{val as number}</span></div>
+                ))}
+              </div>
+            ):closeData.preview?(
+              <div>
+                {[[isAr?"مبيعات نقدي":"Cash sales",closeData.preview.cash_sales],[isAr?"مبيعات بطاقة":"Card sales",closeData.preview.card_sales],[isAr?"مبيعات تأمين":"Insurance sales",closeData.preview.insurance_sales],[isAr?"مرتجعات نقدية":"Cash returns",-closeData.preview.cash_returns]].map(([label,val],i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}><span style={{color:"#888"}}>{label}</span><span style={{fontWeight:700,color:"#353535"}}>{val as number}</span></div>
+                ))}
+                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderTop:"1.5px solid #eef0f3",marginTop:6,marginBottom:16}}><span style={{fontWeight:800,color:"#353535"}}>{isAr?"المتوقع بالدرج نقدًا":"Expected cash in drawer"}</span><span style={{fontWeight:800,color:"#0863ba",fontSize:16}}>{closeData.preview.expected_cash} {isAr?"ر.س":"SAR"}</span></div>
+                <label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المبلغ النقدي المعدود فعليًا":"Actual cash counted"}</label>
+                <input type="number" value={countedCash} onChange={e=>setCountedCash(e.target.value)} placeholder="0" style={{width:"100%",padding:"11px 14px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:15,fontWeight:700,outline:"none",marginBottom:12}}/>
+                {countedCash!==""&&<div style={{textAlign:"center",marginBottom:12,fontSize:13,fontWeight:700,color:Number(countedCash)-closeData.preview.expected_cash===0?"#27ae60":"#e67e22"}}>{isAr?"الفرق":"Difference"}: {Number(countedCash)-closeData.preview.expected_cash>0?"+":""}{(Number(countedCash)-closeData.preview.expected_cash).toFixed(2)}</div>}
+                <label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"ملاحظات (اختياري)":"Notes (optional)"}</label>
+                <input value={closeNotes} onChange={e=>setCloseNotes(e.target.value)} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr",marginBottom:16}}/>
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={submitClose} className="btn-primary-lg" style={{flex:1,justifyContent:"center",background:"#2c3e50",boxShadow:"0 4px 14px rgba(44,62,80,.35)"}}>🔒 {isAr?"تأكيد التقفيل":"Confirm Close"}</button>
+                  <button onClick={()=>setShowClose(false)} style={{padding:"13px 22px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:13,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
+                </div>
+              </div>
+            ):null}
           </div>
         </div>
       )}
