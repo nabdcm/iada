@@ -2215,45 +2215,52 @@ export default function PharmacyPage() {
         <DesktopSidebar tabs={allowedTabs} active={activeTab} onSelect={(t)=>setActiveTab(t)} badges={badges} isAr={isAr}/>
 
         {/* ===== Topbar سطح المكتب ===== */}
-        <div className="nabd-topbar-desktop no-print" style={{position:"fixed",top:0,insetInlineStart:236,insetInlineEnd:0,zIndex:30,height:60,background:"rgba(244,247,251,.92)",backdropFilter:"blur(14px)",borderBottom:"1px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 26px"}}>
-          <div style={{fontSize:17,fontWeight:800,color:"#1a2840",letterSpacing:"-.4px"}}>{isAr?TAB_META[activeTab as TabKey]?.ar:TAB_META[activeTab as TabKey]?.en}</div>
-          <div style={{display:"flex",gap:9,alignItems:"center"}}>
-            <button onClick={()=>setShowCamera(true)} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 15px",background:"linear-gradient(135deg,#0863ba,#0a56a0)",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(8,99,186,.32)"}}>
-              <Icons.scan size={18}/>{isAr?"مسح باركود":"Scan"}
+        <div className="nabd-topbar-desktop no-print" style={{position:"fixed",top:0,insetInlineStart:236,insetInlineEnd:0,zIndex:30,height:62,background:"rgba(255,255,255,.85)",backdropFilter:"blur(16px)",borderBottom:"1px solid #eaeef4",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,padding:"0 26px"}}>
+          {/* المسار */}
+          <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+            <span style={{fontSize:12,color:"#9aa8b6",fontWeight:600,whiteSpace:"nowrap"}}>{isAr?"صيدلية نبض":"NABD Rx"}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c3ccd6" strokeWidth="2" strokeLinecap="round" style={{transform:isAr?"scaleX(-1)":"none",flexShrink:0}}><path d="M9 6l6 6-6 6"/></svg>
+            <span style={{fontSize:14.5,fontWeight:800,color:"#1a2840",letterSpacing:"-.3px",whiteSpace:"nowrap"}}>{isAr?TAB_META[activeTab as TabKey]?.ar:TAB_META[activeTab as TabKey]?.en}</span>
+          </div>
+          {/* الإجراءات */}
+          <div style={{display:"flex",gap:10,alignItems:"center",flexShrink:0}}>
+            <button onClick={()=>setShowCamera(true)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 17px",background:"linear-gradient(135deg,#0863ba,#0a4f96)",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(8,99,186,.3)"}}>
+              <Icons.scan size={16}/>{isAr?"مسح باركود":"Scan"}
             </button>
-            {rtPeers>1&&<div title={isAr?`${rtPeers} أجهزة متزامنة`:`${rtPeers} devices synced`} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 11px",background:"rgba(39,174,96,.1)",borderRadius:20,fontSize:11,fontWeight:700,color:"#1a7a45"}}>
-              <span style={{width:7,height:7,borderRadius:"50%",background:rtOnline?"#27ae60":"#e74c3c",animation:rtOnline?"pulse 2s infinite":"none"}}/>{rtPeers} 📱
+            {rtPeers>1&&<div title={isAr?`${rtPeers} أجهزة متزامنة`:`${rtPeers} devices synced`} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:"rgba(39,174,96,.09)",border:"1px solid rgba(39,174,96,.2)",borderRadius:20,fontSize:11,fontWeight:700,color:"#1a7a45"}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:rtOnline?"#27ae60":"#e74c3c",animation:rtOnline?"pulse 2s infinite":"none"}}/>{rtPeers} {isAr?"أجهزة":"devices"}
             </div>}
-            <div style={{display:"flex",alignItems:"center",gap:9,padding:"5px 12px 5px 8px",background:"#fff",border:"1px solid #eef0f3",borderRadius:12}}>
-              <div style={{width:30,height:30,borderRadius:9,background:`${ROLE[currentUser.role].color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>{currentUser.avatar}</div>
+            <span style={{width:1,height:26,background:"#eaeef4"}}/>
+            <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{height:36,padding:"0 13px",border:"1.5px solid #e4e9f0",borderRadius:10,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
+            <div style={{display:"flex",alignItems:"center",gap:9,height:44,padding:"0 13px 0 9px",background:"#fff",border:"1.5px solid #e4e9f0",borderRadius:12}}>
+              <div style={{width:30,height:30,borderRadius:9,background:`${ROLE[currentUser.role].color}12`,color:ROLE[currentUser.role].color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800}}>{(isAr?currentUser.name_ar:currentUser.name_en).slice(0,1)}</div>
               <div>
-                <div style={{fontSize:12,fontWeight:700,color:"#1a2840",lineHeight:1.1}}>{isAr?currentUser.name_ar:currentUser.name_en}</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#1a2840",lineHeight:1.15,maxWidth:130,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{isAr?currentUser.name_ar:currentUser.name_en}</div>
                 <div style={{fontSize:9.5,color:ROLE[currentUser.role].color,fontWeight:600}}>{isAr?ROLE[currentUser.role].ar:ROLE[currentUser.role].en}</div>
               </div>
             </div>
-            <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{padding:"8px 12px",border:"1px solid #d0e4f7",borderRadius:10,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
-            <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);setDataLoaded(false);setMedicines([]);setSales([]);setSuppliers([]);setInvoices([]);setPrescriptions([]);setStockLog([]);}} title={isAr?"تسجيل الخروج":"Logout"} style={{width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid #eef0f3",borderRadius:10,background:"#fff",color:"#9aa2ab",cursor:"pointer"}}><Icons.logout size={18}/></button>
+            <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);setDataLoaded(false);setMedicines([]);setSales([]);setSuppliers([]);setInvoices([]);setPrescriptions([]);setStockLog([]);}} title={isAr?"تسجيل الخروج":"Logout"} style={{width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #e4e9f0",borderRadius:10,background:"#fff",color:"#9aa2ab",cursor:"pointer",transition:"all .15s"}} onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#e74c3c";(e.currentTarget as HTMLElement).style.borderColor="rgba(231,76,60,.35)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color="#9aa2ab";(e.currentTarget as HTMLElement).style.borderColor="#e4e9f0";}}><Icons.logout size={17}/></button>
           </div>
         </div>
 
         {/* ===== Topbar موبايل ===== */}
-        <div className="nabd-topbar-mobile no-print" style={{position:"sticky",top:0,zIndex:30,background:"rgba(244,247,251,.94)",backdropFilter:"blur(14px)",borderBottom:"1px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 15px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <div style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#0863ba,#1a8fe3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,boxShadow:"0 4px 12px rgba(8,99,186,.28)"}}>💊</div>
-            <div>
-              <div style={{fontSize:14.5,fontWeight:800,color:"#1a2840"}}>{isAr?TAB_META[activeTab as TabKey]?.ar:TAB_META[activeTab as TabKey]?.en}</div>
-              <div style={{fontSize:9.5,color:ROLE[currentUser.role].color,fontWeight:600}}>{isAr?currentUser.name_ar:currentUser.name_en}</div>
+        <div className="nabd-topbar-mobile no-print" style={{position:"sticky",top:0,zIndex:30,background:"rgba(255,255,255,.9)",backdropFilter:"blur(16px)",borderBottom:"1px solid #eaeef4",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",paddingTop:"max(10px,env(safe-area-inset-top))"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+            <div style={{width:36,height:36,borderRadius:11,background:"linear-gradient(135deg,#0863ba,#1a8fe3)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 12px rgba(8,99,186,.28)",flexShrink:0}}><Icons.box size={18}/></div>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:15,fontWeight:800,color:"#1a2840",letterSpacing:"-.3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{isAr?TAB_META[activeTab as TabKey]?.ar:TAB_META[activeTab as TabKey]?.en}</div>
+              <div style={{fontSize:9.5,color:"#9aa8b6",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{isAr?"صيدلية نبض":"NABD Rx"} · {isAr?currentUser.name_ar:currentUser.name_en}</div>
             </div>
           </div>
-          <div style={{display:"flex",gap:7,alignItems:"center"}}>
-            {rtPeers>1&&<span style={{display:"flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700,color:"#1a7a45",background:"rgba(39,174,96,.1)",padding:"4px 8px",borderRadius:14}}><span style={{width:6,height:6,borderRadius:"50%",background:"#27ae60"}}/>{rtPeers}</span>}
-            <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{padding:"6px 10px",border:"1px solid #d0e4f7",borderRadius:9,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:10.5,fontWeight:700,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
-            <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);}} style={{width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid #eef0f3",borderRadius:9,background:"#fff",color:"#9aa2ab",cursor:"pointer"}}><Icons.logout size={16}/></button>
+          <div style={{display:"flex",gap:7,alignItems:"center",flexShrink:0}}>
+            {rtPeers>1&&<span style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontWeight:700,color:"#1a7a45",background:"rgba(39,174,96,.09)",border:"1px solid rgba(39,174,96,.2)",padding:"5px 9px",borderRadius:14}}><span style={{width:6,height:6,borderRadius:"50%",background:"#27ae60"}}/>{rtPeers}</span>}
+            <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{height:34,padding:"0 11px",border:"1.5px solid #e4e9f0",borderRadius:9,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:10.5,fontWeight:800,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
+            <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);}} style={{width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #e4e9f0",borderRadius:9,background:"#fff",color:"#9aa2ab",cursor:"pointer"}}><Icons.logout size={16}/></button>
           </div>
         </div>
 
         {/* ===== المحتوى ===== */}
-        <main className="main-anim nabd-main" style={{padding:"76px 26px 44px",transition:"margin .3s",minHeight:"100vh"}}>
+        <main className="main-anim nabd-main" style={{padding:"82px 26px 44px",transition:"margin .3s",minHeight:"100vh"}}>
           <div className="content-pad">
             {loading&&!dataLoaded?(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:320,gap:16}}>
