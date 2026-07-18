@@ -175,11 +175,6 @@ const Ico = {
       <circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>
     </svg>
   ),
-  search: (c: string, s = 16) => (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
-      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
-    </svg>
-  ),
   arrow: (c: string, s = 14) => (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -707,7 +702,6 @@ export default function DashboardPage() {
           .qa-btn{padding:14px!important}
           .sections-grid{grid-template-columns:1fr!important}
           .section-card-v2{padding:18px!important;border-radius:16px!important}
-          .search-input-wrap{display:none!important}
           .hero-inner h1{font-size:19px!important}
           .hero-inner p{font-size:11.5px!important}
           .week-chart-bar-area{height:88px!important}
@@ -750,21 +744,6 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div className="search-input-wrap" style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: "rgba(255,255,255,.14)", border: "1.5px solid rgba(255,255,255,.22)",
-                  borderRadius: 12, padding: "9px 14px", backdropFilter: "blur(6px)",
-                }}>
-                  {Ico.search("rgba(255,255,255,.8)")}
-                  <input
-                    placeholder={tr.header.search}
-                    style={{
-                      border: "none", outline: "none", background: "none",
-                      fontFamily: "Rubik,sans-serif", fontSize: 13, color: "#fff", width: 150,
-                      direction: isAr ? "rtl" : "ltr",
-                    }}
-                  />
-                </div>
               </div>
             </div>
           </div>
