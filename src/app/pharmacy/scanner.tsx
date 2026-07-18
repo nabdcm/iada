@@ -23,6 +23,8 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
   const [ready, setReady] = useState(false);
   const [starting, setStarting] = useState(true);
   const lastScan = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+  // تأكيد القراءة: لا نقبل الكود إلا بعد قراءته متطابقًا عدة مرات متتالية
+  const confirm = useRef<{ code: string; hits: number; at: number }>({ code: "", hits: 0, at: 0 });
   const startedRef = useRef(false);
   const doneRef = useRef(false); // منع أي معالجة بعد أول مسح ناجح
   const onScanRef = useRef(onScan);   onScanRef.current = onScan;
@@ -38,9 +40,32 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
       stop: () => Promise<void>; clear: () => void; getState?: () => number;
     } | null = null;
 
-    const handleDecoded = (decodedText: string) => {
+    // فحص checksum لباركود EAN/UPC الرقمي — يرفض القراءات المشوّهة
+    const validChecksum = (c: string): boolean => {
+      if (!/^\d+$/.test(c)) return true; // غير رقمي (Code128/QR) — لا checksum قياسي
+      if (![8, 12, 13].includes(c.length)) return c.length >= 4; // أطوال أخرى: نقبلها كما هي
+      let sum = 0;
+      for (let i = 0; i < c.length - 1; i++) {
+        const d = c.charCodeAt(c.length - 2 - i) - 48;
+        sum += i % 2 === 0 ? d * 3 : d;
+      }
+      return (10 - (sum % 10)) % 10 === c.charCodeAt(c.length - 1) - 48;
+    };
+
+    const handleDecoded = (raw: string) => {
       if (doneRef.current) return;
       const now = Date.now();
+      const candidate = raw.trim();
+      if (!validChecksum(candidate)) return; // قراءة مشوّهة — تجاهل
+
+      // تصويت: نفس الكود يجب أن يُقرأ 3 مرات متتالية خلال ثانية ليُقبل
+      const cf = confirm.current;
+      if (candidate === cf.code && now - cf.at < 1000) { cf.hits += 1; cf.at = now; }
+      else { confirm.current = { code: candidate, hits: 1, at: now }; }
+      if (confirm.current.hits < 3) return;
+      confirm.current = { code: "", hits: 0, at: 0 };
+
+      const decodedText = candidate;
       if (decodedText === lastScan.current.code && now - lastScan.current.at < 1500) return;
       lastScan.current = { code: decodedText, at: now };
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(60);
@@ -72,16 +97,13 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
         const { Html5Qrcode, Html5QrcodeSupportedFormats } = mod;
 
         // كل صيغ باركود الأدوية الشائعة (خطي) + QR
+        // فقط الصيغ الموثوقة ذات checksum — الصيغ الأخرى (ITF/CODE_39/CODABAR) كانت سبب القراءات الخاطئة
         const formatsToSupport = [
           Html5QrcodeSupportedFormats.EAN_13,
           Html5QrcodeSupportedFormats.EAN_8,
           Html5QrcodeSupportedFormats.UPC_A,
           Html5QrcodeSupportedFormats.UPC_E,
           Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.CODE_93,
-          Html5QrcodeSupportedFormats.ITF,
-          Html5QrcodeSupportedFormats.CODABAR,
           Html5QrcodeSupportedFormats.QR_CODE,
         ];
 
@@ -94,13 +116,18 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
           return { width: w, height: Math.floor(w * 0.62) };
         };
 
-        const config = { fps: 10, qrbox: qrboxFn, aspectRatio: 1.3333, disableFlip: false };
+        const config = {
+          fps: 15, qrbox: qrboxFn, aspectRatio: 1.3333, disableFlip: false,
+          // دقة أعلى = قراءة أدق للباركود الخطي
+          videoConstraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        } as Record<string, unknown>;
 
         // محاولة الكاميرا الخلفية أولًا، ثم أي كاميرا كاحتياط
         try {
           await instance!.start({ facingMode: { exact: "environment" } }, config, handleDecoded, () => {});
         } catch {
           if (cancelled) return;
+          delete (config as { videoConstraints?: unknown }).videoConstraints;
           await instance!.start({ facingMode: "environment" }, config, handleDecoded, () => {});
         }
         startedRef.current = true;
