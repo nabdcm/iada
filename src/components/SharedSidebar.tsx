@@ -464,33 +464,34 @@ export default function SharedSidebar({
           display: "flex", alignItems: "center",
           gap: (collapsed || compact) ? 0 : 11,
           justifyContent: (collapsed || compact) ? "center" : "flex-start",
-          padding: (collapsed || compact) ? "10px 0" : "10px 13px",
-          borderRadius: 10,
-          marginBottom: compact ? 0 : 3,
+          padding: (collapsed || compact) ? "10px 0" : "11px 13px",
+          borderRadius: 13,
+          marginBottom: compact ? 0 : 5,
           textDecoration: "none",
-          background: isActive ? SB_ACTIVE_BG : "transparent",
-          color: isLocked ? "rgba(255,255,255,0.28)" : (isActive ? SB_ACTIVE : SB_IDLE),
-          fontWeight: isActive ? 600 : 400,
+          background: isActive ? "#fff" : "transparent",
+          color: isLocked ? "rgba(255,255,255,0.28)" : (isActive ? "#0863ba" : SB_IDLE),
+          fontWeight: isActive ? 700 : 500,
           fontSize: 13.5,
-          transition: "all .18s",
+          transition: "all .2s cubic-bezier(.4,0,.2,1)",
           position: "relative",
-          border: isActive ? "1px solid rgba(255,255,255,0.18)" : "1px solid transparent",
+          border: "1px solid transparent",
+          boxShadow: isActive ? "0 6px 18px rgba(0,0,0,.22)" : "none",
           cursor: isLocked ? "not-allowed" : "pointer",
           opacity: isLocked ? 0.5 : 1,
           fontFamily: "Rubik, sans-serif",
           flex: compact ? 1 : undefined,
           minWidth: 0,
         }}
-        onMouseEnter={e => { if (!isActive && !isLocked) (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)"; }}
-        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLAnchorElement).style.background = isActive ? SB_ACTIVE_BG : "transparent"; }}
+        onMouseEnter={e => { if (!isActive && !isLocked) { const el=e.currentTarget as HTMLAnchorElement; el.style.background = "rgba(255,255,255,0.1)"; el.style.transform = `translateX(${isAr?-3:3}px)`; } }}
+        onMouseLeave={e => { const el=e.currentTarget as HTMLAnchorElement; if (!isActive) el.style.background = "transparent"; el.style.transform = "translateX(0)"; }}
       >
-        {isActive && (
+        {isActive && (collapsed || compact) && (
           <div style={{
             position: "absolute",
-            [isAr ? "right" : "left"]: 0,
+            [isAr ? "right" : "left"]: -10,
             top: "50%", transform: "translateY(-50%)",
-            width: 3, height: 22, background: SB_INDICATOR,
-            borderRadius: isAr ? "3px 0 0 3px" : "0 3px 3px 0",
+            width: 4, height: 24, background: SB_INDICATOR,
+            borderRadius: 4, boxShadow: "0 0 10px rgba(125,211,252,.7)",
           }} />
         )}
         <span style={{ flexShrink: 0, display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.8, position: "relative" }}>
@@ -502,7 +503,7 @@ export default function SharedSidebar({
               borderRadius: "50%", background: "#e53935",
               color: "#fff", fontSize: 9, fontWeight: 700,
               display: "flex", alignItems: "center", justifyContent: "center",
-              border: "1.5px solid #0558a8", lineHeight: 1,
+              border: isActive ? "1.5px solid #fff" : "1.5px solid #0558a8", lineHeight: 1,
             }}>
               {unreadMsgs > 9 ? "9+" : unreadMsgs}
             </span>
@@ -873,8 +874,9 @@ export default function SharedSidebar({
         style={{
           width: sideWidth,
           minHeight: "100vh",
-          background: SB_BG,
+          background: "linear-gradient(180deg,#044d96 0%,#0558a8 45%,#0b6ec7 100%)",
           display: "flex", flexDirection: "column",
+          overflow: "hidden",
           transition: "width .3s cubic-bezier(.4,0,.2,1)",
           position: "fixed", top: 0,
           right: isAr ? 0 : undefined, left: isAr ? undefined : 0,
@@ -884,18 +886,25 @@ export default function SharedSidebar({
             : "4px 0 32px rgba(5,88,168,.45)",
         }}
       >
+        {/* زخارف */}
+        <div style={{ position:"absolute", top:-70, insetInlineStart:-50, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,.05)", pointerEvents:"none" }}/>
+        <div style={{ position:"absolute", bottom:120, insetInlineEnd:-70, width:180, height:180, borderRadius:"50%", background:"rgba(255,255,255,.04)", pointerEvents:"none" }}/>
+
         {/* ── Header / Logo ── */}
         <div style={{
           padding: collapsed ? "22px 0" : "22px 20px",
           borderBottom: `1px solid ${SB_BORDER}`,
-          background: SB_HEADER,
+          background: "rgba(255,255,255,0.04)",
+          backdropFilter: "blur(4px)",
           display: "flex", alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
           minHeight: 72,
         }}>
           {!collapsed && (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 32, height: 32, filter: "brightness(0) invert(1)" }} />
+              <div style={{ width:40,height:40,borderRadius:12,background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.22)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 24, height: 24, filter: "brightness(0) invert(1)" }} />
+              </div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>نبض</div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>Clinic Manager</div>
@@ -950,25 +959,19 @@ export default function SharedSidebar({
                     style={{
                       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                       gap: 5, padding: "10px 4px", borderRadius: 10, textDecoration: "none",
-                      background: isActive ? SB_ACTIVE_BG : "rgba(255,255,255,0.05)",
-                      color: isLocked ? "rgba(255,255,255,0.28)" : (isActive ? SB_ACTIVE : SB_IDLE),
-                      fontWeight: isActive ? 600 : 400, fontSize: 11,
-                      transition: "all .18s", position: "relative",
-                      border: isActive ? "1px solid rgba(255,255,255,0.18)" : "1px solid rgba(255,255,255,0.08)",
+                      background: isActive ? "#fff" : "rgba(255,255,255,0.06)",
+                      color: isLocked ? "rgba(255,255,255,0.28)" : (isActive ? "#0863ba" : SB_IDLE),
+                      fontWeight: isActive ? 700 : 500, fontSize: 11,
+                      transition: "all .2s", position: "relative",
+                      border: "1px solid " + (isActive ? "transparent" : "rgba(255,255,255,0.1)"),
+                      boxShadow: isActive ? "0 6px 18px rgba(0,0,0,.22)" : "none",
                       cursor: isLocked ? "not-allowed" : "pointer",
                       opacity: isLocked ? 0.5 : 1, fontFamily: "Rubik, sans-serif", textAlign: "center",
                     }}
                     onMouseEnter={e => { if (!isActive && !isLocked) (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.1)"; }}
                     onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLAnchorElement).style.background = isActive ? SB_ACTIVE_BG : "rgba(255,255,255,0.05)"; }}
                   >
-                    {isActive && (
-                      <div style={{
-                        position: "absolute", top: 0, left: "50%",
-                        transform: "translateX(-50%)",
-                        width: 22, height: 3, background: SB_INDICATOR,
-                        borderRadius: "0 0 3px 3px",
-                      }} />
-                    )}
+
                     <span style={{ display: "flex", alignItems: "center", opacity: isActive ? 1 : 0.85, position: "relative" }}>
                       {icon}
                       {showBadge && (
@@ -996,7 +999,7 @@ export default function SharedSidebar({
         </nav>
 
         {/* ── Footer ── */}
-        <div style={{ padding: collapsed ? "12px 10px" : "12px 12px", borderTop: `1px solid ${SB_BORDER}`, background: SB_HEADER }}>
+        <div style={{ padding: collapsed ? "12px 10px" : "12px 12px", borderTop: `1px solid ${SB_BORDER}`, background: "rgba(0,0,0,0.12)" }}>
           {!collapsed && userId && pushPerm !== "unsupported" && pushPerm !== "denied" && (
             <button
               onClick={handlePushToggle}
