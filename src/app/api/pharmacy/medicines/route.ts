@@ -57,6 +57,18 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
       const newStock = data?.[0]?.new_stock ?? null;
+      // تسجيل الحركة اليدوية في سجل المخزون
+      const delta = Number(fields.delta || 0);
+      await supabaseAdmin.from("pharmacy_stock_logs").insert({
+        user_id,
+        medicine_id: id,
+        medicine_name: fields.medicine_name || "",
+        type: delta >= 0 ? "in" : "out",
+        qty: Math.abs(delta),
+        date: new Date().toISOString().slice(0, 10),
+        user: fields.by || "",
+        ref: "MANUAL",
+      }).then(() => {}, () => {});
       return NextResponse.json({ success: true, newStock });
     }
 

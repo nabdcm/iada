@@ -15,7 +15,7 @@ import { supabase } from "@/lib/supabase";
 // ============================================================
 
 type Lang = "ar"|"en";
-type MedCat = "antibiotics"|"analgesics"|"chronic"|"vitamins"|"topical"|"other";
+type MedCat = "antibiotics"|"analgesics"|"chronic"|"vitamins"|"topical"|"syrups"|"injections"|"dermatology"|"pediatric"|"digestive"|"respiratory"|"cardiac"|"diabetes"|"eye_ear"|"womens_health"|"cosmetics"|"supplies"|"other";
 type BarcodeMode = "inventory"|"stock_in"|"stock_out"|"sale"|null;
 type UserRole = "pharmacist"|"manager"|"doctor";
 
@@ -40,13 +40,25 @@ type SysAlert = { id:number; type:"low_stock"|"expiring"|"out_of_stock"; medicin
 
 // ── بيانات الصيدلية تُحمَّل من Supabase عبر loadData() ──
 
-const CAT:{[k:string]:{ar:string;en:string;color:string;icon:string}} = {
-  antibiotics:{ar:"مضادات حيوية",en:"Antibiotics",color:"#e74c3c",icon:"🦠"},
-  analgesics: {ar:"مسكنات",      en:"Analgesics", color:"#e67e22",icon:"💊"},
-  chronic:    {ar:"أمراض مزمنة", en:"Chronic",    color:"#8e44ad",icon:"❤️"},
-  vitamins:   {ar:"فيتامينات",   en:"Vitamins",   color:"#27ae60",icon:"🌿"},
-  topical:    {ar:"موضعية",      en:"Topical",    color:"#2980b9",icon:"🧴"},
-  other:      {ar:"أخرى",       en:"Other",      color:"#7f8c8d",icon:"📦"},
+const CAT:{[k:string]:{ar:string;en:string;color:string}} = {
+  antibiotics:  {ar:"مضادات حيوية",    en:"Antibiotics",   color:"#c0392b"},
+  analgesics:   {ar:"مسكنات وخافضات",  en:"Analgesics",    color:"#d35400"},
+  chronic:      {ar:"أمراض مزمنة",     en:"Chronic",       color:"#8e44ad"},
+  cardiac:      {ar:"قلب وضغط",        en:"Cardiac",       color:"#a93226"},
+  diabetes:     {ar:"سكري",            en:"Diabetes",      color:"#1f618d"},
+  vitamins:     {ar:"فيتامينات ومكملات",en:"Vitamins",     color:"#1e8449"},
+  syrups:       {ar:"شرابات",          en:"Syrups",        color:"#b7770d"},
+  injections:   {ar:"حقن وأمصال",      en:"Injections",    color:"#5b2c6f"},
+  topical:      {ar:"مراهم وموضعية",   en:"Topical",       color:"#2471a3"},
+  dermatology:  {ar:"جلدية",           en:"Dermatology",   color:"#884ea0"},
+  pediatric:    {ar:"أطفال ورضّع",     en:"Pediatric",     color:"#117a65"},
+  digestive:    {ar:"جهاز هضمي",       en:"Digestive",     color:"#9c640c"},
+  respiratory:  {ar:"تنفسية",          en:"Respiratory",   color:"#2e86c1"},
+  eye_ear:      {ar:"عين وأذن",        en:"Eye & Ear",     color:"#148f77"},
+  womens_health:{ar:"صحة المرأة",      en:"Women's Health",color:"#af3f74"},
+  cosmetics:    {ar:"تجميل وعناية",    en:"Cosmetics",     color:"#6c5b7b"},
+  supplies:     {ar:"مستلزمات طبية",   en:"Supplies",      color:"#566573"},
+  other:        {ar:"أخرى",            en:"Other",         color:"#7f8c8d"},
 };
 
 const ROLE:{[k:string]:{ar:string;en:string;color:string;tabs:string[]}} = {
@@ -112,7 +124,7 @@ function ScanResultCard({code,med,isAr,onClose,onAddNew,onSell,onReturn}:{code:s
           {/* المواصفات */}
           <div style={{padding:"4px 20px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
             {[
-              {l:isAr?"الفئة":"Category", v:cat?`${cat.icon} ${isAr?cat.ar:cat.en}`:"—", c:"#555"},
+              {l:isAr?"الفئة":"Category", v:cat?(isAr?cat.ar:cat.en):"—", c:"#555"},
               {l:isAr?"الوحدة":"Unit", v:med.unit||"—", c:"#555"},
               {l:isAr?"المخزون":"Stock", v:`${med.stock} ${med.unit||""}`, c:low?"#e67e22":"#27ae60"},
               {l:isAr?"الصلاحية":"Expiry", v:med.expiry_date||(isAr?"غير محدد":"N/A"), c:expired?"#e74c3c":"#555"},
@@ -261,10 +273,10 @@ function MedModal({lang,medicine,initialBarcode,onSave,onClose}:{lang:Lang;medic
   return (
     <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={onClose}/>
-      <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"26px",width:"min(96vw,540px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease"}}>
+      <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"clamp(16px,4vw,26px)",width:"min(96vw,560px)",maxHeight:"92dvh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-          <h2 style={{fontSize:16,fontWeight:800,color:"#353535"}}>{medicine?(isAr?"تعديل دواء":"Edit"):(isAr?"إضافة دواء":"Add Medicine")} 💊</h2>
-          <button onClick={onClose} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button>
+          <h2 style={{fontSize:16,fontWeight:800,color:"#1a2840",display:"flex",alignItems:"center",gap:9}}><span style={{width:34,height:34,borderRadius:10,background:"rgba(8,99,186,.09)",color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.box size={17}/></span>{medicine?(isAr?"تعديل دواء":"Edit Medicine"):(isAr?"إضافة دواء":"Add Medicine")}</h2>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"1.5px solid #eef0f3",background:"#f7f9fc",cursor:"pointer",color:"#8a94a0",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.close size={15}/></button>
         </div>
         <div style={{background:"linear-gradient(135deg,rgba(8,99,186,.07),rgba(8,99,186,.03))",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:13,padding:"13px 15px",marginBottom:15}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9}}>
@@ -277,14 +289,14 @@ function MedModal({lang,medicine,initialBarcode,onSave,onClose}:{lang:Lang;medic
             {form.barcode&&<div style={{flexShrink:0,background:"#fff",borderRadius:9,padding:"3px 7px",border:"1.5px solid #eef0f3",overflow:"hidden"}}><BarcodeSVG code={form.barcode} w={100} h={34}/></div>}
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="med-form-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div style={{gridColumn:"1/-1"}}><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"اسم الدواء *":"Name *"}</label><input value={form.name_ar||""} onChange={e=>set("name_ar",e.target.value)} style={{...inp,direction:"rtl"}}/></div>
-          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"الفئة":"Category"}</label><select value={form.category||"other"} onChange={e=>set("category",e.target.value)} style={{...inp,background:"#fafbfc",direction:isAr?"rtl":"ltr"}}>{Object.entries(CAT).map(([k,v])=><option key={k} value={k}>{v.icon} {isAr?v.ar:v.en}</option>)}</select></div>
+          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"الفئة":"Category"}</label><select value={form.category||"other"} onChange={e=>set("category",e.target.value)} style={{...inp,background:"#fafbfc",direction:isAr?"rtl":"ltr"}}>{Object.entries(CAT).map(([k,v])=><option key={k} value={k}>{isAr?v.ar:v.en}</option>)}</select></div>
           <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"الوحدة":"Unit"}</label><input value={form.unit||""} onChange={e=>set("unit",e.target.value)} style={{...inp,direction:"rtl"}}/></div>
-          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"سعر الشراء":"Buy"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.purchase_price||0} onChange={e=>set("purchase_price",Number(e.target.value))} style={inp}/></div>
-          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"سعر البيع":"Sell"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.sell_price||0} onChange={e=>set("sell_price",Number(e.target.value))} style={inp}/></div>
-          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المخزون":"Stock"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.stock||0} onChange={e=>set("stock",Number(e.target.value))} style={inp}/></div>
-          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"الحد الأدنى":"Min"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.min_stock||20} onChange={e=>set("min_stock",Number(e.target.value))} style={inp}/></div>
+          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"سعر الشراء":"Buy"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.purchase_price||""} onChange={e=>set("purchase_price",Number(e.target.value))} style={inp}/></div>
+          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"سعر البيع":"Sell"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.sell_price||""} onChange={e=>set("sell_price",Number(e.target.value))} style={inp}/></div>
+          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المخزون":"Stock"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.stock||""} onChange={e=>set("stock",Number(e.target.value))} style={inp}/></div>
+          <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"الحد الأدنى":"Min"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={form.min_stock||""} onChange={e=>set("min_stock",Number(e.target.value))} style={inp}/></div>
           <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"الانتهاء":"Expiry"}</label><input type="date" value={form.expiry_date||""} onChange={e=>set("expiry_date",e.target.value)} style={inp}/></div>
           <div style={{gridColumn:"1/-1"}}><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"الشركة المصنعة":"Manufacturer"}</label><input value={form.manufacturer||""} onChange={e=>set("manufacturer",e.target.value)} style={{...inp,direction:isAr?"rtl":"ltr"}}/></div>
         </div>
@@ -299,24 +311,24 @@ function MedModal({lang,medicine,initialBarcode,onSave,onClose}:{lang:Lang;medic
 
 // نافذة تعديل المخزون
 function AdjModal({lang,medicine,mode,onConfirm,onClose}:{lang:Lang;medicine:Medicine;mode:"in"|"out";onConfirm:(q:number)=>void;onClose:()=>void}) {
-  const isAr=lang==="ar"; const [qty,setQty]=useState(1); const isIn=mode==="in"; const c=isIn?"#27ae60":"#e67e22"; const ic=isIn?"📥":"📤";
+  const isAr=lang==="ar"; const [qty,setQty]=useState(1); const isIn=mode==="in"; const c=isIn?"#27ae60":"#e67e22";
   return (
     <div style={{position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)"}} onClick={onClose}/>
       <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"26px",width:"min(92vw,390px)",boxShadow:"0 24px 80px rgba(0,0,0,.2)",animation:"modalIn .2s ease"}}>
-        <div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:38,marginBottom:7}}>{ic}</div><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>{isIn?(isAr?"إضافة للمخزون":"Stock In"):(isAr?"خصم من المخزون":"Stock Out")}</h2><p style={{fontSize:12,color:"#888",marginTop:3}}>{isAr?medicine.name_ar:medicine.name_en}</p></div>
+        <div style={{textAlign:"center",marginBottom:18}}><div style={{width:52,height:52,margin:"0 auto 9px",borderRadius:15,background:`${c}12`,color:c,display:"flex",alignItems:"center",justifyContent:"center"}}>{isIn?<Icons.stockIn size={26}/>:<Icons.stockOut size={26}/>}</div><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>{isIn?(isAr?"إضافة للمخزون":"Stock In"):(isAr?"خصم من المخزون":"Stock Out")}</h2><p style={{fontSize:12,color:"#888",marginTop:3}}>{isAr?medicine.name_ar:medicine.name_en}</p></div>
         <div style={{background:"#f7f9fc",borderRadius:11,padding:"11px 15px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,color:"#888",fontWeight:600}}>{isAr?"المخزون الحالي":"Current"}</span><span style={{fontSize:17,fontWeight:800,color:medicine.stock<medicine.min_stock?"#e67e22":"#353535"}}>{medicine.stock} <span style={{fontSize:10,color:"#aaa",fontWeight:400}}>{medicine.unit}</span></span></div>
         <div style={{marginBottom:15}}>
           <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
             <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{width:42,height:42,borderRadius:11,border:`2px solid ${c}40`,background:`${c}10`,cursor:"pointer",fontSize:20,fontWeight:700,color:c,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-            <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} value={qty} onChange={e=>setQty(Math.max(1,Number(e.target.value)))} style={{flex:1,padding:"10px",border:`2px solid ${c}40`,borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:20,fontWeight:800,color:c,textAlign:"center",outline:"none"}}/>
+            <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} value={qty||""} onChange={e=>setQty(Math.max(0,Number(e.target.value)))} style={{flex:1,padding:"10px",border:`2px solid ${c}40`,borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:20,fontWeight:800,color:c,textAlign:"center",outline:"none"}}/>
             <button onClick={()=>setQty(q=>q+1)} style={{width:42,height:42,borderRadius:11,border:`2px solid ${c}40`,background:`${c}10`,cursor:"pointer",fontSize:20,fontWeight:700,color:c,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
           </div>
           <div style={{display:"flex",gap:5}}>{[5,10,20,50,100].map(n=>(<button key={n} onClick={()=>setQty(n)} style={{flex:1,padding:"5px",borderRadius:7,border:`1.5px solid ${c}30`,background:qty===n?`${c}15`:"transparent",color:qty===n?c:"#aaa",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>{n}</button>))}</div>
         </div>
         <div style={{background:`${c}08`,borderRadius:11,padding:"9px 13px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",border:`1.5px solid ${c}25`}}><span style={{fontSize:12,color:"#888"}}>{isAr?"بعد التعديل":"After"}</span><span style={{fontSize:15,fontWeight:800,color:c}}>{isIn?medicine.stock+qty:Math.max(0,medicine.stock-qty)} <span style={{fontSize:10,fontWeight:400,color:"#aaa"}}>{medicine.unit}</span></span></div>
         <div style={{display:"flex",gap:9}}>
-          <button onClick={()=>onConfirm(qty)} style={{flex:1,padding:"12px",background:c,color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 13px ${c}40`}}>{ic} {isAr?"تأكيد":"Confirm"}</button>
+          <button onClick={()=>{if(qty>=1)onConfirm(qty);}} style={{flex:1,padding:"12px",background:c,color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 13px ${c}40`}}>{isAr?"تأكيد":"Confirm"}</button>
           <button onClick={onClose} style={{padding:"12px 17px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
         </div>
       </div>
@@ -572,7 +584,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
               </div>
             </div>))}</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-              <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المدفوع":"Paid"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} max={iTotal} value={iPaid} onChange={e=>setIPaid(Number(e.target.value))} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
+              <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المدفوع":"Paid"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} max={iTotal} value={iPaid||""} onChange={e=>setIPaid(Number(e.target.value))} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
               <div style={{display:"flex",alignItems:"flex-end"}}><div style={{width:"100%",background:"rgba(8,99,186,.06)",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,padding:"10px 13px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,color:"#888"}}>{isAr?"الإجمالي":"Total"}</span><span style={{fontSize:18,fontWeight:800,color:"#0863ba"}}>{iTotal}</span></div></div>
             </div>
             <div style={{marginBottom:14}}><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"ملاحظات":"Notes"}</label><input value={iNotes} onChange={e=>setINotes(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
@@ -845,20 +857,20 @@ function AlertsTab({lang,medicines,alerts,markAll,markOne}:{lang:Lang;medicines:
 // ══════════════════════════════════════════════════════════════
 // 🗄️ تبويب المخزون
 // ══════════════════════════════════════════════════════════════
-function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId,broadcastScan,remoteScan,openCamera,pendingAddBarcode,onPendingConsumed,pendingReturnBarcode,onPendingReturnConsumed}:{
+function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId,stockLog,broadcastScan,remoteScan,openCamera,pendingAddBarcode,onPendingConsumed,pendingReturnBarcode,onPendingReturnConsumed}:{
   lang:Lang;medicines:Medicine[];setMedicines:React.Dispatch<React.SetStateAction<Medicine[]>>;
-  barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;
+  barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;stockLog:StockLog[];
   showNotif:(n:ScanNotif,ms?:number)=>void;addLog:(l:Omit<StockLog,"id">)=>void;currentUser:User;
   userId:string|null;broadcastScan:(code:string,mode:string)=>void;remoteScan:ScanEvent|null;openCamera:()=>void;
   pendingAddBarcode?:string;onPendingConsumed?:()=>void;pendingReturnBarcode?:string;onPendingReturnConsumed?:()=>void;
 }) {
   const isAr=lang==="ar";
-  const [search,setSearch]=useState(""); const [catF,setCatF]=useState<"all"|"low"|MedCat>("all");
+  const [search,setSearch]=useState(""); const [catF,setCatF]=useState<"all"|MedCat>("all");
+  const [statusF,setStatusF]=useState<"all"|"low"|"out"|"expiring">("all");
   const [showModal,setShowModal]=useState(false); const [editMed,setEditMed]=useState<Medicine|null>(null);
   const [delId,setDelId]=useState<number|null>(null); const [adj,setAdj]=useState<{med:Medicine;mode:"in"|"out"}|null>(null);
   const [litId,setLitId]=useState<number|null>(null); const [showLog,setShowLog]=useState(false);
   const [unknownBarcode,setUnknownBarcode]=useState<string>("");
-  const [log,setLog]=useState<StockLog[]>([]);
 
   const handleScan=useCallback((code:string)=>{
     const med=medicines.find(m=>m.barcode===code);
@@ -899,10 +911,12 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
   const filtered=useMemo(()=>{
     let l=medicines;
     if(search.trim()) l=l.filter(m=>m.name_ar.includes(search)||(m.name_en||"").toLowerCase().includes(search.toLowerCase())||m.barcode.includes(search));
-    if(catF==="low") l=l.filter(m=>m.stock<m.min_stock);
-    else if(catF!=="all") l=l.filter(m=>m.category===catF);
+    if(catF!=="all") l=l.filter(m=>m.category===catF);
+    if(statusF==="low") l=l.filter(m=>m.stock>0&&m.stock<m.min_stock);
+    else if(statusF==="out") l=l.filter(m=>m.stock===0);
+    else if(statusF==="expiring") l=l.filter(m=>isSoon(medExpiry(m))||isExp(medExpiry(m)));
     return l;
-  },[medicines,search,catF]);
+  },[medicines,search,catF,statusF]);
 
   const handleSave=async(data:Partial<Medicine>)=>{
     if(!data.name_ar?.trim()) return;
@@ -924,7 +938,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
     if(!adj) return;
     const{med,mode}=adj;
     if(userId){
-      const res=await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"adjust_stock",user_id:userId,id:med.id,delta:mode==="in"?qty:-qty})});
+      const res=await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"adjust_stock",user_id:userId,id:med.id,delta:mode==="in"?qty:-qty,medicine_name:med.name_ar,by:isAr?currentUser.name_ar:currentUser.name_en})});
       const json=await res.json();
       if(json.success){
         setMedicines(prev=>prev.map(m=>m.id===med.id?{...m,stock:json.newStock}:m));
@@ -932,9 +946,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
     } else {
       setMedicines(prev=>prev.map(m=>m.id===med.id?{...m,stock:mode==="in"?m.stock+qty:Math.max(0,m.stock-qty)}:m));
     }
-    const logEntry:Omit<StockLog,"id">={medicine_id:med.id,medicine_name:med.name_ar,type:mode,qty,date:new Date().toISOString().slice(0,10),user:isAr?currentUser.name_ar:currentUser.name_en};
-    setLog(p=>[{id:Math.max(0,...p.map(x=>x.id))+1,...logEntry},...p]);
-    addLog(logEntry);
+    addLog({medicine_id:med.id,medicine_name:med.name_ar,type:mode,qty,date:new Date().toISOString().slice(0,10),user:isAr?currentUser.name_ar:currentUser.name_en});
     showNotif({type:"success",message:mode==="in"?(isAr?`📥 إضافة ${qty} ${med.unit}`:`📥 Added ${qty}`):(isAr?`📤 خصم ${qty} ${med.unit}`:`📤 Removed ${qty}`),sub:isAr?med.name_ar:med.name_en},2500);
     setAdj(null);
   };
@@ -947,34 +959,36 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
     setDelId(null);
   };
 
-  const lowCount=medicines.filter(m=>m.stock<m.min_stock).length;
+  const lowCount=medicines.filter(m=>m.stock>0&&m.stock<m.min_stock).length;
+  const outCount=medicines.filter(m=>m.stock===0).length;
+  const expCount=medicines.filter(m=>isSoon(medExpiry(m))||isExp(medExpiry(m))).length;
 
   return (
     <div>
       <div style={{background:"#fff",borderRadius:13,padding:"11px 15px",border:"1.5px solid #eef0f3",marginBottom:11,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",boxShadow:"0 2px 8px rgba(8,99,186,.04)"}}>
         <span style={{fontSize:12,fontWeight:700,color:"#888",flexShrink:0}}>{isAr?"الماسح:":"Scanner:"}</span>
-        {([["inventory",isAr?"بحث":"Search","🔍","#0863ba"],["stock_in",isAr?"إضافة":"In","📥","#27ae60"],["stock_out",isAr?"خصم":"Out","📤","#e67e22"]] as [BarcodeMode,string,string,string][]).map(([m,label,icon,color])=>(
+        {([["inventory",isAr?"بحث":"Search",Icons.search,"#0863ba"],["stock_in",isAr?"إضافة":"In",Icons.stockIn,"#27ae60"],["stock_out",isAr?"خصم":"Out",Icons.stockOut,"#e67e22"]] as [BarcodeMode,string,(p:{size?:number})=>React.JSX.Element,string][]).map(([m,label,Ic,color])=>(
           <button key={m!} onClick={()=>setBarcodeMode(barcodeMode===m?null:m)}
-            style={{padding:"6px 13px",borderRadius:9,border:`2px solid ${barcodeMode===m?color:color+"40"}`,background:barcodeMode===m?color:color+"0a",color:barcodeMode===m?"#fff":color,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all .2s",boxShadow:barcodeMode===m?`0 3px 10px ${color}40`:"none"}}>
-            {icon} {label}{barcodeMode===m&&<span style={{fontSize:9,opacity:.8}}>●</span>}
+            style={{padding:"7px 13px",borderRadius:9,border:`1.5px solid ${barcodeMode===m?color:color+"40"}`,background:barcodeMode===m?color:"#fff",color:barcodeMode===m?"#fff":color,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,transition:"all .2s",boxShadow:barcodeMode===m?`0 3px 10px ${color}40`:"none"}}>
+            <Ic size={15}/> {label}
           </button>
         ))}
-        <button onClick={()=>{if(!barcodeMode)setBarcodeMode("inventory");openCamera();}} title={isAr?"مسح بالكاميرا حسب الوضع المختار":"Camera scan"} style={{padding:"6px 13px",borderRadius:9,border:"2px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.06)",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>📷 {isAr?"كاميرا":"Camera"}</button>
-        <button onClick={()=>setShowLog(true)} style={{marginRight:"auto",padding:"6px 13px",borderRadius:9,border:"1.5px solid #eef0f3",background:"#f7f9fc",color:"#666",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📜 {isAr?"سجل الحركة":"Movement Log"}</button>
+        <button onClick={()=>{if(!barcodeMode)setBarcodeMode("inventory");openCamera();}} title={isAr?"مسح بالكاميرا حسب الوضع المختار":"Camera scan"} style={{padding:"6px 13px",borderRadius:9,border:"2px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.06)",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}><Icons.camera size={15}/> {isAr?"كاميرا":"Camera"}</button>
+        <button onClick={()=>setShowLog(true)} style={{marginRight:"auto",padding:"6px 13px",borderRadius:9,border:"1.5px solid #eef0f3",background:"#f7f9fc",color:"#666",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Icons.log size={15}/> {isAr?"سجل الحركة":"Movement Log"}</button>
       </div>
 
       {/* تنبيه: باركود ممسوح غير مسجّل → زر إضافته كدواء جديد */}
       {unknownBarcode&&(
         <div style={{background:"linear-gradient(135deg,rgba(230,126,34,.1),rgba(230,126,34,.04))",border:"1.5px solid rgba(230,126,34,.35)",borderRadius:13,padding:"13px 16px",marginBottom:11,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",animation:"slideUp .3s ease"}}>
           <div style={{display:"flex",alignItems:"center",gap:11}}>
-            <span style={{fontSize:26}}>🆕</span>
+            <span style={{width:40,height:40,borderRadius:11,background:"rgba(230,126,34,.12)",color:"#d35400",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.scan size={20}/></span>
             <div>
               <div style={{fontSize:13,fontWeight:800,color:"#d35400"}}>{isAr?"باركود غير مسجّل في المخزون":"Barcode not in inventory"}</div>
               <div style={{fontSize:12,color:"#e67e22",fontFamily:"monospace",letterSpacing:.5,marginTop:2}}>{unknownBarcode}</div>
             </div>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>{setEditMed(null);setShowModal(true);}} style={{padding:"10px 18px",background:"#27ae60",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 13px rgba(39,174,96,.3)",whiteSpace:"nowrap"}}>➕ {isAr?"إضافة كدواء جديد":"Add as new"}</button>
+            <button onClick={()=>{setEditMed(null);setShowModal(true);}} style={{padding:"10px 18px",background:"#27ae60",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 13px rgba(39,174,96,.3)",whiteSpace:"nowrap"}}>{isAr?"＋ إضافة كدواء جديد":"＋ Add as new"}</button>
             <button onClick={()=>setUnknownBarcode("")} style={{padding:"10px 14px",background:"#fff",color:"#999",border:"1.5px solid #eee",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,cursor:"pointer"}}>{isAr?"تجاهل":"Dismiss"}</button>
           </div>
         </div>
@@ -983,16 +997,25 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
       <div style={{background:"#fff",borderRadius:13,padding:"15px 17px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 8px rgba(8,99,186,.04)",marginBottom:11}}>
         <div style={{display:"flex",gap:10,marginBottom:13,alignItems:"center"}}>
           <div style={{flex:1,display:"flex",alignItems:"center",gap:9,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:11,padding:"12px 15px"}}>
-            <span style={{color:"#bbb"}}>🔍</span>
+            <span style={{color:"#9aa8b6",display:"flex"}}><Icons.search size={16}/></span>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={isAr?"بحث بالاسم أو الباركود...":"Name or barcode..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:14,width:"100%",direction:isAr?"rtl":"ltr"}}/>
             {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb"}}>✕</button>}
           </div>
           <button onClick={()=>{setEditMed(null);setShowModal(true);}} className="btn-primary-lg" style={{background:"#0863ba",boxShadow:"0 4px 16px rgba(8,99,186,.35)"}}>＋ {isAr?"إضافة دواء":"Add Medicine"}</button>
         </div>
-        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-          <button onClick={()=>setCatF("all")} className={catF==="all"?"filter-chip active":"filter-chip"}>{isAr?"الكل":"All"}</button>
-          <button onClick={()=>setCatF("low")} className={catF==="low"?"filter-chip active":"filter-chip"} style={catF!=="low"&&lowCount>0?{borderColor:"#e67e22",color:"#e67e22"}:{}}>⚠️ {isAr?"منخفض":"Low"}{lowCount>0&&<span style={{background:"#e67e22",color:"#fff",borderRadius:10,padding:"1px 6px",fontSize:10,marginRight:4}}>{lowCount}</span>}</button>
-          {Object.entries(CAT).map(([k,v])=>(<button key={k} onClick={()=>setCatF(k as MedCat)} className={catF===k?"filter-chip active":"filter-chip"}>{v.icon} {isAr?v.ar:v.en}</button>))}
+        <div style={{display:"flex",gap:9,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",background:"#f2f5f9",borderRadius:11,padding:3,gap:2}}>
+            {([["all",isAr?"الكل":"All",null],["low",isAr?"منخفض":"Low",lowCount],["out",isAr?"نافد":"Out",outCount],["expiring",isAr?"قارب الانتهاء":"Expiring",expCount]] as [string,string,number|null][]).map(([k,label,cnt])=>(
+              <button key={k} onClick={()=>setStatusF(k as typeof statusF)} style={{padding:"8px 14px",border:"none",borderRadius:9,cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:statusF===k?700:600,background:statusF===k?"#fff":"transparent",color:statusF===k?"#0863ba":"#7a8794",boxShadow:statusF===k?"0 2px 8px rgba(8,99,186,.12)":"none",transition:"all .15s",display:"flex",alignItems:"center",gap:5}}>
+                {label}{typeof cnt==="number"&&cnt>0&&<span style={{background:statusF===k?"#0863ba":"#c3ccd6",color:"#fff",borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:800,minWidth:16,textAlign:"center"}}>{cnt}</span>}
+              </button>
+            ))}
+          </div>
+          <select value={catF} onChange={e=>setCatF(e.target.value as "all"|MedCat)} style={{padding:"9px 13px",border:"1.5px solid #e0e7ef",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:600,color:catF==="all"?"#7a8794":"#0863ba",background:"#fff",outline:"none",cursor:"pointer",minWidth:150,direction:isAr?"rtl":"ltr"}}>
+            <option value="all">{isAr?"كل الفئات":"All categories"}</option>
+            {Object.entries(CAT).map(([k,v])=>(<option key={k} value={k}>{isAr?v.ar:v.en}</option>))}
+          </select>
+          {(catF!=="all"||statusF!=="all")&&<button onClick={()=>{setCatF("all");setStatusF("all");}} style={{padding:"8px 12px",border:"none",background:"none",cursor:"pointer",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,color:"#e74c3c"}}>{isAr?"مسح الفلاتر ✕":"Clear ✕"}</button>}
         </div>
       </div>
 
@@ -1008,15 +1031,15 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
             <div key={m.id} className="inv-row" style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 1fr .9fr 190px",padding:"14px 20px",alignItems:"center",borderBottom:"1px solid #f0f2f5",background:lit?"rgba(8,99,186,.07)":expired?"rgba(231,76,60,.025)":"",outline:lit?"2px solid #0863ba":"none",transition:"all .2s"}}>
               <div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div>{m.manufacturer&&<div style={{fontSize:10,color:"#bbb",marginTop:1}}>{m.manufacturer}</div>}{expired&&<div style={{fontSize:10,color:"#e74c3c",fontWeight:700}}>🚫 {isAr?"منتهي":"EXPIRED"}</div>}{!expired&&medExpiry(m)&&<div style={{fontSize:10,color:isSoon(medExpiry(m))?"#e67e22":"#aaa",fontWeight:isSoon(medExpiry(m))?700:400,marginTop:1}}>{isSoon(medExpiry(m))?"⏳ ":"📅 "}{isAr?"أقرب انتهاء":"Exp"}: {medExpiry(m)}{m.batches&&m.batches.length>1?` · ${m.batches.length} ${isAr?"دفعات":"batches"}`:""}</div>}</div>
               <div><div style={{background:"#f7f9fc",borderRadius:7,padding:"2px 7px",border:"1px solid #e8ecf0",display:"inline-flex"}}><span style={{fontSize:10,color:"#0863ba",fontFamily:"monospace",letterSpacing:.7}}>{m.barcode}</span></div></div>
-              <div><span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{cat.icon} {isAr?cat.ar:cat.en}</span></div>
+              <div><span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{isAr?cat.ar:cat.en}</span></div>
               <div style={{fontSize:13,fontWeight:700,color:"#2e7d32"}}>{m.sell_price}<span style={{fontSize:10,color:"#aaa",fontWeight:400}}> {isAr?"ر.س":"SAR"}</span></div>
               <div style={{fontSize:13,fontWeight:700,color:m.stock<m.min_stock?"#e67e22":"#353535"}}>{m.stock}<span style={{fontSize:10,color:"#aaa",fontWeight:400}}> {isAr?m.unit:"u"}</span></div>
               <div><SBadge s={m.stock} m={m.min_stock} lang={lang}/></div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                <button onClick={()=>setAdj({med:m,mode:"in"})} className="action-icon-btn" title={isAr?"إضافة مخزون":"Stock in"} style={{color:"#27ae60",borderColor:"rgba(39,174,96,.3)"}}>📥</button>
-                <button onClick={()=>setAdj({med:m,mode:"out"})} className="action-icon-btn" title={isAr?"خصم مخزون":"Stock out"} style={{color:"#e67e22",borderColor:"rgba(230,126,34,.3)"}}>📤</button>
-                <button onClick={()=>{setEditMed(m);setShowModal(true);}} className="action-icon-btn" title={isAr?"تعديل":"Edit"}>✏️</button>
-                <button onClick={()=>setDelId(m.id)} className="action-icon-btn" title={isAr?"حذف":"Delete"} style={{color:"#e74c3c",borderColor:"rgba(231,76,60,.25)"}}>🗑️</button>
+                <button onClick={()=>setAdj({med:m,mode:"in"})} className="action-icon-btn" title={isAr?"إضافة مخزون":"Stock in"} style={{color:"#27ae60",borderColor:"rgba(39,174,96,.3)"}}><Icons.stockIn size={16}/></button>
+                <button onClick={()=>setAdj({med:m,mode:"out"})} className="action-icon-btn" title={isAr?"خصم مخزون":"Stock out"} style={{color:"#e67e22",borderColor:"rgba(230,126,34,.3)"}}><Icons.stockOut size={16}/></button>
+                <button onClick={()=>{setEditMed(m);setShowModal(true);}} className="action-icon-btn" title={isAr?"تعديل":"Edit"} style={{color:"#0863ba",borderColor:"rgba(8,99,186,.25)"}}><Icons.edit size={15}/></button>
+                <button onClick={()=>setDelId(m.id)} className="action-icon-btn" title={isAr?"حذف":"Delete"} style={{color:"#e74c3c",borderColor:"rgba(231,76,60,.25)"}}><Icons.trash size={15}/></button>
               </div>
             </div>
           );
@@ -1027,7 +1050,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
       <div className="mobile-cards" style={{display:"none"}}>
         {filtered.map(m=>{const cat=CAT[m.category];const lit=litId===m.id;const expired=isExp(medExpiry(m));return(
           <div key={m.id} style={{background:lit?"rgba(8,99,186,.05)":"#fff",borderRadius:14,padding:"14px",border:`1.5px solid ${lit?"#0863ba":expired?"rgba(231,76,60,.3)":"#eef0f3"}`,marginBottom:9,boxShadow:"0 2px 9px rgba(8,99,186,.05)",transition:"all .2s"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div><span style={{fontSize:10,fontWeight:600,padding:"1px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{cat.icon} {isAr?cat.ar:cat.en}</span></div><SBadge s={m.stock} m={m.min_stock} lang={lang}/></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div><span style={{fontSize:10,fontWeight:600,padding:"1px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{isAr?cat.ar:cat.en}</span></div><SBadge s={m.stock} m={m.min_stock} lang={lang}/></div>
             <div style={{background:"#f7f9fc",borderRadius:9,padding:"6px 10px",marginBottom:7,display:"flex",alignItems:"center",gap:8}}><BarcodeSVG code={m.barcode} w={90} h={30}/><span style={{fontFamily:"monospace",fontSize:9,color:"#0863ba",letterSpacing:.7}}>{m.barcode}</span></div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:9}}>
               <div style={{background:"#f7f9fc",borderRadius:8,padding:"7px",textAlign:"center"}}><div style={{fontSize:10,color:"#aaa",marginBottom:2}}>{isAr?"سعر البيع":"Price"}</div><div style={{fontSize:14,fontWeight:700,color:"#2e7d32"}}>{m.sell_price}</div></div>
@@ -1046,10 +1069,10 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
               </div>
             )}
             <div style={{display:"flex",gap:5}}>
-              <button onClick={()=>setAdj({med:m,mode:"in"})} style={{flex:1,padding:"7px",border:"1.5px solid rgba(39,174,96,.3)",borderRadius:9,background:"rgba(39,174,96,.07)",color:"#27ae60",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>📥</button>
-              <button onClick={()=>setAdj({med:m,mode:"out"})} style={{flex:1,padding:"7px",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:9,background:"rgba(230,126,34,.07)",color:"#e67e22",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>📤</button>
-              <button onClick={()=>{setEditMed(m);setShowModal(true);}} style={{flex:1,padding:"7px",border:"1.5px solid #d0e4f7",borderRadius:9,background:"rgba(8,99,186,.05)",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>{isAr?"تعديل":"Edit"}</button>
-              <button onClick={()=>setDelId(m.id)} style={{padding:"7px 12px",border:"1.5px solid rgba(231,76,60,.3)",borderRadius:9,background:"rgba(231,76,60,.06)",color:"#e74c3c",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑️</button>
+              <button onClick={()=>setAdj({med:m,mode:"in"})} style={{flex:1,padding:"9px",border:"1.5px solid rgba(39,174,96,.3)",borderRadius:10,background:"rgba(39,174,96,.07)",color:"#27ae60",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.stockIn size={17}/></button>
+              <button onClick={()=>setAdj({med:m,mode:"out"})} style={{flex:1,padding:"9px",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:10,background:"rgba(230,126,34,.07)",color:"#e67e22",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.stockOut size={17}/></button>
+              <button onClick={()=>{setEditMed(m);setShowModal(true);}} style={{flex:1,padding:"9px",border:"1.5px solid #d0e4f7",borderRadius:10,background:"rgba(8,99,186,.05)",color:"#0863ba",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.edit size={16}/></button>
+              <button onClick={()=>setDelId(m.id)} style={{flex:1,padding:"9px",border:"1.5px solid rgba(231,76,60,.3)",borderRadius:10,background:"rgba(231,76,60,.06)",color:"#e74c3c",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.trash size={16}/></button>
             </div>
           </div>
         );})}
@@ -1061,7 +1084,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
         <div style={{position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>setDelId(null)}/>
           <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"26px",width:"min(90vw,380px)",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)"}}>
-            <div style={{fontSize:38,marginBottom:12}}>🗑️</div>
+            <div style={{width:52,height:52,margin:"0 auto 12px",borderRadius:15,background:"rgba(231,76,60,.1)",color:"#e74c3c",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.trash size={24}/></div>
             <p style={{fontSize:14,fontWeight:700,color:"#353535",marginBottom:18}}>{isAr?"هل تريد حذف هذا الدواء؟":"Delete this medicine?"}</p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>{handleDelete(delId);}} style={{flex:1,padding:"11px",background:"#e74c3c",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>{isAr?"احذف":"Delete"}</button>
@@ -1075,13 +1098,14 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
         <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>setShowLog(false)}/>
           <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"22px",width:"min(96vw,620px)",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)",animation:"modalIn .25s ease"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>📜 {isAr?"سجل حركة المخزون":"Stock Movement Log"}</h2><button onClick={()=>setShowLog(false)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>{isAr?"سجل حركة المخزون":"Stock Movement Log"}</h2><button onClick={()=>setShowLog(false)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
-              {log.sort((a,b)=>b.id-a.id).map(l=>{
-                const ts:{[k:string]:{ic:string;c:string;ar:string;en:string}}={in:{ic:"📥",c:"#27ae60",ar:"إدخال",en:"In"},out:{ic:"📤",c:"#e67e22",ar:"إخراج",en:"Out"},sale:{ic:"🛒",c:"#8e44ad",ar:"بيع",en:"Sale"},purchase:{ic:"🏭",c:"#0863ba",ar:"شراء",en:"Purchase"},adjustment:{ic:"⚖️",c:"#7f8c8d",ar:"تعديل",en:"Adj"}};
+              {stockLog.length===0&&<div style={{textAlign:"center",padding:"36px",color:"#b8c0c9",fontSize:13,fontWeight:600}}>{isAr?"لا توجد حركات بعد":"No movements yet"}</div>}
+              {[...stockLog].sort((a,b)=>b.id-a.id).slice(0,200).map(l=>{
+                const ts:{[k:string]:{c:string;ar:string;en:string}}={in:{c:"#27ae60",ar:"إدخال",en:"In"},out:{c:"#e67e22",ar:"إخراج",en:"Out"},sale:{c:"#8e44ad",ar:"بيع",en:"Sale"},purchase:{c:"#0863ba",ar:"شراء",en:"Purchase"},adjustment:{c:"#7f8c8d",ar:"تعديل",en:"Adj"}};
                 const s=ts[l.type]||ts.adjustment;
                 return (<div key={l.id} style={{display:"flex",gap:11,alignItems:"flex-start",padding:"9px 12px",background:"#f7f9fc",borderRadius:9,border:"1px solid #eef0f3"}}>
-                  <span style={{fontSize:18,flexShrink:0}}>{s.ic}</span>
+                  <span style={{width:34,height:34,borderRadius:10,flexShrink:0,background:`${s.c}12`,color:s.c,display:"flex",alignItems:"center",justifyContent:"center"}}>{l.type==="out"||l.type==="sale"?<Icons.stockOut size={16}/>:<Icons.stockIn size={16}/>}</span>
                   <div style={{flex:1}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,flexWrap:"wrap"}}>
                       <div><span style={{fontSize:13,fontWeight:700,color:"#353535"}}>{l.medicine_name}</span><span style={{fontSize:10,padding:"1px 7px",borderRadius:20,background:`${s.c}15`,color:s.c,marginRight:5}}>{isAr?s.ar:s.en}</span></div>
@@ -1580,7 +1604,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
       {unknownBarcode&&(
         <div style={{background:"linear-gradient(135deg,rgba(230,126,34,.1),rgba(230,126,34,.04))",border:"1.5px solid rgba(230,126,34,.35)",borderRadius:13,padding:"13px 16px",marginBottom:13,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",animation:"slideUp .3s ease"}}>
           <div style={{display:"flex",alignItems:"center",gap:11}}>
-            <span style={{fontSize:26}}>🆕</span>
+            <span style={{width:40,height:40,borderRadius:11,background:"rgba(230,126,34,.12)",color:"#d35400",display:"flex",alignItems:"center",justifyContent:"center"}}><Icons.scan size={20}/></span>
             <div>
               <div style={{fontSize:13,fontWeight:800,color:"#d35400"}}>{isAr?"باركود غير مسجّل في المخزون":"Barcode not in inventory"}</div>
               <div style={{fontSize:12,color:"#e67e22",fontFamily:"monospace",letterSpacing:.5,marginTop:2}}>{unknownBarcode}</div>
@@ -1588,7 +1612,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
             </div>
           </div>
           <div style={{display:"flex",gap:8}}>
-            {onAddNewMedicine&&<button onClick={()=>{onAddNewMedicine(unknownBarcode);setUnknownBarcode("");}} style={{padding:"10px 18px",background:"#27ae60",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 13px rgba(39,174,96,.3)",whiteSpace:"nowrap"}}>➕ {isAr?"إضافة كدواء جديد":"Add as new"}</button>}
+            {onAddNewMedicine&&<button onClick={()=>{onAddNewMedicine(unknownBarcode);setUnknownBarcode("");}} style={{padding:"10px 18px",background:"#27ae60",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 13px rgba(39,174,96,.3)",whiteSpace:"nowrap"}}>{isAr?"＋ إضافة كدواء جديد":"＋ Add as new"}</button>}
             <button onClick={()=>setUnknownBarcode("")} style={{padding:"10px 14px",background:"#fff",color:"#999",border:"1.5px solid #eee",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,cursor:"pointer"}}>{isAr?"تجاهل":"Dismiss"}</button>
           </div>
         </div>
@@ -1602,13 +1626,13 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
             <div style={{display:"flex",alignItems:"center",gap:7,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:9,padding:"8px 11px"}}><span>💊</span><input ref={searchRef} value={mQ} onChange={e=>setMQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&mRes.length>0){e.preventDefault();addToSale(mRes[0]);}}} placeholder={isAr?"بحث أو رقم باركود... (Enter لإضافة الأول)":"Search or barcode... (Enter to add)"} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/>{mQ&&<button onClick={()=>setMQ("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb"}}>✕</button>}</div>
             {mRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:11,boxShadow:"0 8px 30px rgba(0,0,0,.11)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:3}}>{mRes.map(m=>(<div key={m.id} onClick={()=>addToSale(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><div><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{fontSize:9,color:"#aaa",marginRight:7,fontFamily:"monospace"}}>{m.barcode}</span></div><span style={{color:"#27ae60",fontWeight:700,fontSize:12}}>{m.sell_price} {isAr?"ر.س":"SAR"}</span></div>))}</div>}
           </div>
-          {items.length>0&&<div style={{background:"#f7f9fc",borderRadius:11,padding:"11px",marginBottom:12}}>{items.map((it,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:7,marginBottom:i<items.length-1?9:0,background:flashId===it.medicine_id?"rgba(8,99,186,.09)":"transparent",borderRadius:7,padding:"3px 5px",transition:"background .35s",flexWrap:"wrap"}}><div style={{flex:1,minWidth:120,fontSize:13,fontWeight:600,color:"#353535"}}>{it.medicine_name}</div><div style={{display:"flex",alignItems:"center",gap:3}}><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>-</button><span style={{fontSize:13,fontWeight:700,minWidth:22,textAlign:"center"}}>{it.qty}</span><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>+</button></div><div style={{display:"flex",alignItems:"center",gap:2,background:"#fff",border:"1.5px solid #f0e0d0",borderRadius:6,padding:"1px 5px"}} title={isAr?"خصم للوحدة":"Per-unit discount"}><span style={{fontSize:10,color:"#e67e22"}}>−</span><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} max={it.unit_price} value={it.item_discount||0} onChange={e=>setItems(p=>p.map((x,xi)=>xi===i?{...x,item_discount:Math.max(0,Math.min(x.unit_price,Number(e.target.value)))}:x))} style={{width:38,border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:11,textAlign:"center",color:"#e67e22"}}/></div><div style={{fontSize:12,fontWeight:700,color:"#27ae60",minWidth:50,textAlign:"center"}}>{(it.qty*(it.unit_price-(it.item_discount||0))).toFixed(0)}</div><button onClick={()=>setItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:15}}>✕</button></div>))}</div>}
+          {items.length>0&&<div style={{background:"#f7f9fc",borderRadius:11,padding:"11px",marginBottom:12}}>{items.map((it,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:7,marginBottom:i<items.length-1?9:0,background:flashId===it.medicine_id?"rgba(8,99,186,.09)":"transparent",borderRadius:7,padding:"3px 5px",transition:"background .35s",flexWrap:"wrap"}}><div style={{flex:1,minWidth:120,fontSize:13,fontWeight:600,color:"#353535"}}>{it.medicine_name}</div><div style={{display:"flex",alignItems:"center",gap:3}}><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>-</button><span style={{fontSize:13,fontWeight:700,minWidth:22,textAlign:"center"}}>{it.qty}</span><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>+</button></div><div style={{display:"flex",alignItems:"center",gap:2,background:"#fff",border:"1.5px solid #f0e0d0",borderRadius:6,padding:"1px 5px"}} title={isAr?"خصم للوحدة":"Per-unit discount"}><span style={{fontSize:10,color:"#e67e22"}}>−</span><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} max={it.unit_price} value={it.item_discount||""} onChange={e=>setItems(p=>p.map((x,xi)=>xi===i?{...x,item_discount:Math.max(0,Math.min(x.unit_price,Number(e.target.value)))}:x))} style={{width:38,border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:11,textAlign:"center",color:"#e67e22"}}/></div><div style={{fontSize:12,fontWeight:700,color:"#27ae60",minWidth:50,textAlign:"center"}}>{(it.qty*(it.unit_price-(it.item_discount||0))).toFixed(0)}</div><button onClick={()=>setItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:15}}>✕</button></div>))}</div>}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:11}}>
-            <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"خصم إجمالي":"Discount"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={discount} onChange={e=>setDiscount(Number(e.target.value))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
+            <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"خصم إجمالي":"Discount"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={discount||""} onChange={e=>setDiscount(Number(e.target.value))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
             <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:3}}>{isAr?"كوبون خصم":"Coupon"}</label>
               <div style={{display:"flex",gap:4}}>
                 <input value={coupon} onChange={e=>setCoupon(e.target.value)} placeholder={isAr?"الرمز":"Code"} style={{flex:1,minWidth:0,padding:"8px 9px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",direction:"ltr"}}/>
-                <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={couponVal} onChange={e=>setCouponVal(Math.max(0,Number(e.target.value)))} title={isAr?"قيمة الكوبون":"Coupon value"} style={{width:60,padding:"8px 7px",border:"1.5px solid #d0e0f0",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",textAlign:"center",color:"#8e44ad",fontWeight:700}}/>
+                <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={couponVal||""} onChange={e=>setCouponVal(Math.max(0,Number(e.target.value)))} title={isAr?"قيمة الكوبون":"Coupon value"} style={{width:60,padding:"8px 7px",border:"1.5px solid #d0e0f0",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",textAlign:"center",color:"#8e44ad",fontWeight:700}}/>
               </div>
             </div>
           </div>
@@ -1623,8 +1647,8 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
             ):(
               <div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-                  <div><label style={{fontSize:10,color:"#aaa",display:"block",marginBottom:3}}>💵 {isAr?"نقداً":"Cash"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={payCash} onChange={e=>setPayCash(Math.max(0,Number(e.target.value)))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
-                  <div><label style={{fontSize:10,color:"#aaa",display:"block",marginBottom:3}}>💳 {isAr?"بطاقة":"Card"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={payCard} onChange={e=>setPayCard(Math.max(0,Number(e.target.value)))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
+                  <div><label style={{fontSize:10,color:"#aaa",display:"block",marginBottom:3}}>💵 {isAr?"نقداً":"Cash"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={payCash||""} onChange={e=>setPayCash(Math.max(0,Number(e.target.value)))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
+                  <div><label style={{fontSize:10,color:"#aaa",display:"block",marginBottom:3}}>💳 {isAr?"بطاقة":"Card"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} value={payCard||""} onChange={e=>setPayCard(Math.max(0,Number(e.target.value)))} style={{width:"100%",padding:"8px 11px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
                 </div>
                 <button onClick={()=>{setPayCash(total-payCard>=0?total-payCard:0);}} style={{marginTop:5,fontSize:10,color:"#0863ba",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>{isAr?"املأ الباقي نقداً":"Fill rest cash"}</button>
                 <div style={{marginTop:6,fontSize:11,fontWeight:700,textAlign:"center",color:Math.abs(payedTotal-total)<0.01?"#27ae60":"#e74c3c"}}>{isAr?"مجموع المدفوع":"Paid"}: {payedTotal} / {total} {Math.abs(payedTotal-total)<0.01?"✅":(payedTotal<total?`(${isAr?"ناقص":"short"} ${(total-payedTotal).toFixed(0)})`:`(${isAr?"زائد":"over"} ${(payedTotal-total).toFixed(0)})`)}</div>
@@ -1677,7 +1701,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
               return (
                 <div key={it.id} style={{display:"flex",alignItems:"center",gap:9,marginBottom:10,padding:"9px 11px",background:"#f7f9fc",borderRadius:10}}>
                   <div style={{flex:1,fontSize:13,fontWeight:600,color:"#353535"}}>{it.medicine_name}<div style={{fontSize:10,color:"#aaa"}}>{isAr?"متاح للإرجاع":"Available"}: {remaining}</div></div>
-                  <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} max={remaining} value={retQty[it.id]||0} onChange={e=>setRetQty(p=>({...p,[it.id!]:Math.max(0,Math.min(remaining,Number(e.target.value)))}))} style={{width:64,padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",textAlign:"center"}}/>
+                  <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} max={remaining} value={retQty[it.id]||""} onChange={e=>setRetQty(p=>({...p,[it.id!]:Math.max(0,Math.min(remaining,Number(e.target.value)))}))} style={{width:64,padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",textAlign:"center"}}/>
                 </div>
               );
             })}
@@ -1894,7 +1918,7 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
 
       <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginBottom:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
         <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:13,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"المبيعات حسب التصنيف":"By Category"}</h3>
-        {topCat.map(([k,v])=>{const cat=CAT[k];const pct=maxC>0?(v/maxC)*100:0;return(<div key={k} style={{marginBottom:9}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:12,fontWeight:600,color:"#555"}}>{cat.icon} {isAr?cat.ar:cat.en}</span><span style={{fontSize:12,fontWeight:700,color:cat.color}}>{v} {isAr?"ر.س":"SAR"}</span></div><div style={{height:7,background:"#f0f2f5",borderRadius:10,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:cat.color,borderRadius:10,transition:"width .6s ease"}}/></div></div>);})}
+        {topCat.map(([k,v])=>{const cat=CAT[k];const pct=maxC>0?(v/maxC)*100:0;return(<div key={k} style={{marginBottom:9}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:12,fontWeight:600,color:"#555"}}>{isAr?cat.ar:cat.en}</span><span style={{fontSize:12,fontWeight:700,color:cat.color}}>{v} {isAr?"ر.س":"SAR"}</span></div><div style={{height:7,background:"#f0f2f5",borderRadius:10,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:cat.color,borderRadius:10,transition:"width .6s ease"}}/></div></div>);})}
       </div>
       <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
         <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:13,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"الأكثر مبيعاً":"Best Selling"}</h3>
@@ -2097,6 +2121,8 @@ export default function PharmacyPage() {
           .mobile-cards{display:block!important}
           .nabd-main{margin:0!important;padding:0 0 96px!important}
           .content-pad{padding:12px 13px 0!important}
+          .med-form-grid{grid-template-columns:1fr!important}
+          .med-form-grid>div{grid-column:1/-1!important}
         }
         @media(min-width:769px){
           .nabd-pillnav,.nabd-topbar-mobile,.nabd-fab-mobile{display:none!important}
@@ -2164,7 +2190,7 @@ export default function PharmacyPage() {
               </div>
             ):(
               <>
-                {activeTab==="inventory"    &&<InventoryTab     lang={lang} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} pendingAddBarcode={pendingAddBarcode} onPendingConsumed={()=>setPendingAddBarcode("")} pendingReturnBarcode={pendingReturnBarcode} onPendingReturnConsumed={()=>setPendingReturnBarcode("")}/>}
+                {activeTab==="inventory"    &&<InventoryTab     lang={lang} stockLog={stockLog} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} pendingAddBarcode={pendingAddBarcode} onPendingConsumed={()=>setPendingAddBarcode("")} pendingReturnBarcode={pendingReturnBarcode} onPendingReturnConsumed={()=>setPendingReturnBarcode("")}/>}
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} onAddNewMedicine={(bc)=>{setPendingAddBarcode(bc);setActiveTab("inventory");}} pendingSaleBarcode={pendingSaleBarcode} onPendingSaleConsumed={()=>setPendingSaleBarcode("")}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}

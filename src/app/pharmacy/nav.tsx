@@ -19,6 +19,17 @@ export const Icons = {
   camera: ({ size = 22 }: IconProps) => (<svg {...S(size)}><path d="M3 8a2 2 0 012-2h2l1.5-2h7L18 6h1a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/><circle cx="12" cy="12.5" r="3.2"/></svg>),
   logout: ({ size = 20 }: IconProps) => (<svg {...S(size)}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>),
   menu: ({ size = 22 }: IconProps) => (<svg {...S(size)}><path d="M4 6h16M4 12h16M4 18h16"/></svg>),
+  plus: ({ size = 20 }: IconProps) => (<svg {...S(size)}><path d="M12 5v14M5 12h14"/></svg>),
+  edit: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>),
+  trash: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6"/></svg>),
+  stockIn: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M12 3v10M8 9l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>),
+  stockOut: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M12 13V3M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>),
+  log: ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>),
+  search: ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
+  close: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M18 6L6 18M6 6l12 12"/></svg>),
+  print: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="7"/></svg>),
+  filter: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M4 5h16M7 12h10M10 19h4"/></svg>),
+  box: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>),
 };
 
 export type TabKey = "inventory" | "prescriptions" | "sales" | "suppliers" | "reorder" | "reports" | "alerts";
