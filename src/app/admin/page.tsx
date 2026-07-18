@@ -2759,20 +2759,9 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   const [showPass, setShowPass] = useState(false);
   const [error,    setError]    = useState("");
   const [loading,  setLoading]  = useState(false);
-  const [attempts, setAttempts] = useState(0);
-  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    // ── فحص القفل المؤقت ──────────────────────────────────
-    if (lockedUntil && Date.now() < lockedUntil) {
-      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
-      setError(`محاولات كثيرة. انتظر ${remaining} ثانية.`);
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -2786,18 +2775,9 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
       if (res.ok) {
         // حفظ flag بسيط في sessionStorage فقط للـ UI state (ليس للتحقق الأمني)
         sessionStorage.setItem(SESSION_KEY, "1");
-        setAttempts(0);
         onSuccess();
       } else {
-        const newAttempts = attempts + 1;
-        setAttempts(newAttempts);
-        if (newAttempts >= 5) {
-          const lockDuration = Math.min(newAttempts * 30, 300) * 1000;
-          setLockedUntil(Date.now() + lockDuration);
-          setError(`تم قفل الدخول لمدة ${lockDuration / 1000} ثانية بسبب المحاولات المتعددة.`);
-        } else {
-          setError(`اسم المستخدم أو كلمة المرور غير صحيحة. (${5 - newAttempts} محاولات متبقية)`);
-        }
+        setError("اسم المستخدم أو كلمة المرور غير صحيحة.");
         setPassword("");
       }
     } catch {
