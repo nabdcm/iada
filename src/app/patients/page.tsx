@@ -1898,8 +1898,8 @@ export default function PatientsPage() {
           .page-title{font-size:19px!important}
           .hero-card{margin:14px 0 18px!important;padding:18px 18px!important;border-radius:18px!important}
           .hero-inner{gap:10px!important}
-          .main-content{margin-right:0!important;margin-left:0!important;padding:0 0 100px!important}
-          .content-padding{padding:16px 14px 0!important}
+          .main-content{margin-right:0!important;margin-left:0!important;padding:0 14px 100px!important}
+          .content-padding{padding:16px 0 0!important}
           .search-filter-box{padding:12px 14px!important}
           .topbar-pad{padding:14px 16px!important}
           .mobile-cards{display:block!important}
