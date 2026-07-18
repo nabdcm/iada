@@ -2153,6 +2153,14 @@ ${doctorSettlementRows}
         .filter-chip.active{background:linear-gradient(135deg,#0863ba,#3d8fd6);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(8,99,186,.3)}
         .filter-chip:hover:not(.active){border-color:#a4c4e4;color:#0863ba}
         .icon-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+        .tx-action-btn{width:36px;height:36px;border-radius:11px;border:1.5px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0}
+        .tx-action-btn:hover{transform:translateY(-2px)}
+        .tx-action-view{background:rgba(8,99,186,.08);color:#0863ba;border-color:rgba(8,99,186,.18)}
+        .tx-action-view:hover{background:rgba(8,99,186,.16);box-shadow:0 4px 12px rgba(8,99,186,.2)}
+        .tx-action-invoice{background:rgba(46,125,50,.08);color:#2e7d32;border-color:rgba(46,125,50,.18)}
+        .tx-action-invoice:hover{background:rgba(46,125,50,.16);box-shadow:0 4px 12px rgba(46,125,50,.2)}
+        .tx-action-delete{background:rgba(192,57,43,.07);color:#c0392b;border-color:rgba(192,57,43,.16)}
+        .tx-action-delete:hover{background:rgba(192,57,43,.15);box-shadow:0 4px 12px rgba(192,57,43,.2)}
         .icon-btn:hover{border-color:#a4c4e4;background:rgba(8,99,186,.06)}
         .stat-big{background:#fff;border-radius:18px;padding:22px 24px;border:1.5px solid #eef0f3;box-shadow:0 2px 16px rgba(8,99,186,.06);position:relative;overflow:hidden}
         .pending-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;background:#fff;border:1.5px solid #eef0f3;margin-bottom:10px;transition:all .2s}
@@ -2493,7 +2501,7 @@ ${doctorSettlementRows}
                   </div>
 
                   {/* Header row — desktop only */}
-                  <div className="desktop-table-header" style={{ gridTemplateColumns: isSharedClinicPlan(plan) ? "110px 1fr 120px 110px 90px 90px 90px 40px" : "110px 1fr 130px 90px 90px 90px 40px",padding:"10px 20px",background:"linear-gradient(180deg,#f7fafd,#f1f6fb)",borderBottom:"1.5px solid #e6edf5",gap:0 }}>
+                  <div className="desktop-table-header" style={{ gridTemplateColumns: isSharedClinicPlan(plan) ? "100px 1.1fr 120px 1fr 96px 92px 110px 132px" : "100px 1.1fr 1fr 96px 92px 110px 132px",padding:"12px 22px",background:"linear-gradient(180deg,#f7fafd,#f1f6fb)",borderBottom:"1.5px solid #e6edf5",gap:0 }}>
                     {[
                       tr.table.date, tr.table.patient,
                       ...(isSharedClinicPlan(plan) ? [isAr ? "الطبيب" : "Doctor"] : []),
@@ -2574,13 +2582,13 @@ ${doctorSettlementRows}
                           const isNew = animIds.includes(p.id);
                           const doctor = isSharedClinicPlan(plan) ? doctors.find(d => d.id === (p as any).doctor_id) : null;
                           return (
-                            <div key={p.id} className="tx-row" style={{ display:"grid",gridTemplateColumns:isSharedClinicPlan(plan)?"110px 1fr 120px 110px 90px 90px 90px 40px":"110px 1fr 130px 90px 90px 90px 40px",padding:"13px 20px",alignItems:"center",animation:isNew?"rowPop .4s ease":undefined }}>
+                            <div key={p.id} className="tx-row" style={{ display:"grid",gridTemplateColumns:isSharedClinicPlan(plan)?"100px 1.1fr 120px 1fr 96px 92px 110px 132px":"100px 1.1fr 1fr 96px 92px 110px 132px",padding:"16px 22px",alignItems:"center",animation:isNew?"rowPop .4s ease":undefined }}>
                               <div style={{ fontSize:12,color:"#888" }}>{fmtDate(p.date)}</div>
                               <div style={{ display:"flex",alignItems:"center",gap:10,paddingLeft:8 }}>
                                 <div style={{ width:32,height:32,borderRadius:8,background:getColor(p.patient_id||0),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0 }}>
                                   {patient?getInitials(patient.name):"?"}
                                 </div>
-                                <div style={{ fontSize:13,fontWeight:500,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120 }}>
+                                <div style={{ fontSize:13,fontWeight:500,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
                                   {patient?.name||"—"}
                                 </div>
                               </div>
@@ -2637,10 +2645,16 @@ ${doctorSettlementRows}
                               <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
                                 {p.amount.toLocaleString()} ل.س
                               </div>
-                              <div style={{ display:"flex",justifyContent:"center",gap:4 }}>
-                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}><AppIcon glyph="👁️" /></button>
-                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}><AppIcon glyph="🧾" /></button>
-                                <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}><AppIcon glyph="🗑️" /></button>
+                              <div style={{ display:"flex",justifyContent:"flex-end",gap:6 }}>
+                                <button className="tx-action-btn tx-action-view" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}>
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                                <button className="tx-action-btn tx-action-invoice" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>
+                                </button>
+                                <button className="tx-action-btn tx-action-delete" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
                               </div>
                             </div>
                           );
