@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Appointment, Payment } from "@/lib/supabase";
 
@@ -106,36 +107,6 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType,MedicalField[]> = {
 };
 
 // ════════════════════════════════════════════════════════════
-// ─── MRN Helper — يتحقق من master_patients بالهاتف ──────────
-async function getOrCreateMRN(phone: string, name: string): Promise<string> {
-  const cleanPhone = phone.trim();
-  // هل يوجد سجل مركزي بهذا الهاتف؟
-  const { data: existing } = await supabase
-    .from("master_patients")
-    .select("mrn")
-    .eq("phone", cleanPhone)
-    .maybeSingle();
-
-  if (existing?.mrn) return existing.mrn;
-
-  // إنشاء سجل جديد
-  const { data: inserted } = await supabase
-    .from("master_patients")
-    .insert({ phone: cleanPhone, name: name.trim() })
-    .select("id, mrn")
-    .single();
-
-  if (inserted?.mrn) return inserted.mrn;
-
-  // fallback: إذا فشل الإدراج (race condition)، نحاول جلبه مجدداً
-  const { data: retry } = await supabase
-    .from("master_patients")
-    .select("mrn")
-    .eq("phone", cleanPhone)
-    .maybeSingle();
-
-  return retry?.mrn ?? `MRN-T-${Date.now()}`;
-}
 
 // DB HELPERS
 // ════════════════════════════════════════════════════════════

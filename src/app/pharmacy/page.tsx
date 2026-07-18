@@ -1114,7 +1114,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
       const json=await res.json(); if(!json.success)return; onRefresh();
     }
     setPrescriptions(prev=>prev.map(p=>p.id===rx.id?{...p,dispensed:true,status:"dispensed",dispensed_at:new Date().toISOString().slice(0,10),dispensed_by}:p));
-    rx.items.forEach(it=>{const med=medicines.find(m=>m.name_ar===it.medicine_name||m.name_en===it.medicine_name);if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:it.qty||1,date:new Date().toISOString().slice(0,10),user:dispensed_by,ref:rx.id,notes:"صرف وصفة"});});
+    rx.items.forEach(it=>{const med=medicines.find(m=>it.medicine_id?m.id===it.medicine_id:(m.name_ar.trim().toLowerCase()===it.medicine_name.trim().toLowerCase()||m.name_en.trim().toLowerCase()===it.medicine_name.trim().toLowerCase()));if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:it.qty||1,date:new Date().toISOString().slice(0,10),user:dispensed_by,ref:rx.id,notes:"صرف وصفة"});});
     setSafety(null);
   };
 

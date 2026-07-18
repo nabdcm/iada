@@ -2339,7 +2339,7 @@ async function importClinicData(
           .insert({ phone, name: p.name as string })
           .select("mrn")
           .single();
-        mrn = masterIns?.mrn ?? `MRN-T-${Date.now()}`;
+        mrn = masterIns?.mrn ?? null;
       }
 
       // هل يوجد مريض بنفس الهاتف في العيادة المستهدفة؟

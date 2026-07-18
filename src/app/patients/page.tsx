@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSProperties } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
+import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase } from "@/lib/supabase";
 import type { Patient } from "@/lib/supabase";
 
@@ -382,36 +383,6 @@ type PatientProfile = {
   extra_form_fields: Record<string,string|boolean>;
 };
 
-// ─── MRN Helper — يتحقق من master_patients بالهاتف ──────────
-async function getOrCreateMRN(phone: string, name: string): Promise<string> {
-  const cleanPhone = phone.trim();
-  // هل يوجد سجل مركزي بهذا الهاتف؟
-  const { data: existing } = await supabase
-    .from("master_patients")
-    .select("mrn")
-    .eq("phone", cleanPhone)
-    .maybeSingle();
-
-  if (existing?.mrn) return existing.mrn;
-
-  // إنشاء سجل جديد
-  const { data: inserted } = await supabase
-    .from("master_patients")
-    .insert({ phone: cleanPhone, name: name.trim() })
-    .select("id, mrn")
-    .single();
-
-  if (inserted?.mrn) return inserted.mrn;
-
-  // fallback: إذا فشل الإدراج (race condition)، نحاول جلبه مجدداً
-  const { data: retry } = await supabase
-    .from("master_patients")
-    .select("mrn")
-    .eq("phone", cleanPhone)
-    .maybeSingle();
-
-  return retry?.mrn ?? `MRN-T-${Date.now()}`;
-}
 
 const TOOTH_COLORS: Record<ToothStatus, { bg:string; border:string; text:string }> = {
   healthy:    { bg:"#e8f5e9", border:"#4caf50", text:"#2e7d32" },
