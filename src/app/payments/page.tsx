@@ -1206,11 +1206,25 @@ export default function PaymentsPage() {
       const docPayments = payments.filter(p =>
         (p as any).doctor_id === doc.id && p.status === "paid" && p.date.startsWith(thisMonth)
       );
+      let shareRevenue = 0;
+      let unspecified = 0;
+      docPayments.forEach(p => {
+        const rawPct = (p as any).doctor_share_percentage;
+        const pct = Number(rawPct);
+        if (rawPct != null && rawPct !== "" && !isNaN(pct)) {
+          shareRevenue += p.amount * (Math.min(100, Math.max(0, pct)) / 100);
+        } else {
+          shareRevenue += p.amount; // بدون نسبة محددة → تُحسب كاملة
+          unspecified++;
+        }
+      });
       return {
         id: doc.id,
         name: doc.name,
         color: doc.color || "#0863ba",
         monthlyRevenue: docPayments.reduce((s, p) => s + p.amount, 0),
+        shareRevenue: Math.round(shareRevenue),
+        unspecified,
         count: docPayments.length,
       };
     });
@@ -1349,7 +1363,7 @@ export default function PaymentsPage() {
 
   // دالة الكشف عن الأرقام بكلمة السر
   const handleRevealNumbers = () => {
-    if (paymentsLockEnabled && revealPasswordInput === paymentsLockPassword) {
+    if (paymentsLockEnabled && revealPasswordInput.trim() === (paymentsLockPassword ?? "").trim()) {
       setNumbersHidden(false);
       setShowRevealModal(false);
       setRevealPasswordInput("");
@@ -1364,7 +1378,7 @@ export default function PaymentsPage() {
 
   // دالة إصدار التقرير الشهري (محمي بكلمة السر)
   const handleMonthlyReportPassword = () => {
-    if (paymentsLockEnabled && monthlyReportPasswordInput === paymentsLockPassword) {
+    if (paymentsLockEnabled && monthlyReportPasswordInput.trim() === (paymentsLockPassword ?? "").trim()) {
       setShowMonthlyReportPasswordModal(false);
       setMonthlyReportPasswordInput("");
       setMonthlyReportPasswordError(false);
@@ -2033,6 +2047,7 @@ ${doctorSettlementRows}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes rowPop{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
         @keyframes spin{to{transform:rotate(360deg)}}
+        .hero-glass-btn:hover{background:rgba(255,255,255,.24)!important}
         .page-anim{animation:fadeUp .4s ease both}
         .tx-row{transition:background .15s;border-bottom:1px solid #f0f2f5}
         .tx-row:last-child{border-bottom:none}
@@ -2077,7 +2092,10 @@ ${doctorSettlementRows}
             gap:8px!important;
           }
           /* Topbar buttons — icon-only on mobile */
-          .page-title{font-size:18px!important}
+          .page-title{font-size:19px!important}
+          .page-sub{font-size:11.5px!important}
+          .hero-card{margin:14px 0 18px!important;padding:18px 18px!important;border-radius:18px!important}
+          .hero-inner{gap:10px!important}
           .page-sub{display:none!important}
           .export-btn{display:flex!important;padding:10px 12px!important;font-size:12px!important}
           .export-btn .export-btn-text{display:none!important}
@@ -2184,52 +2202,34 @@ ${doctorSettlementRows}
           {/* ── المحتوى الكامل ── */}
           {canAccess("payments", plan) && (<>
 
-          {/* TOP BAR */}
-          <div className="topbar-pad" style={{ position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.95)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
-            <div className="topbar-inner" style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+          {/* ─── HERO HEADER ─── */}
+          <div className="hero-card" style={{ margin:"20px 0 24px",background:"linear-gradient(120deg, #054a8c 0%, #0863ba 55%, #3d8fd6 100%)",borderRadius:24,padding:"26px 30px",position:"relative",overflow:"hidden",boxShadow:"0 12px 36px rgba(8,99,186,.26)" }}>
+            <div style={{ position:"absolute",top:-60,insetInlineEnd:-40,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,.07)" }}/>
+            <div style={{ position:"absolute",bottom:-80,insetInlineEnd:130,width:170,height:170,borderRadius:"50%",background:"rgba(255,255,255,.05)" }}/>
+            <div className="hero-inner" style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap" }}>
               <div>
-                <h1 className="page-title" style={{ fontSize:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
-                <p className="page-sub" style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>
+                <h1 className="page-title" style={{ fontSize:24,fontWeight:800,color:"#fff" }}>{tr.page.title}</h1>
+                <p className="page-sub" style={{ fontSize:12.5,color:"rgba(255,255,255,.85)",marginTop:5,fontWeight:500 }}>{tr.page.sub}</p>
               </div>
-              <div style={{ display:"flex",gap:10 }}>
-                <button className="export-btn" onClick={()=>paymentsLockEnabled ? setShowMonthlyReportPasswordModal(true) : exportPDF()} style={{ padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0f7ff"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  {paymentsLockEnabled && <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+              <div style={{ display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" }}>
+                <button className="export-btn hero-glass-btn" onClick={()=>paymentsLockEnabled ? setShowMonthlyReportPasswordModal(true) : exportPDF()} style={{ padding:"9px 14px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,backdropFilter:"blur(4px)",transition:"all .2s" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  {paymentsLockEnabled && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
                   <span className="export-btn-text">{tr.exportBtn} PDF</span>
                 </button>
-                <button onClick={exportDailyPDF} className="topbar-secondary-btn" style={{ padding:"10px 18px",background:"#fff",color:"#2e7d32",border:"1.5px solid #c8e6c9",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all .2s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#f0faf0"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#fff"; }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <button onClick={exportDailyPDF} className="topbar-secondary-btn hero-glass-btn" style={{ padding:"9px 14px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,backdropFilter:"blur(4px)",transition:"all .2s" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                   <span className="btn-label">{tr.exportDailyBtn}</span>
                 </button>
-                {/* زر مصروف العيادة */}
-                <button onClick={()=>setShowExpenseModal(true)} className="topbar-secondary-btn"
-                  style={{ display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:"rgba(123,45,139,.06)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                  onMouseEnter={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.12)";}}
-                  onMouseLeave={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.06)";}}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
+                <button onClick={()=>setShowExpenseModal(true)} className="topbar-secondary-btn hero-glass-btn" style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 14px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",backdropFilter:"blur(4px)",transition:"all .2s" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
                   <span className="btn-label add-btn-text-full">{tr.expenseBtn}</span>
                 </button>
-                {/* زر السحب */}
-                <button onClick={()=>setShowWithdrawModal(true)} className="topbar-secondary-btn"
-                  style={{ display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:"rgba(192,57,43,.06)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
-                  onMouseEnter={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.12)";}}
-                  onMouseLeave={(e)=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(192,57,43,.06)";}}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <button onClick={()=>setShowWithdrawModal(true)} className="topbar-secondary-btn hero-glass-btn" style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 14px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",backdropFilter:"blur(4px)",transition:"all .2s" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   <span className="btn-label add-btn-text-full">{tr.withdrawBtn}</span>
                 </button>
-                <button className="add-btn" onClick={()=>setShowModal(true)}
-                  style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(46,125,50,.25)",transition:"all .2s" }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#1b5e20"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#2e7d32"; }}
-                >
+                <button className="add-btn" onClick={()=>setShowModal(true)} style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:"#fff",color:"#0863ba",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 6px 18px rgba(0,0,0,.18)",transition:"all .2s" }}>
                   <span style={{ fontSize:18 }}>＋</span>
                   <span className="add-btn-text-full">{tr.recordPayment}</span>
                   <span className="add-btn-text-short">{isAr?"دفعة":"Add"}</span>
@@ -2668,7 +2668,7 @@ ${doctorSettlementRows}
                       </span>
                     </div>
                     {doctorRevenueStats.map((doc, i) => {
-                      const maxRev = Math.max(...doctorRevenueStats.map(d => d.monthlyRevenue), 1);
+                      const maxRev = Math.max(...doctorRevenueStats.map(d => d.shareRevenue), 1);
                       return (
                         <div key={doc.id} style={{ marginBottom:i < doctorRevenueStats.length-1 ? 14 : 0 }}>
                           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5 }}>
@@ -2681,12 +2681,18 @@ ${doctorSettlementRows}
                               </span>
                             </div>
                             <div style={{ textAlign:"end" }}>
-                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{numbersHidden ? "••••••" : doc.monthlyRevenue.toLocaleString()} ل.س</span>
+                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{numbersHidden ? "••••••" : doc.shareRevenue.toLocaleString()} ل.س</span>
                               <span style={{ fontSize:10,color:"#aaa",marginInlineStart:6 }}>({doc.count} {isAr?"معاملة":"tx"})</span>
+                              {!numbersHidden && doc.shareRevenue !== doc.monthlyRevenue && (
+                                <div style={{ fontSize:9.5,color:"#8a97a6",marginTop:2 }}>
+                                  {isAr?"الإجمالي:":"Gross:"} {doc.monthlyRevenue.toLocaleString()} ل.س
+                                  {doc.unspecified>0 && <span style={{ color:"#e67e22" }}> · {doc.unspecified} {isAr?"بدون نسبة":"no %"}</span>}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div style={{ height:5,background:"#f0f0f0",borderRadius:10,overflow:"hidden" }}>
-                            <div style={{ height:"100%",width:`${Math.round((doc.monthlyRevenue/maxRev)*100)}%`,background:doc.color||"#0891b2",borderRadius:10,transition:"width .8s" }}/>
+                            <div style={{ height:"100%",width:`${Math.round((doc.shareRevenue/maxRev)*100)}%`,background:`linear-gradient(90deg, ${doc.color||"#0891b2"}, ${doc.color||"#0891b2"}99)`,borderRadius:10,transition:"width .8s cubic-bezier(.4,0,.2,1)" }}/>
                           </div>
                         </div>
                       );
@@ -2830,12 +2836,12 @@ ${doctorSettlementRows}
                 type="password"
                 value={revealPasswordInput}
                 onChange={e=>{setRevealPasswordInput(e.target.value);setRevealPasswordError(false);}}
-                onKeyDown={e=>e.key==="Enter"&&handleRevealNumbers()}
+                onKeyDown={e=>{ if(e.key==="Enter"&&!e.nativeEvent.isComposing){ e.preventDefault(); handleRevealNumbers(); } }}
                 placeholder={isAr?"كلمة السر...":"Password..."}
                 autoFocus
                 autoComplete="new-password"
                 name="reveal-numbers-pw"
-                style={{ width:"100%",padding:"12px 16px",border:revealPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:revealPasswordError?8:16,textAlign:"center",letterSpacing:4 }}
+                style={{ width:"100%",padding:"12px 16px",border:revealPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:revealPasswordError?8:16,textAlign:"center",letterSpacing:4,direction:"ltr" }}
               />
               {revealPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
               <div style={{ display:"flex",gap:10 }}>
@@ -2858,12 +2864,12 @@ ${doctorSettlementRows}
                 type="password"
                 value={monthlyReportPasswordInput}
                 onChange={e=>{setMonthlyReportPasswordInput(e.target.value);setMonthlyReportPasswordError(false);}}
-                onKeyDown={e=>e.key==="Enter"&&handleMonthlyReportPassword()}
+                onKeyDown={e=>{ if(e.key==="Enter"&&!e.nativeEvent.isComposing){ e.preventDefault(); handleMonthlyReportPassword(); } }}
                 placeholder={isAr?"كلمة السر...":"Password..."}
                 autoFocus
                 autoComplete="new-password"
                 name="monthly-report-pw"
-                style={{ width:"100%",padding:"12px 16px",border:monthlyReportPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:monthlyReportPasswordError?8:16,textAlign:"center",letterSpacing:4 }}
+                style={{ width:"100%",padding:"12px 16px",border:monthlyReportPasswordError?"2px solid #c0392b":"1.5px solid #e0e0e0",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:monthlyReportPasswordError?8:16,textAlign:"center",letterSpacing:4,direction:"ltr" }}
               />
               {monthlyReportPasswordError&&<p style={{ color:"#c0392b",fontSize:12,marginBottom:16 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
               <div style={{ display:"flex",gap:10 }}>
