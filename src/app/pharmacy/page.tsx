@@ -1863,13 +1863,23 @@ export default function PharmacyPage() {
   // ── تسجيل الدخول عبر Supabase Auth ───────────────────────
   // handleLogin غير مستخدمة بعد الآن — الدخول يتم عبر /pharmacy/login
 
-  // ── تحقق من جلسة Supabase عند التحميل ───────────────────
+  // ── تحقق من جلسة Supabase ونوع الحساب عند التحميل ────────
   useEffect(()=>{
-    supabase.auth.getSession().then(({data:{session}})=>{
+    supabase.auth.getSession().then(async({data:{session}})=>{
       if(session?.user){
         const uid=session.user.id;
-        setSupabaseUserId(uid);
         const meta=session.user.user_metadata;
+        // ── فرض نوع الحساب: صيدلية فقط — العيادات تُعاد لداشبوردها ──
+        let accountType:string|undefined=meta?.account_type as string|undefined;
+        if(!accountType){
+          const{data:clinicRow}=await supabase.from("clinics").select("account_type, plan").eq("user_id",uid).maybeSingle();
+          accountType=clinicRow?.account_type??(clinicRow?.plan==="pharmacy"?"pharmacy":"clinic");
+        }
+        if(accountType!=="pharmacy"){
+          window.location.href="/dashboard";
+          return;
+        }
+        setSupabaseUserId(uid);
         // الدور من بيانات الحساب، والافتراضي "مدير" ليظهر كل الميزات (التقارير، الموردون، إلخ)
         const role:UserRole=(meta?.pharmacy_role as UserRole)||"manager";
         const u:User={id:1,name_ar:meta?.owner_name||meta?.clinic_name||"مستخدم",name_en:meta?.owner_name||meta?.clinic_name||"User",role,username:session.user.email||"",password:"",avatar:"💊"};

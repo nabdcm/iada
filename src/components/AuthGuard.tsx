@@ -34,6 +34,14 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
       if (cancelled) return;
 
       if (session) {
+        // ── فرض نوع الحساب حسب المسار ──────────────────────
+        // حساب الصيدلية لا يدخل صفحات العيادة، والعكس تتكفل به صفحة الصيدلية
+        const isPharmacyPath = window.location.pathname.startsWith("/pharmacy");
+        const accountType = session.user?.user_metadata?.account_type;
+        if (!isPharmacyPath && accountType === "pharmacy") {
+          window.location.href = "/pharmacy";
+          return;
+        }
         // كتابة cookie بسيط حتى يعمل الـ middleware
         const maxAge = 400 * 24 * 60 * 60;
         document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
