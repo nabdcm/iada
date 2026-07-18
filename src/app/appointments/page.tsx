@@ -2033,6 +2033,38 @@ export default function AppointmentsPage() {
                           ＋ {tr.addAppointment}
                         </button>
                       </div>
+                    ) : isMobile ? (
+                      /* ══ عرض أجندة مبسّط — للموبايل فقط ══ */
+                      <div style={{ display:"flex",flexDirection:"column",gap:10,paddingTop:4 }}>
+                        {[...dayAppointments].sort((a,b)=>a.time.localeCompare(b.time)).map(appt=>{
+                          const sc = (tr.statusColors as Record<string,string>)[appt.status] ?? "#0863ba";
+                          const docId = (appt as any).doctor_id as number | null | undefined;
+                          const doc = docId ? doctors.find(d=>d.id===docId) : null;
+                          const isNowAppt = selectedKey===todayKey && appt.time.slice(0,5) <= `${String(nowH).padStart(2,"0")}:${String(nowM).padStart(2,"0")}` && appt.status==="scheduled";
+                          return (
+                            <div key={appt.id} onClick={()=>setEditAppt(appt)}
+                              style={{ display:"flex",alignItems:"center",gap:12,background:"#fff",border:`1.5px solid ${isNowAppt?"rgba(8,99,186,.35)":"#e6edf5"}`,borderInlineStart:`4px solid ${sc}`,borderRadius:14,padding:"12px 14px",boxShadow:isNowAppt?"0 6px 18px rgba(8,99,186,.14)":"0 2px 10px rgba(8,99,186,.05)",cursor:"pointer" }}>
+                              <div style={{ minWidth:52,textAlign:"center",background:`${sc}10`,borderRadius:10,padding:"7px 4px",flexShrink:0 }}>
+                                <div style={{ fontSize:13,fontWeight:800,color:sc,fontVariantNumeric:"tabular-nums" }}>{appt.time.slice(0,5)}</div>
+                                {appt.duration ? <div style={{ fontSize:9,color:"#8a97a6",fontWeight:600,marginTop:2 }}>{appt.duration}{isAr?" د":"m"}</div> : null}
+                              </div>
+                              <div style={{ width:38,height:38,borderRadius:"50%",background:`${sc}14`,color:sc,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,flexShrink:0 }}>
+                                {getInitials(getPatientName(appt.patient_id))}
+                              </div>
+                              <div style={{ flex:1,minWidth:0 }}>
+                                <div style={{ fontSize:13.5,fontWeight:700,color:"#1c2b3a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{getPatientName(appt.patient_id)}</div>
+                                <div style={{ fontSize:11,color:"#8a97a6",marginTop:2,display:"flex",gap:6,whiteSpace:"nowrap",overflow:"hidden" }}>
+                                  {appt.type ? <span>{appt.type}</span> : null}
+                                  {doc ? <span style={{ color:"#6d28d9" }}>· {doc.name}</span> : null}
+                                </div>
+                              </div>
+                              <span style={{ padding:"4px 10px",borderRadius:20,background:`${sc}12`,color:sc,fontSize:10.5,fontWeight:700,flexShrink:0 }}>
+                                {(tr.statuses as Record<string,string>)[appt.status] ?? appt.status}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : isSharedPlan(plan) ? (
                       /* ══ جدول مشترك — للخطط المشتركة فقط ══ */
                       (() => {
