@@ -1894,7 +1894,7 @@ export default function PatientsPage() {
           .stat-value{font-size:22px!important}
           .stat-label{font-size:10px!important}
           .stats-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-bottom:14px!important}
-          .page-sub{display:none!important}
+          .page-sub{font-size:11.5px!important}
           .page-title{font-size:19px!important}
           .hero-card{margin:14px 0 18px!important;padding:18px 18px!important;border-radius:18px!important}
           .hero-inner{gap:10px!important}
