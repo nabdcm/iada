@@ -1891,13 +1891,13 @@ export default function AppointmentsPage() {
               { label:tr.stats.occupancy, value:`${occupancyPct}%`, color:occupancyColor, back:isAr?"نسبة إشغال ساعات اليوم":"Share of today's hours booked", progress:occupancyPct,
                 svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={occupancyColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg> },
             ].map((c,i) => (
-              <div key={i} className="flip-card" style={{ animationDelay:`${i*1.6}s`, height:isMobile?110:126 }}
+              <div key={i} className="flip-card" style={{ animationDelay:`${i*1.6}s`, height:isMobile?122:152 }}
                 onClick={e=>{ const el=e.currentTarget; el.classList.toggle("flipped"); }}>
                 <div className="flip-inner" style={{ animationDelay:`${i*1.6}s` }}>
                   {/* الوجه الأمامي */}
                   <div className="flip-face" style={{ background:"#fff",border:"1.5px solid #e6edf5" }}>
                     <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:`linear-gradient(90deg, ${c.color}, ${c.color}55)` }}/>
-                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:isMobile?8:12 }}>
+                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:isMobile?6:10 }}>
                       <div style={{ width:isMobile?34:40,height:isMobile?34:40,borderRadius:12,background:`${c.color}12`,display:"flex",alignItems:"center",justifyContent:"center" }}>{c.svg}</div>
                     </div>
                     <div style={{ fontSize:isMobile?22:26,fontWeight:800,color:"#1c2b3a",lineHeight:1,fontVariantNumeric:"tabular-nums" }}>{c.value}</div>
