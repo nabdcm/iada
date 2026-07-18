@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { CameraScanner, usePharmacyChannel, type ScanEvent } from "./scanner";
+import { DesktopSidebar, MobilePillNav, MoreSheet, TAB_META, Icons, type TabKey } from "./nav";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -1834,6 +1835,7 @@ export default function PharmacyPage() {
   // ── المزامنة اللحظية عبر الأجهزة + ماسح الكاميرا ──
   const [remoteScan,setRemoteScan]=useState<ScanEvent|null>(null);
   const [showCamera,setShowCamera]=useState(false);
+  const [showMore,setShowMore]=useState(false);
   const [pendingAddBarcode,setPendingAddBarcode]=useState<string>("");
   const onRemoteScan=useCallback((ev:ScanEvent)=>{ setRemoteScan(ev); },[]);
   const { online:rtOnline, peers:rtPeers, broadcastScan }=usePharmacyChannel(supabase,supabaseUserId,onRemoteScan);
@@ -1926,33 +1928,30 @@ export default function PharmacyPage() {
   if(!currentUser) return null;
 
   const isAr=lang==="ar";
-  const allowedTabs=ROLE[currentUser.role].tabs;
+  const allowedTabs=ROLE[currentUser.role].tabs as TabKey[];
   const pendingRx=prescriptions.filter(p=>!p.dispensed).length;
   const reorderCount=medicines.filter(m=>m.stock<=(m.min_stock||0)).length;
 
-  const tabDef:[string,string,number|null][]=[
-    ["inventory",    isAr?"🗄️ المخزون":"🗄️ Inventory",null],
-    ["prescriptions",isAr?"📋 الوصفات":"📋 Prescriptions",pendingRx>0?pendingRx:null],
-    ["sales",        isAr?"💰 المبيعات":"💰 Sales",null],
-    ["suppliers",    isAr?"🏭 الموردون":"🏭 Suppliers",null],
-    ["reorder",      isAr?"🔄 إعادة الطلب":"🔄 Reorder",reorderCount>0?reorderCount:null],
-    ["reports",      isAr?"📊 التقارير":"📊 Reports",null],
-    ["alerts",       isAr?"🔔 التنبيهات":"🔔 Alerts",unread>0?unread:null],
-  ].filter(([k])=>allowedTabs.includes(k as string)) as [string,string,number|null][];
+  const badges:Partial<Record<TabKey,number>>={
+    ...(pendingRx>0?{prescriptions:pendingRx}:{}),
+    ...(reorderCount>0?{reorder:reorderCount}:{}),
+    ...(unread>0?{alerts:unread}:{}),
+  };
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Rubik',sans-serif;background:#f7f9fc;color:#353535}
-        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
+        body{font-family:'Rubik',sans-serif;background:#f4f7fb;color:#1a2840}
+        ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:10px}
         @keyframes slideUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
         @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
         @keyframes barcodeIn{from{opacity:0;transform:translateX(-50%) translateY(-16px) scale(.9)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
         .main-anim{animation:fadeUp .35s ease both}
         .inv-row:hover{background:#fafbff!important}
         .action-icon-btn{width:40px;height:40px;border-radius:10px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
@@ -1969,86 +1968,76 @@ export default function PharmacyPage() {
         .btn-primary-lg:active{transform:translateY(0)}
         @media print{.no-print{display:none!important}}
         @media(max-width:768px){
-          .main-content{margin-right:0!important;margin-left:0!important;padding:0 0 110px!important}
-          .content-pad{padding:12px 13px 0!important}
-          .topbar-inner{padding:11px 13px!important}
+          .nabd-sidebar{display:none!important}
+          .nabd-topbar-desktop{display:none!important}
           .desktop-table{display:none!important}
           .mobile-cards{display:block!important}
+          .nabd-main{margin:0!important;padding:0 0 96px!important}
+          .content-pad{padding:12px 13px 0!important}
         }
         @media(min-width:769px){
+          .nabd-pillnav,.nabd-topbar-mobile,.nabd-fab-mobile{display:none!important}
           .desktop-table{display:block!important}
           .mobile-cards{display:none!important}
-          .main-content{margin-${isAr?"right":"left"}:240px}
+          .nabd-main{margin-${isAr ? "right" : "left"}:236px}
         }
       `}</style>
-      <div style={{fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc"}}>
+      <div style={{fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f4f7fb"}}>
         <BarcodeNotif n={notif}/>
         <BarcodeBar mode={barcodeMode} isAr={isAr} onClose={()=>setBarcodeMode(null)}/>
 
-        {/* زر الكاميرا العائم + مؤشر المزامنة اللحظية */}
-        {currentUser&&!loading&&(
-          <div style={{position:"fixed",bottom:20,insetInlineEnd:20,zIndex:150,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-            {rtPeers>1&&<div title={isAr?`${rtPeers} أجهزة متصلة ومتزامنة`:`${rtPeers} devices synced`} style={{background:"#fff",borderRadius:20,padding:"4px 10px",boxShadow:"0 3px 12px rgba(0,0,0,.12)",fontSize:11,fontWeight:700,color:"#27ae60",display:"flex",alignItems:"center",gap:5}}>
-              <span style={{width:7,height:7,borderRadius:"50%",background:rtOnline?"#27ae60":"#e74c3c",display:"inline-block",animation:rtOnline?"pulse 2s infinite":"none"}}/>
-              {rtPeers} 📱💻
-            </div>}
-            <button onClick={()=>setShowCamera(true)} title={isAr?"مسح بالكاميرا":"Scan with camera"} style={{width:58,height:58,borderRadius:"50%",background:"linear-gradient(135deg,#0863ba,#0a56a0)",color:"#fff",border:"none",cursor:"pointer",fontSize:26,boxShadow:"0 6px 20px rgba(8,99,186,.45)",display:"flex",alignItems:"center",justifyContent:"center"}}>📷</button>
-          </div>
-        )}
-
-        {/* شريط التحميل */}
         {loading&&(
           <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,height:3,background:"linear-gradient(90deg,#0863ba,#1a8fe3)",animation:"pulse 1s ease infinite"}}/>
         )}
 
-        <div className="no-print" style={{position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.97)",backdropFilter:"blur(12px)",borderBottom:"1.5px solid #eef0f3"}}>
-          <div className="topbar-inner" style={{padding:"11px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:11}}>
-            <div style={{display:"flex",alignItems:"center",gap:11}}>
-              <div style={{width:35,height:35,borderRadius:11,background:"linear-gradient(135deg,#0863ba,#1a8fe3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,boxShadow:"0 4px 13px rgba(8,99,186,.3)",flexShrink:0}}>💊</div>
+        {/* ===== Sidebar (سطح المكتب) ===== */}
+        <DesktopSidebar tabs={allowedTabs} active={activeTab} onSelect={(t)=>setActiveTab(t)} badges={badges} isAr={isAr}/>
+
+        {/* ===== Topbar سطح المكتب ===== */}
+        <div className="nabd-topbar-desktop no-print" style={{position:"fixed",top:0,insetInlineStart:236,insetInlineEnd:0,zIndex:30,height:60,background:"rgba(244,247,251,.92)",backdropFilter:"blur(14px)",borderBottom:"1px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 26px"}}>
+          <div style={{fontSize:17,fontWeight:800,color:"#1a2840",letterSpacing:"-.4px"}}>{isAr?TAB_META[activeTab as TabKey]?.ar:TAB_META[activeTab as TabKey]?.en}</div>
+          <div style={{display:"flex",gap:9,alignItems:"center"}}>
+            <button onClick={()=>setShowCamera(true)} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 15px",background:"linear-gradient(135deg,#0863ba,#0a56a0)",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(8,99,186,.32)"}}>
+              <Icons.scan size={18}/>{isAr?"مسح باركود":"Scan"}
+            </button>
+            {rtPeers>1&&<div title={isAr?`${rtPeers} أجهزة متزامنة`:`${rtPeers} devices synced`} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 11px",background:"rgba(39,174,96,.1)",borderRadius:20,fontSize:11,fontWeight:700,color:"#1a7a45"}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:rtOnline?"#27ae60":"#e74c3c",animation:rtOnline?"pulse 2s infinite":"none"}}/>{rtPeers} 📱
+            </div>}
+            <div style={{display:"flex",alignItems:"center",gap:9,padding:"5px 12px 5px 8px",background:"#fff",border:"1px solid #eef0f3",borderRadius:12}}>
+              <div style={{width:30,height:30,borderRadius:9,background:`${ROLE[currentUser.role].color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>{currentUser.avatar}</div>
               <div>
-                <div style={{fontSize:15,fontWeight:800,color:"#353535"}}>{isAr?"إدارة الصيدلية":"Pharmacy"}</div>
-                <div style={{fontSize:10,color:"#aaa"}}>{isAr?"نظام نبض المتكامل":"NABD Integrated System"}</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#1a2840",lineHeight:1.1}}>{isAr?currentUser.name_ar:currentUser.name_en}</div>
+                <div style={{fontSize:9.5,color:ROLE[currentUser.role].color,fontWeight:600}}>{isAr?ROLE[currentUser.role].ar:ROLE[currentUser.role].en}</div>
               </div>
             </div>
-            <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
-              {barcodeMode&&<div style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:9,background:"rgba(142,68,173,.12)",color:"#8e44ad",animation:"pulse 1.2s ease infinite",display:"flex",alignItems:"center",gap:3}}>▐▌▌ {isAr?"نشط":"On"}</div>}
-              {/* مؤشر حالة الاتصال */}
-              {supabaseUserId&&(
-                <div style={{fontSize:10,padding:"3px 8px",borderRadius:9,background:"rgba(39,174,96,.1)",color:"#27ae60",fontWeight:700,display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{width:6,height:6,borderRadius:"50%",background:"#27ae60",display:"inline-block"}}/>
-                  {isAr?"متصل":"Live"}
-                </div>
-              )}
-              <div style={{display:"flex",alignItems:"center",gap:7,padding:"4px 10px",background:`${ROLE[currentUser.role].color}10`,border:`1.5px solid ${ROLE[currentUser.role].color}30`,borderRadius:9}}>
-                <span style={{fontSize:15}}>{currentUser.avatar}</span>
-                <div>
-                  <div style={{fontSize:11,fontWeight:700,color:"#353535",lineHeight:1.1}}>{isAr?currentUser.name_ar:currentUser.name_en}</div>
-                  <div style={{fontSize:9,color:ROLE[currentUser.role].color,fontWeight:600}}>{isAr?ROLE[currentUser.role].ar:ROLE[currentUser.role].en}</div>
-                </div>
-                <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);setDataLoaded(false);setMedicines([]);setSales([]);setSuppliers([]);setInvoices([]);setPrescriptions([]);setStockLog([]);}}
-                  style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#bbb",paddingRight:3}}>{isAr?"خروج":"Out"}</button>
-              </div>
-              <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{padding:"6px 11px",border:"1.5px solid #d0e4f7",borderRadius:9,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
-            </div>
-          </div>
-          <div style={{padding:"0 22px 11px",overflowX:"auto",scrollbarWidth:"none"}}>
-            <div style={{display:"flex",gap:6,minWidth:"max-content"}}>
-              {tabDef.map(([k,v,badge])=>(
-                <button key={k} onClick={()=>setActiveTab(k)} className={activeTab===k?"tab-btn active":"tab-btn"} style={{position:"relative"}}>
-                  {v}
-                  {badge&&<span style={{position:"absolute",top:-5,right:-5,width:16,height:16,borderRadius:"50%",background:"#e74c3c",color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 5px rgba(231,76,60,.4)"}}>{badge}</span>}
-                </button>
-              ))}
-            </div>
+            <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{padding:"8px 12px",border:"1px solid #d0e4f7",borderRadius:10,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
+            <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);setDataLoaded(false);setMedicines([]);setSales([]);setSuppliers([]);setInvoices([]);setPrescriptions([]);setStockLog([]);}} title={isAr?"تسجيل الخروج":"Logout"} style={{width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid #eef0f3",borderRadius:10,background:"#fff",color:"#9aa2ab",cursor:"pointer"}}><Icons.logout size={18}/></button>
           </div>
         </div>
 
-        <main className="main-anim main-content" style={{padding:"0 22px 44px",transition:"margin .3s"}}>
-          <div className="content-pad" style={{padding:"16px 0 0"}}>
+        {/* ===== Topbar موبايل ===== */}
+        <div className="nabd-topbar-mobile no-print" style={{position:"sticky",top:0,zIndex:30,background:"rgba(244,247,251,.94)",backdropFilter:"blur(14px)",borderBottom:"1px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 15px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#0863ba,#1a8fe3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,boxShadow:"0 4px 12px rgba(8,99,186,.28)"}}>💊</div>
+            <div>
+              <div style={{fontSize:14.5,fontWeight:800,color:"#1a2840"}}>{isAr?TAB_META[activeTab as TabKey]?.ar:TAB_META[activeTab as TabKey]?.en}</div>
+              <div style={{fontSize:9.5,color:ROLE[currentUser.role].color,fontWeight:600}}>{isAr?currentUser.name_ar:currentUser.name_en}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:7,alignItems:"center"}}>
+            {rtPeers>1&&<span style={{display:"flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700,color:"#1a7a45",background:"rgba(39,174,96,.1)",padding:"4px 8px",borderRadius:14}}><span style={{width:6,height:6,borderRadius:"50%",background:"#27ae60"}}/>{rtPeers}</span>}
+            <button onClick={()=>setLang(l=>l==="ar"?"en":"ar")} style={{padding:"6px 10px",border:"1px solid #d0e4f7",borderRadius:9,background:"#fff",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:10.5,fontWeight:700,cursor:"pointer"}}>{isAr?"EN":"AR"}</button>
+            <button onClick={async()=>{await supabase.auth.signOut();setCurrentUser(null);setSupabaseUserId(null);}} style={{width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid #eef0f3",borderRadius:9,background:"#fff",color:"#9aa2ab",cursor:"pointer"}}><Icons.logout size={16}/></button>
+          </div>
+        </div>
+
+        {/* ===== المحتوى ===== */}
+        <main className="main-anim nabd-main" style={{padding:"76px 26px 44px",transition:"margin .3s",minHeight:"100vh"}}>
+          <div className="content-pad">
             {loading&&!dataLoaded?(
-              <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:300,gap:16}}>
-                <div style={{width:40,height:40,borderRadius:"50%",border:"3px solid #eef0f3",borderTop:"3px solid #0863ba",animation:"spin 0.8s linear infinite"}}/>
-                <div style={{fontSize:13,color:"#aaa"}}>{isAr?"جاري تحميل البيانات...":"Loading data..."}</div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:320,gap:16}}>
+                <div style={{width:42,height:42,borderRadius:"50%",border:"3px solid #eef0f3",borderTop:"3px solid #0863ba",animation:"spin 0.8s linear infinite"}}/>
+                <div style={{fontSize:13,color:"#9aa2ab"}}>{isAr?"جاري تحميل بيانات الصيدلية...":"Loading pharmacy data..."}</div>
               </div>
             ):(
               <>
@@ -2063,10 +2052,14 @@ export default function PharmacyPage() {
             )}
           </div>
         </main>
+
+        {/* ===== Pill Nav (موبايل) ===== */}
+        {!loading&&<MobilePillNav tabs={allowedTabs} active={activeTab} onSelect={(t)=>setActiveTab(t)} badges={badges} isAr={isAr} onScan={()=>setShowCamera(true)} onMore={()=>setShowMore(true)}/>}
+        {showMore&&<MoreSheet tabs={allowedTabs} active={activeTab} onSelect={(t)=>setActiveTab(t)} badges={badges} isAr={isAr} onClose={()=>setShowMore(false)}/>}
+
         {showCamera&&currentUser&&(
           <CameraScanner lang={lang} onClose={()=>setShowCamera(false)}
             onScan={(code)=>{
-              // ابثّ للأجهزة الأخرى + عالجه محليًا حسب التبويب النشط
               const mode=activeTab==="sales"?"sale":activeTab==="inventory"?(barcodeMode||"query"):"query";
               broadcastScan(code,mode);
               setRemoteScan({code,mode,device:"local-camera",ts:Date.now()});
