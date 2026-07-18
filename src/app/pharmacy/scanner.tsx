@@ -22,6 +22,9 @@ export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
   const [starting, setStarting] = useState(true);
   const lastScan = useRef<{ code: string; at: number }>({ code: "", at: 0 });
   const startedRef = useRef(false);
+  const doneRef = useRef(false); // منع أي معالجة بعد أول مسح ناجح
+  const onScanRef = useRef(onScan);   onScanRef.current = onScan;
+  const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
 
   useEffect(() => {
     let cancelled = false;
@@ -31,11 +34,19 @@ export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
     } | null = null;
 
     const handleDecoded = (decodedText: string) => {
+      if (doneRef.current) return;
       const now = Date.now();
       if (decodedText === lastScan.current.code && now - lastScan.current.at < 1500) return;
       lastScan.current = { code: decodedText, at: now };
+      doneRef.current = true;
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(60);
-      onScan(decodedText.trim());
+      const code = decodedText.trim();
+      // أوقف الكاميرا فورًا ثم أغلق النافذة تلقائيًا وبلّغ بالنتيجة
+      const s = scannerRef.current;
+      const finish = () => { onScanRef.current(code); onCloseRef.current(); };
+      if (s && startedRef.current) {
+        s.stop().then(() => s.clear()).catch(() => {}).finally(finish);
+      } else finish();
     };
 
     (async () => {
@@ -107,12 +118,15 @@ export function CameraScanner({ onScan, onClose, lang, title }: ScannerProps) {
     return () => {
       cancelled = true;
       const s = scannerRef.current;
-      if (s && startedRef.current) {
+      if (s && startedRef.current && !doneRef.current) {
         // أوقف فقط إن كانت الكاميرا قد بدأت فعلًا (تفادي خطأ stop قبل start)
         Promise.resolve().then(() => s.stop()).then(() => s.clear()).catch(() => {});
       }
+      scannerRef.current = null;
     };
-  }, [onScan, isAr]);
+    // deps فارغة عمدًا: تشغيل الكاميرا مرة واحدة فقط عند الفتح (كان إعادة إنشاء onScan يفتح كاميرا ثانية)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>

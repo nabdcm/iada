@@ -81,6 +81,72 @@ function BarcodeNotif({n}:{n:ScanNotif}) {
   return <div style={{position:"fixed",top:68,left:"50%",transform:"translateX(-50%)",zIndex:9999,animation:"barcodeIn .35s cubic-bezier(.34,1.56,.64,1) both",background:c.bg,border:`2px solid ${c.bd}`,borderRadius:14,padding:"11px 20px",display:"flex",alignItems:"center",gap:12,boxShadow:`0 8px 32px ${c.bd}30`,minWidth:270,maxWidth:"90vw",pointerEvents:"none"}}><span style={{fontSize:22}}>{c.ic}</span><div><div style={{fontSize:13,fontWeight:800,color:c.tx}}>{n.message}</div>{n.sub&&<div style={{fontSize:11,color:c.tx,opacity:.75,marginTop:2}}>{n.sub}</div>}</div></div>;
 }
 
+// ══════════════════════════════════════════════════════════════
+// 💳 بطاقة نتيجة المسح — تظهر على كل الأجهزة بعد قراءة الباركود
+// ══════════════════════════════════════════════════════════════
+function ScanResultCard({code,med,isAr,onClose,onAddNew}:{code:string;med:Medicine|null;isAr:boolean;onClose:()=>void;onAddNew:(code:string)=>void}) {
+  useEffect(()=>{ const t=setTimeout(onClose, med?9000:20000); return()=>clearTimeout(t); },[onClose,med]);
+  const cat = med?CAT[med.category]:null;
+  const low = med? med.stock<med.min_stock : false;
+  const expired = med?.expiry_date ? new Date(med.expiry_date) < new Date() : false;
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{position:"absolute",inset:0,background:"rgba(10,20,35,.55)",backdropFilter:"blur(5px)"}} onClick={onClose}/>
+      <div style={{position:"relative",width:"min(94vw,430px)",borderRadius:24,overflow:"hidden",boxShadow:"0 30px 90px rgba(0,0,0,.45)",animation:"modalIn .28s cubic-bezier(.34,1.4,.64,1) both",background:"#fff",fontFamily:"'Rubik',sans-serif"}}>
+        {med ? (<>
+          {/* رأس البطاقة */}
+          <div style={{background:"linear-gradient(135deg,#0863ba,#0a4f96)",padding:"18px 20px 16px",color:"#fff",position:"relative"}}>
+            <button onClick={onClose} style={{position:"absolute",top:12,insetInlineEnd:12,width:30,height:30,borderRadius:"50%",border:"none",background:"rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:14}}>✕</button>
+            <div style={{fontSize:11,opacity:.75,fontWeight:600,letterSpacing:.5,marginBottom:4}}>{isAr?"✓ تم مسح الباركود":"✓ Barcode scanned"}</div>
+            <div style={{fontSize:19,fontWeight:800,lineHeight:1.3}}>{isAr?med.name_ar:(med.name_en||med.name_ar)}</div>
+            {med.manufacturer&&<div style={{fontSize:11,opacity:.7,marginTop:2}}>{med.manufacturer}</div>}
+          </div>
+          {/* السعر — العنصر الأهم */}
+          <div style={{textAlign:"center",padding:"22px 20px 14px",background:"linear-gradient(180deg,#f4f9ff,#fff)"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#8aa2b8",letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>{isAr?"سعر البيع":"Price"}</div>
+            <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:7}}>
+              <span style={{fontSize:52,fontWeight:900,color:"#0863ba",lineHeight:1,letterSpacing:-1}}>{med.sell_price}</span>
+              <span style={{fontSize:16,fontWeight:700,color:"#7a93ab"}}>{isAr?"ر.س":"SAR"}</span>
+            </div>
+          </div>
+          {/* المواصفات */}
+          <div style={{padding:"4px 20px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+            {[
+              {l:isAr?"الفئة":"Category", v:cat?`${cat.icon} ${isAr?cat.ar:cat.en}`:"—", c:"#555"},
+              {l:isAr?"الوحدة":"Unit", v:med.unit||"—", c:"#555"},
+              {l:isAr?"المخزون":"Stock", v:`${med.stock} ${med.unit||""}`, c:low?"#e67e22":"#27ae60"},
+              {l:isAr?"الصلاحية":"Expiry", v:med.expiry_date||(isAr?"غير محدد":"N/A"), c:expired?"#e74c3c":"#555"},
+            ].map((r,i)=>(
+              <div key={i} style={{background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:12,padding:"9px 12px"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#9aa8b6",marginBottom:2}}>{r.l}</div>
+                <div style={{fontSize:13,fontWeight:800,color:r.c}}>{r.v}</div>
+              </div>
+            ))}
+          </div>
+          {(low||expired)&&<div style={{margin:"0 20px 14px",background:expired?"rgba(231,76,60,.09)":"rgba(230,126,34,.09)",border:`1.5px solid ${expired?"#e74c3c55":"#e67e2255"}`,borderRadius:11,padding:"8px 12px",fontSize:12,fontWeight:700,color:expired?"#c0392b":"#a04000"}}>{expired?(isAr?"🚫 هذا الدواء منتهي الصلاحية":"🚫 Expired medicine"):(isAr?"⚠️ المخزون منخفض":"⚠️ Low stock")}</div>}
+          <div style={{padding:"0 20px 16px",display:"flex",gap:8,alignItems:"center"}}>
+            <div style={{flex:1,background:"#f7f9fc",border:"1px solid #e8ecf0",borderRadius:9,padding:"6px 10px",fontFamily:"monospace",fontSize:12,letterSpacing:1.2,color:"#0863ba",fontWeight:700,direction:"ltr",textAlign:"center"}}>{code}</div>
+            <BarcodeSVG code={code} w={96} h={34}/>
+          </div>
+        </>) : (<>
+          {/* باركود غير مسجّل */}
+          <div style={{background:"linear-gradient(135deg,#e67e22,#cf6a12)",padding:"18px 20px 16px",color:"#fff",position:"relative"}}>
+            <button onClick={onClose} style={{position:"absolute",top:12,insetInlineEnd:12,width:30,height:30,borderRadius:"50%",border:"none",background:"rgba(255,255,255,.18)",color:"#fff",cursor:"pointer",fontSize:14}}>✕</button>
+            <div style={{fontSize:26,marginBottom:5}}>📦</div>
+            <div style={{fontSize:17,fontWeight:800}}>{isAr?"باركود غير مسجّل":"Unregistered barcode"}</div>
+            <div style={{fontSize:12,opacity:.8,marginTop:3}}>{isAr?"هذا الكود غير موجود في المخزون":"This code is not in your inventory"}</div>
+          </div>
+          <div style={{padding:"18px 20px"}}>
+            <div style={{background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:11,padding:"10px 12px",fontFamily:"monospace",fontSize:14,letterSpacing:1.5,color:"#0863ba",fontWeight:800,direction:"ltr",textAlign:"center",marginBottom:14}}>{code}</div>
+            <button onClick={()=>onAddNew(code)} style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#27ae60,#1e8f4d)",color:"#fff",border:"none",borderRadius:13,fontFamily:"'Rubik',sans-serif",fontSize:15,fontWeight:800,cursor:"pointer",boxShadow:"0 6px 20px rgba(39,174,96,.35)"}}>＋ {isAr?"إضافة للمخزون":"Add to Inventory"}</button>
+            <button onClick={onClose} style={{width:"100%",marginTop:9,padding:"11px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>{isAr?"إغلاق":"Close"}</button>
+          </div>
+        </>)}
+      </div>
+    </div>
+  );
+}
+
 function BarcodeBar({mode,isAr,onClose}:{mode:BarcodeMode;isAr:boolean;onClose:()=>void}) {
   if(!mode) return null;
   const L:{[k:string]:{ar:string;en:string;c:string;ic:string}} = {inventory:{ar:"وضع البحث",en:"Search",c:"#0863ba",ic:"🔍"},stock_in:{ar:"إضافة مخزون",en:"Stock In",c:"#27ae60",ic:"📥"},stock_out:{ar:"خصم مخزون",en:"Stock Out",c:"#e67e22",ic:"📤"},sale:{ar:"وضع البيع",en:"Sale",c:"#8e44ad",ic:"🛒"}};
@@ -1850,6 +1916,7 @@ export default function PharmacyPage() {
   const [showCamera,setShowCamera]=useState(false);
   const [showMore,setShowMore]=useState(false);
   const [pendingAddBarcode,setPendingAddBarcode]=useState<string>("");
+  const [scanCard,setScanCard]=useState<{code:string;med:Medicine|null}|null>(null);
   const onRemoteScan=useCallback((ev:ScanEvent)=>{ setRemoteScan(ev); },[]);
   const { online:rtOnline, peers:rtPeers, broadcastScan }=usePharmacyChannel(supabase,supabaseUserId,onRemoteScan);
   const [loading,setLoading]=useState(true); // true: نمنع redirect قبل اكتمال getSession
@@ -1857,6 +1924,14 @@ export default function PharmacyPage() {
   const notifT=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   const showNotif=useCallback((n:ScanNotif,ms=2200)=>{setNotif(n);clearTimeout(notifT.current);notifT.current=setTimeout(()=>setNotif(null),ms);},[]);
+
+  // عند أي حدث مسح (كاميرا محلية أو جهاز آخر) → أظهر بطاقة النتيجة على هذا الجهاز
+  useEffect(()=>{
+    if(!remoteScan) return;
+    const med=medicines.find(m=>m.barcode===remoteScan.code)||null;
+    setScanCard({code:remoteScan.code,med});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[remoteScan]);
 
   // ── جلب البيانات من Supabase ──────────────────────────────
   const loadData=useCallback(async(uid:string)=>{
@@ -2080,6 +2155,11 @@ export default function PharmacyPage() {
         {!loading&&<MobilePillNav tabs={allowedTabs} active={activeTab} onSelect={(t)=>setActiveTab(t)} badges={badges} isAr={isAr} onScan={()=>setShowCamera(true)} onMore={()=>setShowMore(true)}/>}
         {showMore&&<MoreSheet tabs={allowedTabs} active={activeTab} onSelect={(t)=>setActiveTab(t)} badges={badges} isAr={isAr} onClose={()=>setShowMore(false)}/>}
 
+        {scanCard&&currentUser&&(
+          <ScanResultCard code={scanCard.code} med={scanCard.med} isAr={isAr}
+            onClose={()=>setScanCard(null)}
+            onAddNew={(bc)=>{setScanCard(null);setPendingAddBarcode(bc);setActiveTab("inventory");}}/>
+        )}
         {showCamera&&currentUser&&(
           <CameraScanner lang={lang} onClose={()=>setShowCamera(false)}
             onScan={(code)=>{
