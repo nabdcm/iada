@@ -1053,6 +1053,8 @@ export default function PaymentsPage() {
   // إخفاء الأرقام الرئيسية (وضع الخصوصية) — يُفعّل فقط إذا كان قفل المدفوعات مُفعّلاً من الأدمن
   const [numbersHidden, setNumbersHidden] = useState(false);
   const [showRevealModal, setShowRevealModal] = useState(false);
+  const [txPage, setTxPage] = useState(1);
+  const TX_PAGE_SIZE = 10;
   const [revealPasswordInput, setRevealPasswordInput] = useState("");
   const [revealPasswordError, setRevealPasswordError] = useState(false);
 
@@ -1179,6 +1181,7 @@ export default function PaymentsPage() {
   const filtered = useMemo(() => {
     return payments.filter(p => {
       const patient = patients.find(x => x.id === p.patient_id);
+
       const q = search.toLowerCase();
       if (q && !patient?.name.toLowerCase().includes(q) && !(p.description||"").toLowerCase().includes(q)) return false;
       if (filter === "paid"    && p.status !== "paid")    return false;
@@ -1196,6 +1199,11 @@ export default function PaymentsPage() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [payments, patients, search, filter, selectedDoctor, plan]);
+
+  useEffect(()=>{ setTxPage(1); },[search,filter,selectedDoctor]);
+  const txTotalPages = Math.max(1, Math.ceil(filtered.length / TX_PAGE_SIZE));
+  const txSafePage = Math.min(txPage, txTotalPages);
+  const txPaged = filtered.slice((txSafePage-1)*TX_PAGE_SIZE, txSafePage*TX_PAGE_SIZE);
 
   const pendingPayments = useMemo(() => payments.filter(p => p.status === "pending"), [payments]);
 
@@ -2497,7 +2505,7 @@ ${doctorSettlementRows}
                     <>
                       {/* MOBILE CARDS */}
                       <div className="mobile-tx">
-                        {filtered.map(p=>{
+                        {txPaged.map(p=>{
                           const patient = patients.find(x=>x.id===p.patient_id);
                           const ss = statusStyle[p.status]||statusStyle.paid;
                           const isNew = animIds.includes(p.id);
@@ -2546,7 +2554,7 @@ ${doctorSettlementRows}
                       </div>
                       {/* DESKTOP ROWS */}
                       <div className="desktop-tx">
-                        {filtered.map(p=>{
+                        {txPaged.map(p=>{
                           const patient = patients.find(x=>x.id===p.patient_id);
                           const ss = statusStyle[p.status]||statusStyle.paid;
                           const isNew = animIds.includes(p.id);
@@ -2624,6 +2632,38 @@ ${doctorSettlementRows}
                           );
                         })}
                       </div>
+                      {/* ── ترقيم الصفحات ── */}
+                      {txTotalPages > 1 && (
+                        <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"16px 0 18px",flexWrap:"wrap",borderTop:"1px solid #f2f6fa" }}>
+                          <button onClick={()=>setTxPage(p=>Math.max(1,p-1))} disabled={txSafePage===1}
+                            style={{ width:34,height:34,borderRadius:10,border:"1.5px solid #e6edf5",background:"#fff",cursor:txSafePage===1?"not-allowed":"pointer",opacity:txSafePage===1?0.4:1,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform:isAr?"none":"scaleX(-1)" }}><polyline points="9 18 15 12 9 6"/></svg>
+                          </button>
+                          {(() => {
+                            const pages: (number|string)[] = [];
+                            for (let i=1;i<=txTotalPages;i++){
+                              if (i===1||i===txTotalPages||Math.abs(i-txSafePage)<=1) pages.push(i);
+                              else if (pages[pages.length-1]!=="…") pages.push("…");
+                            }
+                            return pages.map((pg,idx)=> pg==="…" ? (
+                              <span key={`e${idx}`} style={{ color:"#b3bdc9",fontSize:13,padding:"0 2px" }}>…</span>
+                            ) : (
+                              <button key={pg} onClick={()=>setTxPage(pg as number)}
+                                style={{ minWidth:34,height:34,padding:"0 8px",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",fontVariantNumeric:"tabular-nums",
+                                  border:pg===txSafePage?"none":"1.5px solid #e6edf5",
+                                  background:pg===txSafePage?"linear-gradient(135deg,#0863ba,#3d8fd6)":"#fff",
+                                  color:pg===txSafePage?"#fff":"#8a97a6",
+                                  boxShadow:pg===txSafePage?"0 4px 12px rgba(8,99,186,.3)":"none",transition:"all .2s" }}>
+                                {pg}
+                              </button>
+                            ));
+                          })()}
+                          <button onClick={()=>setTxPage(p=>Math.min(txTotalPages,p+1))} disabled={txSafePage===txTotalPages}
+                            style={{ width:34,height:34,borderRadius:10,border:"1.5px solid #e6edf5",background:"#fff",cursor:txSafePage===txTotalPages?"not-allowed":"pointer",opacity:txSafePage===txTotalPages?0.4:1,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform:isAr?"scaleX(-1)":"none" }}><polyline points="9 18 15 12 9 6"/></svg>
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
