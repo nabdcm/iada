@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { CameraScanner, usePharmacyChannel, type ScanEvent } from "./scanner";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -778,11 +779,11 @@ function AlertsTab({lang,medicines,alerts,markAll,markOne}:{lang:Lang;medicines:
 // ══════════════════════════════════════════════════════════════
 // 🗄️ تبويب المخزون
 // ══════════════════════════════════════════════════════════════
-function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId}:{
+function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId,broadcastScan,remoteScan,openCamera}:{
   lang:Lang;medicines:Medicine[];setMedicines:React.Dispatch<React.SetStateAction<Medicine[]>>;
   barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;
   showNotif:(n:ScanNotif,ms?:number)=>void;addLog:(l:Omit<StockLog,"id">)=>void;currentUser:User;
-  userId:string|null;
+  userId:string|null;broadcastScan:(code:string,mode:string)=>void;remoteScan:ScanEvent|null;openCamera:()=>void;
 }) {
   const isAr=lang==="ar";
   const [search,setSearch]=useState(""); const [catF,setCatF]=useState<"all"|"low"|MedCat>("all");
@@ -800,7 +801,16 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
     else{setSearch(isAr?med.name_ar:med.name_en);showNotif({type:"success",message:isAr?med.name_ar:med.name_en,sub:`${isAr?"مخزون":"Stock"}: ${med.stock} ${med.unit}`},2000);}
   },[medicines,barcodeMode,isAr,showNotif]);
 
-  useBarcode(handleScan,barcodeMode==="inventory"||barcodeMode==="stock_in"||barcodeMode==="stock_out");
+  // ماسح سلكي محلي: يبثّ ثم يعالج حسب الوضع النشط
+  const handleLocalScan=useCallback((code:string)=>{ broadcastScan(code,barcodeMode||"query"); handleScan(code); },[broadcastScan,barcodeMode,handleScan]);
+  useBarcode(handleLocalScan,barcodeMode==="inventory"||barcodeMode==="stock_in"||barcodeMode==="stock_out");
+
+  // استقبال مسح من جهاز آخر (أو كاميرا) عندما يكون تبويب المخزون نشطًا
+  useEffect(()=>{
+    if(!remoteScan)return;
+    if(["query","inventory","stock_in","stock_out"].includes(remoteScan.mode)){ handleScan(remoteScan.code); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[remoteScan]);
 
   const filtered=useMemo(()=>{
     let l=medicines;
@@ -865,6 +875,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
             {icon} {label}{barcodeMode===m&&<span style={{fontSize:9,opacity:.8}}>●</span>}
           </button>
         ))}
+        <button onClick={()=>{if(!barcodeMode)setBarcodeMode("inventory");openCamera();}} title={isAr?"مسح بالكاميرا حسب الوضع المختار":"Camera scan"} style={{padding:"6px 13px",borderRadius:9,border:"2px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.06)",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>📷 {isAr?"كاميرا":"Camera"}</button>
         <button onClick={()=>setShowLog(true)} style={{marginRight:"auto",padding:"6px 13px",borderRadius:9,border:"1.5px solid #eef0f3",background:"#f7f9fc",color:"#666",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>📜 {isAr?"سجل الحركة":"Movement Log"}</button>
       </div>
 
@@ -1283,7 +1294,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
 // ══════════════════════════════════════════════════════════════
 // 💰 تبويب المبيعات
 // ══════════════════════════════════════════════════════════════
-function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,showNotif,currentUser,addLog,userId,onRefresh}:{lang:Lang;medicines:Medicine[];sales:Sale[];setSales:React.Dispatch<React.SetStateAction<Sale[]>>;barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;showNotif:(n:ScanNotif,ms?:number)=>void;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;userId:string|null;onRefresh:()=>void}) {
+function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,showNotif,currentUser,addLog,userId,onRefresh,broadcastScan,remoteScan,openCamera}:{lang:Lang;medicines:Medicine[];sales:Sale[];setSales:React.Dispatch<React.SetStateAction<Sale[]>>;barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;showNotif:(n:ScanNotif,ms?:number)=>void;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;userId:string|null;onRefresh:()=>void;broadcastScan:(code:string,mode:string)=>void;remoteScan:ScanEvent|null;openCamera:()=>void}) {
   const isAr=lang==="ar";
   const [showForm,setShowForm]=useState(false); const [items,setItems]=useState<SaleItem[]>([]);
   const [mQ,setMQ]=useState(""); const [discount,setDiscount]=useState(0); const [payment,setPayment]=useState<"cash"|"card"|"insurance">("cash");
@@ -1309,7 +1320,16 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
     addToSale(med); showNotif({type:"success",message:isAr?`✅ ${med.name_ar}`:`✅ ${med.name_en}`,sub:`${med.sell_price} ${isAr?"ر.س":"SAR"}`},1800);
   },[medicines,isAr,addToSale,showNotif]);
 
-  useBarcode(handleScan,barcodeMode==="sale");
+  // ماسح سلكي محلي: يبثّ للأجهزة الأخرى ثم يعالج
+  const handleLocalScan=useCallback((code:string)=>{ broadcastScan(code,"sale"); handleScan(code); },[broadcastScan,handleScan]);
+  useBarcode(handleLocalScan,barcodeMode==="sale");
+
+  // استقبال مسح من جهاز آخر (أو كاميرا) عندما يكون تبويب البيع نشطًا
+  useEffect(()=>{
+    if(!remoteScan)return;
+    if(remoteScan.mode==="sale"||remoteScan.mode==="query"){ handleScan(remoteScan.code); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[remoteScan]);
 
   const itemsDiscount=items.reduce((s,i)=>s+(i.item_discount||0)*i.qty,0);
   const subtotal=items.reduce((s,i)=>s+i.qty*i.unit_price,0);
@@ -1418,6 +1438,9 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
         <button onClick={()=>{setBarcodeMode(barcodeMode==="sale"?null:"sale");if(barcodeMode!=="sale")setShowForm(true);}}
           style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:barcodeMode==="sale"?"#8e44ad":"rgba(142,68,173,.08)",color:barcodeMode==="sale"?"#fff":"#8e44ad",border:`2px solid ${barcodeMode==="sale"?"#8e44ad":"rgba(142,68,173,.3)"}`,borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:barcodeMode==="sale"?"0 4px 15px rgba(142,68,173,.4)":"none",transition:"all .2s"}}>
           <span style={{fontSize:17}}>▐▌▌▐▌</span>{isAr?"تفعيل الماسح":"Scanner"}{barcodeMode==="sale"&&<span style={{fontSize:10,opacity:.8}}>● {isAr?"نشط":"On"}</span>}
+        </button>
+        <button onClick={openCamera} style={{display:"flex",alignItems:"center",gap:7,padding:"10px 18px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"2px solid rgba(8,99,186,.3)",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .2s"}}>
+          <span style={{fontSize:17}}>📷</span>{isAr?"مسح بالكاميرا":"Camera"}
         </button>
         <button onClick={()=>setShowForm(true)} className="btn-primary-lg" style={{background:"#0863ba",boxShadow:"0 4px 16px rgba(8,99,186,.35)"}}>🛒 {isAr?"بيع جديد":"New Sale"}</button>
         <button onClick={openClose} className="btn-primary-lg" style={{background:"#2c3e50",boxShadow:"0 4px 16px rgba(44,62,80,.35)"}}>🧾 {isAr?"تقفيل الصندوق":"Close Drawer"}</button>
@@ -1762,6 +1785,11 @@ export default function PharmacyPage() {
   const [barcodeMode,setBarcodeMode]=useState<BarcodeMode>(null);
   const [notif,setNotif]=useState<ScanNotif>(null);
   const [alertsRead,setAlertsRead]=useState<Set<number>>(new Set());
+  // ── المزامنة اللحظية عبر الأجهزة + ماسح الكاميرا ──
+  const [remoteScan,setRemoteScan]=useState<ScanEvent|null>(null);
+  const [showCamera,setShowCamera]=useState(false);
+  const onRemoteScan=useCallback((ev:ScanEvent)=>{ setRemoteScan(ev); },[]);
+  const { online:rtOnline, peers:rtPeers, broadcastScan }=usePharmacyChannel(supabase,supabaseUserId,onRemoteScan);
   const [loading,setLoading]=useState(true); // true: نمنع redirect قبل اكتمال getSession
   const [dataLoaded,setDataLoaded]=useState(false);
   const notifT=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1910,6 +1938,17 @@ export default function PharmacyPage() {
         <BarcodeNotif n={notif}/>
         <BarcodeBar mode={barcodeMode} isAr={isAr} onClose={()=>setBarcodeMode(null)}/>
 
+        {/* زر الكاميرا العائم + مؤشر المزامنة اللحظية */}
+        {currentUser&&!loading&&(
+          <div style={{position:"fixed",bottom:20,insetInlineEnd:20,zIndex:150,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+            {rtPeers>1&&<div title={isAr?`${rtPeers} أجهزة متصلة ومتزامنة`:`${rtPeers} devices synced`} style={{background:"#fff",borderRadius:20,padding:"4px 10px",boxShadow:"0 3px 12px rgba(0,0,0,.12)",fontSize:11,fontWeight:700,color:"#27ae60",display:"flex",alignItems:"center",gap:5}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:rtOnline?"#27ae60":"#e74c3c",display:"inline-block",animation:rtOnline?"pulse 2s infinite":"none"}}/>
+              {rtPeers} 📱💻
+            </div>}
+            <button onClick={()=>setShowCamera(true)} title={isAr?"مسح بالكاميرا":"Scan with camera"} style={{width:58,height:58,borderRadius:"50%",background:"linear-gradient(135deg,#0863ba,#0a56a0)",color:"#fff",border:"none",cursor:"pointer",fontSize:26,boxShadow:"0 6px 20px rgba(8,99,186,.45)",display:"flex",alignItems:"center",justifyContent:"center"}}>📷</button>
+          </div>
+        )}
+
         {/* شريط التحميل */}
         {loading&&(
           <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,height:3,background:"linear-gradient(90deg,#0863ba,#1a8fe3)",animation:"pulse 1s ease infinite"}}/>
@@ -1966,9 +2005,9 @@ export default function PharmacyPage() {
               </div>
             ):(
               <>
-                {activeTab==="inventory"    &&<InventoryTab     lang={lang} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId}/>}
+                {activeTab==="inventory"    &&<InventoryTab     lang={lang} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)}/>}
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
-                {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
+                {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="reorder"      &&<ReorderTab       lang={lang} userId={supabaseUserId} suppliers={suppliers} currentUser={currentUser} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={supabaseUserId} currentUser={currentUser}/>}
@@ -1977,6 +2016,15 @@ export default function PharmacyPage() {
             )}
           </div>
         </main>
+        {showCamera&&currentUser&&(
+          <CameraScanner lang={lang} onClose={()=>setShowCamera(false)}
+            onScan={(code)=>{
+              // ابثّ للأجهزة الأخرى + عالجه محليًا حسب التبويب النشط
+              const mode=activeTab==="sales"?"sale":activeTab==="inventory"?(barcodeMode||"query"):"query";
+              broadcastScan(code,mode);
+              setRemoteScan({code,mode,device:"local-camera",ts:Date.now()});
+            }}/>
+        )}
       </div>
     </>
   );
