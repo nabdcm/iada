@@ -118,7 +118,7 @@ function ScanResultCard({code,med,isAr,onClose,onAddNew,onSell,onReturn}:{code:s
             <div style={{fontSize:11,fontWeight:700,color:"#8aa2b8",letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>{isAr?"سعر البيع":"Price"}</div>
             <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:7}}>
               <span style={{fontSize:52,fontWeight:900,color:"#0863ba",lineHeight:1,letterSpacing:-1}}>{med.sell_price}</span>
-              <span style={{fontSize:16,fontWeight:700,color:"#7a93ab"}}>{isAr?"ر.س":"SAR"}</span>
+              <span style={{fontSize:16,fontWeight:700,color:"#7a93ab"}}>{isAr?"ل.س":"SYP"}</span>
             </div>
           </div>
           {/* المواصفات */}
@@ -249,8 +249,8 @@ function PrintModal({invoice,sale,lang,cashierName,onClose}:{invoice?:PurchInvoi
             <tbody>
               {items.map((it,i)=>(<tr key={i} style={{borderBottom:"1px solid #f7f9fc"}}><td style={{padding:"8px 10px",fontSize:12,fontWeight:600}}>{it.medicine_name}</td><td style={{padding:"8px 10px",fontSize:12,textAlign:"center"}}>{it.qty}</td><td style={{padding:"8px 10px",fontSize:12,textAlign:"center"}}>{it.unit_price}</td><td style={{padding:"8px 10px",fontSize:12,textAlign:"center",fontWeight:700,color:"#0863ba"}}>{it.qty*it.unit_price}</td></tr>))}
               {sale?.discount&&sale.discount>0&&<tr style={{background:"rgba(231,76,60,.04)"}}><td colSpan={3} style={{padding:"8px 10px",fontSize:12,color:"#e74c3c"}}>{isAr?"خصم":"Discount"}</td><td style={{padding:"8px 10px",fontSize:12,textAlign:"center",color:"#e74c3c",fontWeight:700}}>-{sale.discount}</td></tr>}
-              <tr style={{background:"rgba(8,99,186,.07)"}}><td colSpan={3} style={{padding:"9px 10px",fontSize:14,fontWeight:800,color:"#1a2840"}}>{isAr?"الإجمالي":"Total"}</td><td style={{padding:"9px 10px",fontSize:16,fontWeight:900,textAlign:"center",color:"#0863ba"}}>{total} {isAr?"ر.س":"SAR"}</td></tr>
-              {isPurch&&invoice&&invoice.status!=="paid"&&<tr style={{background:"rgba(231,76,60,.04)"}}><td colSpan={3} style={{padding:"7px 10px",fontSize:12,color:"#e74c3c"}}>{isAr?"المتبقي":"Outstanding"}</td><td style={{padding:"7px 10px",fontSize:12,textAlign:"center",color:"#e74c3c",fontWeight:700}}>{invoice.total-invoice.paid} {isAr?"ر.س":"SAR"}</td></tr>}
+              <tr style={{background:"rgba(8,99,186,.07)"}}><td colSpan={3} style={{padding:"9px 10px",fontSize:14,fontWeight:800,color:"#1a2840"}}>{isAr?"الإجمالي":"Total"}</td><td style={{padding:"9px 10px",fontSize:16,fontWeight:900,textAlign:"center",color:"#0863ba"}}>{total} {isAr?"ل.س":"SYP"}</td></tr>
+              {isPurch&&invoice&&invoice.status!=="paid"&&<tr style={{background:"rgba(231,76,60,.04)"}}><td colSpan={3} style={{padding:"7px 10px",fontSize:12,color:"#e74c3c"}}>{isAr?"المتبقي":"Outstanding"}</td><td style={{padding:"7px 10px",fontSize:12,textAlign:"center",color:"#e74c3c",fontWeight:700}}>{invoice.total-invoice.paid} {isAr?"ل.س":"SYP"}</td></tr>}
             </tbody>
           </table>
           <div style={{textAlign:"center",fontSize:11,color:"#aaa",borderTop:"1px solid #eef0f3",paddingTop:14}}>{isAr?"شكراً لتعاملكم معنا — نظام نبض":"Thank you — Powered by NABD Pharmacy System"}</div>
@@ -436,7 +436,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
                 {s.address&&<div style={{fontSize:11,color:"#aaa",marginTop:3}}>📍 {s.address}</div>}
               </div>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"الرصيد":"Balance"}</div><div style={{fontSize:15,fontWeight:800,color:s.balance>0?"#e74c3c":"#27ae60"}}>{s.balance} {isAr?"ر.س":"SAR"}</div></div>
+                <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"الرصيد":"Balance"}</div><div style={{fontSize:15,fontWeight:800,color:s.balance>0?"#e74c3c":"#27ae60"}}>{s.balance} {isAr?"ل.س":"SYP"}</div></div>
                 <button onClick={()=>openStatement(s)} className="action-icon-btn" title={isAr?"كشف حساب":"Statement"} style={{color:"#0863ba",borderColor:"rgba(8,99,186,.3)"}}>📋</button>
                 <button onClick={()=>{setEditSup(s);setSF({name:s.name,contact:s.contact,phone:s.phone,email:s.email,address:s.address});setShowSF(true);}} className="action-icon-btn">✏️</button>
               </div>
@@ -448,7 +448,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
       {view==="i"&&(
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:14}}>
-            {[{l:isAr?"الفواتير":"Invoices",v:invoices.length,ic:"🧾",c:"#0863ba"},{l:isAr?"إجمالي الشراء":"Purchases",v:invoices.reduce((s,i)=>s+i.total,0)+" "+(isAr?"ر.س":"SAR"),ic:"💰",c:"#27ae60"},{l:isAr?"مستحق":"Outstanding",v:invoices.filter(i=>i.status!=="paid").reduce((s,i)=>s+(i.total-i.paid),0)+" "+(isAr?"ر.س":"SAR"),ic:"⏳",c:"#e74c3c"}].map((x,i)=>(
+            {[{l:isAr?"الفواتير":"Invoices",v:invoices.length,ic:"🧾",c:"#0863ba"},{l:isAr?"إجمالي الشراء":"Purchases",v:invoices.reduce((s,i)=>s+i.total,0)+" "+(isAr?"ل.س":"SYP"),ic:"💰",c:"#27ae60"},{l:isAr?"مستحق":"Outstanding",v:invoices.filter(i=>i.status!=="paid").reduce((s,i)=>s+(i.total-i.paid),0)+" "+(isAr?"ل.س":"SYP"),ic:"⏳",c:"#e74c3c"}].map((x,i)=>(
               <div key={i} style={card}><div style={{fontSize:22,marginBottom:4}}>{x.ic}</div><div style={{fontSize:16,fontWeight:800,color:x.c,lineHeight:1}}>{x.v}</div><div style={{fontSize:11,color:"#aaa",marginTop:3}}>{x.l}</div></div>
             ))}
           </div>
@@ -464,13 +464,13 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
                       <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{inv.date} · {inv.created_by}</div>
                     </div>
                     <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                      <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"الإجمالي":"Total"}</div><div style={{fontSize:15,fontWeight:800,color:"#0863ba"}}>{inv.total} <span style={{fontSize:10,color:"#aaa",fontWeight:400}}>{isAr?"ر.س":"SAR"}</span></div></div>
+                      <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"الإجمالي":"Total"}</div><div style={{fontSize:15,fontWeight:800,color:"#0863ba"}}>{inv.total} <span style={{fontSize:10,color:"#aaa",fontWeight:400}}>{isAr?"ل.س":"SYP"}</span></div></div>
                       <button onClick={()=>setPrintInv(inv)} style={{padding:"7px 13px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>🖨️ {isAr?"طباعة":"Print"}</button>
                     </div>
                   </div>
                   <div style={{padding:"11px 17px"}}>
                     {inv.items.map((it,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:i<inv.items.length-1?"1px solid #f7f9fc":"none"}}><span style={{fontSize:12,color:"#555",fontWeight:600}}>💊 {it.medicine_name}</span><span style={{fontSize:12,color:"#888"}}>{it.qty} × {it.unit_price} = <strong style={{color:"#0863ba"}}>{it.qty*it.unit_price}</strong></span></div>))}
-                    {inv.status!=="paid"&&<div style={{marginTop:8,fontSize:11,color:"#e74c3c",fontWeight:600}}>💰 {isAr?"المتبقي":"Remaining"}: {inv.total-inv.paid} {isAr?"ر.س":"SAR"}</div>}
+                    {inv.status!=="paid"&&<div style={{marginTop:8,fontSize:11,color:"#e74c3c",fontWeight:600}}>💰 {isAr?"المتبقي":"Remaining"}: {inv.total-inv.paid} {isAr?"ل.س":"SYP"}</div>}
                   </div>
                 </div>
               );
@@ -558,7 +558,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
             </div>
             <div style={{position:"relative",marginBottom:12}}>
               <div style={{display:"flex",alignItems:"center",gap:8,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:10,padding:"9px 12px"}}><span>💊</span><input value={iMedQ} onChange={e=>setIMedQ(e.target.value)} placeholder={isAr?"أضف دواء...":"Add medicine..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/></div>
-              {iMedRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.12)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:4}}>{iMedRes.map(m=>(<div key={m.id} onClick={()=>addII(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{color:"#888",fontSize:11}}>{m.purchase_price} {isAr?"ر.س":"SAR"}</span></div>))}</div>}
+              {iMedRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.12)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:4}}>{iMedRes.map(m=>(<div key={m.id} onClick={()=>addII(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{color:"#888",fontSize:11}}>{m.purchase_price} {isAr?"ل.س":"SYP"}</span></div>))}</div>}
             </div>
             {iItems.length>0&&<div style={{background:"#f7f9fc",borderRadius:12,padding:"11px",marginBottom:12}}>{iItems.map((it,i)=>(<div key={i} style={{marginBottom:i<iItems.length-1?10:0,paddingBottom:i<iItems.length-1?10:0,borderBottom:i<iItems.length-1?"1px solid #eef0f3":"none"}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -766,7 +766,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
                   {r.best_supplier?(
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
                       <div style={{fontSize:12,color:"#555"}}>
-                        🏆 {isAr?"أفضل سعر":"Best price"}: <strong style={{color:"#27ae60"}}>{r.best_supplier.supplier_name}</strong> — {r.best_supplier.unit_price} {isAr?"ر.س":"SAR"}
+                        🏆 {isAr?"أفضل سعر":"Best price"}: <strong style={{color:"#27ae60"}}>{r.best_supplier.supplier_name}</strong> — {r.best_supplier.unit_price} {isAr?"ل.س":"SYP"}
                         {r.est_cost!==null&&inCart(r.medicine_id)&&<span style={{color:"#aaa"}}> · {isAr?"تكلفة الطلب":"Est"}: {(chosen.qty*(r.supplier_prices.find(s=>s.supplier_id===chosen.supplier_id)?.unit_price??r.best_supplier.unit_price)).toFixed(0)}</span>}
                       </div>
                       {r.supplier_prices.length>1&&<button onClick={()=>setExpanded(open?null:r.medicine_id)} style={{background:"none",border:"none",cursor:"pointer",color:"#0863ba",fontSize:11,fontWeight:700,fontFamily:"'Rubik',sans-serif"}}>{open?(isAr?"إخفاء المقارنة ▲":"Hide ▲"):(isAr?`قارن ${r.supplier_prices.length} موردين ▼`:`Compare ${r.supplier_prices.length} ▼`)}</button>}
@@ -781,7 +781,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
                         <div key={sp.supplier_id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11,padding:"4px 0",borderBottom:i<r.supplier_prices.length-1?"1px solid #eef0f3":"none"}}>
                           <span style={{color:i===0?"#27ae60":"#666",fontWeight:i===0?700:400}}>{i===0?"🏆 ":""}{sp.supplier_name}</span>
                           <span style={{color:"#999",fontSize:10}}>{sp.last_date}</span>
-                          <span style={{fontWeight:700,color:i===0?"#27ae60":"#353535"}}>{sp.unit_price} {isAr?"ر.س":"SAR"}</span>
+                          <span style={{fontWeight:700,color:i===0?"#27ae60":"#353535"}}>{sp.unit_price} {isAr?"ل.س":"SYP"}</span>
                         </div>
                       ))}
                     </div>
@@ -812,7 +812,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
         <div style={{position:"sticky",bottom:0,marginTop:16,background:"#0863ba",borderRadius:12,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,boxShadow:"0 -4px 16px rgba(8,99,186,.2)"}}>
           <div style={{color:"#fff"}}>
             <div style={{fontSize:13,fontWeight:700}}>{cartCount} {isAr?"صنف في أمر الشراء":"items in order"}</div>
-            <div style={{fontSize:11,opacity:.85}}>{isAr?"إجمالي تقديري":"Est total"}: {cartTotal.toFixed(0)} {isAr?"ر.س":"SAR"}</div>
+            <div style={{fontSize:11,opacity:.85}}>{isAr?"إجمالي تقديري":"Est total"}: {cartTotal.toFixed(0)} {isAr?"ل.س":"SYP"}</div>
           </div>
           <button onClick={createOrders} disabled={creating} style={{padding:"10px 20px",border:"none",borderRadius:10,cursor:creating?"wait":"pointer",fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:800,background:"#fff",color:"#0863ba"}}>
             {creating?(isAr?"⏳ جاري الإنشاء...":"⏳ Creating..."):(isAr?"🧾 إنشاء فواتير الشراء":"🧾 Create Purchase Orders")}
@@ -987,7 +987,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
       <div className="inv-stats" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
         {([
           {k:"all" as const,label:isAr?"إجمالي الأصناف":"Total Items",val:String(medicines.length),sub:isAr?"صنف في المخزون":"in inventory",c:"#0863ba",Ic:Icons.box},
-          {k:null,label:isAr?"قيمة المخزون":"Stock Value",val:fmtNum(totalValue),sub:isAr?"ر.س بالتكلفة":"SAR at cost",c:"#1e8449",Ic:Icons.reports},
+          {k:null,label:isAr?"قيمة المخزون":"Stock Value",val:fmtNum(totalValue),sub:isAr?"ل.س بالتكلفة":"SAR at cost",c:"#1e8449",Ic:Icons.reports},
           {k:"low" as const,label:isAr?"مخزون منخفض":"Low Stock",val:String(lowCount),sub:isAr?"يحتاج إعادة طلب":"needs reorder",c:"#d35400",Ic:Icons.stockOut},
           {k:"expiring" as const,label:isAr?"قارب الانتهاء":"Expiring",val:String(expCount),sub:isAr?"خلال ٣٠ يوماً":"within 30 days",c:"#c0392b",Ic:Icons.alerts},
         ]).map((st,i)=>{
@@ -1088,7 +1088,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
               </div>
               <div><span style={{background:"#f6f8fb",borderRadius:7,padding:"3px 8px",border:"1px solid #e8edf3",fontSize:10,color:"#5a7189",fontFamily:"monospace",letterSpacing:.7,direction:"ltr",display:"inline-block"}}>{m.barcode}</span></div>
               <div><span style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:`${cat.color}0e`,color:cat.color}}><span style={{width:6,height:6,borderRadius:"50%",background:cat.color}}/>{isAr?cat.ar:cat.en}</span></div>
-              <div style={{fontSize:13.5,fontWeight:800,color:"#1a2840"}}>{m.sell_price}<span style={{fontSize:10,color:"#aab3bf",fontWeight:500}}> {isAr?"ر.س":"SAR"}</span></div>
+              <div style={{fontSize:13.5,fontWeight:800,color:"#1a2840"}}>{m.sell_price}<span style={{fontSize:10,color:"#aab3bf",fontWeight:500}}> {isAr?"ل.س":"SYP"}</span></div>
               <div style={{fontSize:13.5,fontWeight:800,color:m.stock===0?"#c0392b":m.stock<m.min_stock?"#d35400":"#1a2840"}}>{m.stock}<span style={{fontSize:10,color:"#aab3bf",fontWeight:500}}> {isAr?m.unit:"u"}</span></div>
               <div><SBadge s={m.stock} m={m.min_stock} lang={lang}/></div>
               <div style={{display:"flex",gap:6}}>
@@ -1529,7 +1529,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
     const med=medicines.find(m=>m.barcode===code);
     if(!med){ setUnknownBarcode(code); showNotif({type:"warning",message:isAr?"باركود غير مسجّل":"Unregistered barcode",sub:code},2500); return; }
     setUnknownBarcode("");
-    addToSale(med); showNotif({type:"success",message:isAr?`✅ ${med.name_ar}`:`✅ ${med.name_en}`,sub:`${med.sell_price} ${isAr?"ر.س":"SAR"}`},1800);
+    addToSale(med); showNotif({type:"success",message:isAr?`✅ ${med.name_ar}`:`✅ ${med.name_en}`,sub:`${med.sell_price} ${isAr?"ل.س":"SYP"}`},1800);
   },[medicines,isAr,addToSale,showNotif]);
 
   // ماسح سلكي محلي: يبثّ للأجهزة الأخرى ثم يعالج
@@ -1651,7 +1651,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:11,marginBottom:13}}>
-        {[{l:isAr?"مبيعات اليوم":"Today",v:todaySales.length,ic:"🛒",c:"#0863ba"},{l:isAr?"إيرادات اليوم":"Revenue",v:`${todayTotal} ${isAr?"ر.س":"SAR"}`,ic:"💰",c:"#27ae60"},{l:isAr?"الإجمالي":"Total",v:sales.length,ic:"📊",c:"#8e44ad"}].map((s,i)=>(
+        {[{l:isAr?"مبيعات اليوم":"Today",v:todaySales.length,ic:"🛒",c:"#0863ba"},{l:isAr?"إيرادات اليوم":"Revenue",v:`${todayTotal} ${isAr?"ل.س":"SYP"}`,ic:"💰",c:"#27ae60"},{l:isAr?"الإجمالي":"Total",v:sales.length,ic:"📊",c:"#8e44ad"}].map((s,i)=>(
           <div key={i} style={{background:"#fff",borderRadius:13,padding:"13px 15px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 9px rgba(8,99,186,.05)"}}><div style={{fontSize:21,marginBottom:3}}>{s.ic}</div><div style={{fontSize:17,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div><div style={{fontSize:11,color:"#aaa",marginTop:3}}>{s.l}</div></div>
         ))}
       </div>
@@ -1691,7 +1691,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
           <h3 style={{fontSize:14,fontWeight:800,color:"#353535",marginBottom:13,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>🛒 {isAr?"بيع جديد":"New Sale"}<span style={{fontSize:10,fontWeight:500,color:"#bbb"}}>{isAr?"F2 بيع · F4 ماسح · Enter إضافة · F9 إتمام · Esc إلغاء":"F2 new · F4 scan · Enter add · F9 complete · Esc cancel"}</span></h3>
           <div style={{position:"relative",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:7,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:9,padding:"8px 11px"}}><span>💊</span><input ref={searchRef} value={mQ} onChange={e=>setMQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&mRes.length>0){e.preventDefault();addToSale(mRes[0]);}}} placeholder={isAr?"بحث أو رقم باركود... (Enter لإضافة الأول)":"Search or barcode... (Enter to add)"} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/>{mQ&&<button onClick={()=>setMQ("")} style={{background:"none",border:"none",cursor:"pointer",color:"#bbb"}}>✕</button>}</div>
-            {mRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:11,boxShadow:"0 8px 30px rgba(0,0,0,.11)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:3}}>{mRes.map(m=>(<div key={m.id} onClick={()=>addToSale(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><div><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{fontSize:9,color:"#aaa",marginRight:7,fontFamily:"monospace"}}>{m.barcode}</span></div><span style={{color:"#27ae60",fontWeight:700,fontSize:12}}>{m.sell_price} {isAr?"ر.س":"SAR"}</span></div>))}</div>}
+            {mRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:11,boxShadow:"0 8px 30px rgba(0,0,0,.11)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:3}}>{mRes.map(m=>(<div key={m.id} onClick={()=>addToSale(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><div><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{fontSize:9,color:"#aaa",marginRight:7,fontFamily:"monospace"}}>{m.barcode}</span></div><span style={{color:"#27ae60",fontWeight:700,fontSize:12}}>{m.sell_price} {isAr?"ل.س":"SYP"}</span></div>))}</div>}
           </div>
           {items.length>0&&<div style={{background:"#f7f9fc",borderRadius:11,padding:"11px",marginBottom:12}}>{items.map((it,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:7,marginBottom:i<items.length-1?9:0,background:flashId===it.medicine_id?"rgba(8,99,186,.09)":"transparent",borderRadius:7,padding:"3px 5px",transition:"background .35s",flexWrap:"wrap"}}><div style={{flex:1,minWidth:120,fontSize:13,fontWeight:600,color:"#353535"}}>{it.medicine_name}</div><div style={{display:"flex",alignItems:"center",gap:3}}><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>-</button><span style={{fontSize:13,fontWeight:700,minWidth:22,textAlign:"center"}}>{it.qty}</span><button onClick={()=>setItems(p=>p.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:5,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>+</button></div><div style={{display:"flex",alignItems:"center",gap:2,background:"#fff",border:"1.5px solid #f0e0d0",borderRadius:6,padding:"1px 5px"}} title={isAr?"خصم للوحدة":"Per-unit discount"}><span style={{fontSize:10,color:"#e67e22"}}>−</span><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={0} max={it.unit_price} value={it.item_discount||""} onChange={e=>setItems(p=>p.map((x,xi)=>xi===i?{...x,item_discount:Math.max(0,Math.min(x.unit_price,Number(e.target.value)))}:x))} style={{width:38,border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:11,textAlign:"center",color:"#e67e22"}}/></div><div style={{fontSize:12,fontWeight:700,color:"#27ae60",minWidth:50,textAlign:"center"}}>{(it.qty*(it.unit_price-(it.item_discount||0))).toFixed(0)}</div><button onClick={()=>setItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:15}}>✕</button></div>))}</div>}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:11}}>
@@ -1733,7 +1733,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
               {discount>0&&<div style={{display:"flex",justifyContent:"space-between",color:"#e67e22"}}><span>{isAr?"خصم إجمالي":"Discount"}</span><span>−{discount.toFixed(0)}</span></div>}
               {couponVal>0&&<div style={{display:"flex",justifyContent:"space-between",color:"#8e44ad"}}><span>{isAr?"كوبون":"Coupon"} {coupon&&`(${coupon})`}</span><span>−{couponVal.toFixed(0)}</span></div>}
             </div>}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,fontWeight:700,color:"#353535"}}>{isAr?"المجموع النهائي":"Final Total"}</span><span style={{fontSize:21,fontWeight:800,color:"#0863ba"}}>{total}<span style={{fontSize:12,fontWeight:400,color:"#aaa"}}> {isAr?"ر.س":"SAR"}</span></span></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,fontWeight:700,color:"#353535"}}>{isAr?"المجموع النهائي":"Final Total"}</span><span style={{fontSize:21,fontWeight:800,color:"#0863ba"}}>{total}<span style={{fontSize:12,fontWeight:400,color:"#aaa"}}> {isAr?"ل.س":"SYP"}</span></span></div>
           </div>
           <div style={{display:"flex",gap:9}}>
             <button onClick={complete} disabled={items.length===0} style={{flex:1,padding:"12px",background:items.length===0?"#ccc":"#27ae60",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:items.length===0?"not-allowed":"pointer",boxShadow:items.length===0?"none":"0 4px 13px rgba(39,174,96,.3)"}}>✅ {isAr?"إتمام البيع":"Complete"}</button>
@@ -1751,7 +1751,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
           <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,color:"#353535",marginBottom:1}}>{s.patient_name||`${isAr?"بيع":"Sale"} #${s.id}`}</div><div style={{fontSize:11,color:"#aaa"}}>{s.date} · {s.items.length} {isAr?"أدوية":"items"} · {s.cashier}{returnedTotal>0&&<span style={{color:"#e67e22",fontWeight:700}}> · {isAr?"مرتجع":"Returned"} {returnedTotal}</span>}</div></div>
           <div style={{display:"flex",gap:7,alignItems:"center",flexShrink:0}}>
             <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#f0f4f8",color:"#888",fontWeight:600}}>{pi[s.payment_method]} {pm[s.payment_method]}</span>
-            <span style={{fontSize:14,fontWeight:800,color:"#0863ba"}}>{s.total}<span style={{fontSize:10,fontWeight:400,color:"#aaa"}}> {isAr?"ر.س":"SAR"}</span></span>
+            <span style={{fontSize:14,fontWeight:800,color:"#0863ba"}}>{s.total}<span style={{fontSize:10,fontWeight:400,color:"#aaa"}}> {isAr?"ل.س":"SYP"}</span></span>
             {!fullyReturned&&<button onClick={()=>openReturn(s)} className="action-icon-btn" title={isAr?"إرجاع":"Return"} style={{color:"#e67e22",borderColor:"rgba(230,126,34,.3)"}}>↩️</button>}
             <button onClick={()=>setPrintSale(s)} className="action-icon-btn" title={isAr?"طباعة":"Print"}>🖨️</button>
           </div>
@@ -1791,7 +1791,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
               <div>
                 <div style={{background:closeData.closing.difference===0?"rgba(39,174,96,.08)":"rgba(230,126,34,.08)",border:`1.5px solid ${closeData.closing.difference===0?"rgba(39,174,96,.3)":"rgba(230,126,34,.3)"}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
                   <div style={{fontSize:12,color:"#888",marginBottom:4}}>{isAr?"تم تقفيل هذا اليوم مسبقًا بواسطة":"Already closed by"} {closeData.closing.closed_by}</div>
-                  <div style={{fontSize:22,fontWeight:800,color:closeData.closing.difference===0?"#27ae60":"#e67e22"}}>{closeData.closing.difference>0?"+":""}{closeData.closing.difference} {isAr?"ر.س":"SAR"}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:closeData.closing.difference===0?"#27ae60":"#e67e22"}}>{closeData.closing.difference>0?"+":""}{closeData.closing.difference} {isAr?"ل.س":"SYP"}</div>
                   <div style={{fontSize:11,color:"#999"}}>{isAr?"الفرق (معدود - متوقع)":"Difference (counted - expected)"}</div>
                 </div>
                 {[[isAr?"مبيعات نقدي":"Cash sales",closeData.closing.cash_sales],[isAr?"مبيعات بطاقة":"Card sales",closeData.closing.card_sales],[isAr?"مبيعات تأمين":"Insurance sales",closeData.closing.insurance_sales],[isAr?"مرتجعات نقدية":"Cash returns",-closeData.closing.cash_returns],[isAr?"المتوقع بالدرج":"Expected in drawer",closeData.closing.expected_cash],[isAr?"المعدود فعليًا":"Actually counted",closeData.closing.counted_cash]].map(([label,val],i)=>(
@@ -1803,7 +1803,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
                 {[[isAr?"مبيعات نقدي":"Cash sales",closeData.preview.cash_sales],[isAr?"مبيعات بطاقة":"Card sales",closeData.preview.card_sales],[isAr?"مبيعات تأمين":"Insurance sales",closeData.preview.insurance_sales],[isAr?"مرتجعات نقدية":"Cash returns",-closeData.preview.cash_returns]].map(([label,val],i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:13}}><span style={{color:"#888"}}>{label}</span><span style={{fontWeight:700,color:"#353535"}}>{val as number}</span></div>
                 ))}
-                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderTop:"1.5px solid #eef0f3",marginTop:6,marginBottom:16}}><span style={{fontWeight:800,color:"#353535"}}>{isAr?"المتوقع بالدرج نقدًا":"Expected cash in drawer"}</span><span style={{fontWeight:800,color:"#0863ba",fontSize:16}}>{closeData.preview.expected_cash} {isAr?"ر.س":"SAR"}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderTop:"1.5px solid #eef0f3",marginTop:6,marginBottom:16}}><span style={{fontWeight:800,color:"#353535"}}>{isAr?"المتوقع بالدرج نقدًا":"Expected cash in drawer"}</span><span style={{fontWeight:800,color:"#0863ba",fontSize:16}}>{closeData.preview.expected_cash} {isAr?"ل.س":"SYP"}</span></div>
                 <label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المبلغ النقدي المعدود فعليًا":"Actual cash counted"}</label>
                 <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={countedCash} onChange={e=>setCountedCash(e.target.value)} placeholder="0" style={{width:"100%",padding:"11px 14px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:15,fontWeight:700,outline:"none",marginBottom:12}}/>
                 {countedCash!==""&&<div style={{textAlign:"center",marginBottom:12,fontSize:13,fontWeight:700,color:Number(countedCash)-closeData.preview.expected_cash===0?"#27ae60":"#e67e22"}}>{isAr?"الفرق":"Difference"}: {Number(countedCash)-closeData.preview.expected_cash>0?"+":""}{(Number(countedCash)-closeData.preview.expected_cash).toFixed(2)}</div>}
@@ -1914,7 +1914,7 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:11,marginBottom:15}}>
-        {[{l:isAr?"إجمالي المبيعات":"Total Sales",v:`${totalRev} ${isAr?"ر.س":"SAR"}`,ic:"💰",c:"#0863ba",bg:"rgba(8,99,186,.08)"},{l:isAr?"صافي الربح (WAC)":"Net Profit (WAC)",v:totalProfit===null?(isAr?"...":"..."):`${totalProfit.toFixed(0)} ${isAr?"ر.س":"SAR"}`,ic:"📈",c:"#27ae60",bg:"rgba(39,174,96,.08)"},{l:isAr?"مخزون منخفض":"Low Stock",v:medicines.filter(m=>m.stock<m.min_stock).length,ic:"⚠️",c:"#e67e22",bg:"rgba(230,126,34,.08)"},{l:isAr?"منتهية الصلاحية":"Expired",v:medicines.filter(m=>isExp(medExpiry(m))).length,ic:"🚫",c:"#e74c3c",bg:"rgba(231,76,60,.08)"}].map((s,i)=>(
+        {[{l:isAr?"إجمالي المبيعات":"Total Sales",v:`${totalRev} ${isAr?"ل.س":"SYP"}`,ic:"💰",c:"#0863ba",bg:"rgba(8,99,186,.08)"},{l:isAr?"صافي الربح (WAC)":"Net Profit (WAC)",v:totalProfit===null?(isAr?"...":"..."):`${totalProfit.toFixed(0)} ${isAr?"ل.س":"SYP"}`,ic:"📈",c:"#27ae60",bg:"rgba(39,174,96,.08)"},{l:isAr?"مخزون منخفض":"Low Stock",v:medicines.filter(m=>m.stock<m.min_stock).length,ic:"⚠️",c:"#e67e22",bg:"rgba(230,126,34,.08)"},{l:isAr?"منتهية الصلاحية":"Expired",v:medicines.filter(m=>isExp(medExpiry(m))).length,ic:"🚫",c:"#e74c3c",bg:"rgba(231,76,60,.08)"}].map((s,i)=>(
           <div key={i} style={{background:s.bg,borderRadius:13,padding:"15px",border:`1.5px solid ${s.c}25`}}><div style={{fontSize:22,marginBottom:5}}>{s.ic}</div><div style={{fontSize:20,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div><div style={{fontSize:11,color:s.c,opacity:.7,marginTop:3,fontWeight:600}}>{s.l}</div></div>
         ))}
       </div>
@@ -1945,7 +1945,7 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
               <div key={cls} style={{background:`${c}0e`,border:`1.5px solid ${c}30`,borderRadius:11,padding:"11px",textAlign:"center"}}>
                 <div style={{fontSize:18,fontWeight:800,color:c}}>{isAr?"فئة ":"Class "}{cls}</div>
                 <div style={{fontSize:12,color:"#666",marginTop:3}}>{abcSummary[cls].count} {isAr?"صنف":"items"}</div>
-                <div style={{fontSize:11,color:c,fontWeight:700,marginTop:2}}>{abcSummary[cls].rev.toFixed(0)} {isAr?"ر.س":"SAR"}</div>
+                <div style={{fontSize:11,color:c,fontWeight:700,marginTop:2}}>{abcSummary[cls].rev.toFixed(0)} {isAr?"ل.س":"SYP"}</div>
               </div>
             ))}
           </div>
@@ -1985,7 +1985,7 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
 
       <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginBottom:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
         <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:13,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"المبيعات حسب التصنيف":"By Category"}</h3>
-        {topCat.map(([k,v])=>{const cat=CAT[k];const pct=maxC>0?(v/maxC)*100:0;return(<div key={k} style={{marginBottom:9}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:12,fontWeight:600,color:"#555"}}>{isAr?cat.ar:cat.en}</span><span style={{fontSize:12,fontWeight:700,color:cat.color}}>{v} {isAr?"ر.س":"SAR"}</span></div><div style={{height:7,background:"#f0f2f5",borderRadius:10,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:cat.color,borderRadius:10,transition:"width .6s ease"}}/></div></div>);})}
+        {topCat.map(([k,v])=>{const cat=CAT[k];const pct=maxC>0?(v/maxC)*100:0;return(<div key={k} style={{marginBottom:9}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:12,fontWeight:600,color:"#555"}}>{isAr?cat.ar:cat.en}</span><span style={{fontSize:12,fontWeight:700,color:cat.color}}>{v} {isAr?"ل.س":"SYP"}</span></div><div style={{height:7,background:"#f0f2f5",borderRadius:10,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:cat.color,borderRadius:10,transition:"width .6s ease"}}/></div></div>);})}
       </div>
       <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
         <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:13,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"الأكثر مبيعاً":"Best Selling"}</h3>
