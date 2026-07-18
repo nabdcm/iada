@@ -1200,10 +1200,60 @@ export default function PaymentsPage() {
     });
   }, [payments, patients, search, filter, selectedDoctor, plan]);
 
+  // ── سجل موحّد كحركة حساب بنكي: مدفوعات + سحوبات + مصروفات ──
+  const ledger = useMemo(() => {
+    const q = search.toLowerCase();
+    const showP = !["withdrawal","expense"].includes(filter);
+    const showW = filter === "all" || filter === "withdrawal";
+    const showE = filter === "all" || filter === "expense";
+    const items: any[] = [];
+    if (showP) items.push(...filtered);
+    if (showW && selectedDoctor === null)
+      items.push(...withdrawals.filter(w => !q || (w.reason||"").toLowerCase().includes(q) || (w.notes||"").toLowerCase().includes(q)).map(w => ({ ...w, __kind:"withdrawal" })));
+    if (showE && selectedDoctor === null)
+      items.push(...expenses.filter(e => !q || (e.description||"").toLowerCase().includes(q)).map(e => ({ ...e, __kind:"expense" })));
+    return items.sort((a,b) => (b.date||"").localeCompare(a.date||"") || (b.created_at||"").localeCompare(a.created_at||""));
+  }, [filtered, withdrawals, expenses, filter, search, selectedDoctor]);
+
   useEffect(()=>{ setTxPage(1); },[search,filter,selectedDoctor]);
-  const txTotalPages = Math.max(1, Math.ceil(filtered.length / TX_PAGE_SIZE));
+  const txTotalPages = Math.max(1, Math.ceil(ledger.length / TX_PAGE_SIZE));
   const txSafePage = Math.min(txPage, txTotalPages);
-  const txPaged = filtered.slice((txSafePage-1)*TX_PAGE_SIZE, txSafePage*TX_PAGE_SIZE);
+  const txPaged = ledger.slice((txSafePage-1)*TX_PAGE_SIZE, txSafePage*TX_PAGE_SIZE);
+
+  // صف موحّد لسحب/مصروف داخل السجل
+  const renderLedgerExtraRow = (item: any) => {
+    const isW = item.__kind === "withdrawal";
+    const color = isW ? "#c0392b" : "#7b2d8b";
+    const label = isW ? (isAr?"سحب":"Withdrawal") : (isAr?"مصروف":"Expense");
+    const title = isW ? item.reason : item.description;
+    const catLabels = tr.expenseModal.categories as Record<string,string>;
+    return (
+      <div key={`${item.__kind}-${item.id}`} className="tx-row" style={{ display:"flex",alignItems:"center",gap:12,padding:"13px 20px",borderBottom:"1px solid #f2f6fa",background:`${color}05` }}>
+        <div style={{ width:36,height:36,borderRadius:10,background:`${color}14`,color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+          {isW
+            ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>
+            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17"/></svg>}
+        </div>
+        <div style={{ flex:1,minWidth:0 }}>
+          <div style={{ fontSize:13,fontWeight:700,color:"#1c2b3a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{title}</div>
+          <div style={{ fontSize:11,color:"#8a97a6",marginTop:2,display:"flex",gap:8,flexWrap:"wrap" }}>
+            <span>{fmtDate(item.date)}</span>
+            {!isW && item.category && <span style={{ color }}>{catLabels[item.category] || item.category}</span>}
+            {item.notes && <span>· {item.notes}</span>}
+          </div>
+        </div>
+        <span style={{ fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20,background:`${color}12`,color,flexShrink:0 }}>{label}</span>
+        <span style={{ fontSize:14,fontWeight:800,color,whiteSpace:"nowrap",flexShrink:0,fontVariantNumeric:"tabular-nums" }}>
+          -{numbersHidden ? "••••" : item.amount.toLocaleString()} ل.س
+        </span>
+        <button
+          onClick={()=> isW ? setReverseWithdrawalId(item.id) : setReverseExpenseId(item.id)}
+          title={isAr?"تراجع / حذف":"Undo / Delete"}
+          style={{ width:32,height:32,borderRadius:9,background:`${color}0d`,border:`1.5px solid ${color}30`,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}
+        >↩️</button>
+      </div>
+    );
+  };
 
   const pendingPayments = useMemo(() => payments.filter(p => p.status === "pending"), [payments]);
 
@@ -2416,6 +2466,8 @@ ${doctorSettlementRows}
                     {Object.entries(tr.filter as Record<string, string>).map(([k, v]) => (
                       <button key={k} className={`filter-chip${filter===k?" active":""}`} onClick={()=>setFilter(k)}>{v}</button>
                     ))}
+                    <button className={`filter-chip${filter==="withdrawal"?" active":""}`} onClick={()=>setFilter("withdrawal")}>{isAr?"سحوبات":"Withdrawals"}</button>
+                    <button className={`filter-chip${filter==="expense"?" active":""}`} onClick={()=>setFilter("expense")}>{isAr?"مصروفات":"Expenses"}</button>
                     {isSharedClinicPlan(plan) && doctors.length > 0 && (
                       <>
                         <span style={{ width:1,alignSelf:"stretch",background:"#e6edf5",margin:"0 2px" }}/>
@@ -2466,6 +2518,7 @@ ${doctorSettlementRows}
                       {/* MOBILE CARDS */}
                       <div className="mobile-tx">
                         {txPaged.map(p=>{
+                          if ((p as any).__kind) return renderLedgerExtraRow(p);
                           const patient = patients.find(x=>x.id===p.patient_id);
                           const ss = statusStyle[p.status]||statusStyle.paid;
                           const isNew = animIds.includes(p.id);
@@ -2515,6 +2568,7 @@ ${doctorSettlementRows}
                       {/* DESKTOP ROWS */}
                       <div className="desktop-tx">
                         {txPaged.map(p=>{
+                          if ((p as any).__kind) return renderLedgerExtraRow(p);
                           const patient = patients.find(x=>x.id===p.patient_id);
                           const ss = statusStyle[p.status]||statusStyle.paid;
                           const isNew = animIds.includes(p.id);
@@ -2638,56 +2692,6 @@ ${doctorSettlementRows}
                   </div>
                 )}
 
-                {/* ── سجل السحوبات ضمن الحركة المالية ── */}
-                {withdrawals.length > 0 && (
-                  <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.18)",boxShadow:"0 2px 16px rgba(192,57,43,.06)",overflow:"hidden",marginTop:20 }}>
-                    <div style={{ padding:"16px 20px",borderBottom:"1.5px solid rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(192,57,43,.03)" }}>
-                      <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
-                        <span style={{ fontSize:16 }}><AppIcon glyph="💸" /></span>
-                        {tr.withdrawalsSection.title}
-                      </h3>
-                      <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                        <span style={{ fontSize:12,color:"#c0392b",fontWeight:700 }}>
-                          -{withdrawals.filter(w=>!w.is_reversed).reduce((s,w)=>s+w.amount,0).toLocaleString()} ل.س
-                        </span>
-                        <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
-                      </div>
-                    </div>
-                    {/* Header */}
-                    <div className="desktop-table-header" style={{ gridTemplateColumns:"120px 1fr 130px 90px 60px",padding:"10px 20px",background:"#fafbfc",borderBottom:"1px solid rgba(192,57,43,.08)",gap:0 }}>
-                      {[tr.table.date, isAr?"السبب":"Reason", tr.table.amount, isAr?"الحالة":"Status", ""].map((h,i)=>(
-                        <div key={i} style={{ fontSize:11,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.4,paddingLeft:i>0?8:0 }}>{h}</div>
-                      ))}
-                    </div>
-                    {withdrawals.map((w,i) => (
-                      <div key={w.id||i} style={{ display:"grid",gridTemplateColumns:"120px 1fr 130px 90px 60px",padding:"12px 20px",alignItems:"center",borderBottom:"1px solid #faf0ee",transition:"background .2s" }}
-                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(192,57,43,.03)";}}
-                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-                        <div style={{ fontSize:12,color:"#888" }}>{fmtDate(w.date)}</div>
-                        <div style={{ fontSize:13,fontWeight:500,color:"#353535",paddingLeft:8 }}>
-                          {w.reason}
-                          {w.notes && <div style={{ fontSize:11,color:"#bbb",marginTop:2 }}>{w.notes}</div>}
-                        </div>
-                        <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:"#c0392b" }}>
-                          -{w.amount.toLocaleString()} ل.س
-                        </div>
-                        <div style={{ paddingLeft:8 }}>
-                          <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(192,57,43,.1)",color:"#c0392b" }}>
-                            {isAr?"سحب":"Withdrawal"}
-                          </span>
-                        </div>
-                        <div style={{ display:"flex",justifyContent:"center" }}>
-                          <button
-                            className="icon-btn"
-                            onClick={()=>setReverseWithdrawalId(w.id)}
-                            title={tr.withdrawalsSection.reverseBtn}
-                            style={{ fontSize:14 }}
-                          >↩️</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* RIGHT: Revenue Chart + Pending */}
@@ -2787,77 +2791,6 @@ ${doctorSettlementRows}
                   )}
                 </div>
 
-                {/* Recent Withdrawals */}
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.15)",padding:"18px",boxShadow:"0 2px 16px rgba(192,57,43,.06)",marginTop:16,minWidth:0,overflow:"hidden" }}>
-                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
-                    <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
-                      <span style={{ fontSize:16 }}><AppIcon glyph="💸" /></span> {tr.withdrawalsSection.title}
-                    </h3>
-                    <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
-                  </div>
-                  {withdrawals.length===0?(
-                    <div style={{ textAlign:"center",padding:"18px 0",color:"#ccc",fontSize:13 }}>{tr.withdrawalsSection.empty}</div>
-                  ):(
-                    withdrawals.slice(0,5).map((w,i)=>(
-                      <div key={w.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0 }}>
-                        <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
-                          <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{w.reason}</div>
-                          <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2,flexWrap:"wrap" }}>
-                            <span style={{ fontSize:11,color:"#aaa" }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory-nu-latn":"en-GB",{month:"short",day:"numeric"})}</span>
-                          </div>
-                        </div>
-                        <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-                          <span style={{ fontSize:13,fontWeight:800,color:"#c0392b",whiteSpace:"nowrap" }}>-{w.amount.toLocaleString()} ل.س</span>
-                          <button
-                            onClick={()=>setReverseWithdrawalId(w.id)}
-                            title={tr.withdrawalsSection.reverseBtn}
-                            style={{ width:30,height:30,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
-                            onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.18)";}}
-                            onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="rgba(230,126,34,.08)";}}
-                          >↩️</button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Clinic Expenses */}
-                <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(123,45,139,.15)",padding:"18px",boxShadow:"0 2px 16px rgba(123,45,139,.06)",marginTop:16,minWidth:0,overflow:"hidden" }}>
-                  <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
-                    <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
-                      <span style={{ fontSize:16 }}><AppIcon glyph="🏪" /></span> {tr.expensesSection.title}
-                    </h3>
-                    <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
-                  </div>
-                  {expenses.length===0?(
-                    <div style={{ textAlign:"center",padding:"18px 0",color:"#ccc",fontSize:13 }}>{tr.expensesSection.empty}</div>
-                  ):(
-                    expenses.slice(0,5).map((e,i)=>{
-                      const catLabels = tr.expenseModal.categories;
-                      return (
-                        <div key={e.id||i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f5f7fa",gap:8,minWidth:0 }}>
-                          <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
-                            <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{e.description}</div>
-                            <div style={{ display:"flex",gap:8,marginTop:3,flexWrap:"wrap" }}>
-                              <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600,flexShrink:0 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
-                              <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory-nu-latn":"en-GB",{month:"short",day:"numeric"})}</span>
-                            </div>
-                          </div>
-                          <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-                            <span style={{ fontSize:13,fontWeight:800,color:"#7b2d8b",whiteSpace:"nowrap" }}>-{e.amount.toLocaleString()} ل.س</span>
-                            <button
-                              onClick={()=>setReverseExpenseId(e.id)}
-                              title={tr.expensesSection.reverseBtn}
-                              style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s" }}
-                              onMouseEnter={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.18)";}}
-                              onMouseLeave={ev=>{(ev.currentTarget as HTMLButtonElement).style.background="rgba(123,45,139,.08)";}}
-                            >↩️</button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
               </div>
 
             </div>
