@@ -2776,6 +2776,8 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         // حفظ flag بسيط في sessionStorage فقط للـ UI state (ليس للتحقق الأمني)
         sessionStorage.setItem(SESSION_KEY, "1");
         onSuccess();
+      } else if (res.status === 503) {
+        setError("بيانات دخول الأدمن غير مضبوطة على السيرفر. أضف NABD_ADMIN_USERNAME و NABD_ADMIN_PASSWORD في إعدادات Vercel ثم أعد النشر.");
       } else {
         setError("اسم المستخدم أو كلمة المرور غير صحيحة.");
         setPassword("");
