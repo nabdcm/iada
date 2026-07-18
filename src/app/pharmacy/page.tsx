@@ -1875,8 +1875,8 @@ export default function PharmacyPage() {
         const uid=session.user.id;
         setSupabaseUserId(uid);
         const meta=session.user.user_metadata;
-        // اقبل أي نوع حساب — الصيدلاني يدخل من login الموحد
-        const role:UserRole=(meta?.pharmacy_role as UserRole)||"pharmacist";
+        // الدور من بيانات الحساب، والافتراضي "مدير" ليظهر كل الميزات (التقارير، الموردون، إلخ)
+        const role:UserRole=(meta?.pharmacy_role as UserRole)||"manager";
         const u:User={id:1,name_ar:meta?.owner_name||meta?.clinic_name||"مستخدم",name_en:meta?.owner_name||meta?.clinic_name||"User",role,username:session.user.email||"",password:"",avatar:"💊"};
         setCurrentUser(u);
         setActiveTab(ROLE[role].tabs[0]);
