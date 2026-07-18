@@ -928,7 +928,7 @@ function PaymentModal({ patients, lang, doctors, isSharedClinic, onSave, onClose
         <div style={{ display:"flex",gap:12,marginBottom:16 }}>
           <div style={{ flex:1 }}>
             <label style={labelSt}>{isAr?"المبلغ *":"Amount *"}</label>
-            <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={fieldInputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
+            <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={fieldInputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
           </div>
           <div style={{ flex:1 }}>
             <label style={labelSt}>{isAr?"التاريخ":"Date"}</label>
@@ -1044,7 +1044,7 @@ function WithdrawModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>v
       {error&&<div style={{ margin:"12px 24px 0",background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b" }}>⚠️ {error}</div>}
       <div style={{ padding:"16px 24px",display:"flex",flexDirection:"column",gap:14,direction:isAr?"rtl":"ltr" }}>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-          <div><label style={labelSt}>{isAr?"المبلغ (ل.س) *":"Amount *"}</label><input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} style={inputSt}/></div>
+          <div><label style={labelSt}>{isAr?"المبلغ (ل.س) *":"Amount *"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} style={inputSt}/></div>
           <div><label style={labelSt}>{isAr?"التاريخ *":"Date *"}</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt}/></div>
         </div>
         <div><label style={labelSt}>{isAr?"سبب السحب *":"Reason *"}</label><input value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} placeholder={isAr?"مثال: مصروف شخصي...":"e.g. Personal expense..."} style={inputSt}/></div>
@@ -1082,7 +1082,7 @@ function ExpenseModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>vo
       {error&&<div style={{ margin:"12px 24px 0",background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b" }}>⚠️ {error}</div>}
       <div style={{ padding:"16px 24px",display:"flex",flexDirection:"column",gap:14,direction:isAr?"rtl":"ltr" }}>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-          <div><label style={labelSt}>{isAr?"المبلغ (ل.س) *":"Amount *"}</label><input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} style={inputSt}/></div>
+          <div><label style={labelSt}>{isAr?"المبلغ (ل.س) *":"Amount *"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} style={inputSt}/></div>
           <div><label style={labelSt}>{isAr?"التاريخ *":"Date *"}</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt}/></div>
         </div>
         <div><label style={labelSt}>{isAr?"التصنيف *":"Category *"}</label>

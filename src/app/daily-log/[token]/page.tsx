@@ -665,6 +665,7 @@ export default function DailyLogPage() {
                       <div className="number-input-wrap">
                         <input
                           type="number"
+                          onWheel={e=>(e.target as HTMLInputElement).blur()}
                           value={String(fields[field.key] ?? "")}
                           onChange={e => updateField(field.key, parseFloat(e.target.value))}
                           placeholder="0"

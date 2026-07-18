@@ -567,7 +567,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
             <div style={{ background:"#fff",borderRadius:14,border:"1.5px solid #f0f2f5",padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.03)" }}>
               <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>⏱ {s.duration}</div>
               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                <input type="number" min={5} max={120} step={5}
+                <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={5} max={120} step={5}
                   value={sch.appointment_duration}
                   onChange={e => updateSchedule(doc.id, s2 => ({...s2, appointment_duration: Number(e.target.value)}))}
                   style={{ ...inputSt, width:70, textAlign:"center" }}
@@ -579,7 +579,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
             <div style={{ background:"#fff",borderRadius:14,border:"1.5px solid #f0f2f5",padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.03)" }}>
               <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>📋 {s.maxDaily}</div>
               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                <input type="number" min={1} max={100}
+                <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} max={100}
                   value={sch.max_daily_appointments}
                   onChange={e => updateSchedule(doc.id, s2 => ({...s2, max_daily_appointments: Number(e.target.value)}))}
                   style={{ ...inputSt, width:70, textAlign:"center" }}
@@ -1172,7 +1172,7 @@ function PlansTab({ lang, userId, isMobile }: { lang: Lang; userId: string; isMo
           <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 100 }}>
               <div style={labelSt}>{tx.price}</div>
-              <input type="number" style={inputSt} value={editing.price}
+              <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} style={inputSt} value={editing.price}
                 onChange={e => setEditing({ ...editing, price: parseFloat(e.target.value) || 0 })} />
             </div>
             <div style={{ flex: 1, minWidth: 90 }}>

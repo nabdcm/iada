@@ -1045,7 +1045,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                                 ✏️ {isAr?"الحد الأقصى للأطباء (قابل للتخصيص)":"Max Doctors (Customizable)"}
                               </label>
                               <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                                <input type="number" min={1} max={50} value={form.max_doctors}
+                                <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} max={50} value={form.max_doctors}
                                   onChange={e => setForm(prev => ({ ...prev, max_doctors: parseInt(e.target.value)||1 }))}
                                   style={{ width:80,padding:"8px 12px",border:"1.5px solid #e8eaed",borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,color:"#353535",textAlign:"center",outline:"none" }}
                                 />
@@ -1648,7 +1648,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                       ✏️ {sm.maxDoctors} ({sm.maxDoctorsNote})
                     </label>
                     <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                      <input type="number" min={1} max={50} value={form.max_doctors}
+                      <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} max={50} value={form.max_doctors}
                         onChange={e => setForm(prev=>({...prev,max_doctors:parseInt(e.target.value)||1}))}
                         style={{ width:80,padding:"8px 12px",border:"1.5px solid rgba(14,124,106,.3)",borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:16,fontWeight:800,color:"#0e7c6a",textAlign:"center",outline:"none",background:"#fff" }}
                       />
