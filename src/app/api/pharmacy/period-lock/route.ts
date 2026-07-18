@@ -1,6 +1,7 @@
 // src/app/api/pharmacy/period-lock/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("user_id");
   if (!userId) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_userId = await getAuthUserId(req);
+    if (!authUid_userId || authUid_userId !== userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const { data } = await supabaseAdmin.from("pharmacy_period_locks").select("*").eq("user_id", userId).maybeSingle();
     return NextResponse.json({ lock: data || { locked_until: "1900-01-01" } });
@@ -31,6 +34,8 @@ export async function POST(req: Request) {
   try {
     const { user_id, locked_until, closed_by } = await req.json();
     if (!user_id || !locked_until) return NextResponse.json({ error: "user_id and locked_until required" }, { status: 400 });
+    const authUid_user_id = await getAuthUserId(req);
+    if (!authUid_user_id || authUid_user_id !== user_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
     const current = await getLockedUntil(user_id);
     if (locked_until <= current) {

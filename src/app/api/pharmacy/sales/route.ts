@@ -2,6 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getLockedUntil } from "../period-lock/route";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
     const { user_id, items, total, discount, payment_method, patient_name, prescription_id, cashier, date,
             paid_cash, paid_card, paid_insurance, coupon_code, coupon_discount } = await req.json();
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_user_id = await getAuthUserId(req);
+    if (!authUid_user_id || authUid_user_id !== user_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "items required" }, { status: 400 });
 
     const saleDate = date || new Date().toISOString().slice(0, 10);

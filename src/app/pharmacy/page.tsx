@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { CameraScanner, usePharmacyChannel, type ScanEvent } from "./scanner";
 import { DesktopSidebar, MobilePillNav, MoreSheet, TAB_META, Icons, type TabKey } from "./nav";
 import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/pharmacyApi";
 
 // ============================================================
 // NABD - نبض | Pharmacy v3
@@ -363,7 +364,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
   const saveSup=async()=>{
     if(!sf.name.trim()) return;
     if(userId){
-      const res=await fetch("/api/pharmacy/suppliers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:editSup?"update":"add",user_id:userId,id:editSup?.id,...sf})});
+      const res=await apiFetch("/api/pharmacy/suppliers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:editSup?"update":"add",user_id:userId,id:editSup?.id,...sf})});
       const json=await res.json();
       if(json.success){
         if(editSup) setSuppliers(p=>p.map(s=>s.id===editSup.id?{...s,...sf}:s));
@@ -382,7 +383,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
     const status:PurchInvoice["status"]=iPaid>=iTotal?"paid":iPaid>0?"partial":"pending";
     const created_by=isAr?currentUser.name_ar:currentUser.name_en;
     if(userId){
-      const res=await fetch("/api/pharmacy/invoices",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,supplier_id:iSupId,supplier_name:sup?.name||"",date:iDate,items:iItems,total:iTotal,paid:iPaid,status,notes:iNotes||undefined,created_by})});
+      const res=await apiFetch("/api/pharmacy/invoices",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,supplier_id:iSupId,supplier_name:sup?.name||"",date:iDate,items:iItems,total:iTotal,paid:iPaid,status,notes:iNotes||undefined,created_by})});
       const json=await res.json();
       if(json.success){ setInvoices(p=>[json.invoice,...p]); onRefresh(); }
     } else {
@@ -398,14 +399,14 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
   const openStatement=async(s:Supplier)=>{
     setStmtSup(s); setStmtData(null); setPayAmount(""); setPayNotes("");
     if(!userId) return;
-    const res=await fetch(`/api/pharmacy/supplier-payments?user_id=${userId}&supplier_id=${s.id}`);
+    const res=await apiFetch(`/api/pharmacy/supplier-payments?user_id=${userId}&supplier_id=${s.id}`);
     const json=await res.json();
     setStmtData(json);
   };
   const addPayment=async()=>{
     if(!userId||!stmtSup||!payAmount||Number(payAmount)<=0) return;
     const created_by=isAr?currentUser.name_ar:currentUser.name_en;
-    const res=await fetch("/api/pharmacy/supplier-payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,supplier_id:stmtSup.id,amount:Number(payAmount),notes:payNotes||null,created_by})});
+    const res=await apiFetch("/api/pharmacy/supplier-payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,supplier_id:stmtSup.id,amount:Number(payAmount),notes:payNotes||null,created_by})});
     const json=await res.json();
     if(json.success){ setPayAmount(""); setPayNotes(""); openStatement(stmtSup); onRefresh(); }
   };
@@ -644,7 +645,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
     if(!userId) return;
     setLoading(true);
     try{
-      const res=await fetch(`/api/pharmacy/reorder?user_id=${userId}&window=${win}`);
+      const res=await apiFetch(`/api/pharmacy/reorder?user_id=${userId}&window=${win}`);
       const json=await res.json();
       setRows(json.analysis||[]);
       setMeta({lead_time_days:json.lead_time_days,cover_days:json.cover_days});
@@ -684,7 +685,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
     for(const [sidStr,items] of Object.entries(bySupplier)){
       const sid=Number(sidStr); const sup=suppliers.find(s=>s.id===sid);
       const total=items.reduce((s,x)=>s+x.qty*x.unit_price,0);
-      const res=await fetch("/api/pharmacy/invoices",{method:"POST",headers:{"Content-Type":"application/json"},
+      const res=await apiFetch("/api/pharmacy/invoices",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({action:"add",user_id:userId,supplier_id:sid,supplier_name:sup?.name||"",
           date:new Date().toISOString().slice(0,10),items,total,paid:0,status:"pending",
           notes:isAr?"أمر شراء مقترح تلقائيًا":"Auto-suggested purchase order",
@@ -940,7 +941,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
   const handleSave=async(data:Partial<Medicine>)=>{
     if(!data.name_ar?.trim()) return;
     if(userId){
-      const res=await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:editMed?"update":"add",user_id:userId,id:editMed?.id,...data})});
+      const res=await apiFetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:editMed?"update":"add",user_id:userId,id:editMed?.id,...data})});
       const json=await res.json();
       if(json.success){
         if(editMed) setMedicines(prev=>prev.map(m=>m.id===editMed.id?{...m,...data} as Medicine:m));
@@ -957,7 +958,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
     if(!adj) return;
     const{med,mode}=adj;
     if(userId){
-      const res=await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"adjust_stock",user_id:userId,id:med.id,delta:mode==="in"?qty:-qty,medicine_name:med.name_ar,by:isAr?currentUser.name_ar:currentUser.name_en})});
+      const res=await apiFetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"adjust_stock",user_id:userId,id:med.id,delta:mode==="in"?qty:-qty,medicine_name:med.name_ar,by:isAr?currentUser.name_ar:currentUser.name_en})});
       const json=await res.json();
       if(json.success){
         setMedicines(prev=>prev.map(m=>m.id===med.id?{...m,stock:json.newStock}:m));
@@ -972,7 +973,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
 
   const handleDelete=async(id:number)=>{
     if(userId){
-      await fetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete",user_id:userId,id})});
+      await apiFetch("/api/pharmacy/medicines",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete",user_id:userId,id})});
     }
     setMedicines(prev=>prev.filter(m=>m.id!==id));
     setDelId(null);
@@ -1226,7 +1227,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
       const {data:{session}}=await supabase.auth.getSession();
       const token=session?.access_token;
       if(token){
-        const res=await fetch("/api/pharmacy/import-by-mrn",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({mrn})});
+        const res=await apiFetch("/api/pharmacy/import-by-mrn",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify({mrn})});
         const json=await res.json();
         if(json.imported>0)onRefresh();
       }
@@ -1266,7 +1267,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
   const syncClinic=async()=>{
     if(!userId)return; setSyncing(true); setSyncMsg("");
     try{
-      const res=await fetch("/api/pharmacy/sync-prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,days:30})});
+      const res=await apiFetch("/api/pharmacy/sync-prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,days:30})});
       const json=await res.json();
       setSyncMsg(json.synced>0?(isAr?`✅ تمت مزامنة ${json.synced} وصفة من العيادة`:`✅ Synced ${json.synced} from clinic`):(isAr?"لا وصفات جديدة للمزامنة":"No new prescriptions"));
       if(json.synced>0)onRefresh();
@@ -1280,18 +1281,18 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
     setSafety({rx,interactions:[],allergies:[],loading:true});
     const medNames=rx.items.map(it=>it.medicine_name).filter(Boolean);
     try{
-      const res=await fetch("/api/pharmacy/safety-check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,medicines:medNames,patient_id:rx.patient_id,mrn:rx.mrn})});
+      const res=await apiFetch("/api/pharmacy/safety-check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,medicines:medNames,patient_id:rx.patient_id,mrn:rx.mrn})});
       const json=await res.json();
       setSafety({rx,interactions:json.interactions||[],allergies:json.allergies||[],loading:false});
     }catch{setSafety({rx,interactions:[],allergies:[],loading:false});}
   };
 
   const updateStatus=async(id:string,status:RxStatus)=>{
-    if(userId){await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update_status",user_id:userId,id,status,dispensed_by:isAr?currentUser.name_ar:currentUser.name_en})});onRefresh();}
+    if(userId){await apiFetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update_status",user_id:userId,id,status,dispensed_by:isAr?currentUser.name_ar:currentUser.name_en})});onRefresh();}
     setPrescriptions(prev=>prev.map(p=>p.id===id?{...p,status,dispensed:status==="dispensed"}:p));
   };
   const setPriority=async(id:string,priority:RxPriority)=>{
-    if(userId){await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update_status",user_id:userId,id,priority})});onRefresh();}
+    if(userId){await apiFetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update_status",user_id:userId,id,priority})});onRefresh();}
     setPrescriptions(prev=>prev.map(p=>p.id===id?{...p,priority}:p));
   };
 
@@ -1299,11 +1300,12 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
   const doDispense=async(rx:Prescription)=>{
     const dispensed_by=isAr?currentUser.name_ar:currentUser.name_en;
     if(userId){
-      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense",user_id:userId,id:rx.id,dispensed_by})});
+      const res=await apiFetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense",user_id:userId,id:rx.id,dispensed_by})});
       const json=await res.json(); if(!json.success)return; onRefresh();
     }
     setPrescriptions(prev=>prev.map(p=>p.id===rx.id?{...p,dispensed:true,status:"dispensed",dispensed_at:new Date().toISOString().slice(0,10),dispensed_by}:p));
-    rx.items.forEach(it=>{const med=medicines.find(m=>it.medicine_id?m.id===it.medicine_id:(m.name_ar.trim().toLowerCase()===it.medicine_name.trim().toLowerCase()||m.name_en.trim().toLowerCase()===it.medicine_name.trim().toLowerCase()));if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:it.qty||1,date:new Date().toISOString().slice(0,10),user:dispensed_by,ref:rx.id,notes:"صرف وصفة"});});
+    // خصم المخزون وتسجيل الحركة يتمان الآن server-side ضمن action:"dispense"
+    if(!userId) rx.items.forEach(it=>{const med=medicines.find(m=>it.medicine_id?m.id===it.medicine_id:(m.name_ar.trim().toLowerCase()===it.medicine_name.trim().toLowerCase()||m.name_en.trim().toLowerCase()===it.medicine_name.trim().toLowerCase()));if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:it.qty||1,date:new Date().toISOString().slice(0,10),user:dispensed_by,ref:rx.id,notes:"صرف وصفة"});});
     setSafety(null);
   };
 
@@ -1312,7 +1314,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
     if(!partial)return; const {rx,qtys}=partial;
     const dispensed_by=isAr?currentUser.name_ar:currentUser.name_en;
     const items=rx.items.filter(it=>it.id).map(it=>({item_id:it.id!,dispensed_qty:qtys[it.id!]??(it.dispensed_qty||0)}));
-    if(userId){await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense_partial",user_id:userId,id:rx.id,items,dispensed_by})});onRefresh();}
+    if(userId){await apiFetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense_partial",user_id:userId,id:rx.id,items,dispensed_by})});onRefresh();}
     setPartial(null);
   };
 
@@ -1324,7 +1326,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
     const doctor_name=isAr?currentUser.name_ar:currentUser.name_en;
     const filteredItems=rxItems.filter(i=>i.medicine_name.trim()).map(i=>({...i,qty:i.qty||1,dispensed_qty:0}));
     if(userId){
-      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,rx_id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,notes:rxForm.notes||undefined,dispensed:false,status:"waiting",priority:"normal",source:"pharmacy",items:filteredItems})});
+      const res=await apiFetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,rx_id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,notes:rxForm.notes||undefined,dispensed:false,status:"waiting",priority:"normal",source:"pharmacy",items:filteredItems})});
       const json=await res.json();
       if(json.success){setPrescriptions(prev=>[json.prescription,...prev]);}
     } else {
@@ -1614,7 +1616,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
       paid_insurance:multiPay?0:(payment==="insurance"?total:0),
       coupon_code:coupon||"",coupon_discount:couponVal||0};
     if(userId){
-      const res=await fetch("/api/pharmacy/sales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      const res=await apiFetch("/api/pharmacy/sales",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const json=await res.json();
       if(json.success){
         setSales(prev=>[json.sale,...prev]);
@@ -1644,7 +1646,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
     const items=returnSale.items.filter(it=>it.id&&retQty[it.id]>0).map(it=>({sale_item_id:it.id,medicine_id:it.medicine_id,medicine_name:it.medicine_name,qty:retQty[it.id!],unit_price:it.unit_price}));
     if(items.length===0){ showNotif({type:"error",message:isAr?"اختر كمية للإرجاع":"Select a quantity"},2500); return; }
     const cashier=isAr?currentUser.name_ar:currentUser.name_en;
-    const res=await fetch("/api/pharmacy/returns",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,sale_id:returnSale.id,items,reason:retReason||null,created_by:cashier})});
+    const res=await apiFetch("/api/pharmacy/returns",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,sale_id:returnSale.id,items,reason:retReason||null,created_by:cashier})});
     const json=await res.json();
     if(json.success){
       showNotif({type:"success",message:isAr?"تم تسجيل المرتجع":"Return recorded"},2500);
@@ -1657,7 +1659,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   const openClose=async()=>{
     if(!userId) return;
     setShowClose(true); setCloseData(null); setCountedCash(""); setCloseNotes("");
-    const res=await fetch(`/api/pharmacy/cash-closing?user_id=${userId}&date=${today}`);
+    const res=await apiFetch(`/api/pharmacy/cash-closing?user_id=${userId}&date=${today}`);
     const json=await res.json();
     setCloseData(json);
   };
@@ -1666,7 +1668,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
     if(!userId||!closeData?.preview) return;
     if(countedCash===""){ showNotif({type:"error",message:isAr?"أدخل المبلغ النقدي المعدود":"Enter counted cash"},2500); return; }
     const cashier=isAr?currentUser.name_ar:currentUser.name_en;
-    const res=await fetch("/api/pharmacy/cash-closing",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,date:today,counted_cash:Number(countedCash),notes:closeNotes||null,closed_by:cashier})});
+    const res=await apiFetch("/api/pharmacy/cash-closing",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,date:today,counted_cash:Number(countedCash),notes:closeNotes||null,closed_by:cashier})});
     const json=await res.json();
     if(json.success){ showNotif({type:"success",message:isAr?"تم تقفيل الصندوق":"Cash drawer closed"},2500); setShowClose(false); }
     else showNotif({type:"error",message:json.error||"Error"},3500);
@@ -1978,14 +1980,14 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
 
   useEffect(()=>{
     if(!userId) return;
-    fetch(`/api/pharmacy/profitability?user_id=${userId}`).then(r=>r.json()).then(setProfit);
-    fetch(`/api/pharmacy/period-lock?user_id=${userId}`).then(r=>r.json()).then(j=>setLockedUntil(j.lock?.locked_until||"1900-01-01"));
+    apiFetch(`/api/pharmacy/profitability?user_id=${userId}`).then(r=>r.json()).then(setProfit);
+    apiFetch(`/api/pharmacy/period-lock?user_id=${userId}`).then(r=>r.json()).then(j=>setLockedUntil(j.lock?.locked_until||"1900-01-01"));
   },[userId,sales.length]);
 
   const closePeriod=async()=>{
     if(!userId||!lockDate){ return; }
     const closed_by=isAr?currentUser.name_ar:currentUser.name_en;
-    const res=await fetch("/api/pharmacy/period-lock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,locked_until:lockDate,closed_by})});
+    const res=await apiFetch("/api/pharmacy/period-lock",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,locked_until:lockDate,closed_by})});
     const json=await res.json();
     if(json.success){ setLockedUntil(json.locked_until); setLockMsg(isAr?"تم إقفال الفترة بنجاح":"Period closed successfully"); setLockDate(""); }
     else setLockMsg(json.error||"Error");
@@ -2180,7 +2182,11 @@ export default function PharmacyPage() {
   const [stockLog,setStockLog]=useState<StockLog[]>([]);
   const [barcodeMode,setBarcodeMode]=useState<BarcodeMode>(null);
   const [notif,setNotif]=useState<ScanNotif>(null);
-  const [alertsRead,setAlertsRead]=useState<Set<number>>(new Set());
+  const [alertsRead,setAlertsRead]=useState<Set<number>>(()=>{
+    if(typeof window==="undefined") return new Set();
+    try{const raw=localStorage.getItem("nabd-pharmacy-alerts-read");return new Set(raw?JSON.parse(raw) as number[]:[]);}catch{return new Set();}
+  });
+  useEffect(()=>{try{localStorage.setItem("nabd-pharmacy-alerts-read",JSON.stringify([...alertsRead]));}catch{/* ignore */}},[alertsRead]);
   // ── المزامنة اللحظية عبر الأجهزة + ماسح الكاميرا ──
   const [remoteScan,setRemoteScan]=useState<ScanEvent|null>(null);
   const [showCamera,setShowCamera]=useState(false);
@@ -2215,7 +2221,7 @@ export default function PharmacyPage() {
   const loadData=useCallback(async(uid:string)=>{
     setLoading(true);
     try {
-      const res=await fetch(`/api/pharmacy/data?user_id=${uid}`);
+      const res=await apiFetch(`/api/pharmacy/data?user_id=${uid}`);
       if(!res.ok) throw new Error("fetch failed");
       const d=await res.json();
       setMedicines(d.medicines||[]);
@@ -2429,7 +2435,7 @@ export default function PharmacyPage() {
               </div>
             ):(
               <>
-                {activeTab==="inventory"    &&<InventoryTab     lang={lang} stockLog={stockLog} medicines={medicines} setMedicines={(v)=>{setMedicines(v); if(supabaseUserId) loadData(supabaseUserId);}} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} pendingAddBarcode={pendingAddBarcode} onPendingConsumed={()=>setPendingAddBarcode("")} pendingReturnBarcode={pendingReturnBarcode} onPendingReturnConsumed={()=>setPendingReturnBarcode("")}/>}
+                {activeTab==="inventory"    &&<InventoryTab     lang={lang} stockLog={stockLog} medicines={medicines} setMedicines={setMedicines} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} addLog={addLog} currentUser={currentUser} userId={supabaseUserId} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} pendingAddBarcode={pendingAddBarcode} onPendingConsumed={()=>setPendingAddBarcode("")} pendingReturnBarcode={pendingReturnBarcode} onPendingReturnConsumed={()=>setPendingReturnBarcode("")}/>}
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)} broadcastScan={broadcastScan} remoteScan={remoteScan} openCamera={()=>setShowCamera(true)} onAddNewMedicine={(bc)=>{setPendingAddBarcode(bc);setActiveTab("inventory");}} pendingSaleBarcode={pendingSaleBarcode} onPendingSaleConsumed={()=>setPendingSaleBarcode("")}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}

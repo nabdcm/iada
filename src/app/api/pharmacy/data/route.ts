@@ -2,6 +2,7 @@
 // جلب كل بيانات الصيدلية دفعة واحدة
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,20 +14,22 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("user_id");
   if (!userId) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_userId = await getAuthUserId(req);
+    if (!authUid_userId || authUid_userId !== userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   try {
     const [medicines, sales, saleItems, suppliers, invoices, invoiceItems, prescriptions, rxItems, stockLogs, returns, batches] =
       await Promise.all([
         supabaseAdmin.from("pharmacy_medicines").select("*").eq("user_id", userId).order("name_ar"),
-        supabaseAdmin.from("pharmacy_sales").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabaseAdmin.from("pharmacy_sales").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1000),
         supabaseAdmin.from("pharmacy_sale_items").select("*, pharmacy_sales!inner(user_id)").eq("pharmacy_sales.user_id", userId),
         supabaseAdmin.from("pharmacy_suppliers").select("*").eq("user_id", userId).order("name"),
-        supabaseAdmin.from("pharmacy_purchase_invoices").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabaseAdmin.from("pharmacy_purchase_invoices").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(500),
         supabaseAdmin.from("pharmacy_purchase_invoice_items").select("*, pharmacy_purchase_invoices!inner(user_id)").eq("pharmacy_purchase_invoices.user_id", userId),
-        supabaseAdmin.from("pharmacy_prescriptions").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabaseAdmin.from("pharmacy_prescriptions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(500),
         supabaseAdmin.from("pharmacy_prescription_items").select("*, pharmacy_prescriptions!inner(user_id)").eq("pharmacy_prescriptions.user_id", userId),
         supabaseAdmin.from("pharmacy_stock_logs").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(500),
-        supabaseAdmin.from("pharmacy_returns").select("*, pharmacy_return_items(*)").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabaseAdmin.from("pharmacy_returns").select("*, pharmacy_return_items(*)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1000),
         supabaseAdmin.from("pharmacy_medicine_batches").select("*").eq("user_id", userId).gt("qty", 0).order("expiry_date", { ascending: true, nullsFirst: false }),
       ]);
 

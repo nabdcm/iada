@@ -2,6 +2,7 @@
 // ميزة 14: الربط التلقائي بين وصفات الطبيب (العيادة) وقائمة صرف الصيدلية
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,6 +17,8 @@ export async function POST(req: Request) {
   try {
     const { user_id, days } = await req.json();
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_user_id = await getAuthUserId(req);
+    if (!authUid_user_id || authUid_user_id !== user_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
     const lookback = Math.min(90, Math.max(1, Number(days) || 30));
     const since = new Date();

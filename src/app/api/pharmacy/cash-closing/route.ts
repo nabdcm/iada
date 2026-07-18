@@ -1,6 +1,7 @@
 // src/app/api/pharmacy/cash-closing/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +34,8 @@ export async function GET(req: Request) {
   const userId = searchParams.get("user_id");
   const date = searchParams.get("date");
   if (!userId || !date) return NextResponse.json({ error: "user_id and date required" }, { status: 400 });
+    const authUid_userId = await getAuthUserId(req);
+    if (!authUid_userId || authUid_userId !== userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const { data: existing } = await supabaseAdmin.from("pharmacy_cash_closings").select("*").eq("user_id", userId).eq("date", date).maybeSingle();
     if (existing) return NextResponse.json({ closed: true, closing: existing });
@@ -48,6 +51,8 @@ export async function POST(req: Request) {
   try {
     const { user_id, date, counted_cash, notes, closed_by } = await req.json();
     if (!user_id || !date) return NextResponse.json({ error: "user_id and date required" }, { status: 400 });
+    const authUid_user_id = await getAuthUserId(req);
+    if (!authUid_user_id || authUid_user_id !== user_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     if (typeof counted_cash !== "number") return NextResponse.json({ error: "counted_cash required" }, { status: 400 });
 
     const { data: existing } = await supabaseAdmin.from("pharmacy_cash_closings").select("id").eq("user_id", user_id).eq("date", date).maybeSingle();

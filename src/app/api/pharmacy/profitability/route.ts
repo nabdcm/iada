@@ -1,6 +1,7 @@
 // src/app/api/pharmacy/profitability/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,8 @@ export async function GET(req: Request) {
   const from = searchParams.get("from"); // YYYY-MM-DD
   const to = searchParams.get("to");
   if (!userId) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_userId = await getAuthUserId(req);
+    if (!authUid_userId || authUid_userId !== userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   try {
     let salesQuery = supabaseAdmin.from("pharmacy_sales").select("id, date").eq("user_id", userId);

@@ -1,19 +1,36 @@
 // ============================================================
-// middleware.ts — حماية الصفحات (مبسّط)
-// الحماية الحقيقية تتم في AuthGuard (client-side) باستخدام localStorage
-// الـ middleware يكتفي بالتحقق من cookie خفيف كطبقة أولى سريعة
+// middleware.ts — حماية الصفحات
+// cookie موقّع HMAC (v2) يُصدره /api/session-cookie بعد تحقق Supabase
+// القيمة القديمة "1" مقبولة مؤقتاً حفاظاً على جلسات العملاء الحالية
+// (AuthGuard يستبدلها تلقائياً بكوكي موقّع عند أول زيارة)
 // ============================================================
 
 import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room"];
 const PHARMACY_PROTECTED = ["/pharmacy"];
-const PATIENT_PROTECTED = ["/patient-portal"];
+
+async function verifySignedSession(value: string): Promise<boolean> {
+  // v2.<uid>.<exp>.<sig>
+  const parts = value.split(".");
+  if (parts.length !== 4 || parts[0] !== "v2") return false;
+  const [, uid, expStr, sig] = parts;
+  const exp = Number(expStr);
+  if (!exp || Date.now() > exp) return false;
+  const secret = process.env.NABD_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!secret) return false;
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${uid}.${exp}`));
+  const hex = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, "0")).join("");
+  return hex === sig;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ── استثناء الملفات الثابتة والـ API ───────────────────────
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api")   ||
@@ -24,35 +41,8 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/blocked")) return NextResponse.next();
 
-  // ── /admin محمي بـ httpOnly cookie خاص ─────────────────────
+  // ── /admin: التحقق الفعلي server-side في isAdminAuthorized ──
   if (pathname.startsWith("/admin")) {
-    const token = request.cookies.get("nabd_admin_session")?.value;
-    if (!token) return NextResponse.next();
-    try {
-      const payload = JSON.parse(Buffer.from(token, "base64").toString("utf8")) as {
-        auth: string; expiry: number; secret: string;
-      };
-      const isValid =
-        payload.auth === "1" &&
-        Date.now() < payload.expiry &&
-        payload.secret === (process.env.NABD_ADMIN_SECRET ?? "");
-      if (!isValid) {
-        const res = NextResponse.next();
-        res.cookies.set("nabd_admin_session", "", { maxAge: 0, path: "/" });
-        return res;
-      }
-    } catch {
-      return NextResponse.next();
-    }
-    return NextResponse.next();
-  }
-
-  // ── حماية بوابة المريض بجلسة cookie الخاصة بها ─────────────
-  if (PATIENT_PROTECTED.some(p => pathname.startsWith(p))) {
-    const patientCookie = request.cookies.get("nabd_patient_session")?.value;
-    if (!patientCookie) {
-      return NextResponse.redirect(new URL("/portal?type=patient", request.url));
-    }
     return NextResponse.next();
   }
 
@@ -65,18 +55,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── التحقق من الجلسة ──────────────────────────────────────
-  // نقبل إمّا cookie الـ nabd-session أو أي cookie جلسة من Supabase
-  // (sb-*-auth-token) — لأن سفاري/iOS يحذف الكوكيز المكتوبة من JS
-  // بعد 7 أيام، بينما كوكيز Supabase تتجدد تلقائياً.
   const sessionCookie = request.cookies.get("nabd-session")?.value;
-  const hasSupabaseSession = request.cookies
-    .getAll()
-    .some(c => c.name.startsWith("sb-") && c.name.includes("auth-token") && c.value);
 
-  if (!sessionCookie && !hasSupabaseSession) {
-    const loginUrl = new URL("/portal", request.url);
-    loginUrl.searchParams.set("type", isPharmacyProtected ? "pharmacy" : "clinic");
+  // مقبول: كوكي موقّع v2، أو القيمة القديمة "1" (انتقالياً — لا نُخرج أحداً)
+  const valid =
+    !!sessionCookie &&
+    (sessionCookie === "1" || (await verifySignedSession(sessionCookie)));
+
+  if (!valid) {
+    if (isPharmacyProtected) {
+      return NextResponse.redirect(new URL("/pharmacy/login", request.url));
+    }
+    const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }

@@ -8,6 +8,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 
+async function issueSessionCookie(accessToken?: string) {
+  if (!accessToken) return;
+  try {
+    await fetch("/api/session-cookie", { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
+  } catch { /* non-blocking */ }
+}
+
+
 interface Props {
   children: ReactNode;
   redirectTo?: string;
@@ -42,9 +50,8 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
           window.location.href = "/pharmacy";
           return;
         }
-        // كتابة cookie بسيط حتى يعمل الـ middleware
-        const maxAge = 400 * 24 * 60 * 60;
-        document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
+        // إصدار cookie موقّع httpOnly عبر الخادم حتى يعمل الـ middleware
+        await issueSessionCookie(session.access_token);
         setStatus("ok");
       } else {
         setStatus("redirect");

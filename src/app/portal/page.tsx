@@ -203,10 +203,11 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
         setLoading(false);
         return;
       }
-      // كتابة cookie الجلسة حتى يسمح الـ middleware بالمرور
+      // إصدار cookie جلسة موقّع من الخادم حتى يسمح الـ middleware بالمرور
       if (authData?.session?.access_token) {
-        const maxAge = 365 * 24 * 60 * 60;
-        document.cookie = `nabd-session=1; path=/; max-age=${maxAge}; SameSite=Lax`;
+        try {
+          await fetch("/api/session-cookie", { method: "POST", headers: { Authorization: `Bearer ${authData.session.access_token}` } });
+        } catch { /* non-blocking */ }
       }
       // ── التحقق من نوع الحساب وتوجيه كل نوع للمسار الصحيح ──
       // metadata أولاً، ثم fallback من جدول clinics (حسابات الصيدلية القديمة بلا account_type)

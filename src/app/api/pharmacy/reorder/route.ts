@@ -2,6 +2,7 @@
 // ميزات 9 (توقع النفاد) + 10 (أوامر الشراء المقترحة) + 11 (أفضل مورد سعرًا)
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +20,8 @@ export async function GET(req: Request) {
   const userId = searchParams.get("user_id");
   const window = Math.min(365, Math.max(7, Number(searchParams.get("window")) || 90)); // 30/60/90
   if (!userId) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_userId = await getAuthUserId(req);
+    if (!authUid_userId || authUid_userId !== userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   try {
     const sinceDate = new Date();

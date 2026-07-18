@@ -2,6 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getLockedUntil } from "../period-lock/route";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +16,8 @@ export async function POST(req: Request) {
   try {
     const { action, user_id, sale_id, items, reason, created_by } = await req.json();
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_user_id = await getAuthUserId(req);
+    if (!authUid_user_id || authUid_user_id !== user_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
     if (action === "add") {
       if (!sale_id) return NextResponse.json({ error: "sale_id required" }, { status: 400 });
@@ -114,6 +117,8 @@ export async function GET(req: Request) {
   const userId = searchParams.get("user_id");
   const saleId = searchParams.get("sale_id");
   if (!userId) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_userId = await getAuthUserId(req);
+    if (!authUid_userId || authUid_userId !== userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     let query = supabaseAdmin.from("pharmacy_returns").select("*, pharmacy_return_items(*)").eq("user_id", userId).order("created_at", { ascending: false });
     if (saleId) query = query.eq("sale_id", saleId);

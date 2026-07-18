@@ -2,6 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getLockedUntil } from "../period-lock/route";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,8 @@ export async function POST(req: Request) {
   try {
     const { action, user_id, id, items, ...fields } = await req.json();
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const authUid_user_id = await getAuthUserId(req);
+    if (!authUid_user_id || authUid_user_id !== user_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
     if (action === "add") {
       if (items !== undefined && !Array.isArray(items)) {

@@ -1,6 +1,7 @@
 // src/app/api/pharmacy/supplier-payments/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "../_pharmacyAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,8 @@ export async function GET(req: Request) {
   const userId = searchParams.get("user_id");
   const supplierId = searchParams.get("supplier_id");
   if (!userId || !supplierId) return NextResponse.json({ error: "user_id and supplier_id required" }, { status: 400 });
+    const authUid_userId = await getAuthUserId(req);
+    if (!authUid_userId || authUid_userId !== userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const [invoices, payments] = await Promise.all([
       supabaseAdmin.from("pharmacy_purchase_invoices").select("*").eq("user_id", userId).eq("supplier_id", supplierId).order("date"),
@@ -35,6 +38,8 @@ export async function POST(req: Request) {
   try {
     const { user_id, supplier_id, invoice_id, amount, method, notes, created_by } = await req.json();
     if (!user_id || !supplier_id) return NextResponse.json({ error: "user_id and supplier_id required" }, { status: 400 });
+    const authUid_user_id = await getAuthUserId(req);
+    if (!authUid_user_id || authUid_user_id !== user_id) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     if (typeof amount !== "number" || amount <= 0) return NextResponse.json({ error: "amount must be positive" }, { status: 400 });
 
     const { data: payment, error } = await supabaseAdmin
