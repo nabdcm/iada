@@ -1895,8 +1895,8 @@ export default function PatientsPage() {
           .stat-label{font-size:10px!important}
           .stats-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-bottom:14px!important}
           .page-sub{display:none!important}
-          .page-title{font-size:18px!important}
-          .hero-card{margin:14px 0 16px!important;padding:16px 16px!important;border-radius:18px!important}
+          .page-title{font-size:19px!important}
+          .hero-card{margin:14px 0 18px!important;padding:18px 18px!important;border-radius:18px!important}
           .hero-inner{gap:10px!important}
           .main-content{margin-right:0!important;margin-left:0!important;padding:0 0 100px!important}
           .content-padding{padding:16px 14px 0!important}
@@ -1919,13 +1919,13 @@ export default function PatientsPage() {
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 
           {/* ─── HERO HEADER ─── */}
-          <div className="hero-card" style={{ margin:"20px 0 24px",background:`linear-gradient(120deg, #054a8c 0%, #0863ba 55%, ${clinicMeta.color} 130%)`,borderRadius:24,padding:"24px 28px",position:"relative",overflow:"hidden",boxShadow:"0 12px 36px rgba(8,99,186,.26)" }}>
+          <div className="hero-card" style={{ margin:"20px 0 24px",background:`linear-gradient(120deg, #054a8c 0%, #0863ba 55%, ${clinicMeta.color} 130%)`,borderRadius:24,padding:"26px 30px",position:"relative",overflow:"hidden",boxShadow:"0 12px 36px rgba(8,99,186,.26)" }}>
             <div style={{ position:"absolute",top:-60,insetInlineEnd:-40,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,.07)" }}/>
             <div style={{ position:"absolute",bottom:-80,insetInlineEnd:130,width:170,height:170,borderRadius:"50%",background:"rgba(255,255,255,.05)" }}/>
             <div className="hero-inner" style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap" }}>
               <div>
                 <div style={{ display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" }}>
-                  <h1 className="page-title" style={{ fontSize:23,fontWeight:800,color:"#fff" }}>{tr.page.title}</h1>
+                  <h1 className="page-title" style={{ fontSize:24,fontWeight:800,color:"#fff" }}>{tr.page.title}</h1>
                   <span style={{ fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:20,background:"rgba(255,255,255,.16)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",backdropFilter:"blur(4px)" }}>{clinicMeta.icon} {isAr?clinicMeta.ar:clinicMeta.en}</span>
                 </div>
                 <p className="page-sub" style={{ fontSize:12.5,color:"rgba(255,255,255,.85)",marginTop:5,fontWeight:500 }}>{tr.page.sub}</p>
