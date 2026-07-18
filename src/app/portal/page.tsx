@@ -109,9 +109,9 @@ const T = {
 
 // ─── Portal accent colours ────────────────────────────────────
 const PORTAL_ACCENT: Record<Portal, { color: string; glow: string }> = {
-  clinic:   { color: "#4a9eff", glow: "rgba(74,158,255,0.18)" },
-  pharmacy: { color: "#34d399", glow: "rgba(52,211,153,0.18)" },
-  patient:  { color: "#a78bfa", glow: "rgba(167,139,250,0.18)" },
+  clinic:   { color: "#1a8fe3", glow: "rgba(26,143,227,0.22)" },
+  pharmacy: { color: "#2fc98f", glow: "rgba(47,201,143,0.18)" },
+  patient:  { color: "#5aa7f0", glow: "rgba(90,167,240,0.20)" },
 };
 
 // ─── Shared login translation type ───────────────────────────
@@ -320,7 +320,7 @@ function PortalPageContent() {
 
         body {
           font-family: 'Rubik', sans-serif;
-          background: #0a0f1e;
+          background: #051224;
           min-height: 100vh;
           direction: ${isAr ? "rtl" : "ltr"};
         }
@@ -331,7 +331,10 @@ function PortalPageContent() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          background: #0a0f1e;
+          background:
+            radial-gradient(1100px 600px at 85% -10%, rgba(8,99,186,0.28) 0%, transparent 60%),
+            radial-gradient(900px 700px at -10% 110%, rgba(26,143,227,0.18) 0%, transparent 55%),
+            linear-gradient(160deg, #071a33 0%, #051224 55%, #04101f 100%);
           font-family: 'Rubik', sans-serif;
           direction: ${isAr ? "rtl" : "ltr"};
           position: relative;
@@ -682,6 +685,105 @@ function PortalPageContent() {
           cursor: pointer; transition: all .2s;
         }
         .modal-close-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+        /* ── Layout wrapper (mobile: stacked, desktop: split) ── */
+        .main {
+          width: 100%;
+          max-width: 420px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          position: relative;
+          z-index: 1;
+        }
+        .pane-brand, .pane-login {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .desktop-features { display: none; }
+
+        /* ══ Desktop ≥ 1024px ══ */
+        @media (min-width: 1024px) {
+          .topbar, .footer { max-width: 1200px; }
+          .topbar { padding: 26px 48px 0; }
+          .footer {
+            max-width: 100%;
+            flex-direction: row;
+            justify-content: space-between;
+            padding: 20px 48px 26px;
+          }
+          .main {
+            max-width: 1200px;
+            flex: 1;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 72px;
+            padding: 24px 48px 40px;
+          }
+          .pane-brand {
+            flex: 1;
+            align-items: ${isAr ? "flex-start" : "flex-start"};
+          }
+          .hero {
+            max-width: none;
+            align-items: flex-start;
+            text-align: ${isAr ? "right" : "left"};
+            padding: 0 0 30px;
+          }
+          .logo-ring { width: 88px; height: 88px; border-radius: 26px; margin-bottom: 24px; }
+          .logo-ring img { width: 54px !important; height: 54px !important; }
+          .hero-name { font-size: 56px; letter-spacing: -1.5px; margin-bottom: 12px; }
+          .hero-tagline { font-size: 18px; color: rgba(255,255,255,0.55); }
+          .desktop-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            max-width: 520px;
+            margin-top: 8px;
+          }
+          .desk-feat {
+            display: flex; align-items: center; gap: 11px;
+            background: rgba(26,143,227,0.07);
+            border: 1px solid rgba(26,143,227,0.16);
+            border-radius: 14px;
+            padding: 13px 16px;
+            font-size: 13.5px; font-weight: 600;
+            color: rgba(255,255,255,0.72);
+            transition: border-color .25s, background .25s, transform .25s;
+          }
+          .desk-feat:hover {
+            border-color: rgba(26,143,227,0.4);
+            background: rgba(26,143,227,0.12);
+            transform: translateY(-2px);
+          }
+          .desk-feat-icon { font-size: 19px; flex-shrink: 0; }
+          .pane-login { width: 480px; flex-shrink: 0; }
+          .switch-wrap { max-width: none; padding: 0 0 22px; }
+          .login-card { max-width: none; padding: 0; }
+          .login-box {
+            padding: 32px 30px;
+            border-radius: 24px;
+            background: rgba(8,30,58,0.55);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 24px 70px rgba(2,12,28,0.55);
+          }
+          .switch-tab { padding: 13px 8px; }
+          .switch-tab-icon { font-size: 24px; }
+          .field-inp { padding: 14px 17px; font-size: 15px; }
+          .submit-btn { padding: 15px; font-size: 16px; }
+          .modal-overlay { align-items: center; }
+          .modal-box { border-radius: 24px; }
+        }
+
+        /* ══ Large desktop ≥ 1440px ══ */
+        @media (min-width: 1440px) {
+          .main { gap: 110px; }
+          .hero-name { font-size: 64px; }
+        }
       `}</style>
 
       <div className="root">
@@ -702,20 +804,37 @@ function PortalPageContent() {
           </div>
         </div>
 
-        {/* ── Hero ── */}
-        <div className="hero">
-          <div className={`logo-ring lit`} style={{
-            borderColor: `${accent.color}44`,
-            boxShadow: `0 0 0 8px ${accent.glow}`,
-          }}>
-            <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:44, height:44, borderRadius:12 }} />
-          </div>
-          <div className="hero-name">{isAr ? "نبض" : "NABD"}</div>
-          <div className="hero-tagline">{tr.tagline}</div>
-        </div>
+        {/* ── Main split layout ── */}
+        <div className="main">
 
-        {/* ── Switch selector ── */}
-        <div className="switch-wrap">
+          {/* ── Brand pane (hero + desktop features) ── */}
+          <div className="pane-brand">
+            <div className="hero">
+              <div className={`logo-ring lit`} style={{
+                borderColor: `${accent.color}44`,
+                boxShadow: `0 0 0 8px ${accent.glow}`,
+              }}>
+                <img src="/Logo_Nabd.svg" alt="NABD" style={{ width:44, height:44, borderRadius:12 }} />
+              </div>
+              <div className="hero-name">{isAr ? "نبض" : "NABD"}</div>
+              <div className="hero-tagline">{tr.tagline}</div>
+            </div>
+
+            {/* features — desktop only */}
+            <div className="desktop-features">
+              {tr.about.features.map((f, i) => (
+                <div key={i} className="desk-feat">
+                  <span className="desk-feat-icon">{f.icon}</span>
+                  <span>{f.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Login pane (switch + card) ── */}
+          <div className="pane-login">
+            {/* ── Switch selector ── */}
+            <div className="switch-wrap">
           <div className="switch-label">{tr.switchLabel}</div>
           <div className="switch-track">
             {PORTALS.map((p) => {
@@ -769,6 +888,9 @@ function PortalPageContent() {
             )}
           </div>
         </div>
+
+          </div>{/* /pane-login */}
+        </div>{/* /main */}
 
         {/* ── Footer ── */}
         <div className="footer">
