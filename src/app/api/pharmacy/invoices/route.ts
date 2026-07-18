@@ -36,9 +36,9 @@ export async function POST(req: Request) {
           await supabaseAdmin.from("pharmacy_purchase_invoices").delete().eq("id", inv.id);
           return NextResponse.json({ error: `فشل حفظ بنود الفاتورة: ${itemsError.message}` }, { status: 400 });
         }
-        // 3. رفع المخزون (عملية atomic)
+        // 3. رفع المخزون + إعادة حساب متوسط التكلفة المرجّح (WAC) — عملية atomic
         for (const it of items) {
-          await supabaseAdmin.rpc("adjust_medicine_stock", { p_id: it.medicine_id, p_user_id: user_id, p_delta: it.qty });
+          await supabaseAdmin.rpc("adjust_medicine_stock", { p_id: it.medicine_id, p_user_id: user_id, p_delta: it.qty, p_unit_cost: it.unit_price });
         }
         // 4. سجل الحركة
         await supabaseAdmin.from("pharmacy_stock_logs").insert(

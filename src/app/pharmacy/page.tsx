@@ -27,7 +27,7 @@ type Supplier = { id:number; name:string; contact:string; phone:string; email:st
 type PurchItem = { medicine_id:number; medicine_name:string; qty:number; unit_price:number };
 type PurchInvoice = { id:number; supplier_id:number; supplier_name:string; date:string; items:PurchItem[]; total:number; paid:number; status:"paid"|"partial"|"pending"; notes?:string; created_by:string };
 type StockLog = { id:number; medicine_id:number; medicine_name:string; type:"in"|"out"|"sale"|"purchase"|"adjustment"; qty:number; date:string; user:string; ref?:string; notes?:string };
-type Medicine = { id:number; name_ar:string; name_en:string; category:MedCat; barcode:string; unit:string; purchase_price:number; sell_price:number; stock:number; min_stock:number; expiry_date?:string; manufacturer?:string };
+type Medicine = { id:number; name_ar:string; name_en:string; category:MedCat; barcode:string; unit:string; purchase_price:number; sell_price:number; stock:number; min_stock:number; expiry_date?:string; manufacturer?:string; avg_cost?:number };
 type RxItem = { medicine_name:string; dosage:string; duration:string; instructions:string };
 type Prescription = { id:string; mrn:string; patient_name:string; doctor_name:string; doctor_id:number; created_at:string; items:RxItem[]; notes?:string; dispensed:boolean; dispensed_at?:string; dispensed_by?:string };
 type SaleItem = { id?:number; medicine_id:number; medicine_name:string; qty:number; unit_price:number; returned_qty?:number };
@@ -264,6 +264,9 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
   const [showSF,setShowSF]=useState(false); const [showIF,setShowIF]=useState(false);
   const [editSup,setEditSup]=useState<Supplier|null>(null);
   const [printInv,setPrintInv]=useState<PurchInvoice|null>(null);
+  const [stmtSup,setStmtSup]=useState<Supplier|null>(null);
+  const [stmtData,setStmtData]=useState<{invoices:PurchInvoice[];payments:{id:number;amount:number;date:string;method:string;notes?:string;created_by:string}[];totalInvoiced:number;totalPaid:number;balance:number}|null>(null);
+  const [payAmount,setPayAmount]=useState(""); const [payNotes,setPayNotes]=useState("");
   const [sf,setSF]=useState({name:"",contact:"",phone:"",email:"",address:""});
   const [iItems,setIItems]=useState<PurchItem[]>([]);
   const [iSupId,setISupId]=useState(suppliers[0]?.id||1);
@@ -305,6 +308,22 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
     setShowIF(false); setIItems([]); setIPaid(0); setINotes("");
   };
   const stSt:{[k:string]:{bg:string;c:string;ar:string;en:string}}={paid:{bg:"rgba(39,174,96,.1)",c:"#27ae60",ar:"مدفوعة",en:"Paid"},partial:{bg:"rgba(230,126,34,.1)",c:"#e67e22",ar:"جزئي",en:"Partial"},pending:{bg:"rgba(231,76,60,.1)",c:"#e74c3c",ar:"معلقة",en:"Pending"}};
+
+  const openStatement=async(s:Supplier)=>{
+    setStmtSup(s); setStmtData(null); setPayAmount(""); setPayNotes("");
+    if(!userId) return;
+    const res=await fetch(`/api/pharmacy/supplier-payments?user_id=${userId}&supplier_id=${s.id}`);
+    const json=await res.json();
+    setStmtData(json);
+  };
+  const addPayment=async()=>{
+    if(!userId||!stmtSup||!payAmount||Number(payAmount)<=0) return;
+    const created_by=isAr?currentUser.name_ar:currentUser.name_en;
+    const res=await fetch("/api/pharmacy/supplier-payments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,supplier_id:stmtSup.id,amount:Number(payAmount),notes:payNotes||null,created_by})});
+    const json=await res.json();
+    if(json.success){ setPayAmount(""); setPayNotes(""); openStatement(stmtSup); onRefresh(); }
+  };
+
   const card:React.CSSProperties={background:"#fff",borderRadius:14,padding:"15px 17px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 10px rgba(8,99,186,.05)"};
   const inp:React.CSSProperties={width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr"};
   return (
@@ -332,6 +351,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
               </div>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"الرصيد":"Balance"}</div><div style={{fontSize:15,fontWeight:800,color:s.balance>0?"#e74c3c":"#27ae60"}}>{s.balance} {isAr?"ر.س":"SAR"}</div></div>
+                <button onClick={()=>openStatement(s)} className="action-icon-btn" title={isAr?"كشف حساب":"Statement"} style={{color:"#0863ba",borderColor:"rgba(8,99,186,.3)"}}>📋</button>
                 <button onClick={()=>{setEditSup(s);setSF({name:s.name,contact:s.contact,phone:s.phone,email:s.email,address:s.address});setShowSF(true);}} className="action-icon-btn">✏️</button>
               </div>
             </div>
@@ -387,6 +407,56 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
               <button onClick={saveSup} style={{flex:1,padding:"12px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(8,99,186,.3)"}}>{isAr?"حفظ":"Save"}</button>
               <button onClick={()=>{setShowSF(false);setEditSup(null);}} style={{padding:"12px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {stmtSup&&(
+        <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>setStmtSup(null)}/>
+          <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(96vw,560px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>📋 {isAr?"كشف حساب":"Statement"} — {stmtSup.name}</h2><button onClick={()=>setStmtSup(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            {!stmtData?(
+              <div style={{textAlign:"center",padding:20,color:"#aaa"}}>{isAr?"جارِ التحميل...":"Loading..."}</div>
+            ):(
+              <div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+                  <div style={{...card,padding:"10px 12px",textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"إجمالي الفواتير":"Invoiced"}</div><div style={{fontSize:14,fontWeight:800,color:"#0863ba"}}>{stmtData.totalInvoiced}</div></div>
+                  <div style={{...card,padding:"10px 12px",textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"إجمالي المدفوع":"Paid"}</div><div style={{fontSize:14,fontWeight:800,color:"#27ae60"}}>{stmtData.totalPaid}</div></div>
+                  <div style={{...card,padding:"10px 12px",textAlign:"center"}}><div style={{fontSize:11,color:"#aaa"}}>{isAr?"الرصيد المتبقي":"Balance"}</div><div style={{fontSize:14,fontWeight:800,color:stmtData.balance>0?"#e74c3c":"#27ae60"}}>{stmtData.balance}</div></div>
+                </div>
+
+                <div style={{fontSize:12,fontWeight:700,color:"#888",marginBottom:6}}>{isAr?"الفواتير":"Invoices"}</div>
+                <div style={{marginBottom:16,maxHeight:150,overflowY:"auto"}}>
+                  {stmtData.invoices.length===0?<div style={{fontSize:12,color:"#ccc",padding:8}}>{isAr?"لا فواتير":"None"}</div>:stmtData.invoices.map(inv=>{
+                    const ss=stSt[inv.status];
+                    return (<div key={inv.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 4px",borderBottom:"1px solid #f0f2f5",fontSize:12}}>
+                      <span>INV-{inv.id} · {inv.date} <span style={{padding:"1px 7px",borderRadius:20,background:ss.bg,color:ss.c,fontWeight:700,fontSize:10,marginInlineStart:5}}>{isAr?ss.ar:ss.en}</span></span>
+                      <span style={{fontWeight:700}}>{inv.total} <span style={{color:"#aaa",fontWeight:400}}>({isAr?"مدفوع":"paid"} {inv.paid})</span></span>
+                    </div>);
+                  })}
+                </div>
+
+                <div style={{fontSize:12,fontWeight:700,color:"#888",marginBottom:6}}>{isAr?"الدفعات":"Payments"}</div>
+                <div style={{marginBottom:16,maxHeight:120,overflowY:"auto"}}>
+                  {stmtData.payments.length===0?<div style={{fontSize:12,color:"#ccc",padding:8}}>{isAr?"لا دفعات":"None"}</div>:stmtData.payments.map(p=>(
+                    <div key={p.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 4px",borderBottom:"1px solid #f0f2f5",fontSize:12}}>
+                      <span style={{color:"#666"}}>{p.date} · {p.created_by}{p.notes?` · ${p.notes}`:""}</span>
+                      <span style={{fontWeight:700,color:"#27ae60"}}>+{p.amount}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{background:"#f7f9fc",borderRadius:12,padding:14}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#888",marginBottom:8}}>{isAr?"تسجيل دفعة جديدة":"Record New Payment"}</div>
+                  <div style={{display:"flex",gap:8}}>
+                    <input type="number" value={payAmount} onChange={e=>setPayAmount(e.target.value)} placeholder={isAr?"المبلغ":"Amount"} style={{flex:1,padding:"9px 12px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/>
+                    <input value={payNotes} onChange={e=>setPayNotes(e.target.value)} placeholder={isAr?"ملاحظة":"Note"} style={{flex:1,padding:"9px 12px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr"}}/>
+                    <button onClick={addPayment} style={{padding:"9px 16px",background:"#27ae60",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>＋ {isAr?"إضافة":"Add"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1003,10 +1073,17 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
   );
 }
 
-function ReportsTab({lang,medicines,sales}:{lang:Lang;medicines:Medicine[];sales:Sale[]}) {
+function ReportsTab({lang,medicines,sales,userId}:{lang:Lang;medicines:Medicine[];sales:Sale[];userId:string|null}) {
   const isAr=lang==="ar";
+  const [profit,setProfit]=useState<{byMedicine:{medicine_id:number;medicine_name:string;qty_sold:number;revenue:number;cost:number;profit:number;margin:number}[];totals:{revenue:number;cost:number;profit:number;margin:number}}|null>(null);
+
+  useEffect(()=>{
+    if(!userId) return;
+    fetch(`/api/pharmacy/profitability?user_id=${userId}`).then(r=>r.json()).then(setProfit);
+  },[userId,sales.length]);
+
   const totalRev=sales.reduce((s,x)=>s+x.total,0);
-  const totalCost=sales.reduce((s,sale)=>s+sale.items.reduce((ss,it)=>{const m=medicines.find(x=>x.id===it.medicine_id);return ss+(m?m.purchase_price*it.qty:0);},0),0);
+  const totalProfit=profit?.totals.profit ?? null;
   const catS:{[k:string]:number}={}; Object.keys(CAT).forEach(k=>{catS[k]=0;});
   sales.forEach(sale=>sale.items.forEach(it=>{const m=medicines.find(x=>x.id===it.medicine_id);if(m)catS[m.category]=(catS[m.category]||0)+it.qty*it.unit_price;}));
   const topCat=Object.entries(catS).sort((a,b)=>b[1]-a[1]); const maxC=topCat[0]?.[1]||1;
@@ -1015,10 +1092,31 @@ function ReportsTab({lang,medicines,sales}:{lang:Lang;medicines:Medicine[];sales
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:11,marginBottom:15}}>
-        {[{l:isAr?"إجمالي المبيعات":"Total Sales",v:`${totalRev} ${isAr?"ر.س":"SAR"}`,ic:"💰",c:"#0863ba",bg:"rgba(8,99,186,.08)"},{l:isAr?"الربح التقديري":"Est. Profit",v:`${totalRev-totalCost} ${isAr?"ر.س":"SAR"}`,ic:"📈",c:"#27ae60",bg:"rgba(39,174,96,.08)"},{l:isAr?"مخزون منخفض":"Low Stock",v:medicines.filter(m=>m.stock<m.min_stock).length,ic:"⚠️",c:"#e67e22",bg:"rgba(230,126,34,.08)"},{l:isAr?"منتهية الصلاحية":"Expired",v:medicines.filter(m=>isExp(m.expiry_date)).length,ic:"🚫",c:"#e74c3c",bg:"rgba(231,76,60,.08)"}].map((s,i)=>(
+        {[{l:isAr?"إجمالي المبيعات":"Total Sales",v:`${totalRev} ${isAr?"ر.س":"SAR"}`,ic:"💰",c:"#0863ba",bg:"rgba(8,99,186,.08)"},{l:isAr?"صافي الربح (WAC)":"Net Profit (WAC)",v:totalProfit===null?(isAr?"...":"..."):`${totalProfit.toFixed(0)} ${isAr?"ر.س":"SAR"}`,ic:"📈",c:"#27ae60",bg:"rgba(39,174,96,.08)"},{l:isAr?"مخزون منخفض":"Low Stock",v:medicines.filter(m=>m.stock<m.min_stock).length,ic:"⚠️",c:"#e67e22",bg:"rgba(230,126,34,.08)"},{l:isAr?"منتهية الصلاحية":"Expired",v:medicines.filter(m=>isExp(m.expiry_date)).length,ic:"🚫",c:"#e74c3c",bg:"rgba(231,76,60,.08)"}].map((s,i)=>(
           <div key={i} style={{background:s.bg,borderRadius:13,padding:"15px",border:`1.5px solid ${s.c}25`}}><div style={{fontSize:22,marginBottom:5}}>{s.ic}</div><div style={{fontSize:20,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div><div style={{fontSize:11,color:s.c,opacity:.7,marginTop:3,fontWeight:600}}>{s.l}</div></div>
         ))}
       </div>
+
+      {profit&&profit.byMedicine.length>0&&(
+        <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginBottom:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
+          <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"الربحية لكل صنف (متوسط تكلفة مرجّح)":"Profitability by Item (WAC)"}</h3>
+          <div style={{fontSize:10,color:"#bbb",marginBottom:11}}>{isAr?"محسوبة من التكلفة الفعلية وقت كل عملية بيع، بعد خصم المرتجعات":"Based on actual cost at sale time, net of returns"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"2fr .8fr .9fr .9fr .8fr .7fr",padding:"6px 0",borderBottom:"1.5px solid #eef0f3",fontSize:10,fontWeight:800,color:"#9aa2ab",textTransform:"uppercase"}}>
+            <div>{isAr?"الصنف":"Item"}</div><div>{isAr?"الكمية":"Qty"}</div><div>{isAr?"الإيراد":"Revenue"}</div><div>{isAr?"التكلفة":"Cost"}</div><div>{isAr?"الربح":"Profit"}</div><div>{isAr?"الهامش":"Margin"}</div>
+          </div>
+          {profit.byMedicine.slice(0,15).map(m=>(
+            <div key={m.medicine_id} style={{display:"grid",gridTemplateColumns:"2fr .8fr .9fr .9fr .8fr .7fr",padding:"8px 0",borderBottom:"1px solid #f7f9fc",fontSize:12,alignItems:"center"}}>
+              <div style={{fontWeight:600,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.medicine_name}</div>
+              <div style={{color:"#888"}}>{m.qty_sold}</div>
+              <div style={{color:"#555"}}>{m.revenue.toFixed(0)}</div>
+              <div style={{color:"#888"}}>{m.cost.toFixed(0)}</div>
+              <div style={{fontWeight:700,color:m.profit>=0?"#27ae60":"#e74c3c"}}>{m.profit.toFixed(0)}</div>
+              <div style={{fontWeight:700,color:m.margin>=30?"#27ae60":m.margin>=10?"#e67e22":"#e74c3c"}}>{m.margin.toFixed(0)}%</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginBottom:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
         <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:13,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"المبيعات حسب التصنيف":"By Category"}</h3>
         {topCat.map(([k,v])=>{const cat=CAT[k];const pct=maxC>0?(v/maxC)*100:0;return(<div key={k} style={{marginBottom:9}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:12,fontWeight:600,color:"#555"}}>{cat.icon} {isAr?cat.ar:cat.en}</span><span style={{fontSize:12,fontWeight:700,color:cat.color}}>{v} {isAr?"ر.س":"SAR"}</span></div><div style={{height:7,background:"#f0f2f5",borderRadius:10,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:cat.color,borderRadius:10,transition:"width .6s ease"}}/></div></div>);})}
@@ -1252,7 +1350,7 @@ export default function PharmacyPage() {
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
-                {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales}/>}
+                {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={userId}/>}
                 {activeTab==="alerts"       &&<AlertsTab        lang={lang} medicines={medicines} alerts={alerts} markAll={markAll} markOne={markOne}/>}
               </>
             )}

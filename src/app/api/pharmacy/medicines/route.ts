@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     if (action === "add") {
       const { data, error } = await supabaseAdmin
         .from("pharmacy_medicines")
-        .insert({ user_id, ...fields })
+        .insert({ user_id, avg_cost: fields.purchase_price || 0, ...fields })
         .select()
         .single();
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });

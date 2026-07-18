@@ -14,11 +14,12 @@ export async function POST(req: Request) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
     if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "items required" }, { status: 400 });
 
-    // 0. التحقق من كفاية المخزون قبل أي إدخال (فحص أولي سريع، الحسم الفعلي atomic لاحقًا)
+    // 0. التحقق من كفاية المخزون قبل أي إدخال + التقاط تكلفة الوحدة الحالية (WAC) لحساب الربح لاحقًا
+    const costByMedicine: Record<number, number> = {};
     for (const it of items) {
       const { data: med, error: medError } = await supabaseAdmin
         .from("pharmacy_medicines")
-        .select("stock, name")
+        .select("stock, name_ar, avg_cost")
         .eq("id", it.medicine_id)
         .eq("user_id", user_id)
         .single();
@@ -26,8 +27,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `الدواء غير موجود: ${it.medicine_name || it.medicine_id}` }, { status: 400 });
       }
       if (med.stock < it.qty) {
-        return NextResponse.json({ error: `المخزون غير كافٍ لـ ${med.name}: المتوفر ${med.stock} والمطلوب ${it.qty}` }, { status: 400 });
+        return NextResponse.json({ error: `المخزون غير كافٍ لـ ${med.name_ar}: المتوفر ${med.stock} والمطلوب ${it.qty}` }, { status: 400 });
       }
+      costByMedicine[it.medicine_id] = med.avg_cost || 0;
     }
 
     // 1. إنشاء السجل الرئيسي
@@ -38,9 +40,10 @@ export async function POST(req: Request) {
       .single();
     if (saleError) return NextResponse.json({ error: saleError.message }, { status: 400 });
 
-    // 2. إضافة البنود
+    // 2. إضافة البنود (مع تسجيل تكلفة الوحدة وقت البيع لحساب ربح دقيق تاريخيًا)
     const saleItems = items.map((it: { medicine_id: number; medicine_name: string; qty: number; unit_price: number }) => ({
       sale_id: sale.id, medicine_id: it.medicine_id, medicine_name: it.medicine_name, qty: it.qty, unit_price: it.unit_price,
+      unit_cost: costByMedicine[it.medicine_id] || 0,
     }));
     const { error: itemsError } = await supabaseAdmin.from("pharmacy_sale_items").insert(saleItems);
     if (itemsError) {
