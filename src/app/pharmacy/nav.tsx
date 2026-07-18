@@ -30,6 +30,13 @@ export const Icons = {
   print: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="7"/></svg>),
   filter: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M4 5h16M7 12h10M10 19h4"/></svg>),
   box: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>),
+  cart: ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.2a1.5 1.5 0 001.5 1.2h8.2a1.5 1.5 0 001.5-1.2L22 7H6"/></svg>),
+  cash: ({ size = 18 }: IconProps) => (<svg {...S(size)}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M5.5 9.5h.01M18.5 14.5h.01"/></svg>),
+  card: ({ size = 18 }: IconProps) => (<svg {...S(size)}><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>),
+  shield: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M12 3l8 3v6c0 4.6-3.2 7.8-8 9-4.8-1.2-8-4.4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>),
+  receipt: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M6 2h12v20l-2-1.5L14 22l-2-1.5L10 22l-2-1.5L6 22V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>),
+  undo: ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg>),
+  money: ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 .9-3 2.2c0 2.9 6 1.7 6 4.6 0 1.3-1.3 2.2-3 2.2s-3-1.1-3-2.5"/></svg>),
 };
 
 export type TabKey = "inventory" | "prescriptions" | "sales" | "suppliers" | "reorder" | "reports" | "alerts";
