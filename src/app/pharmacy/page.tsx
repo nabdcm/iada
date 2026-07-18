@@ -976,7 +976,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
         </div>
         <div style={{display:"flex",gap:9,alignItems:"center",flexWrap:"wrap"}}>
           <button onClick={()=>setShowLog(true)} className="inv-ghost-btn"><Icons.log size={16}/> <span className="hide-xs">{isAr?"سجل الحركة":"Log"}</span></button>
-          <button onClick={()=>{if(!barcodeMode)setBarcodeMode("inventory");openCamera();}} className="inv-ghost-btn"><Icons.camera size={16}/> <span className="hide-xs">{isAr?"كاميرا":"Camera"}</span></button>
+          <button onClick={()=>{if(!barcodeMode)setBarcodeMode("inventory");openCamera();}} className="inv-ghost-btn"><Icons.scan size={16}/> <span className="hide-xs">{isAr?"مسح باركود":"Scan"}</span></button>
           <button onClick={()=>{setEditMed(null);setShowModal(true);}} style={{display:"flex",alignItems:"center",gap:7,padding:"12px 22px",background:"linear-gradient(135deg,#0863ba,#0a4f96)",color:"#fff",border:"none",borderRadius:13,fontFamily:"'Rubik',sans-serif",fontSize:13.5,fontWeight:800,cursor:"pointer",boxShadow:"0 8px 22px rgba(8,99,186,.32)",transition:"all .18s"}}>
             <Icons.plus size={17}/> {isAr?"إضافة دواء":"Add Medicine"}
           </button>
@@ -2224,9 +2224,6 @@ export default function PharmacyPage() {
           </div>
           {/* الإجراءات */}
           <div style={{display:"flex",gap:10,alignItems:"center",flexShrink:0}}>
-            <button onClick={()=>setShowCamera(true)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 17px",background:"linear-gradient(135deg,#0863ba,#0a4f96)",color:"#fff",border:"none",borderRadius:11,fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(8,99,186,.3)"}}>
-              <Icons.scan size={16}/>{isAr?"مسح باركود":"Scan"}
-            </button>
             {rtPeers>1&&<div title={isAr?`${rtPeers} أجهزة متزامنة`:`${rtPeers} devices synced`} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 12px",background:"rgba(39,174,96,.09)",border:"1px solid rgba(39,174,96,.2)",borderRadius:20,fontSize:11,fontWeight:700,color:"#1a7a45"}}>
               <span style={{width:7,height:7,borderRadius:"50%",background:rtOnline?"#27ae60":"#e74c3c",animation:rtOnline?"pulse 2s infinite":"none"}}/>{rtPeers} {isAr?"أجهزة":"devices"}
             </div>}
