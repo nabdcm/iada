@@ -1984,6 +1984,55 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
     apiFetch(`/api/pharmacy/period-lock?user_id=${userId}`).then(r=>r.json()).then(j=>setLockedUntil(j.lock?.locked_until||"1900-01-01"));
   },[userId,sales.length]);
 
+  const [exporting,setExporting]=useState(false);
+  const dl=(blob:Blob,name:string)=>{const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),3000);};
+  const today=()=>new Date().toISOString().slice(0,10);
+
+  // تصدير Excel: مخزون + مبيعات + بنود البيع
+  const exportExcel=async()=>{
+    setExporting(true);
+    try{
+      const XLSX=await import("xlsx");
+      const wb=XLSX.utils.book_new();
+      const invRows=medicines.map(m=>({
+        [isAr?"الاسم":"Name"]:m.name_ar,[isAr?"الاسم EN":"Name EN"]:m.name_en||"",
+        [isAr?"الفئة":"Category"]:CAT[m.category]?.[lang]||m.category,[isAr?"باركود":"Barcode"]:m.barcode,
+        [isAr?"المخزون":"Stock"]:m.stock,[isAr?"الحد الأدنى":"Min"]:m.min_stock,[isAr?"الوحدة":"Unit"]:m.unit,
+        [isAr?"سعر البيع":"Price"]:m.sell_price,[isAr?"متوسط التكلفة":"Avg cost"]:m.avg_cost??"",
+        [isAr?"الصلاحية":"Expiry"]:medExpiry(m)||"",
+      }));
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(invRows),isAr?"المخزون":"Inventory");
+      const saleRows=sales.map(s=>({
+        [isAr?"رقم":"ID"]:s.id,[isAr?"التاريخ":"Date"]:s.date,[isAr?"الإجمالي":"Total"]:s.total,
+        [isAr?"الخصم":"Discount"]:s.discount,[isAr?"الدفع":"Payment"]:s.payment_method,
+        [isAr?"المريض":"Patient"]:s.patient_name||"",[isAr?"الكاشير":"Cashier"]:s.cashier,
+      }));
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(saleRows),isAr?"المبيعات":"Sales");
+      const itemRows=sales.flatMap(s=>s.items.map(it=>({
+        [isAr?"رقم البيع":"Sale"]:s.id,[isAr?"التاريخ":"Date"]:s.date,[isAr?"الصنف":"Item"]:it.medicine_name,
+        [isAr?"الكمية":"Qty"]:it.qty,[isAr?"سعر الوحدة":"Unit price"]:it.unit_price,
+        [isAr?"المجموع":"Subtotal"]:it.qty*it.unit_price,
+      })));
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(itemRows),isAr?"بنود البيع":"Sale items");
+      const out=XLSX.write(wb,{type:"array",bookType:"xlsx"});
+      dl(new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),`nabd-pharmacy-${today()}.xlsx`);
+    }catch(e){console.error("excel export:",e);}
+    finally{setExporting(false);}
+  };
+
+  // نسخة احتياطية كاملة JSON من الخادم
+  const exportBackup=async()=>{
+    if(!userId) return;
+    setExporting(true);
+    try{
+      const res=await apiFetch(`/api/pharmacy/data?user_id=${userId}`);
+      const data=await res.json();
+      const backup={app:"NABD Pharmacy",version:1,exported_at:new Date().toISOString(),user_id:userId,data};
+      dl(new Blob([JSON.stringify(backup,null,2)],{type:"application/json"}),`nabd-backup-${today()}.json`);
+    }catch(e){console.error("backup:",e);}
+    finally{setExporting(false);}
+  };
+
   const closePeriod=async()=>{
     if(!userId||!lockDate){ return; }
     const closed_by=isAr?currentUser.name_ar:currentUser.name_en;
@@ -2062,6 +2111,10 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
 
   return (
     <div>
+      <div style={{display:"flex",gap:9,marginBottom:13,flexWrap:"wrap"}}>
+        <button onClick={exportExcel} disabled={exporting} style={{flex:1,minWidth:150,padding:"11px 14px",borderRadius:11,border:"1.5px solid rgba(30,132,73,.3)",background:"rgba(30,132,73,.08)",color:"#1e8449",fontWeight:800,fontSize:13,cursor:exporting?"wait":"pointer",fontFamily:"inherit"}}>📊 {exporting?(isAr?"جارٍ التصدير...":"Exporting..."):(isAr?"تصدير Excel":"Export Excel")}</button>
+        <button onClick={exportBackup} disabled={exporting||!userId} style={{flex:1,minWidth:150,padding:"11px 14px",borderRadius:11,border:"1.5px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.08)",color:"#0863ba",fontWeight:800,fontSize:13,cursor:exporting?"wait":"pointer",fontFamily:"inherit"}}>💾 {isAr?"نسخة احتياطية (JSON)":"Backup (JSON)"}</button>
+      </div>
       <div style={{marginBottom:16}}>
         <h1 style={{fontSize:"clamp(19px,3vw,24px)",fontWeight:800,color:"#1a2840",letterSpacing:"-.4px",marginBottom:3}}>{isAr?"التقارير والتحليلات":"Reports & Analytics"}</h1>
         <p style={{fontSize:12.5,color:"#8a94a3",fontWeight:500}}>{isAr?"مؤشرات الأداء، تحليل ABC، وتصدير التقارير المحاسبية":"KPIs, ABC analysis & accounting exports"}</p>
@@ -2182,6 +2235,13 @@ export default function PharmacyPage() {
   const [stockLog,setStockLog]=useState<StockLog[]>([]);
   const [barcodeMode,setBarcodeMode]=useState<BarcodeMode>(null);
   const [notif,setNotif]=useState<ScanNotif>(null);
+  const [isOnline,setIsOnline]=useState(true);
+  useEffect(()=>{
+    setIsOnline(navigator.onLine);
+    const on=()=>setIsOnline(true), off=()=>setIsOnline(false);
+    window.addEventListener("online",on); window.addEventListener("offline",off);
+    return ()=>{window.removeEventListener("online",on); window.removeEventListener("offline",off);};
+  },[]);
   const [alertsRead,setAlertsRead]=useState<Set<number>>(()=>{
     if(typeof window==="undefined") return new Set();
     try{const raw=localStorage.getItem("nabd-pharmacy-alerts-read");return new Set(raw?JSON.parse(raw) as number[]:[]);}catch{return new Set();}
@@ -2322,6 +2382,7 @@ export default function PharmacyPage() {
 
   return (
     <>
+      {!isOnline&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#e67e22",color:"#fff",textAlign:"center",padding:"7px 12px",fontSize:12.5,fontWeight:700,fontFamily:"'Rubik',sans-serif"}}>📡 {lang==="ar"?"لا يوجد اتصال بالإنترنت — أنت تتصفح آخر نسخة محفوظة، التعديلات غير متاحة حالياً":"Offline — viewing last saved data, edits are unavailable"}</div>}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
