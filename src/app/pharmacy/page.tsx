@@ -29,8 +29,12 @@ type PurchInvoice = { id:number; supplier_id:number; supplier_name:string; date:
 type StockLog = { id:number; medicine_id:number; medicine_name:string; type:"in"|"out"|"sale"|"purchase"|"adjustment"; qty:number; date:string; user:string; ref?:string; notes?:string };
 type Batch = { id:number; medicine_id:number; batch_no?:string|null; expiry_date?:string|null; qty:number; unit_cost:number; received_date?:string; invoice_id?:number|null };
 type Medicine = { id:number; name_ar:string; name_en:string; category:MedCat; barcode:string; unit:string; purchase_price:number; sell_price:number; stock:number; min_stock:number; expiry_date?:string; manufacturer?:string; avg_cost?:number; batches?:Batch[]; nearest_expiry?:string|null };
-type RxItem = { medicine_name:string; dosage:string; duration:string; instructions:string };
-type Prescription = { id:string; mrn:string; patient_name:string; doctor_name:string; doctor_id:number; created_at:string; items:RxItem[]; notes?:string; dispensed:boolean; dispensed_at?:string; dispensed_by?:string };
+type RxStatus = "waiting"|"preparing"|"ready"|"dispensed"|"cancelled";
+type RxPriority = "low"|"normal"|"high"|"urgent";
+type RxItem = { id?:number; medicine_name:string; dosage:string; duration:string; instructions:string; qty?:number; dispensed_qty?:number; medicine_id?:number };
+type Prescription = { id:string; mrn:string; patient_name:string; doctor_name:string; doctor_id:number; created_at:string; items:RxItem[]; notes?:string; dispensed:boolean; dispensed_at?:string; dispensed_by?:string; status?:RxStatus; priority?:RxPriority; patient_id?:number; source?:string };
+type Interaction = { id:number; drug_a:string; drug_b:string; severity:"mild"|"moderate"|"severe"; description:string; is_seed:boolean; med_a?:string; med_b?:string };
+type AllergyHit = { medicine:string; allergen:string };
 type SaleItem = { id?:number; medicine_id:number; medicine_name:string; qty:number; unit_price:number; returned_qty?:number };
 type SaleReturn = { id:number; sale_id:number; date:string; reason?:string; total_refund:number; created_by:string };
 type Sale = { id:number; date:string; items:SaleItem[]; total:number; payment_method:"cash"|"card"|"insurance"; prescription_id?:string; patient_name?:string; discount:number; cashier:string; returns?:SaleReturn[] };
@@ -988,46 +992,118 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
 // ══════════════════════════════════════════════════════════════
 function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLog,medicines,userId,onRefresh}:{lang:Lang;prescriptions:Prescription[];setPrescriptions:React.Dispatch<React.SetStateAction<Prescription[]>>;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;medicines:Medicine[];userId:string|null;onRefresh:()=>void}) {
   const isAr=lang==="ar";
-  const [mrnQ,setMrnQ]=useState(""); const [submitted,setSubmitted]=useState(""); const [pF,setPF]=useState<"all"|"pending"|"dispensed">("all");
+  const [mrnQ,setMrnQ]=useState(""); const [submitted,setSubmitted]=useState("");
+  const [pF,setPF]=useState<"all"|"waiting"|"preparing"|"ready"|"dispensed">("all");
   const [showAdd,setShowAdd]=useState(false); const [rxForm,setRxForm]=useState({mrn:"",patient_name:"",notes:""});
-  const [rxItems,setRxItems]=useState<RxItem[]>([{medicine_name:"",dosage:"",duration:"",instructions:""}]);
+  const [rxItems,setRxItems]=useState<RxItem[]>([{medicine_name:"",dosage:"",duration:"",instructions:"",qty:1}]);
+  const [syncing,setSyncing]=useState(false); const [syncMsg,setSyncMsg]=useState("");
+  const [safety,setSafety]=useState<{rx:Prescription;interactions:Interaction[];allergies:AllergyHit[];loading:boolean}|null>(null);
+  const [partial,setPartial]=useState<{rx:Prescription;qtys:Record<number,number>}|null>(null);
+  const [ackSafety,setAckSafety]=useState(false);
 
-  const displayed=useMemo(()=>{let l=prescriptions;if(submitted.trim())l=l.filter(p=>p.mrn.toLowerCase()===submitted.trim().toLowerCase());if(pF==="pending")l=l.filter(p=>!p.dispensed);if(pF==="dispensed")l=l.filter(p=>p.dispensed);return l;},[prescriptions,submitted,pF]);
+  const stFilter=(p:Prescription)=>{const s=p.status||(p.dispensed?"dispensed":"waiting");
+    if(pF==="all")return true; if(pF==="dispensed")return s==="dispensed"; return s===pF;};
+  const displayed=useMemo(()=>{let l=prescriptions.filter(stFilter);
+    if(submitted.trim())l=l.filter(p=>p.mrn.toLowerCase()===submitted.trim().toLowerCase());
+    // ترتيب: الأولوية العالية أولاً ثم الأقدم
+    const prio:Record<string,number>={urgent:0,high:1,normal:2,low:3};
+    return [...l].sort((a,b)=>(prio[a.priority||"normal"]-prio[b.priority||"normal"])||a.created_at.localeCompare(b.created_at));
+  },[prescriptions,submitted,pF]);
 
-  const dispense=async(id:string)=>{
-    const rx=prescriptions.find(p=>p.id===id); if(!rx) return;
-    const dispensed_by=isAr?currentUser.name_ar:currentUser.name_en;
-    if(userId){
-      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense",user_id:userId,id,dispensed_by})});
-      const json=await res.json();
-      if(!json.success) return;
-      onRefresh();
-    }
-    setPrescriptions(prev=>prev.map(p=>p.id===id?{...p,dispensed:true,dispensed_at:new Date().toISOString().slice(0,10),dispensed_by}:p));
-    rx.items.forEach(it=>{const med=medicines.find(m=>m.name_ar===it.medicine_name||m.name_en===it.medicine_name);if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:1,date:new Date().toISOString().slice(0,10),user:dispensed_by,ref:id,notes:"صرف وصفة"});});
+  const statusMeta:Record<string,{ar:string;en:string;c:string;bg:string;ic:string}>={
+    waiting:{ar:"بانتظار",en:"Waiting",c:"#e67e22",bg:"rgba(230,126,34,.12)",ic:"⏳"},
+    preparing:{ar:"قيد التحضير",en:"Preparing",c:"#0863ba",bg:"rgba(8,99,186,.12)",ic:"🔧"},
+    ready:{ar:"جاهزة",en:"Ready",c:"#8e44ad",bg:"rgba(142,68,173,.12)",ic:"📦"},
+    dispensed:{ar:"صُرِّفت",en:"Dispensed",c:"#27ae60",bg:"rgba(39,174,96,.12)",ic:"✅"},
+    cancelled:{ar:"ملغاة",en:"Cancelled",c:"#95a5a6",bg:"rgba(149,165,166,.12)",ic:"🚫"},
+  };
+  const prioMeta:Record<string,{ar:string;en:string;c:string}>={
+    urgent:{ar:"عاجلة",en:"Urgent",c:"#e74c3c"},high:{ar:"عالية",en:"High",c:"#e67e22"},
+    normal:{ar:"عادية",en:"Normal",c:"#95a5a6"},low:{ar:"منخفضة",en:"Low",c:"#bbb"},
   };
 
+  // ميزة 14: مزامنة وصفات العيادة
+  const syncClinic=async()=>{
+    if(!userId)return; setSyncing(true); setSyncMsg("");
+    try{
+      const res=await fetch("/api/pharmacy/sync-prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,days:30})});
+      const json=await res.json();
+      setSyncMsg(json.synced>0?(isAr?`✅ تمت مزامنة ${json.synced} وصفة من العيادة`:`✅ Synced ${json.synced} from clinic`):(isAr?"لا وصفات جديدة للمزامنة":"No new prescriptions"));
+      if(json.synced>0)onRefresh();
+    }catch{setSyncMsg(isAr?"تعذّرت المزامنة":"Sync failed");}
+    setSyncing(false); setTimeout(()=>setSyncMsg(""),4000);
+  };
+
+  // ميزة 12+13: فحص السلامة قبل الصرف
+  const runSafetyCheck=async(rx:Prescription)=>{
+    setAckSafety(false);
+    setSafety({rx,interactions:[],allergies:[],loading:true});
+    const medNames=rx.items.map(it=>it.medicine_name).filter(Boolean);
+    try{
+      const res=await fetch("/api/pharmacy/safety-check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,medicines:medNames,patient_id:rx.patient_id,mrn:rx.mrn})});
+      const json=await res.json();
+      setSafety({rx,interactions:json.interactions||[],allergies:json.allergies||[],loading:false});
+    }catch{setSafety({rx,interactions:[],allergies:[],loading:false});}
+  };
+
+  const updateStatus=async(id:string,status:RxStatus)=>{
+    if(userId){await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update_status",user_id:userId,id,status,dispensed_by:isAr?currentUser.name_ar:currentUser.name_en})});onRefresh();}
+    setPrescriptions(prev=>prev.map(p=>p.id===id?{...p,status,dispensed:status==="dispensed"}:p));
+  };
+  const setPriority=async(id:string,priority:RxPriority)=>{
+    if(userId){await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"update_status",user_id:userId,id,priority})});onRefresh();}
+    setPrescriptions(prev=>prev.map(p=>p.id===id?{...p,priority}:p));
+  };
+
+  // الصرف الكامل (بعد تجاوز فحص السلامة)
+  const doDispense=async(rx:Prescription)=>{
+    const dispensed_by=isAr?currentUser.name_ar:currentUser.name_en;
+    if(userId){
+      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense",user_id:userId,id:rx.id,dispensed_by})});
+      const json=await res.json(); if(!json.success)return; onRefresh();
+    }
+    setPrescriptions(prev=>prev.map(p=>p.id===rx.id?{...p,dispensed:true,status:"dispensed",dispensed_at:new Date().toISOString().slice(0,10),dispensed_by}:p));
+    rx.items.forEach(it=>{const med=medicines.find(m=>m.name_ar===it.medicine_name||m.name_en===it.medicine_name);if(med)addLog({medicine_id:med.id,medicine_name:med.name_ar,type:"out",qty:it.qty||1,date:new Date().toISOString().slice(0,10),user:dispensed_by,ref:rx.id,notes:"صرف وصفة"});});
+    setSafety(null);
+  };
+
+  // ميزة 16: صرف جزئي
+  const doPartial=async()=>{
+    if(!partial)return; const {rx,qtys}=partial;
+    const dispensed_by=isAr?currentUser.name_ar:currentUser.name_en;
+    const items=rx.items.filter(it=>it.id).map(it=>({item_id:it.id!,dispensed_qty:qtys[it.id!]??(it.dispensed_qty||0)}));
+    if(userId){await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"dispense_partial",user_id:userId,id:rx.id,items,dispensed_by})});onRefresh();}
+    setPartial(null);
+  };
+
+  const startDispense=(rx:Prescription)=>{ runSafetyCheck(rx); };
+
   const saveRx=async()=>{
-    if(!rxForm.mrn.trim()||!rxForm.patient_name.trim()) return;
+    if(!rxForm.mrn.trim()||!rxForm.patient_name.trim())return;
     const rxId=`RX-${new Date().getFullYear()}-${String(Math.max(0,...prescriptions.map(p=>parseInt(p.id.split("-")[2]||"0")))+1).padStart(3,"0")}`;
     const doctor_name=isAr?currentUser.name_ar:currentUser.name_en;
-    const filteredItems=rxItems.filter(i=>i.medicine_name.trim());
+    const filteredItems=rxItems.filter(i=>i.medicine_name.trim()).map(i=>({...i,qty:i.qty||1,dispensed_qty:0}));
     if(userId){
-      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,rx_id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,notes:rxForm.notes||undefined,dispensed:false,items:filteredItems})});
+      const res=await fetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"add",user_id:userId,rx_id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,notes:rxForm.notes||undefined,dispensed:false,status:"waiting",priority:"normal",source:"pharmacy",items:filteredItems})});
       const json=await res.json();
-      if(json.success){ setPrescriptions(prev=>[json.prescription,...prev]); }
+      if(json.success){setPrescriptions(prev=>[json.prescription,...prev]);}
     } else {
-      setPrescriptions(prev=>[{id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,created_at:new Date().toISOString().slice(0,10),items:filteredItems,notes:rxForm.notes||undefined,dispensed:false},...prev]);
+      setPrescriptions(prev=>[{id:rxId,mrn:rxForm.mrn,patient_name:rxForm.patient_name,doctor_name,doctor_id:currentUser.id,created_at:new Date().toISOString().slice(0,10),items:filteredItems,notes:rxForm.notes||undefined,dispensed:false,status:"waiting",priority:"normal"},...prev]);
     }
-    setShowAdd(false); setRxForm({mrn:"",patient_name:"",notes:""}); setRxItems([{medicine_name:"",dosage:"",duration:"",instructions:""}]);
+    setShowAdd(false); setRxForm({mrn:"",patient_name:"",notes:""}); setRxItems([{medicine_name:"",dosage:"",duration:"",instructions:"",qty:1}]);
   };
 
   const canAdd=currentUser.role==="doctor"||currentUser.role==="manager";
   const canDispense=currentUser.role==="pharmacist"||currentUser.role==="manager";
+  const hasSafetyIssue=safety&&!safety.loading&&(safety.interactions.length>0||safety.allergies.length>0);
 
   return (
     <div>
-      {canAdd&&<button onClick={()=>setShowAdd(true)} className="btn-primary-lg" style={{background:"#27ae60",boxShadow:"0 4px 16px rgba(39,174,96,.35)",marginBottom:15}}>＋ {isAr?"وصفة طبية جديدة":"New Prescription"}</button>}
+      <div style={{display:"flex",gap:10,marginBottom:15,flexWrap:"wrap"}}>
+        {canAdd&&<button onClick={()=>setShowAdd(true)} className="btn-primary-lg" style={{background:"#27ae60",boxShadow:"0 4px 16px rgba(39,174,96,.35)"}}>＋ {isAr?"وصفة طبية جديدة":"New Prescription"}</button>}
+        {canDispense&&<button onClick={syncClinic} disabled={syncing} className="btn-primary-lg" style={{background:"#0863ba",boxShadow:"0 4px 16px rgba(8,99,186,.3)"}}>{syncing?(isAr?"⏳ جاري...":"⏳..."):(isAr?"🔄 مزامنة وصفات العيادة":"🔄 Sync clinic Rx")}</button>}
+      </div>
+      {syncMsg&&<div style={{background:"rgba(8,99,186,.08)",border:"1px solid rgba(8,99,186,.2)",borderRadius:10,padding:"9px 13px",marginBottom:13,fontSize:12,color:"#0863ba",fontWeight:700}}>{syncMsg}</div>}
 
       <div style={{background:"linear-gradient(135deg,rgba(8,99,186,.08),rgba(8,99,186,.03))",borderRadius:15,padding:"17px",border:"1.5px solid rgba(8,99,186,.15)",marginBottom:13}}>
         <div style={{display:"flex",gap:4,marginBottom:5,alignItems:"center"}}><span style={{fontSize:17}}>🔍</span><span style={{fontSize:13,fontWeight:700,color:"#0863ba"}}>{isAr?"رقم السجل الطبي":"MRN"}</span></div>
@@ -1043,33 +1119,126 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
       </div>
 
       <div style={{display:"flex",gap:7,marginBottom:13,flexWrap:"wrap"}}>
-        {([["all",isAr?"الكل":"All"],["pending",isAr?"بانتظار الصرف":"Pending"],["dispensed",isAr?"مصروفة":"Dispensed"]] as [string,string][]).map(([k,v])=>(<button key={k} onClick={()=>setPF(k as any)} className={pF===k?"filter-chip active":"filter-chip"}>{v}</button>))}
+        {([["all",isAr?"الكل":"All"],["waiting",isAr?"بانتظار":"Waiting"],["preparing",isAr?"قيد التحضير":"Preparing"],["ready",isAr?"جاهزة":"Ready"],["dispensed",isAr?"مصروفة":"Dispensed"]] as [string,string][]).map(([k,v])=>(<button key={k} onClick={()=>setPF(k as typeof pF)} className={pF===k?"filter-chip active":"filter-chip"}>{v}</button>))}
       </div>
 
-      {displayed.length===0?(<div style={{textAlign:"center",padding:"55px 20px",color:"#ccc",background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3"}}><div style={{fontSize:38,marginBottom:10}}>📋</div><div style={{fontSize:13,fontWeight:600}}>{submitted?(isAr?"لم يُعثر على وصفات":"No prescriptions found"):(isAr?"أدخل الرقم الطبي للبحث":"Enter MRN to search")}</div></div>):(
+      {displayed.length===0?(<div style={{textAlign:"center",padding:"55px 20px",color:"#ccc",background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3"}}><div style={{fontSize:38,marginBottom:10}}>📋</div><div style={{fontSize:13,fontWeight:600}}>{submitted?(isAr?"لم يُعثر على وصفات":"No prescriptions found"):(isAr?"لا وصفات في هذه القائمة":"No prescriptions")}</div></div>):(
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {displayed.map(rx=>(
-            <div key={rx.id} style={{background:"#fff",borderRadius:15,border:`1.5px solid ${rx.dispensed?"rgba(39,174,96,.25)":"rgba(8,99,186,.2)"}`,boxShadow:"0 2px 12px rgba(8,99,186,.06)",overflow:"hidden"}}>
-              <div style={{padding:"13px 17px",background:rx.dispensed?"rgba(39,174,96,.04)":"rgba(8,99,186,.04)",borderBottom:"1px solid #f0f4f8",display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:9}}>
+          {displayed.map(rx=>{
+            const st=rx.status||(rx.dispensed?"dispensed":"waiting"); const sm=statusMeta[st]; const pm=prioMeta[rx.priority||"normal"];
+            const done=st==="dispensed";
+            const partialDone=rx.items.some(it=>(it.dispensed_qty||0)>0)&&!rx.items.every(it=>(it.dispensed_qty||0)>=(it.qty||1));
+            return (
+            <div key={rx.id} style={{background:"#fff",borderRadius:15,border:`1.5px solid ${done?"rgba(39,174,96,.25)":(rx.priority==="urgent"?"rgba(231,76,60,.4)":"rgba(8,99,186,.2)")}`,boxShadow:"0 2px 12px rgba(8,99,186,.06)",overflow:"hidden"}}>
+              <div style={{padding:"13px 17px",background:done?"rgba(39,174,96,.04)":"rgba(8,99,186,.04)",borderBottom:"1px solid #f0f4f8",display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:9}}>
                 <div>
-                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}><span style={{fontSize:13,fontWeight:800,color:"#0863ba",letterSpacing:.5}}>{rx.id}</span><span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:rx.dispensed?"rgba(39,174,96,.15)":"rgba(230,126,34,.12)",color:rx.dispensed?"#27ae60":"#e67e22"}}>{rx.dispensed?"✅ "+(isAr?"صُرِّف":"Dispensed"):"⏳ "+(isAr?"بانتظار":"Pending")}</span></div>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap"}}>
+                    <span style={{fontSize:13,fontWeight:800,color:"#0863ba",letterSpacing:.5}}>{rx.id}</span>
+                    <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:sm.bg,color:sm.c}}>{sm.ic} {isAr?sm.ar:sm.en}</span>
+                    {rx.priority&&rx.priority!=="normal"&&<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:`${pm.c}18`,color:pm.c}}>{isAr?pm.ar:pm.en}</span>}
+                    {rx.source==="clinic"&&<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"rgba(142,68,173,.12)",color:"#8e44ad"}}>🏥 {isAr?"من العيادة":"Clinic"}</span>}
+                  </div>
                   <div style={{fontSize:13,fontWeight:700,color:"#353535"}}>{rx.patient_name}</div>
                   <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{rx.doctor_name} · {rx.created_at}</div>
                   {rx.dispensed_by&&<div style={{fontSize:10,color:"#27ae60",marginTop:1}}>✅ {isAr?"بواسطة":"By"}: {rx.dispensed_by}</div>}
                 </div>
                 <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                   <span style={{fontSize:12,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.08)",padding:"3px 9px",borderRadius:7,letterSpacing:.4}}>{rx.mrn}</span>
-                  {!rx.dispensed&&canDispense&&<button onClick={()=>dispense(rx.id)} style={{padding:"7px 14px",background:"#27ae60",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 9px rgba(39,174,96,.3)",whiteSpace:"nowrap"}}>💊 {isAr?"صرف":"Dispense"}</button>}
+                  {canDispense&&!done&&(
+                    <select value={rx.priority||"normal"} onChange={e=>setPriority(rx.id,e.target.value as RxPriority)} style={{padding:"5px 7px",border:"1.5px solid #e0e7ef",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:11,outline:"none",background:"#fff",color:pm.c,fontWeight:700}}>
+                      {(["urgent","high","normal","low"] as RxPriority[]).map(p=><option key={p} value={p}>{isAr?prioMeta[p].ar:prioMeta[p].en}</option>)}
+                    </select>
+                  )}
                 </div>
               </div>
               <div style={{padding:"12px 17px"}}>
                 {rx.notes&&<div style={{background:"rgba(231,76,60,.06)",border:"1px solid rgba(231,76,60,.2)",borderRadius:9,padding:"7px 11px",marginBottom:9,fontSize:12,color:"#c0392b",fontWeight:600}}>⚠️ {rx.notes}</div>}
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {rx.items.map((it,i)=>(<div key={i} style={{background:"#f7f9fc",borderRadius:9,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:9,flexWrap:"wrap"}}><div><div style={{fontSize:13,fontWeight:700,color:"#353535"}}>💊 {it.medicine_name}</div><div style={{fontSize:11,color:"#888",marginTop:2}}>{it.instructions}</div></div><div style={{textAlign:isAr?"left":"right",flexShrink:0}}><div style={{fontSize:11,fontWeight:700,color:"#0863ba"}}>{it.dosage}</div><div style={{fontSize:10,color:"#aaa"}}>{it.duration}</div></div></div>))}
+                  {rx.items.map((it,i)=>{const dq=it.dispensed_qty||0;const q=it.qty||1;const full=dq>=q;
+                    return(<div key={i} style={{background:"#f7f9fc",borderRadius:9,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:9,flexWrap:"wrap"}}>
+                    <div><div style={{fontSize:13,fontWeight:700,color:"#353535"}}>💊 {it.medicine_name} {q>1&&<span style={{fontSize:11,color:"#888",fontWeight:400}}>×{q}</span>}</div><div style={{fontSize:11,color:"#888",marginTop:2}}>{it.instructions}</div></div>
+                    <div style={{textAlign:isAr?"left":"right",flexShrink:0}}><div style={{fontSize:11,fontWeight:700,color:"#0863ba"}}>{it.dosage}</div><div style={{fontSize:10,color:"#aaa"}}>{it.duration}</div>{dq>0&&<div style={{fontSize:10,fontWeight:700,color:full?"#27ae60":"#e67e22",marginTop:2}}>{full?"✅":"⏳"} {isAr?"صُرف":"disp"} {dq}/{q}</div>}</div>
+                  </div>);})}
                 </div>
+                {canDispense&&!done&&(
+                  <div style={{display:"flex",gap:8,marginTop:11,flexWrap:"wrap"}}>
+                    <button onClick={()=>startDispense(rx)} style={{flex:1,minWidth:130,padding:"9px 14px",background:"#27ae60",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 9px rgba(39,174,96,.3)"}}>💊 {isAr?"صرف كامل":"Dispense all"}</button>
+                    <button onClick={()=>setPartial({rx,qtys:Object.fromEntries(rx.items.filter(it=>it.id).map(it=>[it.id!,it.dispensed_qty||0]))})} style={{padding:"9px 14px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>⏳ {isAr?"صرف جزئي":"Partial"}</button>
+                    {st==="waiting"&&<button onClick={()=>updateStatus(rx.id,"preparing")} style={{padding:"9px 12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔧 {isAr?"تحضير":"Prep"}</button>}
+                    {(st==="preparing"||partialDone)&&<button onClick={()=>updateStatus(rx.id,"ready")} style={{padding:"9px 12px",background:"rgba(142,68,173,.08)",color:"#8e44ad",border:"1.5px solid rgba(142,68,173,.2)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>📦 {isAr?"جاهزة":"Ready"}</button>}
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+          );})}
+        </div>
+      )}
+
+      {/* نافذة فحص السلامة قبل الصرف (12+13) */}
+      {safety&&(
+        <div style={{position:"fixed",inset:0,zIndex:250,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)"}} onClick={()=>setSafety(null)}/>
+          <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(96vw,520px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>🛡️ {isAr?"فحص السلامة الدوائية":"Safety Check"}</h2><button onClick={()=>setSafety(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            <div style={{fontSize:12,color:"#888",marginBottom:14}}>{isAr?`المريض: ${safety.rx.patient_name} · ${safety.rx.items.length} دواء`:`${safety.rx.patient_name} · ${safety.rx.items.length} meds`}</div>
+            {safety.loading?(
+              <div style={{textAlign:"center",padding:"30px",color:"#aaa"}}>{isAr?"⏳ جاري الفحص...":"⏳ Checking..."}</div>
+            ):(
+              <>
+                {!hasSafetyIssue&&<div style={{background:"rgba(39,174,96,.08)",border:"1.5px solid rgba(39,174,96,.3)",borderRadius:12,padding:"16px",textAlign:"center",marginBottom:16}}><div style={{fontSize:32,marginBottom:6}}>✅</div><div style={{fontSize:14,fontWeight:700,color:"#27ae60"}}>{isAr?"لا تعارضات أو حساسية معروفة":"No known issues"}</div></div>}
+                {safety.allergies.length>0&&(
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:13,fontWeight:800,color:"#c0392b",marginBottom:8}}>🚨 {isAr?"تحذير حساسية":"Allergy Alert"}</div>
+                    {safety.allergies.map((a,i)=>(<div key={i} style={{background:"rgba(231,76,60,.07)",border:"1.5px solid rgba(231,76,60,.3)",borderRadius:10,padding:"11px 13px",marginBottom:7}}><div style={{fontSize:13,fontWeight:700,color:"#c0392b"}}>💊 {a.medicine}</div><div style={{fontSize:11,color:"#e74c3c",marginTop:3}}>{isAr?`المريض لديه حساسية مسجّلة تجاه: ${a.allergen}`:`Patient allergic to: ${a.allergen}`}</div></div>))}
+                  </div>
+                )}
+                {safety.interactions.length>0&&(
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:13,fontWeight:800,color:"#e67e22",marginBottom:8}}>⚠️ {isAr?"تعارضات دوائية":"Drug Interactions"}</div>
+                    {safety.interactions.map((it,i)=>{const sc=it.severity==="severe"?"#e74c3c":it.severity==="moderate"?"#e67e22":"#f39c12";const sl=it.severity==="severe"?(isAr?"شديد":"Severe"):it.severity==="moderate"?(isAr?"متوسط":"Moderate"):(isAr?"خفيف":"Mild");
+                      return(<div key={i} style={{background:`${sc}0e`,border:`1.5px solid ${sc}44`,borderRadius:10,padding:"11px 13px",marginBottom:7}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><span style={{fontSize:12,fontWeight:700,color:"#353535"}}>{it.med_a} + {it.med_b}</span><span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:sc,color:"#fff"}}>{sl}</span></div><div style={{fontSize:11,color:"#666"}}>{it.description}</div></div>);})}
+                  </div>
+                )}
+                <div style={{fontSize:10,color:"#bbb",background:"#fafbfd",borderRadius:8,padding:"8px 11px",marginBottom:14,lineHeight:1.5}}>ℹ️ {isAr?"هذا الفحص أداة مساعدة للتنبيه فقط وليس بديلاً عن الحكم المهني أو مرجع دوائي معتمد.":"Advisory aid only; not a substitute for professional judgment or an approved drug reference."}</div>
+                {hasSafetyIssue&&(
+                  <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,cursor:"pointer",fontSize:12,color:"#c0392b",fontWeight:600}}>
+                    <input type="checkbox" checked={ackSafety} onChange={e=>setAckSafety(e.target.checked)} style={{width:16,height:16,cursor:"pointer"}}/>
+                    {isAr?"راجعت التحذيرات وأتحمّل مسؤولية المتابعة":"I reviewed the warnings and take responsibility to proceed"}
+                  </label>
+                )}
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={()=>doDispense(safety.rx)} disabled={!!(hasSafetyIssue&&!ackSafety)} style={{flex:1,padding:"12px",background:hasSafetyIssue&&!ackSafety?"#ccc":hasSafetyIssue?"#e67e22":"#27ae60",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:hasSafetyIssue&&!ackSafety?"not-allowed":"pointer"}}>💊 {isAr?"متابعة الصرف":"Proceed"}</button>
+                  <button onClick={()=>setSafety(null)} style={{padding:"12px 18px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* نافذة الصرف الجزئي (16) */}
+      {partial&&(
+        <div style={{position:"fixed",inset:0,zIndex:250,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)"}} onClick={()=>setPartial(null)}/>
+          <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(96vw,480px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>⏳ {isAr?"صرف جزئي":"Partial Dispense"}</h2><button onClick={()=>setPartial(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            <div style={{fontSize:12,color:"#888",marginBottom:14}}>{isAr?"حدّد الكمية المصروفة لكل دواء (يمكن إكمال الباقي لاحقًا)":"Set dispensed qty per item"}</div>
+            {partial.rx.items.filter(it=>it.id).map(it=>{const q=it.qty||1;const cur=partial.qtys[it.id!]??0;
+              return(<div key={it.id} style={{background:"#f7f9fc",borderRadius:10,padding:"11px 13px",marginBottom:8}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#353535",marginBottom:7}}>💊 {it.medicine_name}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:11,color:"#888"}}>{isAr?"المصروف":"Dispensed"}:</span>
+                  <button onClick={()=>setPartial(p=>p&&({...p,qtys:{...p.qtys,[it.id!]:Math.max(0,cur-1)}}))} style={{width:26,height:26,border:"1.5px solid #d0e4f7",borderRadius:6,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba"}}>-</button>
+                  <span style={{fontSize:14,fontWeight:700,minWidth:50,textAlign:"center"}}>{cur} / {q}</span>
+                  <button onClick={()=>setPartial(p=>p&&({...p,qtys:{...p.qtys,[it.id!]:Math.min(q,cur+1)}}))} style={{width:26,height:26,border:"1.5px solid #d0e4f7",borderRadius:6,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba"}}>+</button>
+                  <button onClick={()=>setPartial(p=>p&&({...p,qtys:{...p.qtys,[it.id!]:q}}))} style={{marginInlineStart:"auto",fontSize:11,color:"#0863ba",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>{isAr?"الكل":"All"}</button>
+                </div>
+              </div>);})}
+            <div style={{display:"flex",gap:10,marginTop:14}}>
+              <button onClick={doPartial} style={{flex:1,padding:"12px",background:"#e67e22",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>✅ {isAr?"حفظ الصرف":"Save"}</button>
+              <button onClick={()=>setPartial(null)} style={{padding:"12px 18px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1086,14 +1255,19 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
             {rxItems.map((it,i)=>(
               <div key={i} style={{background:"#f7f9fc",borderRadius:11,padding:"11px",marginBottom:7}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}><span style={{fontSize:11,fontWeight:700,color:"#0863ba"}}>{isAr?"دواء":"Medicine"} {i+1}</span>{rxItems.length>1&&<button onClick={()=>setRxItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:14}}>✕</button>}</div>
+                <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:7,marginBottom:7}}>
+                  <div><label style={{fontSize:10,fontWeight:700,color:"#aaa",display:"block",marginBottom:3}}>{isAr?"اسم الدواء":"Name"}</label><input value={it.medicine_name} onChange={e=>setRxItems(p=>p.map((x,xi)=>xi===i?{...x,medicine_name:e.target.value}:x))} style={{width:"100%",padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:7,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
+                  <div><label style={{fontSize:10,fontWeight:700,color:"#aaa",display:"block",marginBottom:3}}>{isAr?"الكمية":"Qty"}</label><input type="number" min={1} value={it.qty||1} onChange={e=>setRxItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Number(e.target.value)}:x))} style={{width:"100%",padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:7,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",textAlign:"center"}}/></div>
+                </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-                  {([["medicine_name",isAr?"اسم الدواء":"Name","1/-1"],["dosage",isAr?"الجرعة":"Dosage",""],["duration",isAr?"المدة":"Duration",""],["instructions",isAr?"التعليمات":"Instructions","1/-1"]] as [keyof RxItem,string,string][]).map(([k,label,gc])=>(
-                    <div key={k} style={{gridColumn:gc||"auto"}}><label style={{fontSize:10,fontWeight:700,color:"#aaa",display:"block",marginBottom:3}}>{label}</label><input value={it[k]} onChange={e=>setRxItems(p=>p.map((x,xi)=>xi===i?{...x,[k]:e.target.value}:x))} style={{width:"100%",padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:7,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
+                  {([["dosage",isAr?"الجرعة":"Dosage"],["duration",isAr?"المدة":"Duration"]] as [keyof RxItem,string][]).map(([k,label])=>(
+                    <div key={k}><label style={{fontSize:10,fontWeight:700,color:"#aaa",display:"block",marginBottom:3}}>{label}</label><input value={(it[k] as string)||""} onChange={e=>setRxItems(p=>p.map((x,xi)=>xi===i?{...x,[k]:e.target.value}:x))} style={{width:"100%",padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:7,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
                   ))}
+                  <div style={{gridColumn:"1/-1"}}><label style={{fontSize:10,fontWeight:700,color:"#aaa",display:"block",marginBottom:3}}>{isAr?"التعليمات":"Instructions"}</label><input value={it.instructions} onChange={e=>setRxItems(p=>p.map((x,xi)=>xi===i?{...x,instructions:e.target.value}:x))} style={{width:"100%",padding:"7px 9px",border:"1.5px solid #e0e7ef",borderRadius:7,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
                 </div>
               </div>
             ))}
-            <button onClick={()=>setRxItems(p=>[...p,{medicine_name:"",dosage:"",duration:"",instructions:""}])} style={{width:"100%",padding:"8px",border:"1.5px dashed #d0e4f7",borderRadius:9,background:"rgba(8,99,186,.03)",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:12}}>＋ {isAr?"إضافة دواء آخر":"Add Medicine"}</button>
+            <button onClick={()=>setRxItems(p=>[...p,{medicine_name:"",dosage:"",duration:"",instructions:"",qty:1}])} style={{width:"100%",padding:"8px",border:"1.5px dashed #d0e4f7",borderRadius:9,background:"rgba(8,99,186,.03)",color:"#0863ba",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:12}}>＋ {isAr?"إضافة دواء آخر":"Add Medicine"}</button>
             <div style={{marginBottom:12}}><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"ملاحظات":"Notes"}</label><input value={rxForm.notes} onChange={e=>setRxForm(f=>({...f,notes:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={saveRx} style={{flex:1,padding:"12px",background:"#27ae60",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 13px rgba(39,174,96,.3)"}}>📋 {isAr?"إصدار الوصفة":"Issue Rx"}</button>
