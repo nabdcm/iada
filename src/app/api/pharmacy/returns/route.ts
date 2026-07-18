@@ -62,11 +62,35 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `فشل حفظ بنود المرتجع: ${itemsError.message}` }, { status: 400 });
       }
 
-      // 5. تحديث الكمية المرتجعة على بنود البيع الأصلية + إرجاع المخزون (atomic) + سجل حركة
+      // 5. تحديث الكمية المرتجعة على بنود البيع الأصلية + إرجاع الكمية إلى نفس الدفعات المصروفة (عكس FEFO) + سجل حركة
       for (const it of items as ReturnItemInput[]) {
         const { data: si } = await supabaseAdmin.from("pharmacy_sale_items").select("returned_qty").eq("id", it.sale_item_id).single();
         await supabaseAdmin.from("pharmacy_sale_items").update({ returned_qty: (si?.returned_qty || 0) + it.qty }).eq("id", it.sale_item_id);
-        await supabaseAdmin.rpc("adjust_medicine_stock", { p_id: it.medicine_id, p_user_id: user_id, p_delta: it.qty });
+
+        // اجلب الدفعات التي صُرف منها هذا البند لإعادة الكمية إليها بالترتيب
+        const { data: dispensedBatches } = await supabaseAdmin
+          .from("pharmacy_sale_item_batches")
+          .select("batch_id, qty, unit_cost")
+          .eq("sale_item_id", it.sale_item_id)
+          .order("id", { ascending: true });
+
+        let remaining = it.qty;
+        for (const b of (dispensedBatches || [])) {
+          if (remaining <= 0) break;
+          const restoreQty = Math.min(b.qty, remaining);
+          await supabaseAdmin.rpc("return_to_batch", {
+            p_medicine_id: it.medicine_id, p_user_id: user_id,
+            p_batch_id: b.batch_id, p_qty: restoreQty, p_unit_cost: b.unit_cost,
+          });
+          remaining -= restoreQty;
+        }
+        // احتياط: لو لم توجد بيانات دفعات مصروفة، أعد لدفعة إرجاع جديدة
+        if (remaining > 0) {
+          await supabaseAdmin.rpc("return_to_batch", {
+            p_medicine_id: it.medicine_id, p_user_id: user_id,
+            p_batch_id: null, p_qty: remaining, p_unit_cost: it.unit_price,
+          });
+        }
       }
       await supabaseAdmin.from("pharmacy_stock_logs").insert(
         (items as ReturnItemInput[]).map(it => ({

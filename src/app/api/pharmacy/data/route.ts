@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   if (!userId) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
   try {
-    const [medicines, sales, saleItems, suppliers, invoices, invoiceItems, prescriptions, rxItems, stockLogs, returns] =
+    const [medicines, sales, saleItems, suppliers, invoices, invoiceItems, prescriptions, rxItems, stockLogs, returns, batches] =
       await Promise.all([
         supabaseAdmin.from("pharmacy_medicines").select("*").eq("user_id", userId).order("name_ar"),
         supabaseAdmin.from("pharmacy_sales").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
@@ -27,6 +27,7 @@ export async function GET(req: Request) {
         supabaseAdmin.from("pharmacy_prescription_items").select("*, pharmacy_prescriptions!inner(user_id)").eq("pharmacy_prescriptions.user_id", userId),
         supabaseAdmin.from("pharmacy_stock_logs").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(500),
         supabaseAdmin.from("pharmacy_returns").select("*, pharmacy_return_items(*)").eq("user_id", userId).order("created_at", { ascending: false }),
+        supabaseAdmin.from("pharmacy_medicine_batches").select("*").eq("user_id", userId).gt("qty", 0).order("expiry_date", { ascending: true, nullsFirst: false }),
       ]);
 
     // دمج الـ items مع الـ parents
@@ -46,13 +47,26 @@ export async function GET(req: Request) {
       items: (rxItems.data || []).filter(i => i.prescription_id === rx.id),
     }));
 
+    // دمج الدفعات مع كل دواء + حساب أقرب صلاحية
+    const batchesData = batches.data || [];
+    const medicinesData = (medicines.data || []).map(m => {
+      const medBatches = batchesData.filter(b => b.medicine_id === m.id);
+      const withExpiry = medBatches.filter(b => b.expiry_date).sort((a, b) => a.expiry_date.localeCompare(b.expiry_date));
+      return {
+        ...m,
+        batches: medBatches,
+        nearest_expiry: withExpiry[0]?.expiry_date || null,
+      };
+    });
+
     return NextResponse.json({
-      medicines:     medicines.data     || [],
+      medicines:     medicinesData,
       sales:         salesData,
       suppliers:     suppliers.data     || [],
       invoices:      invoicesData,
       prescriptions: prescriptionsData,
       stockLogs:     stockLogs.data     || [],
+      batches:       batchesData,
     });
   } catch (err) {
     console.error("pharmacy/data error:", err);

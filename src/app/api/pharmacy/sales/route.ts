@@ -21,12 +21,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `هذه الفترة مقفلة محاسبيًا حتى ${lockedUntil}، لا يمكن إضافة عمليات بيع بتاريخ سابق أو مساوٍ` }, { status: 403 });
     }
 
-    // 0. التحقق من كفاية المخزون قبل أي إدخال + التقاط تكلفة الوحدة الحالية (WAC) لحساب الربح لاحقًا
-    const costByMedicine: Record<number, number> = {};
+    // 0. التحقق من كفاية المخزون قبل أي إدخال
     for (const it of items) {
       const { data: med, error: medError } = await supabaseAdmin
         .from("pharmacy_medicines")
-        .select("stock, name_ar, avg_cost")
+        .select("stock, name_ar")
         .eq("id", it.medicine_id)
         .eq("user_id", user_id)
         .single();
@@ -36,7 +35,6 @@ export async function POST(req: Request) {
       if (med.stock < it.qty) {
         return NextResponse.json({ error: `المخزون غير كافٍ لـ ${med.name_ar}: المتوفر ${med.stock} والمطلوب ${it.qty}` }, { status: 400 });
       }
-      costByMedicine[it.medicine_id] = med.avg_cost || 0;
     }
 
     // 1. إنشاء السجل الرئيسي
@@ -47,24 +45,33 @@ export async function POST(req: Request) {
       .single();
     if (saleError) return NextResponse.json({ error: saleError.message }, { status: 400 });
 
-    // 2. إضافة البنود (مع تسجيل تكلفة الوحدة وقت البيع لحساب ربح دقيق تاريخيًا)
-    const saleItems = items.map((it: { medicine_id: number; medicine_name: string; qty: number; unit_price: number }) => ({
-      sale_id: sale.id, medicine_id: it.medicine_id, medicine_name: it.medicine_name, qty: it.qty, unit_price: it.unit_price,
-      unit_cost: costByMedicine[it.medicine_id] || 0,
-    }));
-    const { error: itemsError } = await supabaseAdmin.from("pharmacy_sale_items").insert(saleItems);
-    if (itemsError) {
+    // 2. إضافة البنود (unit_cost يُحدّث لاحقًا بالتكلفة الفعلية للدفعات المصروفة حسب FEFO)
+    const { data: insertedItems, error: itemsError } = await supabaseAdmin
+      .from("pharmacy_sale_items")
+      .insert(items.map((it: { medicine_id: number; medicine_name: string; qty: number; unit_price: number }) => ({
+        sale_id: sale.id, medicine_id: it.medicine_id, medicine_name: it.medicine_name,
+        qty: it.qty, unit_price: it.unit_price, unit_cost: 0,
+      })))
+      .select();
+    if (itemsError || !insertedItems) {
       await supabaseAdmin.from("pharmacy_sales").delete().eq("id", sale.id);
-      return NextResponse.json({ error: `فشل حفظ بنود البيع: ${itemsError.message}` }, { status: 400 });
+      return NextResponse.json({ error: `فشل حفظ بنود البيع: ${itemsError?.message}` }, { status: 400 });
     }
 
-    // 3. تخفيض المخزون لكل دواء (عملية atomic تمنع تعارض العمليات المتزامنة)
+    // 3. صرف كل بند حسب FEFO (الأقرب انتهاءً أولاً) عبر دالة ذرية، وتحديث التكلفة الفعلية للربح
     const stockErrors: string[] = [];
-    for (const it of items) {
-      const { error: rpcError } = await supabaseAdmin.rpc("adjust_medicine_stock", {
-        p_id: it.medicine_id, p_user_id: user_id, p_delta: -it.qty,
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const si = insertedItems[i];
+      const { data: fefo, error: rpcError } = await supabaseAdmin.rpc("dispense_fefo", {
+        p_medicine_id: it.medicine_id, p_user_id: user_id, p_qty: it.qty, p_sale_item_id: si.id,
       });
-      if (rpcError) stockErrors.push(it.medicine_name || String(it.medicine_id));
+      if (rpcError) {
+        stockErrors.push(it.medicine_name || String(it.medicine_id));
+      } else {
+        const unitCost = fefo?.[0]?.avg_unit_cost ?? 0;
+        await supabaseAdmin.from("pharmacy_sale_items").update({ unit_cost: unitCost }).eq("id", si.id);
+      }
     }
     if (stockErrors.length > 0) {
       // تراجع عن عملية البيع لأن المخزون لم يعد كافيًا وقت التنفيذ الفعلي

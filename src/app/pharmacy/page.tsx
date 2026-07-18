@@ -24,10 +24,11 @@ type UserRole = "pharmacist"|"manager"|"doctor";
 
 type User = { id:number; name_ar:string; name_en:string; role:UserRole; username:string; password:string; avatar:string };
 type Supplier = { id:number; name:string; contact:string; phone:string; email:string; address:string; balance:number };
-type PurchItem = { medicine_id:number; medicine_name:string; qty:number; unit_price:number };
+type PurchItem = { medicine_id:number; medicine_name:string; qty:number; unit_price:number; expiry_date?:string; batch_no?:string };
 type PurchInvoice = { id:number; supplier_id:number; supplier_name:string; date:string; items:PurchItem[]; total:number; paid:number; status:"paid"|"partial"|"pending"; notes?:string; created_by:string };
 type StockLog = { id:number; medicine_id:number; medicine_name:string; type:"in"|"out"|"sale"|"purchase"|"adjustment"; qty:number; date:string; user:string; ref?:string; notes?:string };
-type Medicine = { id:number; name_ar:string; name_en:string; category:MedCat; barcode:string; unit:string; purchase_price:number; sell_price:number; stock:number; min_stock:number; expiry_date?:string; manufacturer?:string; avg_cost?:number };
+type Batch = { id:number; medicine_id:number; batch_no?:string|null; expiry_date?:string|null; qty:number; unit_cost:number; received_date?:string; invoice_id?:number|null };
+type Medicine = { id:number; name_ar:string; name_en:string; category:MedCat; barcode:string; unit:string; purchase_price:number; sell_price:number; stock:number; min_stock:number; expiry_date?:string; manufacturer?:string; avg_cost?:number; batches?:Batch[]; nearest_expiry?:string|null };
 type RxItem = { medicine_name:string; dosage:string; duration:string; instructions:string };
 type Prescription = { id:string; mrn:string; patient_name:string; doctor_name:string; doctor_id:number; created_at:string; items:RxItem[]; notes?:string; dispensed:boolean; dispensed_at?:string; dispensed_by?:string };
 type SaleItem = { id?:number; medicine_id:number; medicine_name:string; qty:number; unit_price:number; returned_qty?:number };
@@ -53,8 +54,10 @@ const ROLE:{[k:string]:{ar:string;en:string;color:string;tabs:string[]}} = {
   doctor:    {ar:"طبيب",   en:"Doctor",    color:"#27ae60",tabs:["prescriptions","alerts"]},
 };
 
-const isSoon = (d?:string) => { if(!d) return false; const x=new Date(); x.setDate(x.getDate()+30); return new Date(d)<=x; };
-const isExp  = (d?:string) => { if(!d) return false; return new Date(d)<new Date(); };
+const isSoon = (d?:string|null) => { if(!d) return false; const x=new Date(); x.setDate(x.getDate()+30); return new Date(d)<=x; };
+const isExp  = (d?:string|null) => { if(!d) return false; return new Date(d)<new Date(); };
+// الصلاحية الفعلية: أقرب دفعة انتهاءً إن وُجدت، وإلا الحقل القديم (توافق رجعي)
+const medExpiry = (m:Medicine):string|null => m.nearest_expiry ?? m.expiry_date ?? null;
 
 // ── مكوّنات مساعدة صغيرة ─────────────────────────────────────
 function SBadge({s,m,lang}:{s:number;m:number;lang:Lang}) {
@@ -474,16 +477,28 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
               <div style={{display:"flex",alignItems:"center",gap:8,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:10,padding:"9px 12px"}}><span>💊</span><input value={iMedQ} onChange={e=>setIMedQ(e.target.value)} placeholder={isAr?"أضف دواء...":"Add medicine..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/></div>
               {iMedRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.12)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:4}}>{iMedRes.map(m=>(<div key={m.id} onClick={()=>addII(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{color:"#888",fontSize:11}}>{m.purchase_price} {isAr?"ر.س":"SAR"}</span></div>))}</div>}
             </div>
-            {iItems.length>0&&<div style={{background:"#f7f9fc",borderRadius:12,padding:"11px",marginBottom:12}}>{iItems.map((it,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:i<iItems.length-1?7:0}}>
-              <div style={{flex:1,fontSize:12,fontWeight:600,color:"#353535"}}>{it.medicine_name}</div>
-              <div style={{display:"flex",alignItems:"center",gap:4}}>
-                <button onClick={()=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:6,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>-</button>
-                <span style={{fontSize:13,fontWeight:700,minWidth:28,textAlign:"center"}}>{it.qty}</span>
-                <button onClick={()=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:6,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            {iItems.length>0&&<div style={{background:"#f7f9fc",borderRadius:12,padding:"11px",marginBottom:12}}>{iItems.map((it,i)=>(<div key={i} style={{marginBottom:i<iItems.length-1?10:0,paddingBottom:i<iItems.length-1?10:0,borderBottom:i<iItems.length-1?"1px solid #eef0f3":"none"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{flex:1,fontSize:12,fontWeight:600,color:"#353535"}}>{it.medicine_name}</div>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <button onClick={()=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,qty:Math.max(1,x.qty-1)}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:6,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>-</button>
+                  <span style={{fontSize:13,fontWeight:700,minWidth:28,textAlign:"center"}}>{it.qty}</span>
+                  <button onClick={()=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,qty:x.qty+1}:x))} style={{width:24,height:24,border:"1.5px solid #d0e4f7",borderRadius:6,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                </div>
+                <input type="number" min={0} value={it.unit_price} onChange={e=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,unit_price:Number(e.target.value)}:x))} style={{width:65,padding:"4px 8px",border:"1.5px solid #e0e7ef",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",textAlign:"center"}}/>
+                <span style={{fontSize:11,color:"#27ae60",fontWeight:700,minWidth:55,textAlign:"center"}}>{(it.qty*it.unit_price).toFixed(0)}</span>
+                <button onClick={()=>setIItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:15}}>✕</button>
               </div>
-              <input type="number" min={0} value={it.unit_price} onChange={e=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,unit_price:Number(e.target.value)}:x))} style={{width:65,padding:"4px 8px",border:"1.5px solid #e0e7ef",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:12,outline:"none",textAlign:"center"}}/>
-              <span style={{fontSize:11,color:"#27ae60",fontWeight:700,minWidth:55,textAlign:"center"}}>{(it.qty*it.unit_price).toFixed(0)}</span>
-              <button onClick={()=>setIItems(p=>p.filter((_,xi)=>xi!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:15}}>✕</button>
+              <div style={{display:"flex",gap:8,marginTop:6,paddingRight:2}}>
+                <div style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
+                  <label style={{fontSize:9,color:"#aaa",fontWeight:600}}>{isAr?"تاريخ الانتهاء":"Expiry"}</label>
+                  <input type="date" value={it.expiry_date||""} onChange={e=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,expiry_date:e.target.value}:x))} style={{padding:"4px 6px",border:"1.5px solid #e0e7ef",borderRadius:7,fontFamily:"'Rubik',sans-serif",fontSize:11,outline:"none"}}/>
+                </div>
+                <div style={{flex:1,display:"flex",flexDirection:"column",gap:2}}>
+                  <label style={{fontSize:9,color:"#aaa",fontWeight:600}}>{isAr?"رقم الدفعة (اختياري)":"Batch no."}</label>
+                  <input value={it.batch_no||""} onChange={e=>setIItems(p=>p.map((x,xi)=>xi===i?{...x,batch_no:e.target.value}:x))} placeholder={isAr?"مثال: L2024A":"e.g. L2024A"} style={{padding:"4px 6px",border:"1.5px solid #e0e7ef",borderRadius:7,fontFamily:"'Rubik',sans-serif",fontSize:11,outline:"none",direction:isAr?"rtl":"ltr"}}/>
+                </div>
+              </div>
             </div>))}</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
               <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المدفوع":"Paid"}</label><input type="number" min={0} max={iTotal} value={iPaid} onChange={e=>setIPaid(Number(e.target.value))} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
@@ -651,10 +666,10 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
         </div>
         {filtered.length===0?(<div style={{textAlign:"center",padding:"36px",color:"#ccc"}}><div style={{fontSize:30,marginBottom:7}}>📦</div><div>{isAr?"لا نتائج":"No results"}</div></div>)
         :filtered.map(m=>{
-          const cat=CAT[m.category]; const expired=isExp(m.expiry_date); const lit=litId===m.id;
+          const cat=CAT[m.category]; const expired=isExp(medExpiry(m)); const lit=litId===m.id;
           return (
             <div key={m.id} className="inv-row" style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 1fr .9fr 190px",padding:"14px 20px",alignItems:"center",borderBottom:"1px solid #f0f2f5",background:lit?"rgba(8,99,186,.07)":expired?"rgba(231,76,60,.025)":"",outline:lit?"2px solid #0863ba":"none",transition:"all .2s"}}>
-              <div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div>{m.manufacturer&&<div style={{fontSize:10,color:"#bbb",marginTop:1}}>{m.manufacturer}</div>}{expired&&<div style={{fontSize:10,color:"#e74c3c",fontWeight:700}}>🚫 {isAr?"منتهي":"EXPIRED"}</div>}</div>
+              <div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div>{m.manufacturer&&<div style={{fontSize:10,color:"#bbb",marginTop:1}}>{m.manufacturer}</div>}{expired&&<div style={{fontSize:10,color:"#e74c3c",fontWeight:700}}>🚫 {isAr?"منتهي":"EXPIRED"}</div>}{!expired&&medExpiry(m)&&<div style={{fontSize:10,color:isSoon(medExpiry(m))?"#e67e22":"#aaa",fontWeight:isSoon(medExpiry(m))?700:400,marginTop:1}}>{isSoon(medExpiry(m))?"⏳ ":"📅 "}{isAr?"أقرب انتهاء":"Exp"}: {medExpiry(m)}{m.batches&&m.batches.length>1?` · ${m.batches.length} ${isAr?"دفعات":"batches"}`:""}</div>}</div>
               <div><div style={{background:"#f7f9fc",borderRadius:7,padding:"2px 7px",border:"1px solid #e8ecf0",display:"inline-flex"}}><span style={{fontSize:10,color:"#0863ba",fontFamily:"monospace",letterSpacing:.7}}>{m.barcode}</span></div></div>
               <div><span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{cat.icon} {isAr?cat.ar:cat.en}</span></div>
               <div style={{fontSize:13,fontWeight:700,color:"#2e7d32"}}>{m.sell_price}<span style={{fontSize:10,color:"#aaa",fontWeight:400}}> {isAr?"ر.س":"SAR"}</span></div>
@@ -673,7 +688,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
 
       {/* كروت موبايل */}
       <div className="mobile-cards" style={{display:"none"}}>
-        {filtered.map(m=>{const cat=CAT[m.category];const lit=litId===m.id;const expired=isExp(m.expiry_date);return(
+        {filtered.map(m=>{const cat=CAT[m.category];const lit=litId===m.id;const expired=isExp(medExpiry(m));return(
           <div key={m.id} style={{background:lit?"rgba(8,99,186,.05)":"#fff",borderRadius:14,padding:"14px",border:`1.5px solid ${lit?"#0863ba":expired?"rgba(231,76,60,.3)":"#eef0f3"}`,marginBottom:9,boxShadow:"0 2px 9px rgba(8,99,186,.05)",transition:"all .2s"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}><div><div style={{fontSize:14,fontWeight:700,color:"#353535"}}>{isAr?m.name_ar:m.name_en}</div><span style={{fontSize:10,fontWeight:600,padding:"1px 8px",borderRadius:20,background:`${cat.color}15`,color:cat.color}}>{cat.icon} {isAr?cat.ar:cat.en}</span></div><SBadge s={m.stock} m={m.min_stock} lang={lang}/></div>
             <div style={{background:"#f7f9fc",borderRadius:9,padding:"6px 10px",marginBottom:7,display:"flex",alignItems:"center",gap:8}}><BarcodeSVG code={m.barcode} w={90} h={30}/><span style={{fontFamily:"monospace",fontSize:9,color:"#0863ba",letterSpacing:.7}}>{m.barcode}</span></div>
@@ -681,6 +696,18 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
               <div style={{background:"#f7f9fc",borderRadius:8,padding:"7px",textAlign:"center"}}><div style={{fontSize:10,color:"#aaa",marginBottom:2}}>{isAr?"سعر البيع":"Price"}</div><div style={{fontSize:14,fontWeight:700,color:"#2e7d32"}}>{m.sell_price}</div></div>
               <div style={{background:"#f7f9fc",borderRadius:8,padding:"7px",textAlign:"center"}}><div style={{fontSize:10,color:"#aaa",marginBottom:2}}>{isAr?"المخزون":"Stock"}</div><div style={{fontSize:14,fontWeight:700,color:m.stock<m.min_stock?"#e67e22":"#353535"}}>{m.stock}</div></div>
             </div>
+            {m.batches&&m.batches.length>0&&(
+              <div style={{background:"#fafbfd",borderRadius:9,padding:"7px 9px",marginBottom:9,border:"1px solid #eef0f3"}}>
+                <div style={{fontSize:10,color:"#888",fontWeight:700,marginBottom:5}}>{isAr?`الدفعات (${m.batches.length})`:`Batches (${m.batches.length})`}</div>
+                {m.batches.slice().sort((a,b)=>(a.expiry_date||"9999").localeCompare(b.expiry_date||"9999")).map(b=>(
+                  <div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10,padding:"2px 0",color:"#666"}}>
+                    <span>{b.batch_no?`#${b.batch_no}`:(isAr?"—":"—")}</span>
+                    <span style={{color:isExp(b.expiry_date)?"#e74c3c":isSoon(b.expiry_date)?"#e67e22":"#999"}}>{b.expiry_date||(isAr?"بلا صلاحية":"no exp")}</span>
+                    <span style={{fontWeight:700,color:"#353535"}}>{b.qty} {isAr?m.unit:"u"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{display:"flex",gap:5}}>
               <button onClick={()=>setAdj({med:m,mode:"in"})} style={{flex:1,padding:"7px",border:"1.5px solid rgba(39,174,96,.3)",borderRadius:9,background:"rgba(39,174,96,.07)",color:"#27ae60",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>📥</button>
               <button onClick={()=>setAdj({med:m,mode:"out"})} style={{flex:1,padding:"7px",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:9,background:"rgba(230,126,34,.07)",color:"#e67e22",fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>📤</button>
@@ -1105,7 +1132,7 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:11,marginBottom:15}}>
-        {[{l:isAr?"إجمالي المبيعات":"Total Sales",v:`${totalRev} ${isAr?"ر.س":"SAR"}`,ic:"💰",c:"#0863ba",bg:"rgba(8,99,186,.08)"},{l:isAr?"صافي الربح (WAC)":"Net Profit (WAC)",v:totalProfit===null?(isAr?"...":"..."):`${totalProfit.toFixed(0)} ${isAr?"ر.س":"SAR"}`,ic:"📈",c:"#27ae60",bg:"rgba(39,174,96,.08)"},{l:isAr?"مخزون منخفض":"Low Stock",v:medicines.filter(m=>m.stock<m.min_stock).length,ic:"⚠️",c:"#e67e22",bg:"rgba(230,126,34,.08)"},{l:isAr?"منتهية الصلاحية":"Expired",v:medicines.filter(m=>isExp(m.expiry_date)).length,ic:"🚫",c:"#e74c3c",bg:"rgba(231,76,60,.08)"}].map((s,i)=>(
+        {[{l:isAr?"إجمالي المبيعات":"Total Sales",v:`${totalRev} ${isAr?"ر.س":"SAR"}`,ic:"💰",c:"#0863ba",bg:"rgba(8,99,186,.08)"},{l:isAr?"صافي الربح (WAC)":"Net Profit (WAC)",v:totalProfit===null?(isAr?"...":"..."):`${totalProfit.toFixed(0)} ${isAr?"ر.س":"SAR"}`,ic:"📈",c:"#27ae60",bg:"rgba(39,174,96,.08)"},{l:isAr?"مخزون منخفض":"Low Stock",v:medicines.filter(m=>m.stock<m.min_stock).length,ic:"⚠️",c:"#e67e22",bg:"rgba(230,126,34,.08)"},{l:isAr?"منتهية الصلاحية":"Expired",v:medicines.filter(m=>isExp(medExpiry(m))).length,ic:"🚫",c:"#e74c3c",bg:"rgba(231,76,60,.08)"}].map((s,i)=>(
           <div key={i} style={{background:s.bg,borderRadius:13,padding:"15px",border:`1.5px solid ${s.c}25`}}><div style={{fontSize:22,marginBottom:5}}>{s.ic}</div><div style={{fontSize:20,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div><div style={{fontSize:11,color:s.c,opacity:.7,marginTop:3,fontWeight:600}}>{s.l}</div></div>
         ))}
       </div>
@@ -1231,7 +1258,7 @@ export default function PharmacyPage() {
     medicines.forEach(m=>{
       if(m.stock===0) list.push({id:m.id*10,type:"out_of_stock",medicine_id:m.id,medicine_name:m.name_ar,detail:isAr?`نفد مخزون ${m.name_ar}`:`${m.name_en} out of stock`,date:today,read:alertsRead.has(m.id*10)});
       else if(m.stock<m.min_stock) list.push({id:m.id*10+1,type:"low_stock",medicine_id:m.id,medicine_name:m.name_ar,detail:isAr?`المخزون ${m.stock} / الحد ${m.min_stock}`:`Stock ${m.stock} / Min ${m.min_stock}`,date:today,read:alertsRead.has(m.id*10+1)});
-      if(isSoon(m.expiry_date)) list.push({id:m.id*10+2,type:"expiring",medicine_id:m.id,medicine_name:m.name_ar,detail:isAr?`ينتهي في ${m.expiry_date}`:`Expires ${m.expiry_date}`,date:today,read:alertsRead.has(m.id*10+2)});
+      if(isSoon(medExpiry(m))) list.push({id:m.id*10+2,type:"expiring",medicine_id:m.id,medicine_name:m.name_ar,detail:isAr?`ينتهي في ${medExpiry(m)}`:`Expires ${medExpiry(m)}`,date:today,read:alertsRead.has(m.id*10+2)});
     });
     return list;
   },[medicines,lang,alertsRead]);
@@ -1377,7 +1404,7 @@ export default function PharmacyPage() {
                 {activeTab==="prescriptions"&&<PrescriptionsTab lang={lang} prescriptions={prescriptions} setPrescriptions={setPrescriptions} currentUser={currentUser} addLog={addLog} medicines={medicines} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="sales"        &&<SalesTab         lang={lang} medicines={medicines} sales={sales} setSales={setSales} barcodeMode={barcodeMode} setBarcodeMode={setBarcodeMode} showNotif={showNotif} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
                 {activeTab==="suppliers"    &&<SuppliersTab     lang={lang} medicines={medicines} suppliers={suppliers} setSuppliers={setSuppliers} invoices={invoices} setInvoices={setInvoices} setMedicines={setMedicines} currentUser={currentUser} addLog={addLog} userId={supabaseUserId} onRefresh={()=>supabaseUserId&&loadData(supabaseUserId)}/>}
-                {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={userId} currentUser={currentUser}/>}
+                {activeTab==="reports"      &&<ReportsTab       lang={lang} medicines={medicines} sales={sales} userId={supabaseUserId} currentUser={currentUser}/>}
                 {activeTab==="alerts"       &&<AlertsTab        lang={lang} medicines={medicines} alerts={alerts} markAll={markAll} markOne={markOne}/>}
               </>
             )}
