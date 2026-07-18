@@ -897,6 +897,7 @@ export default function SharedSidebar({
           borderBottom: `1px solid ${SB_BORDER}`,
           background: "rgba(255,255,255,0.04)",
           backdropFilter: "blur(4px)",
+          position: "relative", zIndex: 20,
           display: "flex", alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
           minHeight: 72,
@@ -937,7 +938,7 @@ export default function SharedSidebar({
         </div>
 
         {/* ── Nav items ── */}
-        <nav style={{ flex: 1, padding: collapsed ? "16px 10px" : "14px 12px", overflowY: "auto" }}>
+        <nav style={{ flex: 1, padding: collapsed ? "16px 10px" : "14px 12px", overflowY: "auto", position: "relative", zIndex: 1 }}>
           {allNavItems.map(item => renderSidebarItem(item))}
 
           <div style={{ height: 1, background: SB_BORDER, margin: "10px 4px" }} />
