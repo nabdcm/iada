@@ -2044,6 +2044,11 @@ export default function PharmacyPage() {
   useEffect(()=>{
     if(!remoteScan) return;
     if(remoteScan.device==="cam-live") return; // كاميرا البيع المستمرة: تضاف مباشرة بدون بطاقة
+    // أوضاع تفاعلية: إدخال/إخراج/بيع — تُعالج مباشرة في التبويب النشط بدون إظهار البطاقة
+    if(["stock_in","stock_out","sale"].includes(remoteScan.mode)||barcodeMode==="stock_in"||barcodeMode==="stock_out"||(activeTab==="sales"&&barcodeMode==="sale")){
+      const known=medicines.some(m=>m.barcode===remoteScan.code);
+      if(known) return; // معروف → نافذة الكمية/السلة تتولى الأمر
+    }
     const med=medicines.find(m=>m.barcode===remoteScan.code)||null;
     setScanCard({code:remoteScan.code,med});
     // eslint-disable-next-line react-hooks/exhaustive-deps
