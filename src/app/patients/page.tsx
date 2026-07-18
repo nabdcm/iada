@@ -1860,19 +1860,21 @@ export default function PatientsPage() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
         .main-anim{animation:fadeUp .4s ease both}
-        .patient-row{transition:background .15s;border-bottom:1px solid #f0f2f5}
+        .patient-row{transition:background .15s;border-bottom:1px solid #f2f6fa}
         .patient-row:last-child{border-bottom:none}
-        .patient-row:hover{background:#fafbff}
-        .action-icon-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
-        .action-icon-btn:hover{border-color:#a4c4e4;background:rgba(8,99,186,.06)}
-        .filter-chip{padding:8px 14px;border-radius:20px;border:1.5px solid #eef0f3;background:#fff;cursor:pointer;font-size:13px;font-family:'Rubik',sans-serif;font-weight:500;color:#888;transition:all .2s;white-space:nowrap;flex-shrink:0}
-        .filter-chip.active{background:#0863ba;color:#fff;border-color:#0863ba}
+        .patient-row:hover{background:#f6faff}
+        .action-icon-btn{width:33px;height:33px;border-radius:10px;border:1.5px solid #e6edf5;background:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .18s}
+        .action-icon-btn:hover{border-color:#0863ba55;background:rgba(8,99,186,.07);transform:translateY(-1px)}
+        .hero-refresh:hover{background:rgba(255,255,255,.24)!important}
+        .desktop-add-btn:hover:not([style*="not-allowed"]){transform:translateY(-2px)}
+        .filter-chip{padding:8px 16px;border-radius:20px;border:1.5px solid #e6edf5;background:#fff;cursor:pointer;font-size:13px;font-family:'Rubik',sans-serif;font-weight:600;color:#8a97a6;transition:all .2s;white-space:nowrap;flex-shrink:0}
+        .filter-chip.active{background:linear-gradient(135deg,#0863ba,#3d8fd6);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(8,99,186,.3)}
         .filter-chip:hover:not(.active){border-color:#a4c4e4;color:#0863ba}
         .dropdown-menu{position:absolute;top:calc(100% + 6px);${isAr?"left:0":"right:0"};background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);border:1.5px solid #eef0f3;min-width:160px;z-index:9999;overflow:hidden;animation:modalIn .18s ease}
         .dropdown-item{padding:10px 16px;font-size:13px;color:#555;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .12s;font-family:'Rubik',sans-serif}
         .dropdown-item:hover{background:#f7f9fc}
         .dropdown-item.danger:hover{background:rgba(192,57,43,.06);color:#c0392b}
-        .stat-mini{background:#fff;border-radius:14px;padding:16px;border:1.5px solid #eef0f3;box-shadow:0 2px 10px rgba(8,99,186,.05)}
+        .stat-mini{background:#fff;border-radius:18px;padding:18px 20px;border:1.5px solid #e6edf5;box-shadow:0 4px 20px rgba(8,99,186,.06)}
         @media(max-width:768px){
           .fab-add{display:flex!important}
           .desktop-add-btn{display:none!important}
@@ -1885,8 +1887,9 @@ export default function PatientsPage() {
           .stat-label{font-size:10px!important}
           .stats-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-bottom:14px!important}
           .page-sub{display:none!important}
-          .page-title{font-size:17px!important}
-          .topbar-inner{padding-right:${isAr?"56px":"8px"}!important;padding-left:${isAr?"8px":"56px"}!important}
+          .page-title{font-size:18px!important}
+          .hero-card{margin:14px 0 16px!important;padding:16px 16px!important;border-radius:18px!important}
+          .hero-inner{gap:10px!important}
           .main-content{margin-right:0!important;margin-left:0!important;padding:0 0 100px!important}
           .content-padding{padding:16px 14px 0!important}
           .search-filter-box{padding:12px 14px!important}
@@ -1907,18 +1910,20 @@ export default function PatientsPage() {
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 
-          {/* TOP BAR */}
-          <div className="topbar-pad" style={{ position:"sticky",top:0,zIndex:30,background:"rgba(247,249,252,.97)",backdropFilter:"blur(12px)",padding:"16px 0",borderBottom:"1.5px solid #eef0f3" }}>
-            <div className="topbar-inner" style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-              <div style={{ flex:1 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                  <h1 className="page-title" style={{ fontSize:22,fontWeight:800,color:"#353535" }}>{tr.page.title}</h1>
-                  <span style={{ fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,background:`${clinicMeta.color}15`,color:clinicMeta.color }}>{clinicMeta.icon} {isAr?clinicMeta.ar:clinicMeta.en}</span>
+          {/* ─── HERO HEADER ─── */}
+          <div className="hero-card" style={{ margin:"20px 0 24px",background:`linear-gradient(120deg, #054a8c 0%, #0863ba 55%, ${clinicMeta.color} 130%)`,borderRadius:24,padding:"24px 28px",position:"relative",overflow:"hidden",boxShadow:"0 12px 36px rgba(8,99,186,.26)" }}>
+            <div style={{ position:"absolute",top:-60,insetInlineEnd:-40,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,.07)" }}/>
+            <div style={{ position:"absolute",bottom:-80,insetInlineEnd:130,width:170,height:170,borderRadius:"50%",background:"rgba(255,255,255,.05)" }}/>
+            <div className="hero-inner" style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap" }}>
+              <div>
+                <div style={{ display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" }}>
+                  <h1 className="page-title" style={{ fontSize:23,fontWeight:800,color:"#fff" }}>{tr.page.title}</h1>
+                  <span style={{ fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:20,background:"rgba(255,255,255,.16)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",backdropFilter:"blur(4px)" }}>{clinicMeta.icon} {isAr?clinicMeta.ar:clinicMeta.en}</span>
                 </div>
-                <p className="page-sub" style={{ fontSize:13,color:"#aaa",marginTop:2 }}>{tr.page.sub}</p>
+                <p className="page-sub" style={{ fontSize:12.5,color:"rgba(255,255,255,.85)",marginTop:5,fontWeight:500 }}>{tr.page.sub}</p>
               </div>
               <div style={{ display:"flex",gap:10,alignItems:"center" }}>
-                <button onClick={()=>loadPatients(0)} title={isAr?"تحديث":"Refresh"} style={{ display:"flex",alignItems:"center",gap:6,padding:"10px 16px",background:"#fff",color:"#0863ba",border:"1.5px solid #d0e4f7",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}>
+                <button onClick={()=>loadPatients(0)} title={isAr?"تحديث":"Refresh"} className="hero-refresh" style={{ display:"flex",alignItems:"center",gap:6,padding:"10px 16px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",backdropFilter:"blur(4px)",transition:"all .2s" }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                   <span className="refresh-btn-text">{isAr?"تحديث":"Refresh"}</span>
                 </button>
@@ -1930,7 +1935,7 @@ export default function PatientsPage() {
                     <button className="desktop-add-btn"
                       onClick={()=>{ if (!full) setAddModal(true); }}
                       title={full ? (isAr?"وصلت للحد الأقصى، قم بترقية خطتك":"Limit reached, upgrade your plan") : undefined}
-                      style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:full?"#ccc":clinicMeta.color,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:full?"not-allowed":"pointer",boxShadow:full?"none":`0 4px 16px ${clinicMeta.color}40`,opacity:full?0.7:1,transition:"all .2s" }}>
+                      style={{ display:"flex",alignItems:"center",gap:8,padding:"11px 22px",background:full?"rgba(255,255,255,.3)":"#fff",color:full?"rgba(255,255,255,.7)":"#0863ba",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:800,cursor:full?"not-allowed":"pointer",boxShadow:full?"none":"0 6px 18px rgba(0,0,0,.18)",transition:"all .2s" }}>
                       <span style={{ fontSize:18,lineHeight:1 }}>＋</span> {tr.addPatient}
                     </button>
                   );
@@ -1941,30 +1946,7 @@ export default function PatientsPage() {
 
           <div className="content-padding" style={{ padding:"28px 0 0" }}>
 
-            {/* ── بانر العيادة المشتركة — يظهر فقط للخطط المشتركة ── */}
-            {isSharedPlan(plan) && (
-              <div style={{ background:"rgba(14,138,110,.06)", border:"1.5px solid rgba(14,138,110,.2)", borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ fontSize:28, flexShrink:0 }}><AppIcon glyph="🏥" /></div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#0e8a6e", marginBottom:2 }}>
-                    {isAr ? "عيادة مشتركة متعددة الأطباء" : "Multi-Doctor Shared Clinic"}
-                  </div>
-                  <div style={{ fontSize:11, color:"#888" }}>
-                    {isAr ? `خطتك تدعم حتى ${maxDoctors} أطباء` : `Your plan supports up to ${maxDoctors} doctors`}
-                  </div>
-                </div>
-                <div style={{ textAlign:"center", flexShrink:0 }}>
-                  <div style={{ fontSize:18, fontWeight:800, color:"#0e8a6e" }}>{doctors.length}</div>
-                  <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"طبيب نشط":"active drs"}</div>
-                </div>
-                <div style={{ textAlign:"center", flexShrink:0, paddingLeft:12, borderLeft:"1px solid rgba(0,0,0,0.08)" }}>
-                  <div style={{ fontSize:18, fontWeight:800, color:"#0e8a6e" }}>{maxDoctors}</div>
-                  <div style={{ fontSize:10, color:"#aaa" }}>{isAr?"الحد الأقصى":"max drs"}</div>
-                </div>
-              </div>
-            )}
-
-            {/* ── شريط حد المرضى ── */}
+            {/* ── عداد حد المرضى v2 ── */}
             {(() => {
               const limit = PLAN_LIMITS[plan];
               const count = patients.filter(p=>!p.is_hidden).length;
@@ -1972,44 +1954,52 @@ export default function PatientsPage() {
               const pct = Math.min((count/limit)*100, 100);
               const near = pct >= 80;
               const full = count >= limit;
-              const barColor = full ? "#c0392b" : near ? "#e67e22" : "#2e7d32";
+              const barColor = full ? "#c0392b" : near ? "#e67e22" : "#0863ba";
               return (
-                <div style={{ background:full?"rgba(192,57,43,.06)":near?"rgba(230,126,34,.06)":"rgba(46,125,50,.06)", border:`1.5px solid ${barColor}30`, borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:14 }}>
+                <div style={{ background:"#fff", border:"1.5px solid #e6edf5", borderRadius:18, padding:"16px 22px", marginBottom:20, display:"flex", alignItems:"center", gap:18, boxShadow:"0 4px 20px rgba(8,99,186,.06)", position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:`linear-gradient(90deg, ${barColor}, ${barColor}55)` }}/>
+                  <div style={{ width:48,height:48,borderRadius:14,background:`${barColor}12`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={barColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
                   <div style={{ flex:1 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                      <span style={{ fontSize:12, fontWeight:700, color:barColor }}>
-                        {full ? (isAr?"وصلت إلى الحد الأقصى للمرضى":"Patient limit reached") : near ? (isAr?"اقتربت من الحد الأقصى":"Approaching patient limit") : (isAr?"المرضى المسجلون":"Registered Patients")}
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                      <span style={{ fontSize:13, fontWeight:800, color:"#1c2b3a" }}>
+                        {full ? (isAr?"وصلت إلى الحد الأقصى للمرضى":"Patient limit reached") : near ? (isAr?"اقتربت من الحد الأقصى":"Approaching patient limit") : (isAr?"عداد المرضى":"Patient Counter")}
                       </span>
-                      <span style={{ fontSize:12, fontWeight:700, color:barColor }}>{count} / {limit}</span>
+                      <span style={{ fontSize:13, fontWeight:800, color:barColor, fontVariantNumeric:"tabular-nums", background:`${barColor}10`, padding:"3px 12px", borderRadius:20 }}>{count} / {limit}</span>
                     </div>
-                    <div style={{ height:6, background:"rgba(0,0,0,0.08)", borderRadius:10, overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:`${pct}%`, background:barColor, borderRadius:10, transition:"width .4s" }}/>
+                    <div style={{ height:7, background:"#f0f5fa", borderRadius:10, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${barColor}, ${barColor}99)`, borderRadius:10, transition:"width .6s cubic-bezier(.4,0,.2,1)" }}/>
                     </div>
-                    {full && <p style={{ fontSize:11, color:"#c0392b", marginTop:6, fontWeight:600 }}>{isAr?"قم بترقية خطتك لإضافة المزيد من المرضى":"Upgrade your plan to add more patients"}</p>}
+                    {full && <p style={{ fontSize:11, color:"#c0392b", marginTop:7, fontWeight:600 }}>{isAr?"قم بترقية خطتك لإضافة المزيد من المرضى":"Upgrade your plan to add more patients"}</p>}
                   </div>
                 </div>
               );
             })()}
-            {/* STATS */}
-            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:28 }}>
+            {/* STATS v2 */}
+            <div className="stats-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24 }}>
               {[
-                { label:tr.stats.total,    value:stats.total,    icon:"👥", color:clinicMeta.color },
-                { label:tr.stats.male,     value:stats.male,     icon:"👨", color:"#2980b9" },
-                { label:tr.stats.female,   value:stats.female,   icon:"👩", color:"#8e44ad" },
-                { label:tr.stats.newMonth, value:stats.newMonth, icon:"✨", color:"#0863ba" },
-              ].map((s,i)=>(
-                <div key={i} className="stat-mini" style={{ animationDelay:`${i*60}ms`,animation:"fadeUp .4s ease both" }}>
-                  <div className="stat-icon" style={{ width:36,height:36,borderRadius:9,background:`${s.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}><AppIcon glyph={s.icon} /></div>
-                  <div className="stat-value" style={{ fontSize:26,fontWeight:800,color:s.color,lineHeight:1 }}>{s.value}</div>
-                  <div className="stat-label" style={{ fontSize:12,color:"#aaa",marginTop:4,fontWeight:500 }}>{s.label}</div>
+                { label:tr.stats.total,    value:stats.total,    color:clinicMeta.color,
+                  svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={clinicMeta.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+                { label:tr.stats.male,     value:stats.male,     color:"#2980b9",
+                  svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2980b9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="14" r="6"/><path d="M21 3l-6.5 6.5M15 3h6v6"/></svg> },
+                { label:tr.stats.female,   value:stats.female,   color:"#8e44ad",
+                  svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e44ad" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="9" r="6"/><path d="M12 15v7M9 19h6"/></svg> },
+                { label:tr.stats.newMonth, value:stats.newMonth, color:"#16a085",
+                  svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a085" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg> },
+              ].map((c,i)=>(
+                <div key={i} className="stat-mini" style={{ animationDelay:`${i*70}ms`,animation:"fadeUp .45s ease both",position:"relative",overflow:"hidden" }}>
+                  <div style={{ position:"absolute",top:0,insetInlineStart:0,width:"100%",height:4,background:`linear-gradient(90deg, ${c.color}, ${c.color}55)` }}/>
+                  <div className="stat-icon" style={{ width:42,height:42,borderRadius:12,background:`${c.color}12`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:12 }}>{c.svg}</div>
+                  <div className="stat-value" style={{ fontSize:27,fontWeight:800,color:"#1c2b3a",lineHeight:1,fontVariantNumeric:"tabular-nums" }}>{c.value}</div>
+                  <div className="stat-label" style={{ fontSize:12,color:"#8a97a6",marginTop:6,fontWeight:600 }}>{c.label}</div>
                 </div>
               ))}
             </div>
 
-
             {/* SEARCH + FILTERS */}
-            <div className="search-filter-box" style={{ background:"#fff",borderRadius:14,padding:"18px 20px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 10px rgba(8,99,186,.05)",marginBottom:16 }}>
-              <div style={{ display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"10px 14px",marginBottom:10 }}>
+            <div className="search-filter-box" style={{ background:"#fff",borderRadius:18,padding:"18px 20px",border:"1.5px solid #e6edf5",boxShadow:"0 4px 20px rgba(8,99,186,.06)",marginBottom:18 }}>
+              <div style={{ display:"flex",alignItems:"center",gap:10,background:"#f4f8fc",border:"1.5px solid #e6edf5",borderRadius:12,padding:"11px 15px",marginBottom:12 }}>
                 <span style={{ color:"#bbb",fontSize:15 }}><AppIcon glyph="🔍" /></span>
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr.search}
                   style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:"100%",direction:isAr?"rtl":"ltr" }}/>
@@ -2048,8 +2038,8 @@ export default function PatientsPage() {
 
             {/* DESKTOP TABLE */}
             <div className="desktop-table">
-              <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.06)",overflow:"hidden" }}>
-                <div style={{ display:"grid",gridTemplateColumns:"200px 130px 90px 140px 1fr",gap:0,padding:"12px 20px",background:"#f9fafb",borderRadius:"16px 16px 0 0",borderBottom:"1.5px solid #eef0f3" }}>
+              <div style={{ background:"#fff",borderRadius:20,border:"1.5px solid #e6edf5",boxShadow:"0 4px 24px rgba(8,99,186,.07)",overflow:"hidden" }}>
+                <div style={{ display:"grid",gridTemplateColumns:"200px 130px 90px 140px 1fr",gap:0,padding:"13px 20px",background:"linear-gradient(180deg,#f7fafd,#f1f6fb)",borderRadius:"20px 20px 0 0",borderBottom:"1.5px solid #e6edf5" }}>
                   {([
                     { label: tr.table.name,                        align:"start",  pl:0  },
                     { label: isAr?"الرقم الطبي":"Medical ID",      align:"start",  pl:12 },
