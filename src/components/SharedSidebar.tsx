@@ -538,7 +538,7 @@ export default function SharedSidebar({
     return (
       <>
         {/* ── Safe area spacer at bottom ── */}
-        <div style={{ height: 72, flexShrink: 0 }} />
+        <div style={{ height: 96, flexShrink: 0 }} />
 
         {/* ── More drawer overlay ── */}
         {moreOpen && (
@@ -556,7 +556,7 @@ export default function SharedSidebar({
         <div
           style={{
             position: "fixed",
-            bottom: moreOpen ? 72 : -400,
+            bottom: moreOpen ? "calc(88px + env(safe-area-inset-bottom, 0px))" : -400,
             left: 0, right: 0,
             background: SB_BG,
             borderRadius: "20px 20px 0 0",
@@ -693,13 +693,16 @@ export default function SharedSidebar({
         <nav
           style={{
             position: "fixed",
-            bottom: 0, left: 0, right: 0,
-            background: BN_BG,
-            borderTop: "1px solid rgba(255,255,255,0.12)",
+            bottom: "calc(14px + env(safe-area-inset-bottom, 0px))",
+            left: 12, right: 12,
+            background: "rgba(5,88,168,0.92)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            borderRadius: 999,
             display: "flex", alignItems: "center",
             zIndex: 58,
-            boxShadow: "0 -4px 24px rgba(5,88,168,0.35)",
-            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            boxShadow: "0 12px 32px rgba(5,88,168,0.45), 0 2px 8px rgba(0,0,0,0.2)",
           }}
         >
           {/* Back — fixed at edge */}
@@ -737,7 +740,7 @@ export default function SharedSidebar({
               scrollBehavior: dragState.current.dragging ? "auto" : "smooth",
               WebkitOverflowScrolling: "touch",
               touchAction: "pan-x",
-              maskImage: "linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%)",
+              maskImage: "linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%)",
               WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%)",
               cursor: dragState.current.dragging ? "grabbing" : "grab",
             }}
