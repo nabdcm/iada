@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 // ============================================================
 // SharedSidebar.tsx — القائمة الجانبية الموحّدة لتطبيق نبض
 // الموبايل: Bottom Navigation Bar بدلاً من زر الهامبرغر
@@ -523,7 +524,7 @@ export default function SharedSidebar({
           </span>
         )}
         {!collapsed && !compact && isLocked && (
-          <span style={{ fontSize: 11, opacity: 0.6 }}>🔒</span>
+          <span style={{ fontSize: 11, opacity: 0.6 }}><AppIcon glyph="🔒" /></span>
         )}
       </a>
     );
@@ -616,7 +617,7 @@ export default function SharedSidebar({
                   <span style={{ display: "flex", alignItems: "center" }}>{icon}</span>
                   <span>
                     {(tr as Record<string,string>)[item.key]}
-                    {isLocked && " 🔒"}
+                    {isLocked && <AppIcon glyph="🔒" />}
                   </span>
                 </a>
               );
@@ -642,7 +643,7 @@ export default function SharedSidebar({
                   opacity: pushLoading ? 0.7 : 1,
                 }}
               >
-                <span style={{ fontSize: 18 }}>{pushPerm === "granted" ? "🔔" : "🔕"}</span>
+                <span style={{ fontSize: 18 }}><AppIcon glyph={pushPerm === "granted" ? "🔔" : "🔕"} /></span>
                 {pushLoading
                   ? (isAr ? "جارٍ..." : "Loading...")
                   : pushPerm === "granted"
@@ -804,7 +805,7 @@ export default function SharedSidebar({
                     )}
                   </span>
                   <span style={{ lineHeight: 1 }}>
-                    {(tr as Record<string,string>)[item.key]}{isLocked ? " 🔒" : ""}
+                    {(tr as Record<string,string>)[item.key]}{isLocked && <AppIcon glyph="🔒" style={{marginInlineStart:4}} />}
                   </span>
                 </a>
               );
@@ -985,7 +986,7 @@ export default function SharedSidebar({
                     </span>
                     <span style={{ lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%", paddingInline: 2 }}>
                       {(tr as Record<string,string>)[item.key]}
-                      {isLocked && " 🔒"}
+                      {isLocked && <AppIcon glyph="🔒" />}
                     </span>
                   </a>
                 );
@@ -1009,7 +1010,7 @@ export default function SharedSidebar({
                 opacity: pushLoading ? 0.7 : 1,
               }}
             >
-              <span style={{ fontSize: 15 }}>{pushPerm === "granted" ? "🔔" : "🔕"}</span>
+              <span style={{ fontSize: 15 }}><AppIcon glyph={pushPerm === "granted" ? "🔔" : "🔕"} /></span>
               <span style={{ fontSize: 12, fontWeight: 600, color: pushPerm === "granted" ? "#86efac" : "rgba(255,255,255,.7)" }}>
                 {pushLoading
                   ? (isAr ? "جارٍ..." : "Loading...")

@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 // ============================================================
 // NotificationBell.tsx — جرس الإشعارات + لوحة القراءة
 // ============================================================
@@ -32,7 +33,7 @@ function timeAgo(iso: string, isAr: boolean): string {
   if (h < 24) return isAr ? `قبل ${h} س` : `${h}h`;
   const d = Math.floor(h / 24);
   if (d < 7) return isAr ? `قبل ${d} ي` : `${d}d`;
-  return new Date(iso).toLocaleDateString(isAr ? "ar-SA-u-ca-gregory" : "en-US", {
+  return new Date(iso).toLocaleDateString(isAr ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
     day: "numeric", month: "short",
   });
 }
@@ -188,7 +189,7 @@ export default function NotificationBell({ userId, lang = "ar", variant = "dark"
               </div>
             ) : items.length === 0 ? (
               <div style={{ padding: "32px 16px", textAlign: "center", color: "#aaa", fontSize: 13 }}>
-                <div style={{ fontSize: 28, marginBottom: 8, opacity: .5 }}>🔔</div>
+                <div style={{ fontSize: 28, marginBottom: 8, opacity: .5 }}><AppIcon glyph="🔔" /></div>
                 {isAr ? "لا توجد إشعارات بعد" : "No notifications yet"}
               </div>
             ) : (

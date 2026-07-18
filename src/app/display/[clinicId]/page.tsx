@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useEffect, useState, useCallback, useRef } from "react";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -202,7 +203,7 @@ export default function DisplayPage({
     return (
       <div style={styles.errorPage}>
         <div style={styles.errorBox}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>🏥</div>
+          <div style={{ fontSize: 64, marginBottom: 16 }}><AppIcon glyph="🏥" /></div>
           <h1 style={{ fontSize: 24, color: "#fff", margin: 0 }}>{error}</h1>
         </div>
       </div>
@@ -216,7 +217,7 @@ export default function DisplayPage({
       {callFlash && (
         <div style={styles.flashOverlay}>
           <div style={styles.flashBox}>
-            <div style={styles.flashIcon}>🔔</div>
+            <div style={styles.flashIcon}><AppIcon glyph="🔔" /></div>
             <div style={styles.flashLabel}>يُرجى التفضل للداخل</div>
             <div style={styles.flashName}>{callFlash.maskedName}</div>
             <div style={styles.flashTime}>{callFlash.time}</div>
@@ -227,7 +228,7 @@ export default function DisplayPage({
       {/* ── Header ── */}
       <header style={styles.header}>
         <div style={styles.headerRight}>
-          <div style={styles.logo}>💙</div>
+          <div style={styles.logo}><AppIcon glyph="💙" /></div>
           <div>
             <div style={styles.clinicName}>{clinicInfo?.name ?? "..."}</div>
             <div style={styles.clinicSub}>{clinicInfo?.owner ?? ""}</div>
@@ -251,13 +252,13 @@ export default function DisplayPage({
               <div style={styles.sectionLabel}>المريض الحالي</div>
               {col.current ? (
                 <div style={{ ...styles.currentCard, borderColor: `${col.color}59`, background: `linear-gradient(135deg, ${col.color}1f 0%, ${col.color}0f 100%)` }}>
-                  <div style={styles.currentBadge}>🟢 جارٍ الآن</div>
+                  <div style={styles.currentBadge}><AppIcon glyph="🟢" /> جارٍ الآن</div>
                   <div style={styles.currentName}>{col.current.maskedName}</div>
                   <div style={{ ...styles.currentTime, color: col.color }}>{col.current.time}</div>
                 </div>
               ) : (
                 <div style={styles.emptyCard}>
-                  <span style={{ fontSize: 40 }}>🕐</span>
+                  <span style={{ fontSize: 40 }}><AppIcon glyph="🕐" /></span>
                   <span style={{ marginTop: 12, fontSize: 18, color: "rgba(255,255,255,.5)" }}>
                     لا يوجد مريض قيد الاستقبال
                   </span>

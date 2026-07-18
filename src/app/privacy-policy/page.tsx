@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState } from "react";
 
 // ============================================================
@@ -9,7 +10,7 @@ import { useState } from "react";
 
 type Lang = "ar" | "en";
 
-const LAST_UPDATED_AR = "١ يناير ٢٠٢٦";
+const LAST_UPDATED_AR = "1 يناير 2026";
 const LAST_UPDATED_EN = "January 1, 2026";
 const APP_NAME_AR = "نبض";
 const APP_NAME_EN = "NABD";
@@ -144,12 +145,12 @@ const T = {
         content: [
           {
             subtitle: null,
-            text: `إذا كان لديك أي استفسار أو طلب يتعلق بخصوصيتك، لا تتردد في التواصل معنا:\n\n📧 البريد الإلكتروني: ${CONTACT_EMAIL}\n🌐 الموقع الإلكتروني: ${WEBSITE}\n💬 واتساب: يمكنك التواصل معنا عبر رابط واتساب في الموقع`,
+            text: `إذا كان لديك أي استفسار أو طلب يتعلق بخصوصيتك، لا تتردد في التواصل معنا:\n\nالبريد الإلكتروني: ${CONTACT_EMAIL}\nالموقع الإلكتروني: ${WEBSITE}\nواتساب: يمكنك التواصل معنا عبر رابط واتساب في الموقع`,
           },
         ],
       },
     ],
-    copyright: "© ٢٠٢٦ نبض — جميع الحقوق محفوظة",
+    copyright: "© 2026 نبض — جميع الحقوق محفوظة",
   },
   en: {
     title: "Privacy Policy",
@@ -275,7 +276,7 @@ const T = {
         content: [
           {
             subtitle: null,
-            text: `If you have any inquiry or request related to your privacy, please contact us:\n\n📧 Email: ${CONTACT_EMAIL}\n🌐 Website: ${WEBSITE}\n💬 WhatsApp: Available through the link on our website`,
+            text: `If you have any inquiry or request related to your privacy, please contact us:\n\nEmail: ${CONTACT_EMAIL}\nWebsite: ${WEBSITE}\nWhatsApp: Available through the link on our website`,
           },
         ],
       },
@@ -530,7 +531,7 @@ export default function PrivacyPolicyPage() {
           {tr.sections.map((section, i) => (
             <div key={i} className="pp-section">
               <div className="pp-section-header">
-                <div className="pp-section-icon">{section.icon}</div>
+                <div className="pp-section-icon"><AppIcon glyph={section.icon} /></div>
                 <div className="pp-section-title">{section.title}</div>
               </div>
               {section.content.map((block, j) => (

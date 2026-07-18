@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -176,12 +177,12 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.75)", backdropFilter: "blur(4px)" }} onClick={onClose} />
       <div style={{ position: "relative", background: "#111", borderRadius: 22, padding: "18px", width: "min(96vw,420px)", boxShadow: "0 24px 80px rgba(0,0,0,.5)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>📷 {title || (continuous ? (isAr ? "مسح البيع المستمر" : "Live Sale Scan") : (isAr ? "مسح الباركود" : "Scan Barcode"))}</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}><AppIcon glyph="📷" /> {title || (continuous ? (isAr ? "مسح البيع المستمر" : "Live Sale Scan") : (isAr ? "مسح الباركود" : "Scan Barcode"))}</h2>
           <button onClick={onClose} style={{ border: "none", background: "rgba(255,255,255,.12)", color: "#fff", cursor: "pointer", fontSize: 18, width: 34, height: 34, borderRadius: "50%" }}>✕</button>
         </div>
         {error ? (
           <div style={{ background: "rgba(231,76,60,.15)", border: "1.5px solid rgba(231,76,60,.4)", borderRadius: 12, padding: "20px", textAlign: "center", color: "#ff9b8f" }}>
-            <div style={{ fontSize: 30, marginBottom: 8 }}>📵</div>
+            <div style={{ fontSize: 30, marginBottom: 8 }}><AppIcon glyph="📵" /></div>
             <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.6 }}>{error}</div>
             <button onClick={onClose} style={{ marginTop: 14, padding: "8px 18px", background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 9, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Rubik',sans-serif" }}>{isAr ? "إغلاق" : "Close"}</button>
           </div>
@@ -193,7 +194,7 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
             </div>
             {continuous && scanCount > 0 && (
               <div key={scanCount} style={{ marginTop: 10, background: "rgba(74,222,128,.14)", border: "1.5px solid rgba(74,222,128,.45)", borderRadius: 11, padding: "9px 13px", display: "flex", alignItems: "center", gap: 9, animation: "barcodeIn .3s ease both" }}>
-                <span style={{ fontSize: 17 }}>✅</span>
+                <span style={{ fontSize: 17 }}><AppIcon glyph="✅" /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#4ade80" }}>{isAr ? "أُضيف للفاتورة" : "Added to sale"} ({scanCount})</div>
                   <div style={{ fontSize: 10, color: "#9fdcb6", fontFamily: "monospace", letterSpacing: 1, direction: "ltr" }}>{lastAdded}</div>
@@ -202,7 +203,7 @@ export function CameraScanner({ onScan, onClose, lang, title, continuous = false
             )}
             {continuous && (
               <button onClick={onClose} style={{ width: "100%", marginTop: 12, padding: "12px", background: "linear-gradient(135deg,#8e44ad,#7a35a0)", color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 800, fontFamily: "'Rubik',sans-serif", boxShadow: "0 5px 18px rgba(142,68,173,.4)" }}>
-                {isAr ? "✔ إنهاء المسح والعودة للفاتورة" : "✔ Done — back to sale"}
+                {isAr ? "إنهاء المسح والعودة للفاتورة" : "Done — back to sale"}
               </button>
             )}
           </>

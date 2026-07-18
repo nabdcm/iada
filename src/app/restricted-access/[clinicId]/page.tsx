@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 
@@ -69,20 +70,20 @@ type ClinicType = "general"|"dental"|"dermatology"|"cosmetic"|"pediatrics"|"phys
 type MedicalField = { key:string; label_ar:string; icon:string };
 
 const MEDICAL_FIELDS_BY_TYPE: Record<string, MedicalField[]> = {
-  general:          [ {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات السابقة"}, {key:"family_history",icon:"👨‍👩‍👧",label_ar:"التاريخ العائلي"}, {key:"chronic_diseases",icon:"🏥",label_ar:"الأمراض المزمنة"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
+  general:          [ {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات السابقة"}, {key:"family_history",icon:"‍‍",label_ar:"التاريخ العائلي"}, {key:"chronic_diseases",icon:"🏥",label_ar:"الأمراض المزمنة"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   dental:           [ {key:"allergies",icon:"💊",label_ar:"حساسية الأدوية"}, {key:"medications",icon:"💉",label_ar:"الأدوية الحالية"}, {key:"dental_history",icon:"🦷",label_ar:"التاريخ الطبي السني"}, {key:"tmj_issues",icon:"🦴",label_ar:"مشاكل مفصل الفك"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   dermatology:      [ {key:"allergies",icon:"🤧",label_ar:"الحساسية الجلدية"}, {key:"medications",icon:"💊",label_ar:"الأدوية والكريمات"}, {key:"skin_history",icon:"🧴",label_ar:"التاريخ الجلدي"}, {key:"sun_exposure",icon:"☀️",label_ar:"التعرض للشمس"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   cosmetic:         [ {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"prev_procedures",icon:"✨",label_ar:"الإجراءات التجميلية السابقة"}, {key:"expectations",icon:"🎯",label_ar:"التوقعات والأهداف"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
-  pediatrics:       [ {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"birth_history",icon:"👶",label_ar:"تاريخ الولادة"}, {key:"developmental",icon:"📈",label_ar:"مراحل النمو والتطور"}, {key:"vaccinations",icon:"💉",label_ar:"جدول التطعيمات"}, {key:"family_history",icon:"👨‍👩‍👧",label_ar:"التاريخ العائلي"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
+  pediatrics:       [ {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"birth_history",icon:"👶",label_ar:"تاريخ الولادة"}, {key:"developmental",icon:"📈",label_ar:"مراحل النمو والتطور"}, {key:"vaccinations",icon:"💉",label_ar:"جدول التطعيمات"}, {key:"family_history",icon:"‍‍",label_ar:"التاريخ العائلي"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   physical_therapy: [ {key:"injury_details",icon:"🦴",label_ar:"تفاصيل الإصابة"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"pain_scale",icon:"😣",label_ar:"وصف الألم"}, {key:"functional_goals",icon:"🎯",label_ar:"الأهداف الوظيفية"}, {key:"exercise_history",icon:"🏋️",label_ar:"تاريخ التمارين"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   mental_health:    [ {key:"chief_complaint",icon:"💭",label_ar:"الشكوى الرئيسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية النفسية الحالية"}, {key:"therapy_history",icon:"🧠",label_ar:"تاريخ العلاج النفسي"}, {key:"sleep_pattern",icon:"🌙",label_ar:"نمط النوم"}, {key:"social_support",icon:"🤝",label_ar:"الدعم الاجتماعي"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات المعالج"} ],
   nutrition:        [ {key:"dietary_restrictions",icon:"🚫",label_ar:"القيود الغذائية"}, {key:"food_allergies",icon:"🤧",label_ar:"حساسية الطعام"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"weight_history",icon:"⚖️",label_ar:"تاريخ الوزن"}, {key:"eating_habits",icon:"🍽️",label_ar:"العادات الغذائية"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الأخصائي"} ],
-  ophthalmology:    [ {key:"eye_history",icon:"👁️",label_ar:"التاريخ البصري"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"glasses_history",icon:"👓",label_ar:"تاريخ النظارات"}, {key:"family_history",icon:"👨‍👩‍👧",label_ar:"التاريخ العائلي البصري"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
+  ophthalmology:    [ {key:"eye_history",icon:"👁️",label_ar:"التاريخ البصري"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"glasses_history",icon:"👓",label_ar:"تاريخ النظارات"}, {key:"family_history",icon:"‍‍",label_ar:"التاريخ العائلي البصري"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   orthopedic:       [ {key:"injury_details",icon:"🦴",label_ar:"تفاصيل الإصابة"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"fracture_history",icon:"🩺",label_ar:"تاريخ الكسور"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات الجراحية"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
-  cardiology:       [ {key:"cardiac_history",icon:"❤️",label_ar:"التاريخ القلبي"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"risk_factors",icon:"⚠️",label_ar:"عوامل الخطر"}, {key:"family_history",icon:"👨‍👩‍👧",label_ar:"التاريخ العائلي"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات القلبية"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
-  gynecology:       [ {key:"ob_history",icon:"🌸",label_ar:"التاريخ التوليدي"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"menstrual_history",icon:"📅",label_ar:"تاريخ الدورة الشهرية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات الجراحية"}, {key:"family_history",icon:"👨‍👩‍👧",label_ar:"التاريخ العائلي"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيبة"} ],
+  cardiology:       [ {key:"cardiac_history",icon:"❤️",label_ar:"التاريخ القلبي"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"risk_factors",icon:"⚠️",label_ar:"عوامل الخطر"}, {key:"family_history",icon:"‍‍",label_ar:"التاريخ العائلي"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات القلبية"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
+  gynecology:       [ {key:"ob_history",icon:"🌸",label_ar:"التاريخ التوليدي"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"menstrual_history",icon:"📅",label_ar:"تاريخ الدورة الشهرية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات الجراحية"}, {key:"family_history",icon:"‍‍",label_ar:"التاريخ العائلي"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيبة"} ],
   ent:              [ {key:"ent_history",icon:"👂",label_ar:"التاريخ الطبي للأذن والأنف والحنجرة"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات الجراحية"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
-  urology:          [ {key:"urological_history",icon:"💧",label_ar:"التاريخ المسالكي"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات الجراحية"}, {key:"family_history",icon:"👨‍👩‍👧",label_ar:"التاريخ العائلي"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
+  urology:          [ {key:"urological_history",icon:"💧",label_ar:"التاريخ المسالكي"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات الجراحية"}, {key:"family_history",icon:"‍‍",label_ar:"التاريخ العائلي"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   other:            [ {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات السابقة"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
 };
 
@@ -162,7 +163,7 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
 
       {pendingImg ? (
         <div style={{ borderRadius:14,border:"2px solid #0863ba",background:"#f0f6ff",padding:14,display:"flex",flexDirection:"column",gap:12 }}>
-          <div style={{ fontSize:12,fontWeight:700,color:"#0863ba" }}>🩻 معاينة الصورة — تأكد قبل الحفظ</div>
+          <div style={{ fontSize:12,fontWeight:700,color:"#0863ba" }}><AppIcon glyph="🩻" /> معاينة الصورة — تأكد قبل الحفظ</div>
           <img src={pendingImg.url ?? ""} alt={pendingImg.name} style={{ width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,background:"#000",border:"1.5px solid #dde4f0" }}/>
           <div style={{ fontSize:11,color:"#555" }}><span style={{ fontWeight:700 }}>الملف:</span> {pendingImg.name}</div>
           <div style={{ display:"flex",gap:10 }}>
@@ -182,7 +183,7 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
           onDragLeave={()=>setDragging(false)}
           onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)handleFile(f);}}
           style={{ border:`2px dashed ${dragging?"#0863ba":"#c8d4e0"}`,borderRadius:14,padding:"28px 16px",textAlign:"center",cursor:"pointer",background:dragging?"rgba(8,99,186,.05)":"#fafbfc" }}>
-          <div style={{ fontSize:36,marginBottom:8 }}>🩻</div>
+          <div style={{ fontSize:36,marginBottom:8 }}><AppIcon glyph="🩻" /></div>
           <div style={{ fontSize:13,color:"#888",fontWeight:500 }}>اسحب الصورة هنا أو انقر للرفع</div>
           <div style={{ fontSize:11,color:"#bbb",marginTop:4 }}>JPG, PNG, WEBP</div>
         </div>
@@ -190,7 +191,7 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
       <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{const f=e.target.files?.[0];if(f)handleFile(f);e.target.value="";}}/>
 
       {xrays.length===0?(
-        <div style={{ textAlign:"center",padding:"32px 0",color:"#ccc" }}><div style={{ fontSize:36,marginBottom:8 }}>🩻</div><div style={{ fontSize:13 }}>لا توجد صور أشعة</div></div>
+        <div style={{ textAlign:"center",padding:"32px 0",color:"#ccc" }}><div style={{ fontSize:36,marginBottom:8 }}><AppIcon glyph="🩻" /></div><div style={{ fontSize:13 }}>لا توجد صور أشعة</div></div>
       ):(
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))",gap:10 }}>
           {xrays.map(img=>(
@@ -436,9 +437,9 @@ export default function RestrictedAccessPage() {
     return (
       <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0863ba 0%,#0e7c6a 100%)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Rubik,sans-serif",padding:16 }}>
         <div style={{ background:"#fff",borderRadius:24,padding:"40px 36px",width:"100%",maxWidth:380,boxShadow:"0 32px 80px rgba(0,0,0,.18)",textAlign:"center" }}>
-          <div style={{ width:70,height:70,borderRadius:20,background:"linear-gradient(135deg,#0863ba,#0e7c6a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px",boxShadow:"0 8px 24px rgba(8,99,186,.25)" }}>🔗</div>
+          <div style={{ width:70,height:70,borderRadius:20,background:"linear-gradient(135deg,#0863ba,#0e7c6a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px",boxShadow:"0 8px 24px rgba(8,99,186,.25)" }}><AppIcon glyph="🔗" /></div>
           <h1 style={{ fontSize:20,fontWeight:800,color:"#353535",marginBottom:4 }}>دخول مقيّد</h1>
-          <p style={{ fontSize:13,color:"#888",marginBottom:6 }}>{CLINIC_TYPE_ICONS[clinicInfo.clinic_type||"general"]} {clinicInfo.name}</p>
+          <p style={{ fontSize:13,color:"#888",marginBottom:6 }}><AppIcon glyph={CLINIC_TYPE_ICONS[clinicInfo.clinic_type||"general"]} /> {clinicInfo.name}</p>
           <p style={{ fontSize:12,color:"#aaa",marginBottom:28,lineHeight:1.6 }}>أدخل الـ PIN للوصول إلى ملفات المرضى</p>
           <div style={{ display:"flex",gap:10,justifyContent:"center",marginBottom:20 }}>
             {pinDisplay.map((ch, i) => (
@@ -455,7 +456,7 @@ export default function RestrictedAccessPage() {
               </button>
             ))}
           </div>
-          {pinError && <div style={{ padding:"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:10,fontSize:12,color:"#c0392b",marginBottom:14 }}>⚠️ {pinError}</div>}
+          {pinError && <div style={{ padding:"10px 14px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:10,fontSize:12,color:"#c0392b",marginBottom:14 }}><AppIcon glyph="⚠️" /> {pinError}</div>}
           <button onClick={handlePinSubmit} disabled={pinInput.length<4}
             style={{ width:"100%",padding:"14px",background:pinInput.length>=4?"#0863ba":"#e8eaed",color:pinInput.length>=4?"#fff":"#aaa",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:pinInput.length>=4?"pointer":"not-allowed",transition:"all .2s",boxShadow:pinInput.length>=4?"0 4px 16px rgba(8,99,186,.25)":"none" }}>
             دخول
@@ -475,7 +476,7 @@ export default function RestrictedAccessPage() {
       <div style={{ background:"#fff",borderBottom:"1.5px solid #eef0f3",padding:"0 20px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 12px rgba(8,99,186,.06)",position:"sticky",top:0,zIndex:10 }}>
         <div style={{ display:"flex",alignItems:"center",gap:12 }}>
           <div style={{ width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${clinicColor},#0863ba)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>
-            {CLINIC_TYPE_ICONS[clinicInfo?.clinic_type||"general"]}
+            <AppIcon glyph={CLINIC_TYPE_ICONS[clinicInfo?.clinic_type||"general"]} />
           </div>
           <div>
             <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>{clinicInfo?.name}</div>
@@ -499,8 +500,8 @@ export default function RestrictedAccessPage() {
       <div style={{ background:"#fff",borderBottom:"1.5px solid #eef0f3",position:"sticky",top:60,zIndex:9 }}>
         <div style={{ maxWidth:isMobile?"100%":(activeTab==="appointments"?1100:700),margin:"0 auto",padding:"0 16px",display:"flex",gap:4 }}>
           {([
-            { key:"patients" as const,     label:"👥 المرضى" },
-            { key:"appointments" as const, label:"📅 المواعيد" },
+            { key:"patients" as const,     label:"المرضى" },
+            { key:"appointments" as const, label:"المواعيد" },
           ]).map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               style={{ padding:"12px 18px",border:"none",background:"transparent",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,color:activeTab===tab.key?clinicColor:"#aaa",borderBottom:activeTab===tab.key?`2.5px solid ${clinicColor}`:"2.5px solid transparent",transition:"all .18s" }}>
@@ -514,7 +515,7 @@ export default function RestrictedAccessPage() {
       <div style={{ maxWidth:700,margin:"0 auto",padding:"24px 16px" }}>
         {/* Search */}
         <div style={{ position:"relative",marginBottom:16 }}>
-          <span style={{ position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:16,color:"#aaa",pointerEvents:"none" }}>🔍</span>
+          <span style={{ position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:16,color:"#aaa",pointerEvents:"none" }}><AppIcon glyph="🔍" /></span>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث باسم المريض أو رقم الهاتف..."
             style={{ width:"100%",padding:"12px 42px 12px 14px",border:"1.5px solid #eef0f3",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,background:"#fff",color:"#353535",outline:"none",boxSizing:"border-box" }} />
         </div>
@@ -522,12 +523,12 @@ export default function RestrictedAccessPage() {
         {/* Stats */}
         <div style={{ display:"flex",gap:10,marginBottom:16 }}>
           <div style={{ flex:1,background:"#fff",borderRadius:12,padding:"12px 16px",border:"1.5px solid #eef0f3",display:"flex",alignItems:"center",gap:8 }}>
-            <span style={{ fontSize:20 }}>👥</span>
+            <span style={{ fontSize:20 }}><AppIcon glyph="👥" /></span>
             <div><div style={{ fontSize:18,fontWeight:800,color:"#0863ba" }}>{patients.length}</div><div style={{ fontSize:10,color:"#aaa" }}>إجمالي المرضى</div></div>
           </div>
           {search && (
             <div style={{ flex:1,background:"#fff",borderRadius:12,padding:"12px 16px",border:"1.5px solid #eef0f3",display:"flex",alignItems:"center",gap:8 }}>
-              <span style={{ fontSize:20 }}>🔎</span>
+              <span style={{ fontSize:20 }}><AppIcon glyph="🔎" /></span>
               <div><div style={{ fontSize:18,fontWeight:800,color:"#0e7c6a" }}>{filteredPatients.length}</div><div style={{ fontSize:10,color:"#aaa" }}>نتائج البحث</div></div>
             </div>
           )}
@@ -539,7 +540,7 @@ export default function RestrictedAccessPage() {
         {patientsLoading ? (
           <div style={{ textAlign:"center",padding:60,color:"#aaa" }}><div style={{ fontSize:32,marginBottom:12 }}>⏳</div><div>جاري التحميل...</div></div>
         ) : filteredPatients.length === 0 ? (
-          <div style={{ textAlign:"center",padding:60,color:"#ccc" }}><div style={{ fontSize:40,marginBottom:12 }}>🔍</div><div>{search?"لا توجد نتائج":"لا يوجد مرضى"}</div></div>
+          <div style={{ textAlign:"center",padding:60,color:"#ccc" }}><div style={{ fontSize:40,marginBottom:12 }}><AppIcon glyph="🔍" /></div><div>{search?"لا توجد نتائج":"لا يوجد مرضى"}</div></div>
         ) : (
           <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
             {filteredPatients.map(p => (
@@ -552,16 +553,16 @@ export default function RestrictedAccessPage() {
                   <div style={{ flex:1,minWidth:0 }}>
                     <div style={{ fontSize:14,fontWeight:700,color:"#353535",marginBottom:3 }}>{p.name}</div>
                     <div style={{ fontSize:11,color:"#aaa",display:"flex",gap:12,flexWrap:"wrap" }}>
-                      {p.phone && <span>📞 {p.phone}</span>}
-                      {p.date_of_birth && calcAge(p.date_of_birth) !== null && <span>🎂 {calcAge(p.date_of_birth)} سنة</span>}
-                      {p.has_diabetes && <span style={{ color:"#e67e22",fontWeight:600 }}>🩸 سكري</span>}
-                      {p.has_hypertension && <span style={{ color:"#c0392b",fontWeight:600 }}>❤️ ضغط</span>}
+                      {p.phone && <span><AppIcon glyph="📞" /> {p.phone}</span>}
+                      {p.date_of_birth && calcAge(p.date_of_birth) !== null && <span><AppIcon glyph="🎂" /> {calcAge(p.date_of_birth)} سنة</span>}
+                      {p.has_diabetes && <span style={{ color:"#e67e22",fontWeight:600 }}><AppIcon glyph="🩸" /> سكري</span>}
+                      {p.has_hypertension && <span style={{ color:"#c0392b",fontWeight:600 }}><AppIcon glyph="❤️" /> ضغط</span>}
                     </div>
                   </div>
                   {/* زر الملف الطبي */}
                   <button onClick={() => openProfile(p)}
                     style={{ padding:"7px 14px",border:`1.5px solid ${clinicColor}30`,borderRadius:10,background:`${clinicColor}08`,color:clinicColor,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s" }}>
-                    📋 الملف الطبي
+                    <AppIcon glyph="📋" /> الملف الطبي
                   </button>
                 </div>
               </div>
@@ -610,7 +611,7 @@ export default function RestrictedAccessPage() {
                       {profilePatient.gender && <span>{profilePatient.gender==="male"?"ذكر":"أنثى"}</span>}
                       {calcAge(profilePatient.date_of_birth) !== null && <span>• {calcAge(profilePatient.date_of_birth)} سنة</span>}
                       <span style={{ padding:"2px 8px",borderRadius:8,fontSize:10,fontWeight:700,background:`${clinicColor}15`,color:clinicColor }}>
-                        {CLINIC_TYPE_ICONS[clinicInfo?.clinic_type||"general"]} {clinicInfo?.clinic_type||""}
+                        <AppIcon glyph={CLINIC_TYPE_ICONS[clinicInfo?.clinic_type||"general"]} /> {clinicInfo?.clinic_type||""}
                       </span>
                     </div>
                   </div>
@@ -618,8 +619,8 @@ export default function RestrictedAccessPage() {
                 </div>
                 {/* Tabs */}
                 <div style={{ display:"flex" }}>
-                  {([{key:"info",label:"👤 المعلومات"},{key:"medical",label:"🏥 السجل الطبي"},
-                     ...(canXray ? [{key:"xrays" as const,label:"🩻 الأشعة"}] : [])] as const).map(tab => (
+                  {([{key:"info",label:"المعلومات"},{key:"medical",label:"السجل الطبي"},
+                     ...(canXray ? [{key:"xrays" as const,label:"الأشعة"}] : [])] as const).map(tab => (
                     <button key={tab.key} onClick={() => setProfileTab(tab.key)}
                       style={{ flex:1,padding:"10px 4px",border:"none",background:"transparent",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,color:profileTab===tab.key?"#0863ba":"#aaa",borderBottom:profileTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",transition:"all .18s" }}>
                       {tab.label}
@@ -656,13 +657,13 @@ export default function RestrictedAccessPage() {
                         {/* الحالات المزمنة */}
                         {(profilePatient.has_diabetes || profilePatient.has_hypertension) && (
                           <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-                            {profilePatient.has_diabetes && <span style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.2)" }}>🩸 يعاني من السكري</span>}
-                            {profilePatient.has_hypertension && <span style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:"rgba(192,57,43,.1)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)" }}>❤️ يعاني من ضغط الدم</span>}
+                            {profilePatient.has_diabetes && <span style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.2)" }}><AppIcon glyph="🩸" /> يعاني من السكري</span>}
+                            {profilePatient.has_hypertension && <span style={{ padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:600,background:"rgba(192,57,43,.1)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)" }}><AppIcon glyph="❤️" /> يعاني من ضغط الدم</span>}
                           </div>
                         )}
                         {profilePatient.notes && (
                           <div style={{ background:"#fffbf0",borderRadius:10,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
-                            <div style={{ fontSize:10,fontWeight:700,color:"#aaa",marginBottom:5 }}>📝 ملاحظات</div>
+                            <div style={{ fontSize:10,fontWeight:700,color:"#aaa",marginBottom:5 }}><AppIcon glyph="📝" /> ملاحظات</div>
                             <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{profilePatient.notes}</div>
                           </div>
                         )}
@@ -674,7 +675,7 @@ export default function RestrictedAccessPage() {
                     {profileTab === "medical" && (
                       <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
                         <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"9px 12px",background:`${clinicColor}08`,borderRadius:10,border:`1px solid ${clinicColor}20` }}>
-                          <span style={{ fontSize:16 }}>{CLINIC_TYPE_ICONS[clinicInfo?.clinic_type||"general"]}</span>
+                          <span style={{ fontSize:16, display:"flex" }}><AppIcon glyph={CLINIC_TYPE_ICONS[clinicInfo?.clinic_type||"general"]} /></span>
                           <span style={{ fontSize:12,fontWeight:700,color:clinicColor }}>السجل الطبي — {clinicInfo?.name}</span>
                         </div>
 
@@ -689,7 +690,7 @@ export default function RestrictedAccessPage() {
                               {/* رأس الحقل */}
                               <div style={{ padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",background:isExpanded?"#f0f6ff":"transparent" }}>
                                 <div style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0 }}>
-                                  <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
+                                  <span style={{ fontSize:16,flexShrink:0 }}><AppIcon glyph={field.icon} /></span>
                                   <div style={{ minWidth:0 }}>
                                     <div style={{ fontSize:12,fontWeight:700,color:isExpanded?"#0863ba":"#555" }}>{field.label_ar}</div>
                                     {!isExpanded && savedVal && <div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200 }}>{savedVal}</div>}
@@ -712,7 +713,7 @@ export default function RestrictedAccessPage() {
                                     <button
                                       onClick={() => { setDraftValues((p: Record<string,string>) => ({...p, [field.key]: savedVal})); setExpandedField(field.key); }}
                                       style={{ padding:"6px 12px",borderRadius:8,border:`1.5px solid ${clinicColor}40`,background:`${clinicColor}10`,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:clinicColor,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",minHeight:34 }}>
-                                      ✏️ تعديل
+                                      <AppIcon glyph="✏️" /> تعديل
                                     </button>
                                   )}
                                   {isExpanded && (
@@ -792,7 +793,7 @@ function ErrorScreen() {
   return (
     <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f9fc",fontFamily:"Rubik,sans-serif",direction:"rtl" }}>
       <div style={{ textAlign:"center",padding:40,maxWidth:360 }}>
-        <div style={{ fontSize:56,marginBottom:16 }}>🔒</div>
+        <div style={{ fontSize:56,marginBottom:16 }}><AppIcon glyph="🔒" /></div>
         <h2 style={{ fontSize:20,fontWeight:800,color:"#353535",marginBottom:8 }}>رابط غير صالح</h2>
         <p style={{ fontSize:13,color:"#888",lineHeight:1.7 }}>هذا الرابط غير موجود أو لم يتم تفعيل الدخول المقيّد لهذه العيادة. تواصل مع الطبيب المسؤول للحصول على رابط صحيح.</p>
       </div>
@@ -871,7 +872,7 @@ function AppointmentsTab({
               })}
             </div>
             <button onClick={()=>setSelectedKey(todayKey)} style={{ width:"100%",marginTop:10,padding:"7px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer" }}>
-              📅 اليوم
+              <AppIcon glyph="📅" /> اليوم
             </button>
           </div>
         </div>
@@ -903,7 +904,7 @@ function AppointmentsTab({
               </div>
             ) : dayAppointments.length === 0 ? (
               <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                <div style={{ fontSize:44,marginBottom:14 }}>📅</div>
+                <div style={{ fontSize:44,marginBottom:14 }}><AppIcon glyph="📅" /></div>
                 <div style={{ fontSize:15,fontWeight:600 }}>لا توجد مواعيد في هذا اليوم</div>
               </div>
             ) : isShared ? (

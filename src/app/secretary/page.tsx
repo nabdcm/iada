@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase } from "@/lib/supabase";
@@ -139,7 +140,7 @@ async function saveProfileToDB(patientId:number, userId:string, profile:PatientP
 // ════════════════════════════════════════════════════════════
 function exportDailyReportHTML(payments:Payment[], withdrawals:any[], expenses:any[], patients:Patient[], clinicName:string) {
   const today = new Date().toISOString().slice(0,10);
-  const fmt = (d:string) => new Date(d+"T00:00:00").toLocaleDateString("ar-EG-u-ca-gregory",{year:"numeric",month:"long",day:"numeric"});
+  const fmt = (d:string) => new Date(d+"T00:00:00").toLocaleDateString("ar-EG-u-ca-gregory-nu-latn",{year:"numeric",month:"long",day:"numeric"});
   const todayP = payments.filter(p=>p.date===today);
   const todayW = withdrawals.filter(w=>w.date===today);
   const todayE = expenses.filter(e=>e.date===today);
@@ -183,11 +184,11 @@ tr:nth-child(even) td{background:#fafbfc}
   <div class="stat"><div class="sv" style="color:#7b2d8b">-${totalE.toLocaleString()} ل.س</div><div class="sl">المصروفات</div></div>
   <div class="stat"><div class="sv ${net>=0?"green":"red"}">${net>=0?"+":""}${net.toLocaleString()} ل.س</div><div class="sl">الرصيد الصافي</div></div>
 </div>
-<div class="sec">💰 المدفوعات</div>
+<div class="sec">المدفوعات</div>
 <table><thead><tr><th>التاريخ</th><th>المريض</th><th>الوصف</th><th>الطريقة</th><th>الحالة</th><th>المبلغ</th></tr></thead><tbody>${pRows}</tbody></table>
-<div class="sec">💸 السحوبات</div>
+<div class="sec">السحوبات</div>
 <table><thead><tr><th>التاريخ</th><th colspan="3">السبب</th><th>النوع</th><th>المبلغ</th></tr></thead><tbody>${wRows}</tbody></table>
-<div class="sec">🏪 المصروفات</div>
+<div class="sec">المصروفات</div>
 <table><thead><tr><th>التاريخ</th><th colspan="2">الوصف</th><th>التصنيف</th><th>النوع</th><th>المبلغ</th></tr></thead><tbody>${eRows}</tbody></table>
 <div class="net ${net>=0?"net-pos":"net-neg"}"><div style="font-size:13px;font-weight:700">الرصيد الصافي لهذا اليوم</div><div style="font-size:20px;font-weight:800;color:${net>=0?"#2e7d32":"#c0392b"}">${net>=0?"+":""}${net.toLocaleString()} ل.س</div></div>
 </body></html>`;
@@ -296,7 +297,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
     <div style={{ position:"fixed",inset:0,zIndex:201,display:"flex",alignItems:"center",justifyContent:"center" }}>
       <div onClick={()=>setShowDel(false)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"calc(100% - 40px)",maxWidth:380,padding:32,textAlign:"center",boxShadow:"0 24px 80px rgba(192,57,43,.15)",direction:isAr?"rtl":"ltr" }}>
-        <div style={{ width:72,height:72,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px" }}>🗑️</div>
+        <div style={{ width:72,height:72,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px" }}><AppIcon glyph="🗑️" /></div>
         <h3 style={{ fontSize:18,fontWeight:800,color:"#353535",marginBottom:10,fontFamily:"Rubik,sans-serif" }}>{isAr?"حذف الموعد":"Delete Appointment"}</h3>
         <p style={{ fontSize:14,color:"#888",lineHeight:1.7,marginBottom:28,fontFamily:"Rubik,sans-serif" }}>{isAr?"هل أنت متأكد من حذف هذا الموعد؟":"Are you sure you want to delete this appointment?"}</p>
         <div style={{ display:"flex",gap:12 }}>
@@ -317,12 +318,12 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
             {isEdit&&<p style={{ fontSize:11,color:"#aaa",marginTop:2 }}>ID: #{(appt as any).id}</p>}
           </div>
           <div style={{ display:"flex",gap:8 }}>
-            {isEdit&&<button onClick={()=>setShowDel(true)} style={{ width:36,height:36,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",color:"#c0392b" }}>🗑️</button>}
+            {isEdit&&<button onClick={()=>setShowDel(true)} style={{ width:36,height:36,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",color:"#c0392b" }}><AppIcon glyph="🗑️" /></button>}
             <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
           </div>
         </div>
         <div style={{ padding:"20px 26px" }}>
-          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
+          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
           <Field label={isAr?"المريض *":"Patient *"}>
             <div ref={patRef} style={{ position:"relative" }}>
               <input type="text" value={patientSearch}
@@ -330,7 +331,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
                 onFocus={()=>setPatientDropOpen(true)}
                 placeholder={isAr?"ابحث عن مريض...":"Search patient..."}
                 style={{ ...inputSt, paddingInlineEnd:36 }} autoComplete="off"/>
-              <span style={{ position:"absolute",top:"50%",insetInlineEnd:12,transform:"translateY(-50%)",pointerEvents:"none",fontSize:14,color:"#aaa" }}>{form.patient_id?"✓":"🔍"}</span>
+              <span style={{ position:"absolute",top:"50%",insetInlineEnd:12,transform:"translateY(-50%)",pointerEvents:"none",fontSize:14,color:"#aaa" }}><AppIcon glyph={form.patient_id?"✓":"🔍"} /></span>
               {patientDropOpen&&(
                 <div style={{ position:"absolute",top:"calc(100% + 4px)",insetInlineStart:0,insetInlineEnd:0,background:"#fff",border:"1.5px solid #e0e6ef",borderRadius:12,boxShadow:"0 8px 32px rgba(8,99,186,.13)",zIndex:999,maxHeight:220,overflowY:"auto" }}>
                   {filteredPatients.length===0?(
@@ -433,7 +434,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose }: {
         <button onClick={onClose} style={{ width:34,height:34,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16 }}>✕</button>
       </div>
       <div style={{ padding:"20px 24px",direction:isAr?"rtl":"ltr" }}>
-        {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:18 }}>⚠️ {error}</div>}
+        {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:18 }}><AppIcon glyph="⚠️" /> {error}</div>}
         <Field label={isAr?"الاسم الكامل *":"Full Name *"}>
           <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder={isAr?"اسم المريض":"Patient name"} style={inputSt}/>
         </Field>
@@ -457,7 +458,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose }: {
             const checked = form[c.key];
             return (
               <label key={c.key} style={{ display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:10,cursor:"pointer",border:checked?`1.5px solid ${c.color}40`:"1.5px solid #eef0f3",background:checked?`${c.color}08`:"#fafbfc",transition:"all .2s" }}>
-                <span style={{ fontSize:18 }}>{c.icon}</span>
+                <span style={{ fontSize:18 }}><AppIcon glyph={c.icon} /></span>
                 <span style={{ fontSize:13,fontWeight:checked?700:400,color:checked?c.color:"#666",flex:1 }}>{c.label}</span>
                 <div style={{ width:18,height:18,borderRadius:5,background:checked?c.color:"transparent",border:`2px solid ${checked?c.color:"#ccc"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
                   {checked&&<span style={{ color:"#fff",fontSize:10,fontWeight:900 }}>✓</span>}
@@ -549,7 +550,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
               {patient.gender&&<span>{isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")}</span>}
               {calcAge((patient as any).date_of_birth)!=="—"&&<span>• {calcAge((patient as any).date_of_birth)} {isAr?"سنة":"yr"}</span>}
               <span style={{ padding:"2px 8px",borderRadius:8,fontSize:10,fontWeight:700,background:`${meta.color}15`,color:meta.color }}>{meta.icon} {isAr?meta.ar:meta.en}</span>
-              {saving&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600 }}>💾 {isAr?"جاري الحفظ...":"Saving..."}</span>}
+              {saving&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600 }}><AppIcon glyph="💾" /> {isAr?"جاري الحفظ...":"Saving..."}</span>}
             </div>
           </div>
           <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#888",fontWeight:700 }}>✕</button>
@@ -560,7 +561,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
           {tabList.map(tab=>(
             <button key={tab.key} onClick={()=>setActiveTab(tab.key)}
               style={{ flex:1,padding:"11px 4px",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,background:"transparent",color:activeTab===tab.key?"#0863ba":"#aaa",borderBottom:activeTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,transition:"all .18s" }}>
-              <span style={{ fontSize:15 }}>{tab.icon}</span>{tab.label}
+              <span style={{ fontSize:15 }}><AppIcon glyph={tab.icon} /></span>{tab.label}
             </button>
           ))}
         </div>
@@ -582,7 +583,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
                       { label:isAr?"الاسم":"Name",  value:patient.name,  icon:"👤" },
                       { label:isAr?"الهاتف":"Phone", value:(patient.phone||"—"), icon:"📞" },
                       { label:isAr?"الجنس":"Gender", value:patient.gender?(isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")):"—", icon:"⚧" },
-                      { label:isAr?"تاريخ الميلاد":"DOB", value:(patient as any).date_of_birth?new Date((patient as any).date_of_birth).toLocaleDateString(isAr?"ar-SA-u-ca-gregory":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
+                      { label:isAr?"تاريخ الميلاد":"DOB", value:(patient as any).date_of_birth?new Date((patient as any).date_of_birth).toLocaleDateString(isAr?"ar-SA-u-ca-gregory-nu-latn":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
                     ].map(f=>(
                       <div key={f.label} style={{ background:"#f7f9fc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>
                         <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:4 }}>{f.icon} {f.label}</div>
@@ -602,7 +603,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
                   </div>
                   {(patient as any).notes&&(
                     <div style={{ background:"#fffbf0",borderRadius:10,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
-                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>📝 {isAr?"ملاحظات":"Notes"}</div>
+                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}><AppIcon glyph="📝" /> {isAr?"ملاحظات":"Notes"}</div>
                       <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{(patient as any).notes}</div>
                     </div>
                   )}
@@ -613,7 +614,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
               {activeTab==="medical"&&(
                 <div>
                   <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"9px 12px",background:`${meta.color}08`,borderRadius:10,border:`1px solid ${meta.color}20` }}>
-                    <span style={{ fontSize:16 }}>{meta.icon}</span>
+                    <span style={{ fontSize:16 }}><AppIcon glyph={meta.icon} /></span>
                     <span style={{ fontSize:12,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {isAr?"السجل الطبي":"Medical Record"}</span>
                   </div>
                   <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
@@ -628,7 +629,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
                           {/* رأس الحقل */}
                           <div style={{ padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",background:isExpanded?"#f0f6ff":"transparent" }}>
                             <div style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0 }}>
-                              <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
+                              <span style={{ fontSize:16,flexShrink:0 }}><AppIcon glyph={field.icon} /></span>
                               <div style={{ minWidth:0 }}>
                                 <div style={{ fontSize:12,fontWeight:700,color:isExpanded?"#0863ba":"#555" }}>{isAr?field.label_ar:field.label_en}</div>
                                 {!isExpanded&&savedVal&&<div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220 }}>{savedVal}</div>}
@@ -650,7 +651,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, onClose }: {
                                 <button
                                   onClick={()=>{ setDraftValues(p=>({...p,[field.key]:savedVal})); setExpandedField(field.key); }}
                                   style={{ padding:"6px 12px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.25)",background:"rgba(8,99,186,.07)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",minHeight:34 }}>
-                                  ✏️ {isAr?"تعديل":"Edit"}
+                                  <AppIcon glyph="✏️" /> {isAr?"تعديل":"Edit"}
                                 </button>
                               )}
                               {isExpanded&&(
@@ -721,7 +722,7 @@ function DeletePatientModal({ lang, patient, onConfirm, onClose }: { lang:Lang; 
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:420,padding:"0 0 32px",boxShadow:"0 -8px 40px rgba(0,0,0,.15)",animation:"slideUp .3s cubic-bezier(.4,0,.2,1)",direction:isAr?"rtl":"ltr" }}>
         <div style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"12px auto 0" }}/>
         <div style={{ textAlign:"center",padding:"24px 32px 20px" }}>
-          <div style={{ width:60,height:60,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 16px" }}>🗑️</div>
+          <div style={{ width:60,height:60,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 16px" }}><AppIcon glyph="🗑️" /></div>
           <h2 style={{ fontSize:18,fontWeight:800,color:"#353535",marginBottom:8,fontFamily:"Rubik,sans-serif" }}>{isAr?"حذف المريض":"Delete Patient"}</h2>
           <p style={{ fontSize:14,color:"#888",lineHeight:1.6,fontFamily:"Rubik,sans-serif" }}>{isAr?"هل أنت متأكد من حذف":"Are you sure you want to delete"} <strong style={{ color:"#353535" }}>{patient.name}</strong>؟<br/><span style={{ color:"#c0392b",fontSize:12 }}>{isAr?"لا يمكن التراجع عن هذا الإجراء":"This action cannot be undone"}</span></p>
         </div>
@@ -815,14 +816,14 @@ function PaymentModal({ patients, lang, doctors, isSharedClinic, onSave, onClose
       {/* Header */}
       <div style={{ padding:"16px 24px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",direction:isAr?"rtl":"ltr" }}>
         <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-          <div style={{ width:38,height:38,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💳</div>
+          <div style={{ width:38,height:38,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="💳" /></div>
           <h3 style={{ fontFamily:"Rubik,sans-serif",fontSize:17,fontWeight:800,margin:0,color:"#353535" }}>{isAr?"تسجيل دفعة":"Record Payment"}</h3>
         </div>
         <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14 }}>✕</button>
       </div>
 
       <div style={{ padding:"16px 24px",display:"flex",flexDirection:"column",gap:0,direction:isAr?"rtl":"ltr" }}>
-        {error && <div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>⚠️ {error}</div>}
+        {error && <div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}><AppIcon glyph="⚠️" /> {error}</div>}
 
         {/* المريض */}
         <Field label={isAr?"المريض *":"Patient *"}>
@@ -879,7 +880,7 @@ function PaymentModal({ patients, lang, doctors, isSharedClinic, onSave, onClose
             <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
               <button onClick={() => setForm({...form, doctorId:""})}
                 style={{ padding:"9px 16px",borderRadius:10,cursor:"pointer",border:form.doctorId===""?"1.5px solid #888":"1.5px solid #eee",background:form.doctorId===""?"rgba(100,100,100,.08)":"#fafbfc",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:form.doctorId===""?700:400,color:form.doctorId===""?"#555":"#aaa",transition:"all .2s",display:"flex",alignItems:"center",gap:7 }}>
-                <div style={{ width:22,height:22,borderRadius:6,background:form.doctorId===""?"#888":"#ddd",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11 }}>🏥</div>
+                <div style={{ width:22,height:22,borderRadius:6,background:form.doctorId===""?"#888":"#ddd",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11 }}><AppIcon glyph="🏥" /></div>
                 {isAr?"إيراد مشترك":"Shared Revenue"}
               </button>
               {doctors.map(doc => (
@@ -921,7 +922,7 @@ function PaymentModal({ patients, lang, doctors, isSharedClinic, onSave, onClose
               { k:"followup",     icon:"🔄", ar:"مراجعة",   en:"Follow-up"    },
             ].map(s => (
               <label key={s.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.sessionType===s.k?"1.5px solid #0863ba":"1.5px solid #eee",background:form.sessionType===s.k?"rgba(8,99,186,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.sessionType===s.k?700:400,color:form.sessionType===s.k?"#0863ba":"#888" }}>
-                <span>{s.icon}</span>{isAr?s.ar:s.en}
+                <span><AppIcon glyph={s.icon} /></span>{isAr?s.ar:s.en}
                 <input type="radio" name="sessionType" value={s.k} checked={form.sessionType===s.k} onChange={e=>setForm({...form,sessionType:e.target.value})} style={{ display:"none" }}/>
               </label>
             ))}
@@ -936,7 +937,7 @@ function PaymentModal({ patients, lang, doctors, isSharedClinic, onSave, onClose
             </div>
             <input type="checkbox" checked={form.isPrepayment} onChange={e=>setForm({...form,isPrepayment:e.target.checked,prepaymentSessions:e.target.checked?form.prepaymentSessions:1})} style={{ display:"none" }}/>
             <span style={{ fontSize:13,fontWeight:600,color:form.isPrepayment?"#7b2d8b":"#666" }}>
-              💳 {isAr?"تسجيل كدفع مسبق لعدة جلسات":"Register as prepayment for multiple sessions"}
+              <AppIcon glyph="💳" /> {isAr?"تسجيل كدفع مسبق لعدة جلسات":"Register as prepayment for multiple sessions"}
             </span>
           </label>
           {form.isPrepayment && (
@@ -963,7 +964,7 @@ function PaymentModal({ patients, lang, doctors, isSharedClinic, onSave, onClose
               { k:"transfer", icon:"🏦", ar:"تحويل",   en:"Transfer" },
             ].map(m => (
               <label key={m.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.method===m.k?"1.5px solid #2e7d32":"1.5px solid #eee",background:form.method===m.k?"rgba(46,125,50,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.method===m.k?700:400,color:form.method===m.k?"#2e7d32":"#888" }}>
-                <span>{m.icon}</span>{isAr?m.ar:m.en}
+                <span><AppIcon glyph={m.icon} /></span>{isAr?m.ar:m.en}
                 <input type="radio" name="method" value={m.k} checked={form.method===m.k} onChange={e=>setForm({...form,method:e.target.value})} style={{ display:"none" }}/>
               </label>
             ))}
@@ -1012,7 +1013,7 @@ function WithdrawModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>v
         <h3 style={{ fontFamily:"Rubik,sans-serif",fontSize:17,fontWeight:700,margin:0 }}>{isAr?"تسجيل سحب":"Record Withdrawal"}</h3>
         <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14 }}>✕</button>
       </div>
-      {error&&<div style={{ margin:"12px 24px 0",background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b" }}>⚠️ {error}</div>}
+      {error&&<div style={{ margin:"12px 24px 0",background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b" }}><AppIcon glyph="⚠️" /> {error}</div>}
       <div style={{ padding:"16px 24px",display:"flex",flexDirection:"column",gap:14,direction:isAr?"rtl":"ltr" }}>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
           <div><label style={labelSt}>{isAr?"المبلغ (ل.س) *":"Amount *"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} style={inputSt}/></div>
@@ -1050,7 +1051,7 @@ function ExpenseModal({ lang, onSave, onClose }: { lang:Lang; onSave:(d:any)=>vo
         <h3 style={{ fontFamily:"Rubik,sans-serif",fontSize:17,fontWeight:700,margin:0 }}>{isAr?"تسجيل مصروف":"Record Expense"}</h3>
         <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14 }}>✕</button>
       </div>
-      {error&&<div style={{ margin:"12px 24px 0",background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b" }}>⚠️ {error}</div>}
+      {error&&<div style={{ margin:"12px 24px 0",background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b" }}><AppIcon glyph="⚠️" /> {error}</div>}
       <div style={{ padding:"16px 24px",display:"flex",flexDirection:"column",gap:14,direction:isAr?"rtl":"ltr" }}>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
           <div><label style={labelSt}>{isAr?"المبلغ (ل.س) *":"Amount *"}</label><input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} style={inputSt}/></div>
@@ -1345,7 +1346,7 @@ export default function SecretaryPage() {
 
 
   const fmtTime = (t:string) => { const [h,m]=t.slice(0,5).split(":").map(Number); const ap=h>=12?"م":"ص"; return `${h>12?h-12:h||12}:${String(m).padStart(2,"0")} ${isAr?ap:(h>=12?"PM":"AM")}`; };
-  const fmtShort = (d:string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"});
+  const fmtShort = (d:string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory-nu-latn":"en-GB",{month:"short",day:"numeric"});
   const calcAge  = (dob?:string|null) => !dob?null:Math.floor((Date.now()-new Date(dob).getTime())/(1000*60*60*24*365.25));
   const weekDay  = (d:string) => ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"][new Date(d+"T00:00:00").getDay()];
 
@@ -1394,7 +1395,7 @@ export default function SecretaryPage() {
       <div style={{ background:SB_BG,position:"sticky",top:0,zIndex:50,paddingBottom:0 }}>
         <div style={{ padding:"14px 16px 12px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-            <div style={{ width:36,height:36,background:"rgba(255,255,255,.15)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>🏥</div>
+            <div style={{ width:36,height:36,background:"rgba(255,255,255,.15)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="🏥" /></div>
             <div>
               <div style={{ fontWeight:800,fontSize:16,color:"#fff",lineHeight:1.1 }}>{clinicName}</div>
               <div style={{ fontSize:11,color:"rgba(255,255,255,.6)" }}>{isAr?"لوحة السكرتيرة":"Secretary Dashboard"}</div>
@@ -1449,7 +1450,7 @@ export default function SecretaryPage() {
               })}
             </div>
             <button onClick={()=>setSelectedDate(CAL_TODAY)} style={{ width:"100%",marginTop:10,padding:"7px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer" }}>
-              📅 {calTr.today}
+              <AppIcon glyph="📅" /> {calTr.today}
             </button>
           </div>
         </div>
@@ -1462,7 +1463,7 @@ export default function SecretaryPage() {
         </div>
         {dayAppts.length===0?(
           <div style={{ textAlign:"center",padding:"48px 0",color:"#aaa" }}>
-            <div style={{ fontSize:36,marginBottom:10 }}>📭</div>
+            <div style={{ fontSize:36,marginBottom:10 }}><AppIcon glyph="📭" /></div>
             <div style={{ fontSize:14 }}>{isAr?"لا توجد مواعيد":"No appointments"}</div>
             <button onClick={()=>{setEditAppt(null);setShowApptModal(true);}}
               style={{ marginTop:16,padding:"10px 24px",background:PRIMARY,color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer" }}>
@@ -1664,7 +1665,7 @@ export default function SecretaryPage() {
                                           onMouseEnter={e=>(e.currentTarget.style.background="rgba(8,99,186,.2)")}
                                           onMouseLeave={e=>(e.currentTarget.style.background="rgba(8,99,186,.09)")}
                                         >
-                                          ✏️
+                                          <AppIcon glyph="✏️" />
                                         </button>
                                       </div>
                                     </div>
@@ -1773,7 +1774,7 @@ export default function SecretaryPage() {
         <div style={{ position:"sticky",top:0,background:"#fafbfc",paddingTop:14,paddingBottom:10,zIndex:10 }}>
           <div style={{ display:"flex",gap:8,marginBottom:8 }}>
             <div style={{ flex:1,position:"relative" }}>
-              <span style={{ position:"absolute",top:"50%",insetInlineStart:12,transform:"translateY(-50%)",fontSize:14,color:"#aaa",pointerEvents:"none" }}>🔍</span>
+              <span style={{ position:"absolute",top:"50%",insetInlineStart:12,transform:"translateY(-50%)",fontSize:14,color:"#aaa",pointerEvents:"none" }}><AppIcon glyph="🔍" /></span>
               <input value={patSearch} onChange={e=>setPatSearch(e.target.value)}
                 placeholder={isAr?"بحث بالاسم أو الهاتف...":"Search by name or phone..."}
                 style={{ ...inputSt,paddingInlineStart:36 }}/>
@@ -1787,7 +1788,7 @@ export default function SecretaryPage() {
         </div>
         {filtPats.length===0?(
           <div style={{ textAlign:"center",padding:"48px 0",color:"#aaa" }}>
-            <div style={{ fontSize:36,marginBottom:10 }}>🔍</div>
+            <div style={{ fontSize:36,marginBottom:10 }}><AppIcon glyph="🔍" /></div>
             <div style={{ fontSize:14 }}>{isAr?"لا توجد نتائج":"No results"}</div>
           </div>
         ):filtPats.map(p=>{
@@ -1814,7 +1815,7 @@ export default function SecretaryPage() {
                   { icon:"🗑️", label:isAr?"حذف":"Delete", fn:()=>setDelPat(p), color:"#c0392b", bg:"rgba(192,57,43,.04)" },
                 ].map((btn,i)=>(
                   <button key={i} onClick={btn.fn} style={{ padding:"10px 4px",background:btn.bg,border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:600,color:btn.color,display:"flex",flexDirection:"column",alignItems:"center",gap:3,borderInlineEnd:i<3?"1px solid #f0f2f5":"none" }}>
-                    <span style={{ fontSize:16 }}>{btn.icon}</span>
+                    <span style={{ fontSize:16 }}><AppIcon glyph={btn.icon} /></span>
                     {btn.label}
                   </button>
                 ))}
@@ -1830,7 +1831,7 @@ export default function SecretaryPage() {
           {/* تقرير يومي */}
           <button className="act-btn" onClick={()=>exportDailyReportHTML(payments,withdrawals,expenses,patients,clinicName)}
             style={{ width:"100%",padding:"14px",background:PRIMARY,color:"#fff",border:"none",borderRadius:14,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:14,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
-            📄 {isAr?"تصدير التقرير اليومي":"Export Daily Report"}
+            <AppIcon glyph="📄" /> {isAr?"تصدير التقرير اليومي":"Export Daily Report"}
           </button>
 
           {/* action buttons */}
@@ -1842,7 +1843,7 @@ export default function SecretaryPage() {
             ].map(btn=>(
               <button key={btn.label} className="act-btn" onClick={btn.fn}
                 style={{ padding:"14px 6px",background:btn.bg,border:`1.5px solid ${btn.border}`,borderRadius:14,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,color:btn.color,display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
-                <span style={{ fontSize:22 }}>{btn.icon}</span>
+                <span style={{ fontSize:22 }}><AppIcon glyph={btn.icon} /></span>
                 <span>{btn.label}</span>
               </button>
             ))}
@@ -1850,13 +1851,13 @@ export default function SecretaryPage() {
 
           {/* today's transactions */}
           <div style={{ fontSize:13,fontWeight:700,color:"#353535",marginBottom:10,display:"flex",alignItems:"center",gap:8 }}>
-            📋 {isAr?"معاملات اليوم":"Today's Transactions"}
+            <AppIcon glyph="📋" /> {isAr?"معاملات اليوم":"Today's Transactions"}
             <span style={{ background:"#f0f7ff",color:PRIMARY,fontSize:11,padding:"2px 8px",borderRadius:10,fontWeight:600 }}>{todayTx.length}</span>
           </div>
 
           {todayTx.length===0?(
             <div style={{ textAlign:"center",padding:"40px 0",color:"#aaa" }}>
-              <div style={{ fontSize:32,marginBottom:8 }}>🗒️</div>
+              <div style={{ fontSize:32,marginBottom:8 }}><AppIcon glyph="🗒️" /></div>
               <div style={{ fontSize:13 }}>{isAr?"لا توجد معاملات اليوم":"No transactions today"}</div>
             </div>
           ):todayTx.map((tx:any,i)=>{
@@ -1874,7 +1875,7 @@ export default function SecretaryPage() {
             return (
               <div key={i} style={{ background:"#fff",borderRadius:12,marginBottom:8,border:"1.5px solid #eef0f3",overflow:"hidden",animation:"fadeIn .2s ease",opacity:isCancelled?0.5:1 }}>
                 <div style={{ padding:"12px 14px",display:"flex",alignItems:"center",gap:12 }}>
-                  <div style={{ width:36,height:36,borderRadius:10,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0 }}>{icon}</div>
+                  <div style={{ width:36,height:36,borderRadius:10,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0 }}><AppIcon glyph={icon} /></div>
                   <div style={{ flex:1,minWidth:0 }}>
                     {patient&&<div style={{ fontSize:13,fontWeight:600,color:"#353535",marginBottom:1 }}>{patient.name}</div>}
                     <div style={{ fontSize:12,color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{label||typeLabel}</div>
@@ -1895,7 +1896,7 @@ export default function SecretaryPage() {
                       else if (isWD) handleDeleteWD(tx.id);
                       else handleDeleteExp(tx.id);
                     }} style={{ padding:"8px 14px",background:"rgba(192,57,43,.04)",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:600,color:"#c0392b",display:"flex",alignItems:"center",gap:4 }}>
-                      {isIn?(isAr?"↩ تراجع":"↩ Reverse"):(isAr?"🗑️ حذف":"🗑️ Delete")}
+                      {isIn?(isAr?"↩ تراجع":"↩ Reverse"):(isAr?"حذف":"Delete")}
                     </button>
                   </div>
                 )}

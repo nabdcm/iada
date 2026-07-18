@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 // ============================================================
 // NABD - نبض | Messages Page — صفحة الرسائل
 // Route: /messages
@@ -137,7 +138,7 @@ export default function MessagesPage() {
 
   function formatTime(iso: string) {
     const d = new Date(iso);
-    return d.toLocaleString(isAr ? "ar-SA-u-ca-gregory" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleString(isAr ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
   function getExpiryLabel(iso: string): string {
@@ -350,7 +351,7 @@ export default function MessagesPage() {
         >
           {/* Header */}
           <div className="msg-header">
-            <div className="msg-header-icon">💬</div>
+            <div className="msg-header-icon"><AppIcon glyph="💬" /></div>
             <div>
               <div className="msg-header-title">{isAr ? "المراسلة" : "Messages"}</div>
               <div className="msg-header-sub">{isAr ? "التواصل مع فريق نبض" : "Contact NABD Team"}</div>
@@ -365,8 +366,8 @@ export default function MessagesPage() {
             {messages.length === 0 && (
               <div className="msg-empty">
                 {isAr
-                  ? "لا توجد رسائل بعد.\nسيتواصل معك فريق نبض قريباً 👋"
-                  : "No messages yet.\nThe NABD team will reach out to you soon 👋"}
+                  ? "لا توجد رسائل بعد.\nسيتواصل معك فريق نبض قريباً "
+                  : "No messages yet.\nThe NABD team will reach out to you soon "}
               </div>
             )}
 
@@ -376,7 +377,7 @@ export default function MessagesPage() {
               return (
                 <div key={msg.id} className={`msg-bubble-wrap ${isMe ? "me" : "them"}`}>
                   <div className={`msg-bubble ${isMe ? "me" : "them"}`}>
-                    {!isMe && <div className="msg-bubble-sender">نبض 💙</div>}
+                    {!isMe && <div className="msg-bubble-sender">نبض <AppIcon glyph="💙" /></div>}
                     {msg.body}
                     <div className="msg-bubble-meta">
                       <span>{formatTime(msg.created_at)}</span>

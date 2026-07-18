@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -151,7 +152,7 @@ function BlockedContent() {
             borderRadius: 14, padding: "16px 20px", marginBottom: 28,
           }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#0863ba", marginBottom: 10, textTransform: "uppercase", letterSpacing: .5 }}>
-              📞 تواصل مع الدعم
+              <AppIcon glyph="📞" /> تواصل مع الدعم
             </div>
             <div style={{ fontSize: 13, color: "#666", lineHeight: 1.8 }}>
               <div>البريد: <span style={{ color: "#0863ba", fontWeight: 600 }}>support@nabd.clinic</span></div>

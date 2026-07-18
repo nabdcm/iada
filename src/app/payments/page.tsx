@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
@@ -30,7 +31,7 @@ const T = {
     statuses:{ paid:"مدفوع", pending:"معلّق", cancelled:"ملغي" },
     filter:{ all:"الكل", paid:"مدفوع", pending:"معلّق", cash:"نقداً", card:"بطاقة" },
     search:"بحث بالمريض أو الوصف...",
-    pendingSection:{ title:"المستحقات المعلّقة", markPaid:"تحديد كمدفوع", empty:"لا توجد مستحقات معلّقة 🎉" },
+    pendingSection:{ title:"المستحقات المعلّقة", markPaid:"تحديد كمدفوع", empty:"لا توجد مستحقات معلّقة " },
     modal:{
       addTitle:"تسجيل دفعة جديدة",
       patient:"المريض *", selectPatient:"اختر المريض",
@@ -129,9 +130,9 @@ const T = {
         shared_enterprise:"حتى 5 أطباء",
       },
       planPricing:{
-        shared_basic:     "٧.٩٩ $ / شهر · ٧٩ $ / سنة",
-        shared_pro:       "١٣.٩٩ $ / شهر · ١٣٩ $ / سنة",
-        shared_enterprise:"٢١.٩٩ $ / شهر · ٢١٩ $ / سنة",
+        shared_basic:     "7.99 $ / شهر · 79 $ / سنة",
+        shared_pro:       "13.99 $ / شهر · 139 $ / سنة",
+        shared_enterprise:"21.99 $ / شهر · 219 $ / سنة",
       },
     },
   },
@@ -154,7 +155,7 @@ const T = {
     statuses:{ paid:"Paid", pending:"Pending", cancelled:"Cancelled" },
     filter:{ all:"All", paid:"Paid", pending:"Pending", cash:"Cash", card:"Card" },
     search:"Search by patient or description...",
-    pendingSection:{ title:"Pending Dues", markPaid:"Mark as Paid", empty:"No pending dues 🎉" },
+    pendingSection:{ title:"Pending Dues", markPaid:"Mark as Paid", empty:"No pending dues " },
     modal:{
       addTitle:"Record New Payment",
       patient:"Patient *", selectPatient:"Select patient",
@@ -433,14 +434,14 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
           {/* Drag handle — mobile only */}
           <div style={{ position:"absolute",top:8,left:"50%",transform:"translateX(-50%)",width:40,height:4,borderRadius:4,background:"#e0e0e0" }}/>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>💳</div>
+            <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph="💳" /></div>
             <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.modal.addTitle}</h2>
           </div>
           <button onClick={onClose} style={{ width:36,height:36,borderRadius:10,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
         </div>
         {/* Body */}
         <div style={{ padding:"20px 26px" }}>
-          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
+          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
           <F label={tr.modal.patient}>
             <div ref={patientDropRef} style={{ position:"relative" }}>
               <div style={{ position:"relative", display:"flex", alignItems:"center" }}>
@@ -528,7 +529,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                     transition:"all .2s", display:"flex", alignItems:"center", gap:7,
                   }}>
                   <div style={{ width:22,height:22,borderRadius:6,background:form.doctorId===""?"#888":"#ddd",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11 }}>
-                    🏥
+                    <AppIcon glyph="🏥" />
                   </div>
                   {tr.modal.sharedRevenue}
                 </button>
@@ -558,8 +559,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                     value={form.doctorSharePercentage}
                     onChange={e=>{
                       // يسمح فقط بأرقام إنجليزية وفاصلة عشرية واحدة، ويحوّل الأرقام العربية/الفارسية تلقائياً
-                      const arabicDigits: Record<string,string> = {"٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9","۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9"};
-                      let v = e.target.value.replace(/[٠-٩۰-۹]/g, ch => arabicDigits[ch] || "");
+                      let v = e.target.value.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, ch => String(ch.charCodeAt(0) % 16 % 10));
                       v = v.replace(/[^0-9.]/g, "");
                       const firstDot = v.indexOf(".");
                       if (firstDot !== -1) v = v.slice(0, firstDot+1) + v.slice(firstDot+1).replace(/\./g, "");
@@ -601,7 +601,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                 { k:"other",        icon:"📝", label:tr.sessionType.other        },
               ].map(s=>(
                 <label key={s.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.sessionType===s.k?"1.5px solid #0863ba":"1.5px solid #eee",background:form.sessionType===s.k?"rgba(8,99,186,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.sessionType===s.k?700:400,color:form.sessionType===s.k?"#0863ba":"#888" }}>
-                  <span>{s.icon}</span>{s.label}
+                  <span><AppIcon glyph={s.icon} /></span>{s.label}
                   <input type="radio" name="sessionType" value={s.k} checked={form.sessionType===s.k} onChange={e=>setForm({...form,sessionType:e.target.value})} style={{ display:"none" }}/>
                 </label>
               ))}
@@ -626,7 +626,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
               </div>
               <input type="checkbox" checked={form.isPrepayment} onChange={e=>setForm({...form,isPrepayment:e.target.checked,prepaymentSessions:e.target.checked?form.prepaymentSessions:1})} style={{ display:"none" }}/>
               <span style={{ fontSize:13,fontWeight:600,color:form.isPrepayment?"#7b2d8b":"#666" }}>
-                💳 {tr.prepayment.toggle}
+                <AppIcon glyph="💳" /> {tr.prepayment.toggle}
               </span>
             </label>
             {form.isPrepayment && (
@@ -651,7 +651,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
                 { k:"transfer", icon:"🏦", label:tr.methods.transfer },
               ].map(m=>(
                 <label key={m.k} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"10px",borderRadius:10,cursor:"pointer",border:form.method===m.k?"1.5px solid #2e7d32":"1.5px solid #eee",background:form.method===m.k?"rgba(46,125,50,.08)":"#fafbfc",transition:"all .2s",fontSize:12,fontWeight:form.method===m.k?700:400,color:form.method===m.k?"#2e7d32":"#888" }}>
-                  <span>{m.icon}</span>{m.label}
+                  <span><AppIcon glyph={m.icon} /></span>{m.label}
                   <input type="radio" name="method" value={m.k} checked={form.method===m.k} onChange={e=>setForm({...form,method:e.target.value})} style={{ display:"none" }}/>
                 </label>
               ))}
@@ -759,10 +759,8 @@ function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHi
           <div key={i} className="stat-big" style={{ position:"relative",overflow:"hidden",background:"#fff",border:"1.5px solid #eef0f3",boxShadow:"0 2px 16px rgba(8,99,186,.08)",borderRadius:16,padding:"20px 20px" }}>
             <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:c.gradient,borderRadius:"16px 16px 0 0" }}/>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
-              <div style={{ width:40,height:40,background:c.iconBg,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>{c.icon}</div>
-              <button onClick={onReveal} style={{ width:32,height:32,borderRadius:8,background:c.eyeBg,border:`1.5px solid ${c.eyeBorder}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:c.eyeColor,fontSize:15,flexShrink:0 }}>
-                {numbersHidden?"👁":"🙈"}
-              </button>
+              <div style={{ width:40,height:40,background:c.iconBg,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph={c.icon} /></div>
+              <button onClick={onReveal} style={{ width:32,height:32,borderRadius:8,background:c.eyeBg,border:`1.5px solid ${c.eyeBorder}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:c.eyeColor,fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
             </div>
             <div style={{ fontSize:26,fontWeight:900,color:c.valueColor,lineHeight:1 }}>{c.value}</div>
             <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{c.label}</div>
@@ -870,13 +868,13 @@ function WithdrawModal({ lang, onSave, onClose }: { lang: string; onSave: (data:
       <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:420,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(192,57,43,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:"rgba(192,57,43,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>💸</div>
+            <div style={{ width:40,height:40,background:"rgba(192,57,43,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph="💸" /></div>
             <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.withdrawModal.title}</h2>
           </div>
           <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
         </div>
         <div style={{ padding:"20px 26px" }}>
-          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
+          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
           <div style={{ display:"flex",gap:12 }}>
             <F label={tr.withdrawModal.amount} half>
               <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={inputSt} onFocus={e=>e.target.style.borderColor="#c0392b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
@@ -926,20 +924,20 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
       <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(123,45,139,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:"rgba(123,45,139,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>🏪</div>
+            <div style={{ width:40,height:40,background:"rgba(123,45,139,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph="🏪" /></div>
             <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.expenseModal.title}</h2>
           </div>
           <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
         </div>
         <div style={{ padding:"20px 26px" }}>
-          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
+          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
           {/* Category Selector */}
           <F label={tr.expenseModal.category}>
             <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
               {(Object.entries(tr.expenseModal.categories) as [string, string][]).map(([k,v])=>(
                 <button key={k} onClick={()=>setForm({...form,category:k})}
                   style={{ padding:"8px 14px",borderRadius:10,cursor:"pointer",border:form.category===k?"1.5px solid #7b2d8b":"1.5px solid #eee",background:form.category===k?"rgba(123,45,139,.08)":"#fafbfc",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:form.category===k?700:400,color:form.category===k?"#7b2d8b":"#888",transition:"all .2s",display:"flex",alignItems:"center",gap:6 }}>
-                  <span>{catIcons[k] ?? "📋"}</span><span>{v}</span>
+                  <span><AppIcon glyph={catIcons[k] ?? "📋"} /></span><span>{v}</span>
                 </button>
               ))}
             </div>
@@ -1379,11 +1377,11 @@ export default function PaymentsPage() {
     }
   };
 
-  const fmtDate = (d: string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{ year:"numeric",month:"short",day:"numeric",calendar:"gregory" });
+  const fmtDate = (d: string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory-nu-latn":"en-GB",{ year:"numeric",month:"short",day:"numeric",calendar:"gregory" });
 
   // ── مساعد تنسيق التاريخ الميلادي للـ PDF ─────────────────────
   const fmtDateGregorian = (d: string) =>
-    new Date(d+"T00:00:00").toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"short", day:"numeric" });
+    new Date(d+"T00:00:00").toLocaleDateString("ar-EG-u-ca-gregory-nu-latn", { year:"numeric", month:"short", day:"numeric" });
 
   // ── تصدير تقرير PDF شهري ─────────────────────────────────
   const exportPDF = () => {
@@ -1401,7 +1399,7 @@ export default function PaymentsPage() {
       .filter(e => e.date.startsWith(thisMonth) && !e.is_reversed)
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const monthName = now.toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"long" });
+    const monthName = now.toLocaleDateString("ar-EG-u-ca-gregory-nu-latn", { year:"numeric", month:"long" });
     const totalPaid = monthPayments.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0);
     const totalPending = monthPayments.filter(p=>p.status==="pending").reduce((s,p)=>s+p.amount,0);
     const totalWD = monthWithdrawals.reduce((s,w)=>s+w.amount,0);
@@ -1465,7 +1463,7 @@ export default function PaymentsPage() {
       if (!rows) return "";
       return `
   <!-- قسم محاسبة الأطباء -->
-  <div class="section-title" style="border-color:#0891b2">🩺 محاسبة الأطباء (نسبة كل طبيب من الإيرادات)</div>
+  <div class="section-title" style="border-color:#0891b2">محاسبة الأطباء (نسبة كل طبيب من الإيرادات)</div>
   <table>
     <thead style="background:#0891b2"><tr style="color:#fff">
       <th>الطبيب</th><th>عدد الدفعات</th><th>إجمالي الإيرادات</th><th>حصة الطبيب</th><th>حصة العيادة</th>
@@ -1579,7 +1577,7 @@ export default function PaymentsPage() {
   </div>
 
   <!-- قسم الدخل -->
-  <div class="section-title section-income">💰 حركة الدفع — المدفوعات والمستحقات</div>
+  <div class="section-title section-income">حركة الدفع — المدفوعات والمستحقات</div>
   <table>
     <thead class="income-head">
       <tr>
@@ -1596,7 +1594,7 @@ export default function PaymentsPage() {
   </table>
 
   <!-- قسم السحوبات -->
-  <div class="section-title section-withdraw">💸 حركة السحوبات</div>
+  <div class="section-title section-withdraw">حركة السحوبات</div>
   <table>
     <thead class="withdraw-head">
       <tr>
@@ -1610,7 +1608,7 @@ export default function PaymentsPage() {
   </table>
 
   <!-- قسم المصروفات -->
-  <div class="section-title section-expense">🏪 حركة مصروفات العيادة</div>
+  <div class="section-title section-expense">حركة مصروفات العيادة</div>
   <table>
     <thead class="expense-head">
       <tr>
@@ -1637,7 +1635,7 @@ ${doctorSettlementRows}
 
   <div class="footer">
     <span>نبض${clinicName ? " — " + clinicName : " — نظام إدارة العيادة"}</span>
-    <span>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"long", day:"numeric" })}</span>
+    <span>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-EG-u-ca-gregory-nu-latn", { year:"numeric", month:"long", day:"numeric" })}</span>
   </div>
 </body>
 </html>`;
@@ -1678,7 +1676,7 @@ ${doctorSettlementRows}
       .filter(e => e.date === todayStr)
       .sort((a,b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
 
-    const dayLabel = now.toLocaleDateString("ar-EG-u-ca-gregory", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+    const dayLabel = now.toLocaleDateString("ar-EG-u-ca-gregory-nu-latn", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
     const totalPaid    = todayPayments.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0);
     const totalPending = todayPayments.filter(p=>p.status==="pending").reduce((s,p)=>s+p.amount,0);
     const totalWD      = todayWithdrawals.filter(w=>!w.is_reversed).reduce((s,w)=>s+w.amount,0);
@@ -1803,7 +1801,7 @@ ${doctorSettlementRows}
     <div class="report-title">
       <h1>التقرير اليومي للعيادة</h1>
       ${clinicName ? `<div style="font-size:13px;font-weight:700;color:#353535;margin-top:3px">${clinicName}</div>` : ""}
-      <div class="day-badge">📅 ${dayLabel}</div>
+      <div class="day-badge">${dayLabel}</div>
     </div>
   </div>
 
@@ -1811,7 +1809,7 @@ ${doctorSettlementRows}
   <div class="stats">
     <div class="stat stat-income">
       <div class="stat-val green">+${totalPaid.toLocaleString()} ل.س</div>
-      <div class="stat-label">💰 إجمالي الدخل اليوم</div>
+      <div class="stat-label">إجمالي الدخل اليوم</div>
     </div>
     <div class="stat stat-pending">
       <div class="stat-val orange">${totalPending.toLocaleString()} ل.س</div>
@@ -1819,16 +1817,16 @@ ${doctorSettlementRows}
     </div>
     <div class="stat stat-withdraw">
       <div class="stat-val red">-${totalWD.toLocaleString()} ل.س</div>
-      <div class="stat-label">💸 سحوبات اليوم</div>
+      <div class="stat-label">سحوبات اليوم</div>
     </div>
     <div class="stat stat-expense">
       <div class="stat-val purple">-${totalEX.toLocaleString()} ل.س</div>
-      <div class="stat-label">🏪 مصروفات اليوم</div>
+      <div class="stat-label">مصروفات اليوم</div>
     </div>
   </div>
 
   <!-- قسم المدفوعات -->
-  <div class="section-title section-income">💰 المدفوعات والمستحقات — اليوم</div>
+  <div class="section-title section-income">المدفوعات والمستحقات — اليوم</div>
   <table>
     <thead class="income-head">
       <tr><th>المريض</th><th>الوصف</th><th>طريقة الدفع</th><th>الحالة</th><th>المبلغ</th></tr>
@@ -1840,7 +1838,7 @@ ${doctorSettlementRows}
   </table>
 
   <!-- قسم السحوبات -->
-  <div class="section-title section-withdraw">💸 سحوبات اليوم</div>
+  <div class="section-title section-withdraw">سحوبات اليوم</div>
   <table>
     <thead class="withdraw-head">
       <tr><th colspan="3">سبب السحب</th><th>النوع</th><th>المبلغ</th></tr>
@@ -1852,7 +1850,7 @@ ${doctorSettlementRows}
   </table>
 
   <!-- قسم المصروفات -->
-  <div class="section-title section-expense">🏪 مصروفات العيادة — اليوم</div>
+  <div class="section-title section-expense">مصروفات العيادة — اليوم</div>
   <table>
     <thead class="expense-head">
       <tr><th colspan="2">الوصف</th><th>التصنيف</th><th>النوع</th><th>المبلغ</th></tr>
@@ -1866,7 +1864,7 @@ ${doctorSettlementRows}
   <!-- الرصيد اليومي الصافي -->
   <div class="net-box ${netBalance >= 0 ? "net-positive" : "net-negative"}">
     <div>
-      <div class="net-label">${netBalance >= 0 ? "✅" : "⚠️"} الحساب اليومي الصافي</div>
+      <div class="net-label">${netBalance >= 0 ? "" : ""} الحساب اليومي الصافي</div>
       <div class="net-sub">الدخل المدفوع (${totalPaid.toLocaleString()}) − السحوبات (${totalWD.toLocaleString()}) − المصروفات (${totalEX.toLocaleString()})</div>
     </div>
     <div class="net-val" style="color:${netBalance >= 0 ? "#2e7d32" : "#c0392b"}">
@@ -1876,7 +1874,7 @@ ${doctorSettlementRows}
 
   <div class="footer">
     <span>نبض${clinicName ? " — " + clinicName : " — نظام إدارة العيادة"}</span>
-    <span>وقت الطباعة: ${now.toLocaleString("ar-EG-u-ca-gregory", { year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit" })}</span>
+    <span>وقت الطباعة: ${now.toLocaleString("ar-EG-u-ca-gregory-nu-latn", { year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit" })}</span>
   </div>
 </body>
 </html>`;
@@ -1916,7 +1914,7 @@ ${doctorSettlementRows}
     const clinicShareAmount = doctorShareAmount != null ? payment.amount - doctorShareAmount : null;
     const doctorSection = doctor ? `
   <div class="info-box" style="margin-bottom:24px;border-color:#0891b2">
-    <h3 style="color:#0891b2">🩺 محاسبة الطبيب</h3>
+    <h3 style="color:#0891b2">محاسبة الطبيب</h3>
     <div class="info-row"><span>الطبيب المعالج</span><span>د. ${doctor.name}</span></div>
     <div class="info-row"><span>النسبة المحتسبة للطبيب</span><span>${pctNum != null ? pctNum + " %" : "غير محددة"}</span></div>
     ${doctorShareAmount != null ? `<div class="info-row"><span>حصة الطبيب</span><span style="color:#2e7d32">${doctorShareAmount.toLocaleString()} ل.س</span></div>
@@ -2000,7 +1998,7 @@ ${doctorSettlementRows}
   ${payment.notes ? `<div class="info-box"><h3>ملاحظات</h3><div style="font-size:13px;color:#555">${payment.notes}</div></div>` : ""}
 
   <div class="footer">
-    نبض${clinicName ? " — " + clinicName : ""} · تاريخ الإصدار: ${new Date().toLocaleDateString("ar-EG-u-ca-gregory", { year:"numeric", month:"long", day:"numeric" })}
+    نبض${clinicName ? " — " + clinicName : ""} · تاريخ الإصدار: ${new Date().toLocaleDateString("ar-EG-u-ca-gregory-nu-latn", { year:"numeric", month:"long", day:"numeric" })}
   </div>
 </body>
 </html>`;
@@ -2159,7 +2157,7 @@ ${doctorSettlementRows}
           {/* ── شاشة "غير متاح في الخطة الأساسية" ── */}
           {!loading && !canAccess("payments", plan) && (
             <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:16 }}>
-              <div style={{ fontSize:64 }}>🔒</div>
+              <div style={{ fontSize:64 }}><AppIcon glyph="🔒" /></div>
               <h2 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>
                 {isAr ? "إدارة المدفوعات غير متاحة في خطتك الحالية" : "Payments Not Available in Your Plan"}
               </h2>
@@ -2170,10 +2168,10 @@ ${doctorSettlementRows}
               </p>
               <div style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginTop:4 }}>
                 <div style={{ padding:"10px 20px",background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:12,fontSize:13,color:"#7b2d8b",fontWeight:600 }}>
-                  ✅ {isAr?"الاحترافية — فردي أو مشترك":"Professional — Individual or Shared"}
+                  <AppIcon glyph="✅" /> {isAr?"الاحترافية — فردي أو مشترك":"Professional — Individual or Shared"}
                 </div>
                 <div style={{ padding:"10px 20px",background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontSize:13,color:"#e67e22",fontWeight:600 }}>
-                  ✅ {isAr?"الشاملة — فردي أو مشترك":"Comprehensive — Individual or Shared"}
+                  <AppIcon glyph="✅" /> {isAr?"الشاملة — فردي أو مشترك":"Comprehensive — Individual or Shared"}
                 </div>
               </div>
               <a href="https://wa.me/963998285483" target="_blank" rel="noopener noreferrer" style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"12px 28px",background:"#25D366",color:"#fff",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:"0 4px 16px rgba(37,211,102,.35)",marginTop:8 }}>
@@ -2246,7 +2244,7 @@ ${doctorSettlementRows}
             {isSharedClinicPlan(plan) && (
               <div style={{ marginBottom:20,padding:"14px 20px",background:"linear-gradient(135deg,rgba(14,124,106,.06),rgba(181,69,27,.06))",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
                 <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-                  <div style={{ width:38,height:38,background:"rgba(14,124,106,.12)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>🏥</div>
+                  <div style={{ width:38,height:38,background:"rgba(14,124,106,.12)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="🏥" /></div>
                   <div>
                     <div style={{ fontSize:13,fontWeight:800,color:PLAN_BADGE[plan].color }}>
                       {PLAN_BADGE[plan].label[lang as "ar"|"en"]}
@@ -2300,11 +2298,9 @@ ${doctorSettlementRows}
               <div className="stat-big" style={{ gridColumn:"span 1",animation:"fadeUp .4s 0ms ease both" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#2e7d32,#66bb6a)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
-                  <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💰</div>
+                  <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="💰" /></div>
                   <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
-                    style={{ width:32,height:32,borderRadius:8,background:"rgba(46,125,50,.08)",border:"1.5px solid rgba(46,125,50,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#2e7d32",fontSize:15,flexShrink:0 }}>
-                    {numbersHidden?"👁":"🙈"}
-                  </button>
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(46,125,50,.08)",border:"1.5px solid rgba(46,125,50,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#2e7d32",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#2e7d32",lineHeight:1 }}>
                   {maskNumber(stats.totalMonth)} ل.س
@@ -2316,11 +2312,9 @@ ${doctorSettlementRows}
               <div className="stat-big" style={{ animation:"fadeUp .4s 60ms ease both" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#0863ba,#a4c4e4)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
-                  <div style={{ width:40,height:40,background:"rgba(8,99,186,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>📊</div>
+                  <div style={{ width:40,height:40,background:"rgba(8,99,186,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="📊" /></div>
                   <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
-                    style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#0863ba",fontSize:15,flexShrink:0 }}>
-                    {numbersHidden?"👁":"🙈"}
-                  </button>
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#0863ba",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#0863ba",lineHeight:1 }}>
                   {maskNumber(stats.totalYear)} ل.س
@@ -2334,9 +2328,7 @@ ${doctorSettlementRows}
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                   <div style={{ width:40,height:40,background:"rgba(230,126,34,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>⏳</div>
                   <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
-                    style={{ width:32,height:32,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e67e22",fontSize:15,flexShrink:0 }}>
-                    {numbersHidden?"👁":"🙈"}
-                  </button>
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e67e22",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#e67e22",lineHeight:1 }}>
                   {maskNumber(stats.pendingAmt)} ل.س
@@ -2378,9 +2370,7 @@ ${doctorSettlementRows}
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <div style={{ fontSize:12,fontWeight:600,opacity:.8 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
                   <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
-                    style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
-                    {numbersHidden?"👁":"🙈"}
-                  </button>
+                    style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
                 <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${stats.netBalance.toLocaleString()}`} ل.س</div>
                 <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
@@ -2391,9 +2381,7 @@ ${doctorSettlementRows}
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalWithdrawals}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
                     <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
-                      style={{ width:30,height:30,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
-                      {numbersHidden?"👁":"🙈"}
-                    </button>
+                      style={{ width:30,height:30,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                     <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
                   </div>
                 </div>
@@ -2406,9 +2394,7 @@ ${doctorSettlementRows}
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalExpenses}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
                     <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
-                      style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
-                      {numbersHidden?"👁":"🙈"}
-                    </button>
+                      style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                     <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
                   </div>
                 </div>
@@ -2425,7 +2411,7 @@ ${doctorSettlementRows}
                 {/* Search + Filter */}
                 <div style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
                   <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
-                    <span style={{ color:"#bbb",fontSize:14 }}>🔍</span>
+                    <span style={{ color:"#bbb",fontSize:14 }}><AppIcon glyph="🔍" /></span>
                     <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr.search}
                       style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:"100%",direction:isAr?"rtl":"ltr" }}/>
                     {search&&<button onClick={()=>setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#bbb" }}>✕</button>}
@@ -2457,7 +2443,7 @@ ${doctorSettlementRows}
 
                   {filtered.length===0?(
                     <div style={{ textAlign:"center",padding:"50px 20px",color:"#ccc" }}>
-                      <div style={{ fontSize:36,marginBottom:10 }}>🔍</div>
+                      <div style={{ fontSize:36,marginBottom:10 }}><AppIcon glyph="🔍" /></div>
                       <div style={{ fontSize:14,fontWeight:600 }}>{tr.noResults}</div>
                     </div>
                   ):loading?(
@@ -2507,9 +2493,9 @@ ${doctorSettlementRows}
                                   <span style={{ fontSize:11,color:"#aaa" }}>{methodIcon[p.method]} {tr.methods[p.method]}</span>
                                 </div>
                                 <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                                  <button className="icon-btn" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}>👁️</button>
-                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>🧾</button>
-                                  <button className="icon-btn" onClick={()=>setDeleteId(p.id)}>🗑️</button>
+                                  <button className="icon-btn" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}><AppIcon glyph="👁️" /></button>
+                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}><AppIcon glyph="🧾" /></button>
+                                  <button className="icon-btn" onClick={()=>setDeleteId(p.id)}><AppIcon glyph="🗑️" /></button>
                                 </div>
                               </div>
                             </div>
@@ -2572,7 +2558,7 @@ ${doctorSettlementRows}
                                 {/* شارة الدفع المسبق */}
                                 {(p as any).is_prepayment && (
                                   <span style={{ display:"inline-flex",alignItems:"center",gap:3,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"rgba(123,45,139,.1)",color:"#7b2d8b",marginInlineEnd:5 }}>
-                                    💳 {tr.prepayment.badgePrefix}{(p as any).prepayment_sessions ?? ""}
+                                    <AppIcon glyph="💳" /> {tr.prepayment.badgePrefix}{(p as any).prepayment_sessions ?? ""}
                                   </span>
                                 )}
                                 {p.description}
@@ -2588,9 +2574,9 @@ ${doctorSettlementRows}
                                 {p.amount.toLocaleString()} ل.س
                               </div>
                               <div style={{ display:"flex",justifyContent:"center",gap:4 }}>
-                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}>👁️</button>
-                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}>🧾</button>
-                                <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}>🗑️</button>
+                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}><AppIcon glyph="👁️" /></button>
+                                <button className="icon-btn" onClick={()=>exportInvoicePDF(p)} title={isAr?"استخراج فاتورة":"Export Invoice"}><AppIcon glyph="🧾" /></button>
+                                <button className="icon-btn" onClick={()=>setDeleteId(p.id)} title={tr.deleteConfirm}><AppIcon glyph="🗑️" /></button>
                               </div>
                             </div>
                           );
@@ -2615,7 +2601,7 @@ ${doctorSettlementRows}
                   <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.18)",boxShadow:"0 2px 16px rgba(192,57,43,.06)",overflow:"hidden",marginTop:20 }}>
                     <div style={{ padding:"16px 20px",borderBottom:"1.5px solid rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(192,57,43,.03)" }}>
                       <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
-                        <span style={{ fontSize:16 }}>💸</span>
+                        <span style={{ fontSize:16 }}><AppIcon glyph="💸" /></span>
                         {tr.withdrawalsSection.title}
                       </h3>
                       <div style={{ display:"flex",alignItems:"center",gap:10 }}>
@@ -2674,7 +2660,7 @@ ${doctorSettlementRows}
                   <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(8,145,178,.2)",padding:"18px 18px",boxShadow:"0 2px 16px rgba(8,145,178,.06)",marginBottom:16 }}>
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                       <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
-                        <span style={{ fontSize:16 }}>👨‍⚕️</span>
+                        <span style={{ fontSize:16 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></span>
                         {tr.sharedClinic.doctorRevenue}
                       </h3>
                       <span style={{ fontSize:11,background:"rgba(8,145,178,.08)",color:"#0891b2",padding:"3px 10px",borderRadius:20,fontWeight:600 }}>
@@ -2755,7 +2741,7 @@ ${doctorSettlementRows}
                 <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(192,57,43,.15)",padding:"18px",boxShadow:"0 2px 16px rgba(192,57,43,.06)",marginTop:16,minWidth:0,overflow:"hidden" }}>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                     <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
-                      <span style={{ fontSize:16 }}>💸</span> {tr.withdrawalsSection.title}
+                      <span style={{ fontSize:16 }}><AppIcon glyph="💸" /></span> {tr.withdrawalsSection.title}
                     </h3>
                     <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
                   </div>
@@ -2767,7 +2753,7 @@ ${doctorSettlementRows}
                         <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
                           <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{w.reason}</div>
                           <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2,flexWrap:"wrap" }}>
-                            <span style={{ fontSize:11,color:"#aaa" }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
+                            <span style={{ fontSize:11,color:"#aaa" }}>{new Date(w.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory-nu-latn":"en-GB",{month:"short",day:"numeric"})}</span>
                           </div>
                         </div>
                         <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
@@ -2789,7 +2775,7 @@ ${doctorSettlementRows}
                 <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid rgba(123,45,139,.15)",padding:"18px",boxShadow:"0 2px 16px rgba(123,45,139,.06)",marginTop:16,minWidth:0,overflow:"hidden" }}>
                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                     <h3 style={{ fontSize:14,fontWeight:700,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>
-                      <span style={{ fontSize:16 }}>🏪</span> {tr.expensesSection.title}
+                      <span style={{ fontSize:16 }}><AppIcon glyph="🏪" /></span> {tr.expensesSection.title}
                     </h3>
                     <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
                   </div>
@@ -2804,7 +2790,7 @@ ${doctorSettlementRows}
                             <div style={{ fontSize:12,fontWeight:600,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{e.description}</div>
                             <div style={{ display:"flex",gap:8,marginTop:3,flexWrap:"wrap" }}>
                               <span style={{ fontSize:10,padding:"2px 8px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",borderRadius:20,fontWeight:600,flexShrink:0 }}>{catLabels[e.category as keyof typeof catLabels]||e.category}</span>
-                              <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory":"en-GB",{month:"short",day:"numeric"})}</span>
+                              <span style={{ fontSize:11,color:"#aaa" }}>{new Date(e.date+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory-nu-latn":"en-GB",{month:"short",day:"numeric"})}</span>
                             </div>
                           </div>
                           <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
@@ -2837,7 +2823,7 @@ ${doctorSettlementRows}
           <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
             <div onClick={()=>{setShowRevealModal(false);setRevealPasswordInput("");setRevealPasswordError(false);}} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
             <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
-              <div style={{ fontSize:44,marginBottom:12 }}>👁</div>
+              <div style={{ fontSize:44,marginBottom:12 }}><AppIcon glyph="👁" /></div>
               <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{isAr?"إظهار الأرقام":"Show Numbers"}</h3>
               <p style={{ fontSize:13,color:"#888",marginBottom:20 }}>{isAr?"أدخل كلمة السر لرؤية الأرقام":"Enter password to view numbers"}</p>
               <input
@@ -2865,7 +2851,7 @@ ${doctorSettlementRows}
           <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
             <div onClick={()=>{setShowMonthlyReportPasswordModal(false);setMonthlyReportPasswordInput("");setMonthlyReportPasswordError(false);}} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
             <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
-              <div style={{ fontSize:44,marginBottom:12 }}>🔒</div>
+              <div style={{ fontSize:44,marginBottom:12 }}><AppIcon glyph="🔒" /></div>
               <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{isAr?"التقرير الشهري محمي":"Monthly Report Protected"}</h3>
               <p style={{ fontSize:13,color:"#888",marginBottom:20 }}>{isAr?"أدخل كلمة سر صفحة المدفوعات لإصدار التقرير الشهري":"Enter payments page password to export monthly report"}</p>
               <input
@@ -2899,7 +2885,7 @@ ${doctorSettlementRows}
           <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px" }}>
             <div onClick={()=>setDeleteId(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
             <div className="modal-inner-center" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:360,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,.18)",animation:"modalIn .25s ease" }}>
-              <div style={{ fontSize:40,marginBottom:16 }}>🗑️</div>
+              <div style={{ fontSize:40,marginBottom:16 }}><AppIcon glyph="🗑️" /></div>
               <h3 style={{ fontSize:16,fontWeight:800,color:"#353535",marginBottom:8 }}>{tr.deleteConfirm}</h3>
               <div style={{ display:"flex",gap:12,marginTop:24 }}>
                 <button onClick={()=>deletePayment(deleteId)} style={{ flex:1,padding:"14px",background:"#c0392b",color:"#fff",border:"none",borderRadius:14,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",minHeight:50 }}>

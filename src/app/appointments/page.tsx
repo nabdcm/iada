@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
@@ -113,12 +114,12 @@ const T = {
     },
     stats:{ total:"مواعيد الشهر", today:"مواعيد اليوم", completed:"مكتملة", pending:"قادمة", occupancy:"إشغال العيادة اليوم" },
     signOut:"تسجيل الخروج", selectedDay:"المحدد", appointments:"مواعيد", appt:"موعد",
-    notification:{ title:"تذكير بموعد", msg:"سيحين موعد المريض", in:"خلال ١٥ دقيقة", dismiss:"تجاهل" },
+    notification:{ title:"تذكير بموعد", msg:"سيحين موعد المريض", in:"خلال 15 دقيقة", dismiss:"تجاهل" },
     errorSave:"حدث خطأ أثناء الحفظ", errorLoad:"حدث خطأ أثناء التحميل",
     errorDelete:"حدث خطأ أثناء الحذف",
     conflictError:"يوجد موعد آخر في نفس الوقت، يرجى اختيار وقت مختلف",
     whatsappMsg:(name:string, date:string, time:string) =>
-      `مرحباً ${name}، نذكّركم بموعدكم في عيادتنا بتاريخ ${date} الساعة ${time}. نتطلع لرؤيتكم 💙`,
+      `مرحباً ${name}، نذكّركم بموعدكم في عيادتنا بتاريخ ${date} الساعة ${time}. نتطلع لرؤيتكم `,
     nowCard:{ title:"الوقت الآن", dateLabel:"التاريخ" },
     // ── نصوص قسم الطلبات المعلقة (جديد) ──
     pending:{
@@ -177,7 +178,7 @@ const T = {
     errorDelete:"Error deleting appointment",
     conflictError:"Another appointment exists at the same time, please choose a different time",
     whatsappMsg:(name:string, date:string, time:string) =>
-      `Hello ${name}, this is a reminder for your appointment on ${date} at ${time}. We look forward to seeing you 💙`,
+      `Hello ${name}, this is a reminder for your appointment on ${date} at ${time}. We look forward to seeing you `,
     nowCard:{ title:"Current Time", dateLabel:"Date" },
     // ── pending section texts (new) ──
     pending:{
@@ -431,7 +432,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
     <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
       <div onClick={()=>setShowDeleteConfirm(false)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:380,padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(192,57,43,.15)",animation:"modalIn .25s ease",direction:isAr?"rtl":"ltr" }}>
-        <div style={{ width:72,height:72,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px" }}>🗑️</div>
+        <div style={{ width:72,height:72,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 20px" }}><AppIcon glyph="🗑️" /></div>
         <h3 style={{ fontSize:18,fontWeight:800,color:"#353535",marginBottom:10 }}>{tr.modal.deleteConfirmTitle}</h3>
         <p style={{ fontSize:14,color:"#888",lineHeight:1.7,marginBottom:28 }}>{tr.modal.deleteConfirmMsg}</p>
         <div style={{ display:"flex",gap:12 }}>
@@ -452,12 +453,12 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
             {isEdit&&<p style={{ fontSize:11,color:"#aaa",marginTop:2 }}>ID: #{appt!.id}</p>}
           </div>
           <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-            {isEdit&&<button onClick={()=>setShowDeleteConfirm(true)} style={{ width:36,height:36,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",color:"#c0392b" }}>🗑️</button>}
+            {isEdit&&<button onClick={()=>setShowDeleteConfirm(true)} style={{ width:36,height:36,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",color:"#c0392b" }}><AppIcon glyph="🗑️" /></button>}
             <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
           </div>
         </div>
         <div style={{ padding:"20px 26px" }}>
-          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}>⚠️ {error}</div>}
+          {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
           <Field label={tr.modal.patient}>
             <div ref={patientRef} style={{ position:"relative" }}>
               <div style={{ position:"relative" }}>
@@ -475,9 +476,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
                   style={{ ...inputSt, paddingInlineEnd:36 }}
                   autoComplete="off"
                 />
-                <span style={{ position:"absolute",top:"50%",insetInlineEnd:12,transform:"translateY(-50%)",pointerEvents:"none",fontSize:14,color:"#aaa" }}>
-                  {form.patient_id ? "✓" : "🔍"}
-                </span>
+                <span style={{ position:"absolute",top:"50%",insetInlineEnd:12,transform:"translateY(-50%)",pointerEvents:"none",fontSize:14,color:"#aaa" }}><AppIcon glyph={form.patient_id ? "✓" : "🔍"} /></span>
               </div>
               {patientDropOpen && (
                 <div style={{ position:"absolute",top:"calc(100% + 4px)",insetInlineStart:0,insetInlineEnd:0,background:"#fff",border:"1.5px solid #e0e6ef",borderRadius:12,boxShadow:"0 8px 32px rgba(8,99,186,.13)",zIndex:999,maxHeight:220,overflowY:"auto" }}>
@@ -607,7 +606,7 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:440,boxShadow:"0 24px 80px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)",overflow:"hidden" }}>
         <div style={{ background:"linear-gradient(135deg,#0863ba,#054a8c)",padding:"28px 28px 24px",textAlign:"center",position:"relative" }}>
           <button onClick={onClose} style={{ position:"absolute",top:16,left:isAr?16:undefined,right:isAr?undefined:16,width:32,height:32,borderRadius:8,background:"rgba(255,255,255,.15)",border:"none",cursor:"pointer",fontSize:15,color:"#fff" }}>✕</button>
-          <div style={{ width:60,height:60,borderRadius:16,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 14px" }}>🔗</div>
+          <div style={{ width:60,height:60,borderRadius:16,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 14px" }}><AppIcon glyph="🔗" /></div>
           <h2 style={{ fontSize:18,fontWeight:800,color:"#fff",marginBottom:6 }}>{isAr?"رابط حجز المواعيد":"Appointment Booking Link"}</h2>
           <p style={{ fontSize:13,color:"rgba(255,255,255,.75)" }}>{isAr?"شارك هذا الرابط مع مرضاك ليحجزوا مواعيدهم":"Share this link so patients can book online"}</p>
         </div>
@@ -620,7 +619,7 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
               </button>
             </div>
             <p style={{ fontSize:11,color:"#aaa",marginTop:6,paddingInlineStart:2 }}>
-              {isAr?"📋 عند النسخ يتم نسخ الرابط الكامل الذي يعمل":"📋 Clicking copy gives you the full working link"}
+              {isAr?"عند النسخ يتم نسخ الرابط الكامل الذي يعمل":"Clicking copy gives you the full working link"}
             </p>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
@@ -629,7 +628,7 @@ function ShareModal({ lang, clinicId, copied, setCopied, onClose }: {
               WhatsApp
             </button>
             <button onClick={handleCopy} style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
-              <span style={{ fontSize:18 }}>📋</span> {isAr?"نسخ الرابط":"Copy Link"}
+              <span style={{ fontSize:18 }}><AppIcon glyph="📋" /></span> {isAr?"نسخ الرابط":"Copy Link"}
             </button>
           </div>
         </div>
@@ -826,7 +825,7 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
             background:"linear-gradient(135deg,#0863ba,#054a8c)",
             display:"flex", alignItems:"center", justifyContent:"center",
             fontSize:20, boxShadow:"0 4px 12px rgba(8,99,186,.3)",
-          }}>💙</div>
+          }}><AppIcon glyph="💙" /></div>
           <div>
             <div style={{ fontSize:17, fontWeight:800, color:"#353535", lineHeight:1.1 }}>نبض</div>
             <div style={{ fontSize:11, color:"#aaa", fontWeight:500 }}>شاشة قاعة الانتظار</div>
@@ -891,7 +890,7 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
                 textAlign:"center", background:"#fff", border:"1.5px dashed #eef0f3",
                 borderRadius:24, padding:"52px 80px", marginBottom:40,
               }}>
-                <div style={{ fontSize:40, marginBottom:12 }}>🕐</div>
+                <div style={{ fontSize:40, marginBottom:12 }}><AppIcon glyph="🕐" /></div>
                 <div style={{ fontSize:18, color:"#bbb" }}>لا يوجد موعد حالي</div>
               </div>
             )}
@@ -1022,7 +1021,7 @@ function WaitingRoomModal({ appointments, patients, doctors, plan, onClose }: {
             ))}
             {colCount === 0 && (
               <div style={{ gridColumn:"1/-1", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:"#bbb" }}>
-                <div style={{ fontSize:40, marginBottom:12 }}>🕐</div>
+                <div style={{ fontSize:40, marginBottom:12 }}><AppIcon glyph="🕐" /></div>
                 <div style={{ fontSize:16 }}>لا توجد مواعيد لهذا اليوم</div>
               </div>
             )}
@@ -1072,7 +1071,7 @@ function NotificationToast({ lang, appt, patientName, onDismiss }: {
   useEffect(()=>{ setTimeout(()=>setVisible(true),50); playNotificationSound(); },[]);
   return (
     <div style={{ position:"fixed",bottom:24,right:24,zIndex:300,background:"#fff",borderRadius:16,padding:"16px 20px",boxShadow:"0 8px 40px rgba(8,99,186,.2)",border:"1.5px solid rgba(8,99,186,.15)",maxWidth:320,display:"flex",gap:14,alignItems:"flex-start",transform:visible?"translateY(0)":"translateY(80px)",opacity:visible?1:0,transition:"all .35s cubic-bezier(.4,0,.2,1)" }}>
-      <div style={{ width:44,height:44,borderRadius:12,background:"rgba(8,99,186,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0 }}>🔔</div>
+      <div style={{ width:44,height:44,borderRadius:12,background:"rgba(8,99,186,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0 }}><AppIcon glyph="🔔" /></div>
       <div style={{ flex:1 }}>
         <div style={{ fontSize:13,fontWeight:700,color:"#0863ba",marginBottom:4 }}>{tr.notification.title}</div>
         <div style={{ fontSize:13,color:"#353535",lineHeight:1.5 }}>
@@ -1200,7 +1199,7 @@ function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove
             background:"rgba(230,126,34,.12)",
             display:"flex",alignItems:"center",justifyContent:"center",
             fontSize:20,
-          }}>🔔</div>
+          }}><AppIcon glyph="🔔" /></div>
           <div>
             <h3 style={{ fontSize:15,fontWeight:800,color:"#e67e22",margin:0 }}>
               {tr.pending.sectionTitle}
@@ -1280,11 +1279,11 @@ function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove
 
                   {/* تفاصيل الموعد */}
                   <div style={{ display:"flex",flexWrap:"wrap",gap:10,fontSize:12,color:"#666" }}>
-                    <span>📅 {dateFormatted}</span>
-                    <span>🕐 {appt.time.slice(0,5)}</span>
-                    {phone && <span>📞 {phone}</span>}
+                    <span><AppIcon glyph="📅" /> {dateFormatted}</span>
+                    <span><AppIcon glyph="🕐" /> {appt.time.slice(0,5)}</span>
+                    {phone && <span><AppIcon glyph="📞" /> {phone}</span>}
                     {appt.type && appt.type !== "حجز إلكتروني / Online Booking" && (
-                      <span>🏷️ {appt.type}</span>
+                      <span><AppIcon glyph="🏷️" /> {appt.type}</span>
                     )}
                   </div>
 
@@ -1300,7 +1299,7 @@ function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove
                       padding:"5px 10px",
                       fontStyle:"italic",
                     }}>
-                      💬 {appt.notes}
+                      <AppIcon glyph="💬" /> {appt.notes}
                     </div>
                   )}
                 </div>
@@ -1830,7 +1829,7 @@ export default function AppointmentsPage() {
                 {/* بادج عدد الطلبات المعلقة — فقط للاحترافية والشاملة */}
                 {canAccess("payments", plan) && pendingAppointments.length > 0 && (
                   <div style={{ display:"flex",alignItems:"center",gap:5,background:"rgba(230,126,34,.1)",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:20,padding:"4px 10px",animation:"pendingPulse 2s ease infinite" }}>
-                    <span style={{ fontSize:14 }}>🔔</span>
+                    <span style={{ fontSize:14 }}><AppIcon glyph="🔔" /></span>
                     <span style={{ fontSize:12,fontWeight:700,color:"#e67e22" }}>{pendingAppointments.length}</span>
                   </div>
                 )}
@@ -1839,7 +1838,7 @@ export default function AppointmentsPage() {
                 {/* رابط الحجز — فقط للاحترافية والشاملة */}
                 {canAccess("payments", plan) && (
                   <button onClick={()=>setShareModal(true)} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                    🔗 {isAr?"رابط الحجز":"Booking Link"}
+                    <AppIcon glyph="🔗" /> {isAr?"رابط الحجز":"Booking Link"}
                   </button>
                 )}
                 {/* زر شاشة قاعة الانتظار — يفتح لوحة التحكم الجديدة بالدور */}
@@ -1848,7 +1847,7 @@ export default function AppointmentsPage() {
                   title={isAr?"شاشة تحكم قاعة الانتظار":"Waiting Room Control"}
                   style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 18px",background:"#fff",color:"#555",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .25s" }}
                 >
-                  {isMobile?"🖥️":`🖥️ ${isAr?"شاشة الانتظار":"Display"}`}
+                  {isMobile?"🖥️":`${isAr?"شاشة الانتظار":"Display"}`}
                 </button>
                 {/* زر التحديث */}
                 <button
@@ -1856,7 +1855,7 @@ export default function AppointmentsPage() {
                   title={isAr?"تحديث البيانات":"Refresh"}
                   style={{ position:"relative",display:"flex",alignItems:"center",gap:6,padding:isMobile?"9px 10px":"9px 14px",background:"#fff",color:"#666",border:"1.5px solid #eef0f3",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:isMobile?12:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}
                 >
-                  🔄{!isMobile&&<span>{isAr?"تحديث":"Refresh"}</span>}
+                  <AppIcon glyph="🔄" />{!isMobile&&<span>{isAr?"تحديث":"Refresh"}</span>}
                   {pendingAppointments.length > 0 && (
                     <span style={{ position:"absolute",top:-6,right:isAr?undefined:-6,left:isAr?-6:undefined,background:"#e67e22",color:"#fff",borderRadius:20,padding:"1px 6px",fontSize:10,fontWeight:800,lineHeight:1.6,minWidth:18,textAlign:"center" }}>
                       {pendingAppointments.length}
@@ -1881,7 +1880,7 @@ export default function AppointmentsPage() {
               <div key={i} style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)",position:"relative",overflow:"hidden" }}>
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:s.color,borderRadius:"14px 14px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
-                  <span style={{ fontSize:20 }}>{s.icon}</span>
+                  <span style={{ fontSize:20 }}><AppIcon glyph={s.icon} /></span>
                   <span style={{ fontSize:10,fontWeight:700,color:s.color,background:`${s.color}14`,padding:"3px 9px",borderRadius:20 }}>{s.label}</span>
                 </div>
                 <div style={{ fontSize:28,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
@@ -1891,7 +1890,7 @@ export default function AppointmentsPage() {
             <div style={{ background:"#fff",borderRadius:14,padding:"16px 18px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)",position:"relative",overflow:"hidden" }}>
               <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:occupancyColor,borderRadius:"14px 14px 0 0" }}/>
               <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
-                <span style={{ fontSize:20 }}>🏥</span>
+                <span style={{ fontSize:20 }}><AppIcon glyph="🏥" /></span>
                 <span style={{ fontSize:9,fontWeight:700,color:occupancyColor,background:`${occupancyColor}14`,padding:"3px 7px",borderRadius:20,textAlign:"center",lineHeight:1.3 }}>{tr.stats.occupancy}</span>
               </div>
               <div style={{ fontSize:28,fontWeight:900,color:occupancyColor,lineHeight:1,marginBottom:6 }}>{occupancyPct}%</div>
@@ -1915,7 +1914,7 @@ export default function AppointmentsPage() {
               flexWrap:"wrap",
               animation:"fadeUp .4s ease",
             }}>
-              <div style={{ width:36,height:36,borderRadius:10,background:"rgba(109,40,217,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>👨‍⚕️</div>
+              <div style={{ width:36,height:36,borderRadius:10,background:"rgba(109,40,217,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></div>
               <div style={{ flex:1,minWidth:0 }}>
                 <div style={{ fontSize:12,fontWeight:700,color:"#6d28d9",marginBottom:4 }}>
                   {isAr ? `خطة مشتركة · ${doctors.length} أطباء مسجلين` : `Shared Plan · ${doctors.length} registered doctors`}
@@ -1984,7 +1983,7 @@ export default function AppointmentsPage() {
                     })}
                   </div>
                   <button onClick={()=>setSelectedKey(todayKey)} style={{ width:"100%",marginTop:10,padding:"7px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer" }}>
-                    📅 {tr.today}
+                    <AppIcon glyph="📅" /> {tr.today}
                   </button>
                 </div>
               </div>
@@ -2043,7 +2042,7 @@ export default function AppointmentsPage() {
                   <>
                     {dayAppointments.length === 0 ? (
                       <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                        <div style={{ fontSize:44,marginBottom:14 }}>📅</div>
+                        <div style={{ fontSize:44,marginBottom:14 }}><AppIcon glyph="📅" /></div>
                         <div style={{ fontSize:15,fontWeight:600 }}>{tr.noAppointments}</div>
                         <button onClick={()=>setAddModal(true)} style={{ marginTop:20,padding:"10px 24px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer" }}>
                           ＋ {tr.addAppointment}
@@ -2249,7 +2248,7 @@ export default function AppointmentsPage() {
                                                       onMouseEnter={e=>(e.currentTarget.style.background="rgba(8,99,186,.2)")}
                                                       onMouseLeave={e=>(e.currentTarget.style.background="rgba(8,99,186,.09)")}
                                                     >
-                                                      ✏️
+                                                      <AppIcon glyph="✏️" />
                                                     </button>
                                                   </div>
                                                 </div>
@@ -2368,7 +2367,7 @@ export default function AppointmentsPage() {
                                   onMouseEnter={e=>(e.currentTarget.style.background="rgba(8,99,186,.18)")}
                                   onMouseLeave={e=>(e.currentTarget.style.background="rgba(8,99,186,.08)")}
                                 >
-                                  ✏️
+                                  <AppIcon glyph="✏️" />
                                 </button>
                               </div>
                             </div>

@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { CameraScanner, usePharmacyChannel, type ScanEvent } from "./scanner";
 import { DesktopSidebar, MobilePillNav, MoreSheet, TAB_META, Icons, type TabKey } from "./nav";
@@ -95,7 +96,7 @@ function BarcodeNotif({n}:{n:ScanNotif}) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 💳 بطاقة نتيجة المسح — تظهر على كل الأجهزة بعد قراءة الباركود
+// <AppIcon glyph="💳" /> بطاقة نتيجة المسح — تظهر على كل الأجهزة بعد قراءة الباركود
 // ══════════════════════════════════════════════════════════════
 function ScanResultCard({code,med,isAr,onClose,onAddNew,onSell,onReturn}:{code:string;med:Medicine|null;isAr:boolean;onClose:()=>void;onAddNew:(code:string)=>void;onSell:(med:Medicine)=>void;onReturn:(med:Medicine)=>void}) {
   useEffect(()=>{ const t=setTimeout(onClose, med?9000:20000); return()=>clearTimeout(t); },[onClose,med]);
@@ -136,20 +137,20 @@ function ScanResultCard({code,med,isAr,onClose,onAddNew,onSell,onReturn}:{code:s
               </div>
             ))}
           </div>
-          {(low||expired)&&<div style={{margin:"0 20px 14px",background:expired?"rgba(231,76,60,.09)":"rgba(230,126,34,.09)",border:`1.5px solid ${expired?"#e74c3c55":"#e67e2255"}`,borderRadius:11,padding:"8px 12px",fontSize:12,fontWeight:700,color:expired?"#c0392b":"#a04000"}}>{expired?(isAr?"🚫 هذا الدواء منتهي الصلاحية":"🚫 Expired medicine"):(isAr?"⚠️ المخزون منخفض":"⚠️ Low stock")}</div>}
+          {(low||expired)&&<div style={{margin:"0 20px 14px",background:expired?"rgba(231,76,60,.09)":"rgba(230,126,34,.09)",border:`1.5px solid ${expired?"#e74c3c55":"#e67e2255"}`,borderRadius:11,padding:"8px 12px",fontSize:12,fontWeight:700,color:expired?"#c0392b":"#a04000"}}>{expired?(isAr?"هذا الدواء منتهي الصلاحية":"Expired medicine"):(isAr?"المخزون منخفض":"Low stock")}</div>}
           <div style={{padding:"0 20px 12px",display:"flex",gap:8,alignItems:"center"}}>
             <div style={{flex:1,background:"#f7f9fc",border:"1px solid #e8ecf0",borderRadius:9,padding:"6px 10px",fontFamily:"monospace",fontSize:12,letterSpacing:1.2,color:"#0863ba",fontWeight:700,direction:"ltr",textAlign:"center"}}>{code}</div>
             <BarcodeSVG code={code} w={96} h={34}/>
           </div>
           <div style={{padding:"0 20px 18px",display:"flex",gap:9}}>
-            <button onClick={()=>onSell(med)} style={{flex:1.4,padding:"13px",background:"linear-gradient(135deg,#8e44ad,#7a35a0)",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 5px 18px rgba(142,68,173,.35)"}}>🛒 {isAr?"بيع":"Sell"}</button>
+            <button onClick={()=>onSell(med)} style={{flex:1.4,padding:"13px",background:"linear-gradient(135deg,#8e44ad,#7a35a0)",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:"0 5px 18px rgba(142,68,173,.35)"}}><AppIcon glyph="🛒" /> {isAr?"بيع":"Sell"}</button>
             <button onClick={()=>onReturn(med)} style={{flex:1,padding:"13px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"2px solid rgba(230,126,34,.35)",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>↩️ {isAr?"إعادة":"Return"}</button>
           </div>
         </>) : (<>
           {/* باركود غير مسجّل */}
           <div style={{background:"linear-gradient(135deg,#e67e22,#cf6a12)",padding:"18px 20px 16px",color:"#fff",position:"relative"}}>
             <button type="button" onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();onClose();}} style={{position:"absolute",top:10,insetInlineEnd:10,width:36,height:36,borderRadius:"50%",border:"none",background:"rgba(255,255,255,.2)",color:"#fff",cursor:"pointer",fontSize:15,zIndex:5,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-            <div style={{fontSize:26,marginBottom:5}}>📦</div>
+            <div style={{fontSize:26,marginBottom:5}}><AppIcon glyph="📦" /></div>
             <div style={{fontSize:17,fontWeight:800}}>{isAr?"باركود غير مسجّل":"Unregistered barcode"}</div>
             <div style={{fontSize:12,opacity:.8,marginTop:3}}>{isAr?"هذا الكود غير موجود في المخزون":"This code is not in your inventory"}</div>
           </div>
@@ -191,11 +192,11 @@ function useBarcode(onScan:(c:string)=>void, enabled=true) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 🔐 شاشة تسجيل الدخول
+// <AppIcon glyph="🔐" /> شاشة تسجيل الدخول
 // ══════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════════════
-// 🖨️ نافذة الطباعة
+// <AppIcon glyph="🖨️" /> نافذة الطباعة
 // ══════════════════════════════════════════════════════════════
 function PrintModal({invoice,sale,lang,cashierName,onClose}:{invoice?:PurchInvoice;sale?:Sale;lang:Lang;cashierName?:string;onClose:()=>void}) {
   const isAr=lang==="ar";
@@ -338,7 +339,7 @@ function AdjModal({lang,medicine,mode,onConfirm,onClose}:{lang:Lang;medicine:Med
 }
 
 // ══════════════════════════════════════════════════════════════
-// 🏭 تبويب الموردين
+// <AppIcon glyph="🏭" /> تبويب الموردين
 // ══════════════════════════════════════════════════════════════
 function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoices,setMedicines,currentUser,addLog,userId,onRefresh}:{
   lang:Lang;medicines:Medicine[];suppliers:Supplier[];setSuppliers:React.Dispatch<React.SetStateAction<Supplier[]>>;
@@ -485,8 +486,8 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
                     </div>
                   </div>
                   <div style={{padding:"11px 17px"}}>
-                    {inv.items.map((it,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:i<inv.items.length-1?"1px solid #f7f9fc":"none"}}><span style={{fontSize:12,color:"#555",fontWeight:600}}>💊 {it.medicine_name}</span><span style={{fontSize:12,color:"#888"}}>{it.qty} × {it.unit_price} = <strong style={{color:"#0863ba"}}>{it.qty*it.unit_price}</strong></span></div>))}
-                    {inv.status!=="paid"&&<div style={{marginTop:8,fontSize:11,color:"#e74c3c",fontWeight:600}}>💰 {isAr?"المتبقي":"Remaining"}: {inv.total-inv.paid} {isAr?"ل.س":"SYP"}</div>}
+                    {inv.items.map((it,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:i<inv.items.length-1?"1px solid #f7f9fc":"none"}}><span style={{fontSize:12,color:"#555",fontWeight:600}}><AppIcon glyph="💊" /> {it.medicine_name}</span><span style={{fontSize:12,color:"#888"}}>{it.qty} × {it.unit_price} = <strong style={{color:"#0863ba"}}>{it.qty*it.unit_price}</strong></span></div>))}
+                    {inv.status!=="paid"&&<div style={{marginTop:8,fontSize:11,color:"#e74c3c",fontWeight:600}}><AppIcon glyph="💰" /> {isAr?"المتبقي":"Remaining"}: {inv.total-inv.paid} {isAr?"ل.س":"SYP"}</div>}
                   </div>
                 </div>
               );
@@ -499,7 +500,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
         <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>{setShowSF(false);setEditSup(null);}}/>
           <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"26px",width:"min(96vw,480px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)",animation:"modalIn .25s ease"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>🏭 {editSup?(isAr?"تعديل مورد":"Edit"):(isAr?"مورد جديد":"New Supplier")}</h2><button onClick={()=>{setShowSF(false);setEditSup(null);}} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}><AppIcon glyph="🏭" /> {editSup?(isAr?"تعديل مورد":"Edit"):(isAr?"مورد جديد":"New Supplier")}</h2><button onClick={()=>{setShowSF(false);setEditSup(null);}} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               {([["name",isAr?"اسم المورد *":"Name *","1/-1"],["contact",isAr?"المسؤول":"Contact",""],["phone",isAr?"الهاتف":"Phone",""],["email","Email",""],["address",isAr?"العنوان":"Address","1/-1"]] as [keyof typeof sf,string,string][]).map(([k,label,gc])=>(
                 <div key={k} style={{gridColumn:gc||"auto"}}><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{label}</label><input value={sf[k]} onChange={e=>setSF(f=>({...f,[k]:e.target.value}))} style={k==="phone"||k==="email"?{...inp,direction:"ltr"}:inp}/></div>
@@ -517,7 +518,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
         <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>setStmtSup(null)}/>
           <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(96vw,560px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>📋 {isAr?"كشف حساب":"Statement"} — {stmtSup.name}</h2><button onClick={()=>setStmtSup(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}><AppIcon glyph="📋" /> {isAr?"كشف حساب":"Statement"} — {stmtSup.name}</h2><button onClick={()=>setStmtSup(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
             {!stmtData?(
               <div style={{textAlign:"center",padding:20,color:"#aaa"}}>{isAr?"جارِ التحميل...":"Loading..."}</div>
             ):(
@@ -567,13 +568,13 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
         <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)"}} onClick={()=>setShowIF(false)}/>
           <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"26px",width:"min(96vw,560px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)",animation:"modalIn .25s ease"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>🧾 {isAr?"فاتورة شراء جديدة":"New Purchase Invoice"}</h2><button onClick={()=>setShowIF(false)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}><AppIcon glyph="🧾" /> {isAr?"فاتورة شراء جديدة":"New Purchase Invoice"}</h2><button onClick={()=>setShowIF(false)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
               <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"المورد":"Supplier"}</label><select value={iSupId} onChange={e=>setISupId(Number(e.target.value))} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",background:"#fafbfc",direction:isAr?"rtl":"ltr"}}>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
               <div><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"التاريخ":"Date"}</label><input type="date" value={iDate} onChange={e=>setIDate(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/></div>
             </div>
             <div style={{position:"relative",marginBottom:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:10,padding:"9px 12px"}}><span>💊</span><input value={iMedQ} onChange={e=>setIMedQ(e.target.value)} placeholder={isAr?"أضف دواء...":"Add medicine..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/></div>
+              <div style={{display:"flex",alignItems:"center",gap:8,background:"#f7f9fc",border:"1.5px solid #e0e7ef",borderRadius:10,padding:"9px 12px"}}><span><AppIcon glyph="💊" /></span><input value={iMedQ} onChange={e=>setIMedQ(e.target.value)} placeholder={isAr?"أضف دواء...":"Add medicine..."} style={{border:"none",outline:"none",background:"none",fontFamily:"'Rubik',sans-serif",fontSize:13,width:"100%",direction:isAr?"rtl":"ltr"}}/></div>
               {iMedRes.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.12)",border:"1.5px solid #eef0f3",overflow:"hidden",marginTop:4}}>{iMedRes.map(m=>(<div key={m.id} onClick={()=>addII(m)} style={{padding:"9px 13px",cursor:"pointer",fontSize:13,display:"flex",justifyContent:"space-between"}} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#f7f9fc"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=""}><span style={{fontWeight:600}}>{isAr?m.name_ar:m.name_en}</span><span style={{color:"#888",fontSize:11}}>{m.purchase_price} {isAr?"ل.س":"SYP"}</span></div>))}</div>}
             </div>
             {iItems.length>0&&<div style={{background:"#f7f9fc",borderRadius:12,padding:"11px",marginBottom:12}}>{iItems.map((it,i)=>(<div key={i} style={{marginBottom:i<iItems.length-1?10:0,paddingBottom:i<iItems.length-1?10:0,borderBottom:i<iItems.length-1?"1px solid #eef0f3":"none"}}>
@@ -605,7 +606,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
             </div>
             <div style={{marginBottom:14}}><label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"ملاحظات":"Notes"}</label><input value={iNotes} onChange={e=>setINotes(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr"}}/></div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={saveInv} disabled={iItems.length===0} style={{flex:1,padding:"12px",background:iItems.length===0?"#ccc":"#27ae60",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:iItems.length===0?"not-allowed":"pointer",boxShadow:iItems.length===0?"none":"0 4px 14px rgba(39,174,96,.3)"}}>✅ {isAr?"حفظ الفاتورة":"Save Invoice"}</button>
+              <button onClick={saveInv} disabled={iItems.length===0} style={{flex:1,padding:"12px",background:iItems.length===0?"#ccc":"#27ae60",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:iItems.length===0?"not-allowed":"pointer",boxShadow:iItems.length===0?"none":"0 4px 14px rgba(39,174,96,.3)"}}><AppIcon glyph="✅" /> {isAr?"حفظ الفاتورة":"Save Invoice"}</button>
               <button onClick={()=>setShowIF(false)} style={{padding:"12px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
             </div>
           </div>
@@ -617,7 +618,7 @@ function SuppliersTab({lang,medicines,suppliers,setSuppliers,invoices,setInvoice
 }
 
 // ══════════════════════════════════════════════════════════════
-// 🔔 تبويب التنبيهات
+// <AppIcon glyph="🔔" /> تبويب التنبيهات
 // ══════════════════════════════════════════════════════════════
 // ══════════════ تبويب إعادة الطلب: توقع النفاد + أوامر شراء مقترحة + أفضل مورد ══════════════
 type SupPrice = { supplier_id:number; supplier_name:string; unit_price:number; last_date:string };
@@ -693,7 +694,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
       const json=await res.json(); if(json.success) created++;
     }
     setCreating(false); setCart({});
-    setMsg(isAr?`✅ تم إنشاء ${created} فاتورة شراء`:`✅ Created ${created} purchase invoice(s)`);
+    setMsg(isAr?`تم إنشاء ${created} فاتورة شراء`:`Created ${created} purchase invoice(s)`);
     onRefresh(); load();
     setTimeout(()=>setMsg(""),4000);
   };
@@ -782,7 +783,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
                   {r.best_supplier?(
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
                       <div style={{fontSize:12,color:"#555"}}>
-                        🏆 {isAr?"أفضل سعر":"Best price"}: <strong style={{color:"#27ae60"}}>{r.best_supplier.supplier_name}</strong> — {r.best_supplier.unit_price} {isAr?"ل.س":"SYP"}
+                        <AppIcon glyph="🏆" /> {isAr?"أفضل سعر":"Best price"}: <strong style={{color:"#27ae60"}}>{r.best_supplier.supplier_name}</strong> — {r.best_supplier.unit_price} {isAr?"ل.س":"SYP"}
                         {r.est_cost!==null&&inCart(r.medicine_id)&&<span style={{color:"#aaa"}}> · {isAr?"تكلفة الطلب":"Est"}: {(chosen.qty*(r.supplier_prices.find(s=>s.supplier_id===chosen.supplier_id)?.unit_price??r.best_supplier.unit_price)).toFixed(0)}</span>}
                       </div>
                       {r.supplier_prices.length>1&&<button onClick={()=>setExpanded(open?null:r.medicine_id)} style={{background:"none",border:"none",cursor:"pointer",color:"#0863ba",fontSize:11,fontWeight:700,fontFamily:"'Rubik',sans-serif"}}>{open?(isAr?"إخفاء المقارنة ▲":"Hide ▲"):(isAr?`قارن ${r.supplier_prices.length} موردين ▼`:`Compare ${r.supplier_prices.length} ▼`)}</button>}
@@ -831,7 +832,7 @@ function ReorderTab({lang,userId,suppliers,currentUser,onRefresh}:{lang:Lang;use
             <div style={{fontSize:11,opacity:.85}}>{isAr?"إجمالي تقديري":"Est total"}: {cartTotal.toFixed(0)} {isAr?"ل.س":"SYP"}</div>
           </div>
           <button onClick={createOrders} disabled={creating} style={{padding:"10px 20px",border:"none",borderRadius:10,cursor:creating?"wait":"pointer",fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:800,background:"#fff",color:"#0863ba"}}>
-            {creating?(isAr?"⏳ جاري الإنشاء...":"⏳ Creating..."):(isAr?"🧾 إنشاء فواتير الشراء":"🧾 Create Purchase Orders")}
+            {creating?(isAr?"⏳ جاري الإنشاء...":"⏳ Creating..."):(isAr?"إنشاء فواتير الشراء":"Create Purchase Orders")}
           </button>
         </div>
       )}
@@ -875,7 +876,7 @@ function AlertsTab({lang,medicines,alerts,markAll,markOne}:{lang:Lang;medicines:
 }
 
 // ══════════════════════════════════════════════════════════════
-// 🗄️ تبويب المخزون
+// <AppIcon glyph="🗄️" /> تبويب المخزون
 // ══════════════════════════════════════════════════════════════
 function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,showNotif,addLog,currentUser,userId,stockLog,broadcastScan,remoteScan,openCamera,pendingAddBarcode,onPendingConsumed,pendingReturnBarcode,onPendingReturnConsumed}:{
   lang:Lang;medicines:Medicine[];setMedicines:React.Dispatch<React.SetStateAction<Medicine[]>>;
@@ -967,7 +968,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
       setMedicines(prev=>prev.map(m=>m.id===med.id?{...m,stock:mode==="in"?m.stock+qty:Math.max(0,m.stock-qty)}:m));
     }
     addLog({medicine_id:med.id,medicine_name:med.name_ar,type:mode,qty,date:new Date().toISOString().slice(0,10),user:isAr?currentUser.name_ar:currentUser.name_en});
-    showNotif({type:"success",message:mode==="in"?(isAr?`📥 إضافة ${qty} ${med.unit}`:`📥 Added ${qty}`):(isAr?`📤 خصم ${qty} ${med.unit}`:`📤 Removed ${qty}`),sub:isAr?med.name_ar:med.name_en},2500);
+    showNotif({type:"success",message:mode==="in"?(isAr?`إضافة ${qty} ${med.unit}`:`Added ${qty}`):(isAr?`خصم ${qty} ${med.unit}`:`Removed ${qty}`),sub:isAr?med.name_ar:med.name_en},2500);
     setAdj(null);
   };
 
@@ -1009,7 +1010,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
           {k:"all" as const,label:isAr?"إجمالي الأصناف":"Total Items",val:String(medicines.length),sub:isAr?"صنف في المخزون":"in inventory",c:"#0863ba",Ic:Icons.box},
           {k:null,label:isAr?"قيمة المخزون":"Stock Value",val:fmtNum(totalValue),sub:isAr?"ل.س بالتكلفة":"SAR at cost",c:"#1e8449",Ic:Icons.reports},
           {k:"low" as const,label:isAr?"مخزون منخفض":"Low Stock",val:String(lowCount),sub:isAr?"يحتاج إعادة طلب":"needs reorder",c:"#d35400",Ic:Icons.stockOut},
-          {k:"expiring" as const,label:isAr?"قارب الانتهاء":"Expiring",val:String(expCount),sub:isAr?"خلال ٣٠ يوماً":"within 30 days",c:"#c0392b",Ic:Icons.alerts},
+          {k:"expiring" as const,label:isAr?"قارب الانتهاء":"Expiring",val:String(expCount),sub:isAr?"خلال 30 يوماً":"within 30 days",c:"#c0392b",Ic:Icons.alerts},
         ]).map((st,i)=>{
           const active=st.k!==null&&statusF===st.k&&st.k!=="all"||st.k==="all"&&statusF==="all"&&false;
           return (
@@ -1211,7 +1212,7 @@ function InventoryTab({lang,medicines,setMedicines,barcodeMode,setBarcodeMode,sh
 }
 
 // ══════════════════════════════════════════════════════════════
-// 📋 تبويب الوصفات
+// <AppIcon glyph="📋" /> تبويب الوصفات
 // ══════════════════════════════════════════════════════════════
 function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLog,medicines,userId,onRefresh}:{lang:Lang;prescriptions:Prescription[];setPrescriptions:React.Dispatch<React.SetStateAction<Prescription[]>>;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;medicines:Medicine[];userId:string|null;onRefresh:()=>void}) {
   const isAr=lang==="ar";
@@ -1269,7 +1270,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
     try{
       const res=await apiFetch("/api/pharmacy/sync-prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:userId,days:30})});
       const json=await res.json();
-      setSyncMsg(json.synced>0?(isAr?`✅ تمت مزامنة ${json.synced} وصفة من العيادة`:`✅ Synced ${json.synced} from clinic`):(isAr?"لا وصفات جديدة للمزامنة":"No new prescriptions"));
+      setSyncMsg(json.synced>0?(isAr?`تمت مزامنة ${json.synced} وصفة من العيادة`:`Synced ${json.synced} from clinic`):(isAr?"لا وصفات جديدة للمزامنة":"No new prescriptions"));
       if(json.synced>0)onRefresh();
     }catch{setSyncMsg(isAr?"تعذّرت المزامنة":"Sync failed");}
     setSyncing(false); setTimeout(()=>setSyncMsg(""),4000);
@@ -1389,7 +1390,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
                   </div>
                   <div style={{fontSize:13,fontWeight:700,color:"#353535"}}>{rx.patient_name}</div>
                   <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{rx.doctor_name} · {rx.created_at}</div>
-                  {rx.dispensed_by&&<div style={{fontSize:10,color:"#27ae60",marginTop:1}}>✅ {isAr?"بواسطة":"By"}: {rx.dispensed_by}</div>}
+                  {rx.dispensed_by&&<div style={{fontSize:10,color:"#27ae60",marginTop:1}}><AppIcon glyph="✅" /> {isAr?"بواسطة":"By"}: {rx.dispensed_by}</div>}
                 </div>
                 <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                   <span style={{fontSize:12,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.08)",padding:"3px 9px",borderRadius:7,letterSpacing:.4}}>{rx.mrn}</span>
@@ -1401,20 +1402,20 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
                 </div>
               </div>
               <div style={{padding:"12px 17px"}}>
-                {rx.notes&&<div style={{background:"rgba(231,76,60,.06)",border:"1px solid rgba(231,76,60,.2)",borderRadius:9,padding:"7px 11px",marginBottom:9,fontSize:12,color:"#c0392b",fontWeight:600}}>⚠️ {rx.notes}</div>}
+                {rx.notes&&<div style={{background:"rgba(231,76,60,.06)",border:"1px solid rgba(231,76,60,.2)",borderRadius:9,padding:"7px 11px",marginBottom:9,fontSize:12,color:"#c0392b",fontWeight:600}}><AppIcon glyph="⚠️" /> {rx.notes}</div>}
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {rx.items.map((it,i)=>{const dq=it.dispensed_qty||0;const q=it.qty||1;const full=dq>=q;
                     return(<div key={i} style={{background:"#f7f9fc",borderRadius:9,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:9,flexWrap:"wrap"}}>
-                    <div><div style={{fontSize:13,fontWeight:700,color:"#353535"}}>💊 {it.medicine_name} {q>1&&<span style={{fontSize:11,color:"#888",fontWeight:400}}>×{q}</span>}</div><div style={{fontSize:11,color:"#888",marginTop:2}}>{it.instructions}</div></div>
+                    <div><div style={{fontSize:13,fontWeight:700,color:"#353535"}}><AppIcon glyph="💊" /> {it.medicine_name} {q>1&&<span style={{fontSize:11,color:"#888",fontWeight:400}}>×{q}</span>}</div><div style={{fontSize:11,color:"#888",marginTop:2}}>{it.instructions}</div></div>
                     <div style={{textAlign:isAr?"left":"right",flexShrink:0}}><div style={{fontSize:11,fontWeight:700,color:"#0863ba"}}>{it.dosage}</div><div style={{fontSize:10,color:"#aaa"}}>{it.duration}</div>{dq>0&&<div style={{fontSize:10,fontWeight:700,color:full?"#27ae60":"#e67e22",marginTop:2}}>{full?"✅":"⏳"} {isAr?"صُرف":"disp"} {dq}/{q}</div>}</div>
                   </div>);})}
                 </div>
                 {canDispense&&!done&&(
                   <div style={{display:"flex",gap:8,marginTop:11,flexWrap:"wrap"}}>
-                    <button onClick={()=>startDispense(rx)} style={{flex:1,minWidth:130,padding:"9px 14px",background:"#27ae60",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 9px rgba(39,174,96,.3)"}}>💊 {isAr?"صرف كامل":"Dispense all"}</button>
+                    <button onClick={()=>startDispense(rx)} style={{flex:1,minWidth:130,padding:"9px 14px",background:"#27ae60",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",boxShadow:"0 3px 9px rgba(39,174,96,.3)"}}><AppIcon glyph="💊" /> {isAr?"صرف كامل":"Dispense all"}</button>
                     <button onClick={()=>setPartial({rx,qtys:Object.fromEntries(rx.items.filter(it=>it.id).map(it=>[it.id!,it.dispensed_qty||0]))})} style={{padding:"9px 14px",background:"rgba(230,126,34,.1)",color:"#e67e22",border:"1.5px solid rgba(230,126,34,.3)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>⏳ {isAr?"صرف جزئي":"Partial"}</button>
-                    {st==="waiting"&&<button onClick={()=>updateStatus(rx.id,"preparing")} style={{padding:"9px 12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔧 {isAr?"تحضير":"Prep"}</button>}
-                    {(st==="preparing"||partialDone)&&<button onClick={()=>updateStatus(rx.id,"ready")} style={{padding:"9px 12px",background:"rgba(142,68,173,.08)",color:"#8e44ad",border:"1.5px solid rgba(142,68,173,.2)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>📦 {isAr?"جاهزة":"Ready"}</button>}
+                    {st==="waiting"&&<button onClick={()=>updateStatus(rx.id,"preparing")} style={{padding:"9px 12px",background:"rgba(8,99,186,.08)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}><AppIcon glyph="🔧" /> {isAr?"تحضير":"Prep"}</button>}
+                    {(st==="preparing"||partialDone)&&<button onClick={()=>updateStatus(rx.id,"ready")} style={{padding:"9px 12px",background:"rgba(142,68,173,.08)",color:"#8e44ad",border:"1.5px solid rgba(142,68,173,.2)",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}><AppIcon glyph="📦" /> {isAr?"جاهزة":"Ready"}</button>}
                   </div>
                 )}
               </div>
@@ -1428,22 +1429,22 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
         <div style={{position:"fixed",inset:0,zIndex:250,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)"}} onClick={()=>setSafety(null)}/>
           <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(96vw,520px)",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}>🛡️ {isAr?"فحص السلامة الدوائية":"Safety Check"}</h2><button onClick={()=>setSafety(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><h2 style={{fontSize:15,fontWeight:800,color:"#353535"}}><AppIcon glyph="🛡️" /> {isAr?"فحص السلامة الدوائية":"Safety Check"}</h2><button onClick={()=>setSafety(null)} style={{border:"none",background:"none",cursor:"pointer",fontSize:20,color:"#aaa"}}>✕</button></div>
             <div style={{fontSize:12,color:"#888",marginBottom:14}}>{isAr?`المريض: ${safety.rx.patient_name} · ${safety.rx.items.length} دواء`:`${safety.rx.patient_name} · ${safety.rx.items.length} meds`}</div>
             {safety.loading?(
               <div style={{textAlign:"center",padding:"30px",color:"#aaa"}}>{isAr?"⏳ جاري الفحص...":"⏳ Checking..."}</div>
             ):(
               <>
-                {!hasSafetyIssue&&<div style={{background:"rgba(39,174,96,.08)",border:"1.5px solid rgba(39,174,96,.3)",borderRadius:12,padding:"16px",textAlign:"center",marginBottom:16}}><div style={{fontSize:32,marginBottom:6}}>✅</div><div style={{fontSize:14,fontWeight:700,color:"#27ae60"}}>{isAr?"لا تعارضات أو حساسية معروفة":"No known issues"}</div></div>}
+                {!hasSafetyIssue&&<div style={{background:"rgba(39,174,96,.08)",border:"1.5px solid rgba(39,174,96,.3)",borderRadius:12,padding:"16px",textAlign:"center",marginBottom:16}}><div style={{fontSize:32,marginBottom:6}}><AppIcon glyph="✅" /></div><div style={{fontSize:14,fontWeight:700,color:"#27ae60"}}>{isAr?"لا تعارضات أو حساسية معروفة":"No known issues"}</div></div>}
                 {safety.allergies.length>0&&(
                   <div style={{marginBottom:14}}>
-                    <div style={{fontSize:13,fontWeight:800,color:"#c0392b",marginBottom:8}}>🚨 {isAr?"تحذير حساسية":"Allergy Alert"}</div>
-                    {safety.allergies.map((a,i)=>(<div key={i} style={{background:"rgba(231,76,60,.07)",border:"1.5px solid rgba(231,76,60,.3)",borderRadius:10,padding:"11px 13px",marginBottom:7}}><div style={{fontSize:13,fontWeight:700,color:"#c0392b"}}>💊 {a.medicine}</div><div style={{fontSize:11,color:"#e74c3c",marginTop:3}}>{isAr?`المريض لديه حساسية مسجّلة تجاه: ${a.allergen}`:`Patient allergic to: ${a.allergen}`}</div></div>))}
+                    <div style={{fontSize:13,fontWeight:800,color:"#c0392b",marginBottom:8}}><AppIcon glyph="🚨" /> {isAr?"تحذير حساسية":"Allergy Alert"}</div>
+                    {safety.allergies.map((a,i)=>(<div key={i} style={{background:"rgba(231,76,60,.07)",border:"1.5px solid rgba(231,76,60,.3)",borderRadius:10,padding:"11px 13px",marginBottom:7}}><div style={{fontSize:13,fontWeight:700,color:"#c0392b"}}><AppIcon glyph="💊" /> {a.medicine}</div><div style={{fontSize:11,color:"#e74c3c",marginTop:3}}>{isAr?`المريض لديه حساسية مسجّلة تجاه: ${a.allergen}`:`Patient allergic to: ${a.allergen}`}</div></div>))}
                   </div>
                 )}
                 {safety.interactions.length>0&&(
                   <div style={{marginBottom:14}}>
-                    <div style={{fontSize:13,fontWeight:800,color:"#e67e22",marginBottom:8}}>⚠️ {isAr?"تعارضات دوائية":"Drug Interactions"}</div>
+                    <div style={{fontSize:13,fontWeight:800,color:"#e67e22",marginBottom:8}}><AppIcon glyph="⚠️" /> {isAr?"تعارضات دوائية":"Drug Interactions"}</div>
                     {safety.interactions.map((it,i)=>{const sc=it.severity==="severe"?"#e74c3c":it.severity==="moderate"?"#e67e22":"#f39c12";const sl=it.severity==="severe"?(isAr?"شديد":"Severe"):it.severity==="moderate"?(isAr?"متوسط":"Moderate"):(isAr?"خفيف":"Mild");
                       return(<div key={i} style={{background:`${sc}0e`,border:`1.5px solid ${sc}44`,borderRadius:10,padding:"11px 13px",marginBottom:7}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><span style={{fontSize:12,fontWeight:700,color:"#353535"}}>{it.med_a} + {it.med_b}</span><span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:sc,color:"#fff"}}>{sl}</span></div><div style={{fontSize:11,color:"#666"}}>{it.description}</div></div>);})}
                   </div>
@@ -1456,7 +1457,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
                   </label>
                 )}
                 <div style={{display:"flex",gap:10}}>
-                  <button onClick={()=>doDispense(safety.rx)} disabled={!!(hasSafetyIssue&&!ackSafety)} style={{flex:1,padding:"12px",background:hasSafetyIssue&&!ackSafety?"#ccc":hasSafetyIssue?"#e67e22":"#27ae60",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:hasSafetyIssue&&!ackSafety?"not-allowed":"pointer"}}>💊 {isAr?"متابعة الصرف":"Proceed"}</button>
+                  <button onClick={()=>doDispense(safety.rx)} disabled={!!(hasSafetyIssue&&!ackSafety)} style={{flex:1,padding:"12px",background:hasSafetyIssue&&!ackSafety?"#ccc":hasSafetyIssue?"#e67e22":"#27ae60",color:"#fff",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,fontWeight:700,cursor:hasSafetyIssue&&!ackSafety?"not-allowed":"pointer"}}><AppIcon glyph="💊" /> {isAr?"متابعة الصرف":"Proceed"}</button>
                   <button onClick={()=>setSafety(null)} style={{padding:"12px 18px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
                 </div>
               </>
@@ -1474,7 +1475,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
             <div style={{fontSize:12,color:"#888",marginBottom:14}}>{isAr?"حدّد الكمية المصروفة لكل دواء (يمكن إكمال الباقي لاحقًا)":"Set dispensed qty per item"}</div>
             {partial.rx.items.filter(it=>it.id).map(it=>{const q=it.qty||1;const cur=partial.qtys[it.id!]??0;
               return(<div key={it.id} style={{background:"#f7f9fc",borderRadius:10,padding:"11px 13px",marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#353535",marginBottom:7}}>💊 {it.medicine_name}</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#353535",marginBottom:7}}><AppIcon glyph="💊" /> {it.medicine_name}</div>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontSize:11,color:"#888"}}>{isAr?"المصروف":"Dispensed"}:</span>
                   <button onClick={()=>setPartial(p=>p&&({...p,qtys:{...p.qtys,[it.id!]:Math.max(0,cur-1)}}))} style={{width:26,height:26,border:"1.5px solid #d0e4f7",borderRadius:6,background:"#fff",cursor:"pointer",fontWeight:700,color:"#0863ba"}}>-</button>
@@ -1530,7 +1531,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
 }
 
 // ══════════════════════════════════════════════════════════════
-// 💰 تبويب المبيعات
+// <AppIcon glyph="💰" /> تبويب المبيعات
 // ══════════════════════════════════════════════════════════════
 function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,showNotif,currentUser,addLog,userId,onRefresh,broadcastScan,remoteScan,openCamera,onAddNewMedicine,pendingSaleBarcode,onPendingSaleConsumed}:{lang:Lang;medicines:Medicine[];sales:Sale[];setSales:React.Dispatch<React.SetStateAction<Sale[]>>;barcodeMode:BarcodeMode;setBarcodeMode:(m:BarcodeMode)=>void;showNotif:(n:ScanNotif,ms?:number)=>void;currentUser:User;addLog:(l:Omit<StockLog,"id">)=>void;userId:string|null;onRefresh:()=>void;broadcastScan:(code:string,mode:string)=>void;remoteScan:ScanEvent|null;openCamera:()=>void;onAddNewMedicine?:(barcode:string)=>void;pendingSaleBarcode?:string;onPendingSaleConsumed?:()=>void}) {
   const isAr=lang==="ar";
@@ -1557,7 +1558,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
     const med=medicines.find(m=>m.barcode===code);
     if(!med){ setUnknownBarcode(code); showNotif({type:"warning",message:isAr?"باركود غير مسجّل":"Unregistered barcode",sub:code},2500); return; }
     setUnknownBarcode("");
-    addToSale(med); showNotif({type:"success",message:isAr?`✅ ${med.name_ar}`:`✅ ${med.name_en}`,sub:`${med.sell_price} ${isAr?"ل.س":"SYP"}`},1800);
+    addToSale(med); showNotif({type:"success",message:isAr?`${med.name_ar}`:`${med.name_en}`,sub:`${med.sell_price} ${isAr?"ل.س":"SYP"}`},1800);
   },[medicines,isAr,addToSale,showNotif]);
 
   // ماسح سلكي محلي: يبثّ للأجهزة الأخرى ثم يعالج
@@ -1959,7 +1960,7 @@ function SalesTab({lang,medicines,sales,setSales,barcodeMode,setBarcodeMode,show
                 <label style={{fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:4}}>{isAr?"ملاحظات (اختياري)":"Notes (optional)"}</label>
                 <input value={closeNotes} onChange={e=>setCloseNotes(e.target.value)} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e0e7ef",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none",direction:isAr?"rtl":"ltr",marginBottom:16}}/>
                 <div style={{display:"flex",gap:10}}>
-                  <button onClick={submitClose} className="btn-primary-lg" style={{flex:1,justifyContent:"center",background:"#2c3e50",boxShadow:"0 4px 14px rgba(44,62,80,.35)"}}>🔒 {isAr?"تأكيد التقفيل":"Confirm Close"}</button>
+                  <button onClick={submitClose} className="btn-primary-lg" style={{flex:1,justifyContent:"center",background:"#2c3e50",boxShadow:"0 4px 14px rgba(44,62,80,.35)"}}><AppIcon glyph="🔒" /> {isAr?"تأكيد التقفيل":"Confirm Close"}</button>
                   <button onClick={()=>setShowClose(false)} style={{padding:"13px 22px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:13,fontFamily:"'Rubik',sans-serif",fontSize:14,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
                 </div>
               </div>
@@ -2112,8 +2113,8 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
   return (
     <div>
       <div style={{display:"flex",gap:9,marginBottom:13,flexWrap:"wrap"}}>
-        <button onClick={exportExcel} disabled={exporting} style={{flex:1,minWidth:150,padding:"11px 14px",borderRadius:11,border:"1.5px solid rgba(30,132,73,.3)",background:"rgba(30,132,73,.08)",color:"#1e8449",fontWeight:800,fontSize:13,cursor:exporting?"wait":"pointer",fontFamily:"inherit"}}>📊 {exporting?(isAr?"جارٍ التصدير...":"Exporting..."):(isAr?"تصدير Excel":"Export Excel")}</button>
-        <button onClick={exportBackup} disabled={exporting||!userId} style={{flex:1,minWidth:150,padding:"11px 14px",borderRadius:11,border:"1.5px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.08)",color:"#0863ba",fontWeight:800,fontSize:13,cursor:exporting?"wait":"pointer",fontFamily:"inherit"}}>💾 {isAr?"نسخة احتياطية (JSON)":"Backup (JSON)"}</button>
+        <button onClick={exportExcel} disabled={exporting} style={{flex:1,minWidth:150,padding:"11px 14px",borderRadius:11,border:"1.5px solid rgba(30,132,73,.3)",background:"rgba(30,132,73,.08)",color:"#1e8449",fontWeight:800,fontSize:13,cursor:exporting?"wait":"pointer",fontFamily:"inherit"}}>{exporting?(isAr?"جارٍ التصدير...":"Exporting..."):(isAr?"تصدير Excel":"Export Excel")}</button>
+        <button onClick={exportBackup} disabled={exporting||!userId} style={{flex:1,minWidth:150,padding:"11px 14px",borderRadius:11,border:"1.5px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.08)",color:"#0863ba",fontWeight:800,fontSize:13,cursor:exporting?"wait":"pointer",fontFamily:"inherit"}}>{isAr?"نسخة احتياطية (JSON)":"Backup (JSON)"}</button>
       </div>
       <div style={{marginBottom:16}}>
         <h1 style={{fontSize:"clamp(19px,3vw,24px)",fontWeight:800,color:"#1a2840",letterSpacing:"-.4px",marginBottom:3}}>{isAr?"التقارير والتحليلات":"Reports & Analytics"}</h1>
@@ -2206,7 +2207,7 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
       </div>
 
       <div style={{background:"#fff",borderRadius:15,border:"1.5px solid #eef0f3",padding:"16px 18px",marginTop:13,boxShadow:"0 2px 9px rgba(8,99,186,.04)"}}>
-        <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>🔒 {isAr?"إقفال الفترة المحاسبية":"Period Closing"}</h3>
+        <h3 style={{fontSize:12,fontWeight:800,color:"#353535",marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>{isAr?"إقفال الفترة المحاسبية":"Period Closing"}</h3>
         <div style={{fontSize:10,color:"#bbb",marginBottom:12}}>{isAr?"يمنع أي تعديل أو إضافة بأثر رجعي للتواريخ المقفلة":"Prevents retroactive edits or additions for locked dates"}</div>
         <div style={{background:"#f7f9fc",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontSize:12,color:"#888"}}>{isAr?"مقفل حتى تاريخ":"Locked through"}</span>
@@ -2214,7 +2215,7 @@ function ReportsTab({lang,medicines,sales,userId,currentUser}:{lang:Lang;medicin
         </div>
         <div style={{display:"flex",gap:9}}>
           <input type="date" value={lockDate} onChange={e=>setLockDate(e.target.value)} style={{flex:1,padding:"9px 12px",border:"1.5px solid #e0e7ef",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,outline:"none"}}/>
-          <button onClick={closePeriod} disabled={!lockDate} style={{padding:"9px 18px",background:lockDate?"#2c3e50":"#ccc",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:lockDate?"pointer":"not-allowed",whiteSpace:"nowrap"}}>🔒 {isAr?"إقفال حتى هذا التاريخ":"Close through date"}</button>
+          <button onClick={closePeriod} disabled={!lockDate} style={{padding:"9px 18px",background:lockDate?"#2c3e50":"#ccc",color:"#fff",border:"none",borderRadius:9,fontFamily:"'Rubik',sans-serif",fontSize:13,fontWeight:700,cursor:lockDate?"pointer":"not-allowed",whiteSpace:"nowrap"}}>{isAr?"إقفال حتى هذا التاريخ":"Close through date"}</button>
         </div>
         {lockMsg&&<div style={{marginTop:9,fontSize:12,fontWeight:600,color:lockMsg.includes("نجاح")||lockMsg.includes("success")?"#27ae60":"#e74c3c"}}>{lockMsg}</div>}
       </div>
@@ -2319,7 +2320,7 @@ export default function PharmacyPage() {
         setSupabaseUserId(uid);
         // الدور من بيانات الحساب، والافتراضي "مدير" ليظهر كل الميزات (التقارير، الموردون، إلخ)
         const role:UserRole=(meta?.pharmacy_role as UserRole)||"manager";
-        const u:User={id:1,name_ar:meta?.owner_name||meta?.clinic_name||"مستخدم",name_en:meta?.owner_name||meta?.clinic_name||"User",role,username:session.user.email||"",password:"",avatar:"💊"};
+        const u:User={id:1,name_ar:meta?.owner_name||meta?.clinic_name||"مستخدم",name_en:meta?.owner_name||meta?.clinic_name||"User",role,username:session.user.email||"",password:"",avatar:""};
         setCurrentUser(u);
         setActiveTab(ROLE[role].tabs[0]);
         // loadData تضبط loading=false في finally
@@ -2382,7 +2383,7 @@ export default function PharmacyPage() {
 
   return (
     <>
-      {!isOnline&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#e67e22",color:"#fff",textAlign:"center",padding:"7px 12px",fontSize:12.5,fontWeight:700,fontFamily:"'Rubik',sans-serif"}}>📡 {lang==="ar"?"لا يوجد اتصال بالإنترنت — أنت تتصفح آخر نسخة محفوظة، التعديلات غير متاحة حالياً":"Offline — viewing last saved data, edits are unavailable"}</div>}
+      {!isOnline&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#e67e22",color:"#fff",textAlign:"center",padding:"7px 12px",fontSize:12.5,fontWeight:700,fontFamily:"'Rubik',sans-serif"}}>{lang==="ar"?"لا يوجد اتصال بالإنترنت — أنت تتصفح آخر نسخة محفوظة، التعديلات غير متاحة حالياً":"Offline — viewing last saved data, edits are unavailable"}</div>}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300..800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}

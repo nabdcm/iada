@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import NotificationBell from "@/components/NotificationBell";
@@ -138,7 +139,7 @@ const getInitials = (name: string) => (name || "?").split(" ").slice(0,2).map(w 
 
 // ── Force Western (Latin) numerals regardless of locale ─────
 const toWestern = (val: string | number): string => {
-  return String(val).replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  return String(val).replace(/[0-9]/g, (d) => String("0123456789".indexOf(d)));
 };
 
 function getGreetingKey(): "greeting_morning" | "greeting_afternoon" | "greeting_evening" {
@@ -208,7 +209,7 @@ function StatCard({ icon, label, value, sub, subColor, accent, delay = 0, loadin
     }}>
       <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:accent,borderRadius:"16px 16px 0 0" }} />
       <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16 }}>
-        <div style={{ width:44,height:44,borderRadius:12,background:`${accent}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>{icon}</div>
+        <div style={{ width:44,height:44,borderRadius:12,background:`${accent}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph={icon} /></div>
       </div>
       {loading ? (
         <div style={{ width:70,height:30,borderRadius:8,background:"#f0f2f5",animation:"pulse 1.5s ease infinite",marginBottom:6 }} />
@@ -321,7 +322,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const now = new Date();
     setGreetingKey(getGreetingKey());
-    setDateStr(now.toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US", {
+    setDateStr(now.toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", {
       weekday: "long", year: "numeric", month: "long", day: "numeric",
     }));
     setDaysElapsed(now.getDate());
@@ -555,7 +556,7 @@ export default function DashboardPage() {
             <div className="topbar-inner" dir={isAr?"rtl":"ltr"} style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
               <div className="topbar-greeting">
                 <h1 style={{ fontSize:22,fontWeight:800,color:"#353535",marginBottom:2 }}>
-                  {tr.header[greetingKey]} 👋
+                  {tr.header[greetingKey]} <AppIcon glyph="👋" />
                 </h1>
                 <p style={{ fontSize:13,color:"#aaa",fontWeight:400 }}>
                   {toWestern(dateStr)}
@@ -563,7 +564,7 @@ export default function DashboardPage() {
               </div>
               <div style={{ display:"flex",alignItems:"center",gap:12 }}>
                 <div className="search-input-wrap" style={{ display:"flex",alignItems:"center",gap:8,background:"#fff",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
-                  <span style={{ color:"#aaa",fontSize:14 }}>🔍</span>
+                  <span style={{ color:"#aaa",fontSize:14 }}><AppIcon glyph="🔍" /></span>
                   <input
                     placeholder={tr.header.search}
                     style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:160,direction:isAr?"rtl":"ltr" }}
@@ -606,7 +607,7 @@ export default function DashboardPage() {
                   { icon:"💳", label:tr.quickActions.recordPayment,   color:"#e67e22", bg:"rgba(230,126,34,.08)", href:"/payments",      feature: "payments" },
                 ].filter(a => !a.feature || canAccess(a.feature, plan)).map(a => (
                   <a key={a.label} href={a.href} className="action-btn">
-                    <div className="action-btn-icon" style={{ background:a.bg,color:a.color }}>{a.icon}</div>
+                    <div className="action-btn-icon" style={{ background:a.bg,color:a.color }}><AppIcon glyph={a.icon} /></div>
                     <span className="action-btn-label" style={{ color:a.color }}>{a.label}</span>
                   </a>
                 ))}
@@ -618,7 +619,7 @@ export default function DashboardPage() {
               <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:"16px 24px",boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:"1.5px solid #eef0f3",marginBottom:28 }}>
                 <div style={{ display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" }}>
                   <div style={{ display:"flex",alignItems:"center",gap:6,marginInlineEnd:8 }}>
-                    <span style={{ fontSize:18 }}>👨‍⚕️</span>
+                    <span style={{ fontSize:18 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></span>
                     <span style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{tr.filterByDoctor}</span>
                     <span style={{ fontSize:11,color:"#aaa",marginInlineStart:4 }}>
                       ({toWestern(activeDoctorCount)}/{toWestern(maxDoctors)} {isAr?"طبيب":"drs"})
@@ -690,7 +691,7 @@ export default function DashboardPage() {
 
                 {loadingStats ? (
                   <div style={{ padding:"40px 0",textAlign:"center",color:"#ccc" }}>
-                    <div style={{ fontSize:32,marginBottom:10,animation:"pulse 1.5s ease infinite" }}>📅</div>
+                    <div style={{ fontSize:32,marginBottom:10,animation:"pulse 1.5s ease infinite" }}><AppIcon glyph="📅" /></div>
                     <div style={{ fontSize:13 }}>{tr.loading}</div>
                   </div>
                 ) : (() => {
@@ -699,7 +700,7 @@ export default function DashboardPage() {
                     : todayAppointments;
                   if (filteredAppts.length === 0) return (
                     <div style={{ textAlign:"center",padding:"40px 20px",color:"#ccc" }}>
-                      <div style={{ fontSize:36,marginBottom:10 }}>📭</div>
+                      <div style={{ fontSize:36,marginBottom:10 }}><AppIcon glyph="📭" /></div>
                       <div style={{ fontSize:13,fontWeight:600 }}>{tr.todaySchedule.noAppointments}</div>
                     </div>
                   );
@@ -726,7 +727,7 @@ export default function DashboardPage() {
                           {/* Show doctor name only in clinic plans when viewing all doctors */}
                           {isSharedPlan(plan) && selectedDoctorId === null && appt.doctorName ? (
                             <div style={{ fontSize:11,color:getPlanBadge(plan).color,marginTop:2,fontWeight:500 }}>
-                              👨‍⚕️ {appt.doctorName}
+                              <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {appt.doctorName}
                             </div>
                           ) : appt.type ? (
                             <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{appt.type}</div>
@@ -756,7 +757,7 @@ export default function DashboardPage() {
                   {(isSharedPlan(plan) ? [
                     { label:tr.apptThisMonth,     value:String(monthTotalVisits), color:getPlanBadge(plan).color, bg:`${getPlanBadge(plan).color}10`, icon:"📅" },
                     { label:tr.dailyAvgLabel,      value:dailyAvg,                color:"#2e7d32", bg:"rgba(46,125,50,.06)",  icon:"📊" },
-                    { label:tr.activeDoctors,      value:String(activeDoctorCount), color:"#7b2d8b", bg:"rgba(123,45,139,.06)", icon:"👨‍⚕️" },
+                    { label:tr.activeDoctors,      value:String(activeDoctorCount), color:"#7b2d8b", bg:"rgba(123,45,139,.06)", icon:"‍" },
                     { label:tr.totalPatientsLabel, value:String(totalPatients),   color:"#e67e22", bg:"rgba(230,126,34,.06)", icon:"👥" },
                   ] : [
                     { label:tr.apptThisMonth,     value:String(monthTotalVisits), color:"#0863ba", bg:"rgba(8,99,186,.06)",   icon:"📅" },
@@ -765,7 +766,7 @@ export default function DashboardPage() {
                     { label:tr.totalPatientsLabel, value:String(totalPatients),   color:"#e67e22", bg:"rgba(230,126,34,.06)", icon:"👥" },
                   ]).map((s,i) => (
                     <div key={i} style={{ background:s.bg,borderRadius:12,padding:"14px 16px",border:`1.5px solid ${s.color}20` }}>
-                      <div style={{ fontSize:18,marginBottom:6 }}>{s.icon}</div>
+                      <div style={{ fontSize:18,marginBottom:6 }}><AppIcon glyph={s.icon} /></div>
                       <div style={{ fontSize:22,fontWeight:800,color:s.color,lineHeight:1,fontVariantNumeric:"tabular-nums" }}>
                         {loadingStats ? "—" : toWestern(s.value)}
                       </div>
@@ -892,7 +893,7 @@ export default function DashboardPage() {
             {isSharedPlan(plan) && doctors.length > 0 && !loadingStats && (
               <div className="section-card" style={{ background:"#fff",borderRadius:16,padding:24,boxShadow:"0 2px 16px rgba(8,99,186,.07)",border:`1.5px solid ${getPlanBadge(plan).color}30`,marginTop:20 }}>
                 <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:20 }}>
-                  <span style={{ fontSize:20 }}>👨‍⚕️</span>
+                  <span style={{ fontSize:20 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></span>
                   <div>
                     <h3 style={{ fontSize:15,fontWeight:700,color:"#353535",margin:0 }}>{tr.todayByDoctor}</h3>
                     <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>
@@ -992,7 +993,7 @@ export default function DashboardPage() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 24, flexShrink: 0,
                 boxShadow: "0 4px 12px rgba(8,99,186,.3)",
-              }}>🔔</div>
+              }}><AppIcon glyph="🔔" /></div>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: "#1a2840", lineHeight: 1.2 }}>
                   {isAr ? "فعّل الإشعارات" : "Enable Notifications"}
@@ -1006,8 +1007,8 @@ export default function DashboardPage() {
             {/* النص */}
             <p style={{ fontSize: 14, color: "#555", lineHeight: 1.65, margin: "0 0 20px" }}>
               {isAr
-                ? "فعّل الإشعارات لتلقي تنبيه فوري عند كل حجز موعد جديد أو طلب يحتاج موافقتك. 📅"
-                : "Enable notifications to get instant alerts for new appointments and approval requests. 📅"}
+                ? "فعّل الإشعارات لتلقي تنبيه فوري عند كل حجز موعد جديد أو طلب يحتاج موافقتك. "
+                : "Enable notifications to get instant alerts for new appointments and approval requests. "}
             </p>
 
             {/* الأزرار */}

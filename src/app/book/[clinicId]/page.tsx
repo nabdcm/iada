@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -384,8 +385,8 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
           body: JSON.stringify({
             user_id: clinicId,
             title:   requiresApproval
-              ? (lang === "ar" ? "🔔 طلب حجز جديد يحتاج موافقة" : "🔔 New Booking Request — Approval Needed")
-              : (lang === "ar" ? "📅 موعد جديد تم حجزه"          : "📅 New Appointment Booked"),
+              ? (lang === "ar" ? "طلب حجز جديد يحتاج موافقة" : "New Booking Request — Approval Needed")
+              : (lang === "ar" ? "موعد جديد تم حجزه"          : "New Appointment Booked"),
             body: lang === "ar"
               ? `${form.name} — ${form.date} الساعة ${form.time}`
               : `${form.name} — ${form.date} at ${form.time}`,
@@ -393,7 +394,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
             tag:  "new-booking",
             requireInteraction: requiresApproval,
             actions: requiresApproval ? [
-              { action:"approve", title: lang==="ar" ? "✅ موافقة" : "✅ Approve" }
+              { action:"approve", title: lang==="ar" ? "موافقة" : "Approve" }
             ] : [],
           }),
         });
@@ -425,7 +426,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
 
   const secTitle = (icon: string, text: string, color = "#0863ba") => (
     <div style={{ fontSize:11,fontWeight:700,color,textTransform:"uppercase" as const,letterSpacing:.8,marginBottom:14,display:"flex",alignItems:"center",gap:6 }}>
-      {icon} {text}
+      <AppIcon glyph={icon} /> {text}
     </div>
   );
 
@@ -444,7 +445,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
   if (!clinic) return (
     <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f7f9fc",direction:"rtl" }}>
       <div style={{ textAlign:"center",padding:40 }}>
-        <div style={{ fontSize:60,marginBottom:16 }}>🏥</div>
+        <div style={{ fontSize:60,marginBottom:16 }}><AppIcon glyph="🏥" /></div>
         <h1 style={{ fontSize:24,fontWeight:800,color:"#353535",marginBottom:8 }}>{tr.notFound}</h1>
         <p style={{ fontSize:15,color:"#aaa" }}>{tr.notFoundSub}</p>
       </div>
@@ -489,12 +490,12 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
               <h1 style={{ fontSize:26,fontWeight:800,marginBottom:6 }}>{clinic.clinic_name}</h1>
               {/* للعيادات الفردية: عرض اسم الطبيب. للمشتركة: عرض بادج "عيادة مشتركة" */}
               {!isSharedClinic && clinic.doctor_name && (
-                <div style={{ fontSize:14,opacity:.85,marginBottom:8 }}>👨‍⚕️ {clinic.doctor_name}</div>
+                <div style={{ fontSize:14,opacity:.85,marginBottom:8 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {clinic.doctor_name}</div>
               )}
               {isSharedClinic && doctors.length > 0 && (
                 <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap" }}>
                   <span style={{ fontSize:12,padding:"3px 10px",background:"rgba(255,255,255,.18)",border:"1px solid rgba(255,255,255,.3)",borderRadius:20,color:"#fff",fontWeight:600 }}>
-                    🏥 {isAr ? "عيادة مشتركة" : "Shared Clinic"}
+                    <AppIcon glyph="🏥" /> {isAr ? "عيادة مشتركة" : "Shared Clinic"}
                   </span>
                   {doctors.slice(0,3).map(doc => (
                     <span key={doc.id} style={{ fontSize:12,color:"rgba(255,255,255,.85)" }}>
@@ -507,9 +508,9 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                 </div>
               )}
               <div style={{ display:"flex",flexWrap:"wrap",gap:14,opacity:.8,fontSize:13,marginTop:4 }}>
-                {clinic.phone   && <span>📞 {clinic.phone}</span>}
-                {clinic.address && <span>📍 {clinic.address}</span>}
-                <span>🕐 {clinic.working_hours_start?.slice(0,5)} – {clinic.working_hours_end?.slice(0,5)}</span>
+                {clinic.phone   && <span><AppIcon glyph="📞" /> {clinic.phone}</span>}
+                {clinic.address && <span><AppIcon glyph="📍" /> {clinic.address}</span>}
+                <span><AppIcon glyph="🕐" /> {clinic.working_hours_start?.slice(0,5)} – {clinic.working_hours_end?.slice(0,5)}</span>
               </div>
             </div>
           </div>
@@ -520,7 +521,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
           {/* نجاح */}
           {success ? (
             <div style={{ background:"#fff",borderRadius:20,padding:"48px 32px",textAlign:"center",border:"1.5px solid #eef0f3",boxShadow:"0 4px 24px rgba(8,99,186,.08)",animation:"popIn .4s ease" }}>
-              <div style={{ width:80,height:80,background:"rgba(8,99,186,.1)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 20px" }}>📋</div>
+              <div style={{ width:80,height:80,background:"rgba(8,99,186,.1)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 20px" }}><AppIcon glyph="📋" /></div>
               <h2 style={{ fontSize:22,fontWeight:800,color:"#0863ba",marginBottom:8 }}>{tr.success}</h2>
               <p style={{ fontSize:14,color:"#888",marginBottom:20,lineHeight:1.7 }}>{tr.successSub}</p>
               {/* بادج "بانتظار الموافقة" */}
@@ -528,11 +529,11 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                 {tr.pendingNote}
               </div>
               <div style={{ background:"#f7f9fc",borderRadius:12,padding:"16px 20px",marginBottom:28,textAlign:isAr?"right":"left" }}>
-                <div style={{ fontSize:13,color:"#555",marginBottom:6 }}>📅 {form.date} — {form.time}</div>
-                <div style={{ fontSize:13,color:"#555",marginBottom: isSharedClinic && selectedDoctor ? 6 : 0 }}>👤 {form.name} | 📞 {form.phone}</div>
+                <div style={{ fontSize:13,color:"#555",marginBottom:6 }}><AppIcon glyph="📅" /> {form.date} — {form.time}</div>
+                <div style={{ fontSize:13,color:"#555",marginBottom: isSharedClinic && selectedDoctor ? 6 : 0 }}><AppIcon glyph="👤" /> {form.name} | <AppIcon glyph="📞" /> {form.phone}</div>
                 {isSharedClinic && selectedDoctor && (
                   <div style={{ fontSize:13,color:"#0891b2",fontWeight:600 }}>
-                    👨‍⚕️ {isAr?"د. ":"Dr. "}{selectedDoctor.name}
+                    <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {isAr?"د. ":"Dr. "}{selectedDoctor.name}
                     {selectedDoctor.specialty && <span style={{ fontWeight:400,color:"#888" }}> — {selectedDoctor.specialty}</span>}
                   </div>
                 )}
@@ -552,14 +553,14 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
               <form onSubmit={handleSubmit} style={{ padding:"24px",display:"flex",flexDirection:"column",gap:0 }}>
                 {error && (
                   <div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:20,display:"flex",alignItems:"center",gap:8 }}>
-                    ⚠️ {error}
+                    <AppIcon glyph="⚠️" /> {error}
                   </div>
                 )}
 
                 {/* ══ اختيار الطبيب — للعيادات المشتركة فقط ══ */}
                 {isSharedClinic && (
                   <div style={{ marginBottom:24,background:"linear-gradient(135deg,rgba(8,145,178,.04),rgba(124,58,237,.04))",border:"1.5px solid rgba(8,145,178,.18)",borderRadius:14,padding:"18px" }}>
-                    {secTitle("👨‍⚕️", (tr as any).selectDoctor, "#0891b2")}
+                    {secTitle("‍", (tr as any).selectDoctor, "#0891b2")}
                     <p style={{ fontSize:12,color:"#888",marginBottom:14,marginTop:-8 }}>{(tr as any).selectDoctorSub}</p>
                     {doctors.length === 0 ? (
                       <div style={{ textAlign:"center",padding:"16px",color:"#aaa",fontSize:13 }}>
@@ -637,7 +638,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                             background: form.gender === g ? "rgba(8,99,186,.06)" : "#fff",
                             color: form.gender === g ? "#0863ba" : "#888",
                           }}>
-                          {g === "male" ? `👨 ${tr.male}` : `👩 ${tr.female}`}
+                          {g === "male" ? `${tr.male}` : `${tr.female}`}
                         </button>
                       ))}
                     </div>
@@ -650,7 +651,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
 
                   {/* السكري */}
                   <div style={{ marginBottom:16 }}>
-                    <label style={{ display:"block",fontSize:13,fontWeight:600,color:"#444",marginBottom:8 }}>🍬 {tr.diabetes}</label>
+                    <label style={{ display:"block",fontSize:13,fontWeight:600,color:"#444",marginBottom:8 }}><AppIcon glyph="🍬" /> {tr.diabetes}</label>
                     <div style={{ display:"flex",gap:10 }}>
                       {([true,false] as const).map(val => (
                         <button key={String(val)} type="button"
@@ -668,7 +669,7 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
 
                   {/* الضغط */}
                   <div>
-                    <label style={{ display:"block",fontSize:13,fontWeight:600,color:"#444",marginBottom:8 }}>💊 {tr.hypertension}</label>
+                    <label style={{ display:"block",fontSize:13,fontWeight:600,color:"#444",marginBottom:8 }}><AppIcon glyph="💊" /> {tr.hypertension}</label>
                     <div style={{ display:"flex",gap:10 }}>
                       {([true,false] as const).map(val => (
                         <button key={String(val)} type="button"
@@ -699,14 +700,14 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
                             .filter(([,d]: [string, any]) => d.enabled)
                             .map(([k]: [string, any]) => ["sun","mon","tue","wed","thu","fri","sat"][parseInt(k)])
                         : clinic.working_days) && (
-                      <div style={{ fontSize:12,color:"#c0392b",marginTop:6 }}>⚠️ {tr.offDay}</div>
+                      <div style={{ fontSize:12,color:"#c0392b",marginTop:6 }}><AppIcon glyph="⚠️" /> {tr.offDay}</div>
                     )}
                   </div>
 
                   {/* للعيادات المشتركة: تنبيه إذا لم يُختار طبيب بعد */}
                   {isSharedClinic && !selectedDoctor && form.date && isDayWorking(form.date, clinic.working_days) && (
                     <div style={{ padding:"12px 14px",background:"rgba(8,145,178,.06)",border:"1.5px solid rgba(8,145,178,.2)",borderRadius:10,fontSize:13,color:"#0891b2",fontWeight:600,marginBottom:10 }}>
-                      👨‍⚕️ {isAr ? "اختر الطبيب أولاً لعرض المواعيد المتاحة" : "Select a doctor first to view available slots"}
+                      <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {isAr ? "اختر الطبيب أولاً لعرض المواعيد المتاحة" : "Select a doctor first to view available slots"}
                     </div>
                   )}
 

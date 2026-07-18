@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect } from "react";
 
 // ============================================================
@@ -35,7 +36,7 @@ const MEDICAL_FIELDS_LABELS: Record<string, { ar: string; en: string; icon: stri
   allergies:           { ar: "الحساسية",                  en: "Allergies",                icon: "🤧" },
   medications:         { ar: "الأدوية الحالية",            en: "Current Medications",       icon: "💊" },
   surgeries:           { ar: "العمليات السابقة",           en: "Past Surgeries",            icon: "🔪" },
-  family_history:      { ar: "التاريخ العائلي",            en: "Family History",            icon: "👨‍👩‍👧" },
+  family_history:      { ar: "التاريخ العائلي",            en: "Family History",            icon: "‍‍" },
   chronic_diseases:    { ar: "الأمراض المزمنة",           en: "Chronic Diseases",          icon: "🏥" },
   extended_notes:      { ar: "ملاحظات الطبيب",            en: "Doctor Notes",              icon: "📝" },
   dental_history:      { ar: "التاريخ الطبي السني",        en: "Dental History",            icon: "🦷" },
@@ -309,8 +310,8 @@ function ClinicCard({ record, lang, isExpanded, onToggle }: {
                 }}
               >
                 {tab === "medical"
-                  ? (isAr ? "📋 " + t.medical : "📋 " + t.medical)
-                  : (isAr ? "🩻 " + t.xrays : "🩻 " + t.xrays)}
+                  ? (isAr ? t.medical : t.medical)
+                  : (isAr ? t.xrays : t.xrays)}
               </button>
             ))}
           </div>
@@ -323,7 +324,7 @@ function ClinicCard({ record, lang, isExpanded, onToggle }: {
                     textAlign: "center", padding: "32px 0",
                     color: "#ccc", fontSize: 13,
                   }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}><AppIcon glyph="📋" /></div>
                     {t.noRecords}
                   </div>
                 ) : medEntries.map(([key, value]) => {
@@ -344,7 +345,7 @@ function ClinicCard({ record, lang, isExpanded, onToggle }: {
                         fontSize: 11, fontWeight: 700, color: "#888",
                         marginBottom: 6, display: "flex", alignItems: "center", gap: 5,
                       }}>
-                        <span>{icon}</span>
+                        <span style={{display:"flex"}}><AppIcon glyph={icon} /></span>
                         <span style={{ textTransform: "uppercase", letterSpacing: "0.5px" }}>
                           {label}
                         </span>
@@ -368,7 +369,7 @@ function ClinicCard({ record, lang, isExpanded, onToggle }: {
                     textAlign: "center", padding: "32px 0",
                     color: "#ccc", fontSize: 13,
                   }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>🩻</div>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}><AppIcon glyph="🩻" /></div>
                     {t.noXrays}
                   </div>
                 ) : (
@@ -553,7 +554,7 @@ function PatientDashboard({ master, lang, onLogout }: {
                   backdropFilter: "blur(4px)",
                   border: "1px solid rgba(255,255,255,0.25)",
                 }}>
-                  <span style={{ fontSize: 13 }}>🎂</span>
+                  <span style={{ fontSize: 13 }}><AppIcon glyph="🎂" /></span>
                   <span style={{ fontSize: 13, fontWeight: 700 }}>
                     {age} {t.years}
                   </span>
@@ -575,7 +576,7 @@ function PatientDashboard({ master, lang, onLogout }: {
               marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.6px",
               display: "flex", alignItems: "center", gap: 6,
             }}>
-              <span>👤</span> {t.personalInfo}
+              <span><AppIcon glyph="👤" /></span> {t.personalInfo}
             </div>
 
             <div style={{
@@ -598,7 +599,7 @@ function PatientDashboard({ master, lang, onLogout }: {
               ].map(({ label, value, icon }) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, color: "#aaa", fontWeight: 700, marginBottom: 4 }}>
-                    {icon} {label}
+                    <AppIcon glyph={icon} /> {label}
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#2d3748" }}>
                     {value || "—"}
@@ -620,7 +621,7 @@ function PatientDashboard({ master, lang, onLogout }: {
                     borderRadius: 20, background: "#fef3c7", color: "#d97706",
                     border: "1.5px solid #fde68a",
                   }}>
-                    💉 {t.diabetes}
+                    <AppIcon glyph="💉" /> {t.diabetes}
                   </span>
                 )}
                 {patientInfo.has_hypertension && (
@@ -629,7 +630,7 @@ function PatientDashboard({ master, lang, onLogout }: {
                     borderRadius: 20, background: "#fce7f3", color: "#be185d",
                     border: "1.5px solid #fbcfe8",
                   }}>
-                    ❤️ {t.hypertension}
+                    <AppIcon glyph="❤️" /> {t.hypertension}
                   </span>
                 )}
               </div>
@@ -644,7 +645,7 @@ function PatientDashboard({ master, lang, onLogout }: {
           display: "flex", alignItems: "center", gap: 6,
           padding: "0 4px",
         }}>
-          <span>🏥</span>
+          <span><AppIcon glyph="🏥" /></span>
           {t.clinics}
           {records.length > 0 && (
             <span style={{
@@ -675,7 +676,7 @@ function PatientDashboard({ master, lang, onLogout }: {
             background: "#fff", borderRadius: 18, padding: "48px 20px",
             textAlign: "center", border: "1.5px dashed #e8eaed",
           }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🏥</div>
+            <div style={{ fontSize: 48, marginBottom: 12 }}><AppIcon glyph="🏥" /></div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#888" }}>
               {t.noClinics}
             </div>

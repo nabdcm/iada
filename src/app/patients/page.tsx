@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSProperties } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { getOrCreateMRN } from "@/lib/mrn";
@@ -132,7 +133,7 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType, MedicalField[]> = {
     { key:"allergies",      label_ar:"الحساسية",          label_en:"Allergies",         type:"textarea", icon:"🤧" },
     { key:"medications",    label_ar:"الأدوية الحالية",   label_en:"Current Medications",type:"textarea", icon:"💊" },
     { key:"surgeries",      label_ar:"العمليات السابقة",  label_en:"Past Surgeries",    type:"textarea", icon:"🔪" },
-    { key:"family_history", label_ar:"التاريخ العائلي",   label_en:"Family History",    type:"textarea", icon:"👨‍👩‍👧" },
+    { key:"family_history", label_ar:"التاريخ العائلي",   label_en:"Family History",    type:"textarea", icon:"‍‍" },
     { key:"chronic_diseases",label_ar:"الأمراض المزمنة", label_en:"Chronic Diseases",  type:"textarea", icon:"🏥" },
     { key:"extended_notes", label_ar:"ملاحظات الطبيب",   label_en:"Doctor Notes",      type:"textarea", icon:"📝" },
   ],
@@ -163,7 +164,7 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType, MedicalField[]> = {
     { key:"birth_history",   label_ar:"تاريخ الولادة",       label_en:"Birth History",        type:"textarea", icon:"👶" },
     { key:"developmental",   label_ar:"مراحل النمو والتطور", label_en:"Developmental Milestones", type:"textarea", icon:"📈" },
     { key:"vaccinations",    label_ar:"جدول التطعيمات",      label_en:"Vaccination Schedule", type:"textarea", icon:"💉" },
-    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"👨‍👩‍👧" },
+    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"‍‍" },
     { key:"extended_notes",  label_ar:"ملاحظات الطبيب",     label_en:"Doctor Notes",         type:"textarea", icon:"📝" },
   ],
   physical_therapy: [
@@ -194,7 +195,7 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType, MedicalField[]> = {
     { key:"eye_history",     label_ar:"التاريخ البصري",      label_en:"Eye History",          type:"textarea", icon:"👁️" },
     { key:"medications",     label_ar:"الأدوية الحالية",     label_en:"Current Medications",  type:"textarea", icon:"💊" },
     { key:"glasses_history", label_ar:"تاريخ النظارات",     label_en:"Glasses/Lens History", type:"textarea", icon:"👓" },
-    { key:"family_history",  label_ar:"التاريخ العائلي البصري", label_en:"Family Eye History", type:"textarea", icon:"👨‍👩‍👧" },
+    { key:"family_history",  label_ar:"التاريخ العائلي البصري", label_en:"Family Eye History", type:"textarea", icon:"‍‍" },
     { key:"extended_notes",  label_ar:"ملاحظات الطبيب",     label_en:"Doctor Notes",         type:"textarea", icon:"📝" },
   ],
   orthopedic: [
@@ -208,7 +209,7 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType, MedicalField[]> = {
     { key:"cardiac_history", label_ar:"التاريخ القلبي",     label_en:"Cardiac History",      type:"textarea", icon:"❤️" },
     { key:"medications",     label_ar:"الأدوية الحالية",     label_en:"Current Medications",  type:"textarea", icon:"💊" },
     { key:"risk_factors",    label_ar:"عوامل الخطر",         label_en:"Risk Factors",         type:"textarea", icon:"⚠️" },
-    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"👨‍👩‍👧" },
+    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"‍‍" },
     { key:"surgeries",       label_ar:"العمليات القلبية",   label_en:"Cardiac Surgeries",    type:"textarea", icon:"🔪" },
     { key:"extended_notes",  label_ar:"ملاحظات الطبيب",     label_en:"Doctor Notes",         type:"textarea", icon:"📝" },
   ],
@@ -217,7 +218,7 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType, MedicalField[]> = {
     { key:"medications",     label_ar:"الأدوية الحالية",     label_en:"Current Medications",  type:"textarea", icon:"💊" },
     { key:"menstrual_history",label_ar:"تاريخ الدورة الشهرية", label_en:"Menstrual History", type:"textarea", icon:"📅" },
     { key:"surgeries",       label_ar:"العمليات الجراحية",  label_en:"Surgical History",     type:"textarea", icon:"🔪" },
-    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"👨‍👩‍👧" },
+    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"‍‍" },
     { key:"extended_notes",  label_ar:"ملاحظات الطبيبة",   label_en:"Doctor Notes",         type:"textarea", icon:"📝" },
   ],
   ent: [
@@ -231,14 +232,14 @@ const MEDICAL_FIELDS_BY_TYPE: Record<ClinicType, MedicalField[]> = {
     { key:"urological_history",label_ar:"التاريخ المسالكي",  label_en:"Urological History",  type:"textarea", icon:"💧" },
     { key:"medications",     label_ar:"الأدوية الحالية",     label_en:"Current Medications",  type:"textarea", icon:"💊" },
     { key:"surgeries",       label_ar:"العمليات الجراحية",  label_en:"Surgical History",     type:"textarea", icon:"🔪" },
-    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"👨‍👩‍👧" },
+    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"‍‍" },
     { key:"extended_notes",  label_ar:"ملاحظات الطبيب",     label_en:"Doctor Notes",         type:"textarea", icon:"📝" },
   ],
   other: [
     { key:"allergies",       label_ar:"الحساسية",             label_en:"Allergies",            type:"textarea", icon:"🤧" },
     { key:"medications",     label_ar:"الأدوية الحالية",     label_en:"Current Medications",  type:"textarea", icon:"💊" },
     { key:"surgeries",       label_ar:"العمليات السابقة",    label_en:"Past Surgeries",       type:"textarea", icon:"🔪" },
-    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"👨‍👩‍👧" },
+    { key:"family_history",  label_ar:"التاريخ العائلي",     label_en:"Family History",       type:"textarea", icon:"‍‍" },
     { key:"extended_notes",  label_ar:"ملاحظات الطبيب",     label_en:"Doctor Notes",         type:"textarea", icon:"📝" },
   ],
 };
@@ -444,7 +445,7 @@ function printMedicalReport(
     `).join("")
     : `<div class="notes-box" style="text-align:center; color:#aaa;">${isAr?"لا توجد بيانات مسجلة في السجل الطبي":"No data recorded in the medical record"}</div>`;
 
-  const genDate = new Date().toLocaleDateString(isAr?"ar-SA-u-ca-gregory":"en-US",{ year:"numeric", month:"long", day:"numeric" });
+  const genDate = new Date().toLocaleDateString(isAr?"ar-SA-u-ca-gregory-nu-latn":"en-US",{ year:"numeric", month:"long", day:"numeric" });
 
   const html = `
     <!DOCTYPE html>
@@ -516,8 +517,8 @@ function printMedicalReport(
         <div class="header">
           <div class="clinic-info">
             <h1>${clinicName || (isAr?"عيادة نبض":"NABD Clinic")}</h1>
-            ${doctorName?`<p>👨‍⚕️ ${doctorName}</p>`:""}
-            ${clinicPhone?`<p>📞 ${clinicPhone}</p>`:""}
+            ${doctorName?`<p><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> ${doctorName}</p>`:""}
+            ${clinicPhone?`<p><AppIcon glyph="📞" /> ${clinicPhone}</p>`:""}
             <p style="font-size:11px; color:#999; margin-top:6px;">${isAr?"تقرير طبي":"Medical Report"} — ${isAr?meta.ar:meta.en}</p>
           </div>
           <div class="rx-badge">${meta.icon}</div>
@@ -595,7 +596,7 @@ function printMedicalReportText(
   };
   const genderLabel = patient.gender ? (isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")) : "—";
   const age = calcAgeLocal(patient.date_of_birth);
-  const genDate = new Date().toLocaleDateString(isAr?"ar-SA-u-ca-gregory":"en-US",{ year:"numeric", month:"long", day:"numeric" });
+  const genDate = new Date().toLocaleDateString(isAr?"ar-SA-u-ca-gregory-nu-latn":"en-US",{ year:"numeric", month:"long", day:"numeric" });
 
   const bodyHTML = reportText.trim()
     ? `<div class="notes-box" style="white-space:pre-wrap;">${reportText.replace(/</g,"&lt;")}</div>`
@@ -636,8 +637,8 @@ function printMedicalReportText(
         <div class="header">
           <div class="clinic-info">
             <h1>${clinicName || (isAr?"عيادة نبض":"NABD Clinic")}</h1>
-            ${doctorName?`<p>👨‍⚕️ ${doctorName}</p>`:""}
-            ${clinicPhone?`<p>📞 ${clinicPhone}</p>`:""}
+            ${doctorName?`<p><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> ${doctorName}</p>`:""}
+            ${clinicPhone?`<p><AppIcon glyph="📞" /> ${clinicPhone}</p>`:""}
             <p style="font-size:11px; color:#999; margin-top:6px;">${isAr?"تقرير طبي":"Medical Report"} — ${isAr?meta.ar:meta.en}</p>
           </div>
           <div class="rx-badge">${meta.icon}</div>
@@ -755,7 +756,7 @@ function DentalChartSection({ lang, chart, onChange }: { lang:Lang; chart:Dental
       <div style={{ background:"#fafbfc",borderRadius:14,padding:16,border:"1.5px solid #eef0f3",overflowX:"auto" }}>
         {!showBaby?(
           <div style={{ display:"flex",flexDirection:"column",gap:12,minWidth:580 }}>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:4 }}>🦷 {t.upper}</div>
+            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:4 }}><AppIcon glyph="🦷" /> {t.upper}</div>
             <div style={{ display:"flex",justifyContent:"center",gap:16 }}>
               <ToothRow nums={UPPER_RIGHT} label={isAr?t.left:t.right}/>
               <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"16px 0 0" }}/>
@@ -767,11 +768,11 @@ function DentalChartSection({ lang, chart, onChange }: { lang:Lang; chart:Dental
               <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"0 0 16px" }}/>
               <ToothRow nums={LOWER_LEFT} label={isAr?t.right:t.left}/>
             </div>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginTop:4 }}>🦷 {t.lower}</div>
+            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginTop:4 }}><AppIcon glyph="🦷" /> {t.lower}</div>
           </div>
         ):(
           <div style={{ display:"flex",flexDirection:"column",gap:12,minWidth:380 }}>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:4 }}>🦷 {t.upper}</div>
+            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:4 }}><AppIcon glyph="🦷" /> {t.upper}</div>
             <div style={{ display:"flex",justifyContent:"center",gap:16 }}>
               <ToothRow nums={UPPER_RIGHT_BABY} label={isAr?t.left:t.right}/>
               <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"16px 0 0" }}/>
@@ -783,7 +784,7 @@ function DentalChartSection({ lang, chart, onChange }: { lang:Lang; chart:Dental
               <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"0 0 16px" }}/>
               <ToothRow nums={LOWER_LEFT_BABY} label={isAr?t.right:t.left}/>
             </div>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginTop:4 }}>🦷 {t.lower}</div>
+            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginTop:4 }}><AppIcon glyph="🦷" /> {t.lower}</div>
           </div>
         )}
       </div>
@@ -795,7 +796,7 @@ function DentalChartSection({ lang, chart, onChange }: { lang:Lang; chart:Dental
       </div>
       {selected!==null&&(
         <div style={{ background:"#fff",borderRadius:14,padding:16,border:"2px solid #0863ba",boxShadow:"0 4px 20px rgba(8,99,186,.12)" }}>
-          <div style={{ fontSize:13,fontWeight:700,color:"#0863ba",marginBottom:12 }}>🦷 {isAr?`السن رقم ${selected}`:`Tooth #${selected}`}</div>
+          <div style={{ fontSize:13,fontWeight:700,color:"#0863ba",marginBottom:12 }}><AppIcon glyph="🦷" /> {isAr?`السن رقم ${selected}`:`Tooth #${selected}`}</div>
           <div style={{ marginBottom:12 }}>
             <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:6 }}>{t.toothStatus}</label>
             <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
@@ -933,7 +934,7 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
         /* ── معاينة الصورة قبل الحفظ ── */
         <div style={{ borderRadius:14,border:"2px solid #0863ba",background:"#f0f6ff",padding:14,display:"flex",flexDirection:"column",gap:12 }}>
           <div style={{ fontSize:12,fontWeight:700,color:"#0863ba",marginBottom:2 }}>
-            🩻 {isAr?"معاينة الصورة — تأكد قبل الحفظ":"Preview — confirm before saving"}
+            <AppIcon glyph="🩻" /> {isAr?"معاينة الصورة — تأكد قبل الحفظ":"Preview — confirm before saving"}
           </div>
           <img src={pendingImg.url ?? ""} alt={pendingImg.name}
             style={{ width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,background:"#000",border:"1.5px solid #dde4f0" }}/>
@@ -961,13 +962,13 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
           onDragLeave={()=>setDragging(false)}
           onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)handleFile(f);}}
           style={{ border:`2px dashed ${dragging?"#0863ba":"#c8d4e0"}`,borderRadius:14,padding:"28px 16px",textAlign:"center",cursor:"pointer",background:dragging?"rgba(8,99,186,.05)":"#fafbfc",transition:"all .2s" }}>
-          <div style={{ fontSize:36,marginBottom:8 }}>🩻</div>
+          <div style={{ fontSize:36,marginBottom:8 }}><AppIcon glyph="🩻" /></div>
           <div style={{ fontSize:13,color:"#888",fontWeight:500 }}>{t.dropzone}</div>
           <div style={{ fontSize:11,color:"#bbb",marginTop:4 }}>JPG, PNG, WEBP</div>
         </div>
       )}
       <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{const f=e.target.files?.[0];if(f)handleFile(f);}}/>
-      {xrays.length===0?(<div style={{ textAlign:"center",padding:"32px 0",color:"#ccc" }}><div style={{ fontSize:36,marginBottom:8 }}>🩻</div><div style={{ fontSize:13 }}>{t.noXrays}</div></div>):(
+      {xrays.length===0?(<div style={{ textAlign:"center",padding:"32px 0",color:"#ccc" }}><div style={{ fontSize:36,marginBottom:8 }}><AppIcon glyph="🩻" /></div><div style={{ fontSize:13 }}>{t.noXrays}</div></div>):(
         <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(130px, 1fr))",gap:10 }}>
           {xrays.map(img=>(
             <div key={img.id} onClick={()=>setPreview(img)} style={{ borderRadius:12,overflow:"hidden",border:"1.5px solid #eef0f3",background:"#fff",boxShadow:"0 2px 8px rgba(0,0,0,.06)",cursor:"pointer" }}>
@@ -1102,7 +1103,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                 {patient.gender&&<span>{isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")}</span>}
                 {calcAge(patient.date_of_birth)!=="—"&&<span>• {calcAge(patient.date_of_birth)} {t.years}</span>}
                 <span style={{ padding:"2px 8px",borderRadius:8,fontSize:10,fontWeight:700,background:`${meta.color}15`,color:meta.color }}>{meta.icon} {isAr?meta.ar:meta.en}</span>
-                {saving&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600 }}>💾 {t.saving}</span>}
+                {saving&&<span style={{ fontSize:10,color:"#0863ba",fontWeight:600 }}><AppIcon glyph="💾" /> {t.saving}</span>}
               </div>
             </div>
             <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:14,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#888",fontWeight:700 }}>✕</button>
@@ -1112,7 +1113,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
           <div style={{ display:"flex",borderBottom:"1.5px solid #eef0f3",padding:"0 8px",background:"#fafbfc",flexShrink:0 }}>
             {tabs.map(tab=>(
               <button key={tab.key} className="ptab" onClick={()=>setActiveTab(tab.key)} style={{ flex:1,padding:"11px 4px",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:600,background:"transparent",color:activeTab===tab.key?"#0863ba":"#aaa",borderBottom:activeTab===tab.key?"2.5px solid #0863ba":"2.5px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",gap:3,transition:"all .18s" }}>
-                <span style={{ fontSize:15 }}>{tab.icon}</span>{tab.label}
+                <span style={{ fontSize:15 }}><AppIcon glyph={tab.icon} /></span>{tab.label}
               </button>
             ))}
           </div>
@@ -1121,7 +1122,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
           <div style={{ flex:1,overflowY:"auto",padding:"18px 22px" }}>
             {loadingProfile?(
               <div style={{ textAlign:"center",padding:"60px 0",color:"#ccc" }}>
-                <div style={{ fontSize:32,animation:"spin 1s linear infinite",display:"inline-block" }}>⚙️</div>
+                <div style={{ fontSize:32,animation:"spin 1s linear infinite",display:"inline-block" }}><AppIcon glyph="⚙️" /></div>
                 <div style={{ fontSize:13,marginTop:12 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
               </div>
             ):(
@@ -1135,7 +1136,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                         { label:t.name,   value:patient.name, icon:"👤" },
                         { label:t.phone,  value:patient.phone||"—", icon:"📞" },
                         { label:t.gender, value:patient.gender?(isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")):"—", icon:"⚧" },
-                        { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA-u-ca-gregory":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
+                        { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA-u-ca-gregory-nu-latn":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
                         { label:t.age,    value:calcAge(patient.date_of_birth)!=="—"?`${calcAge(patient.date_of_birth)} ${t.years}`:"—", icon:"🎯" },
                         { label:isAr?"الرقم الطبي":"Medical ID", value:(patient as any).mrn||"—", icon:"🪪" },
                       ].map(f=>(
@@ -1146,7 +1147,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                       ))}
                     </div>
                     <div style={{ marginBottom:14 }}>
-                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}>⚕️ {t.conditions}</div>
+                      <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}><AppIcon glyph="⚕️" /> {t.conditions}</div>
                       <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
                         {[
                           { key:"has_diabetes",     label:isAr?"السكري":"Diabetes",     icon:"🩸",color:"#c0392b",active:patient.has_diabetes },
@@ -1160,7 +1161,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                     </div>
                     {Object.keys(profile.extra_form_fields??{}).length>0&&(
                       <div style={{ marginBottom:14 }}>
-                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}>📋 {isAr?"معلومات إضافية":"Additional Info"}</div>
+                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:8 }}><AppIcon glyph="📋" /> {isAr?"معلومات إضافية":"Additional Info"}</div>
                         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
                           {(EXTRA_QUESTIONS[clinicType]??[]).map(q=>{
                             const val = profile.extra_form_fields?.[q.key];
@@ -1177,7 +1178,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                     )}
                     {patient.notes&&(
                       <div style={{ background:"#fffbf0",borderRadius:10,padding:"12px 14px",border:"1.5px solid #ffe58f" }}>
-                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}>📝 {isAr?"ملاحظات":"Notes"}</div>
+                        <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:5 }}><AppIcon glyph="📝" /> {isAr?"ملاحظات":"Notes"}</div>
                         <div style={{ fontSize:13,color:"#555",lineHeight:1.7 }}>{patient.notes}</div>
                       </div>
                     )}
@@ -1188,7 +1189,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                 {activeTab==="medical"&&(
                   <div>
                     <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"9px 12px",background:`${meta.color}08`,borderRadius:10,border:`1px solid ${meta.color}20` }}>
-                      <span style={{ fontSize:16 }}>{meta.icon}</span>
+                      <span style={{ fontSize:16 }}><AppIcon glyph={meta.icon} /></span>
                       <span style={{ fontSize:12,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {t.medicalRecord}</span>
                     </div>
                     <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
@@ -1203,7 +1204,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                             {/* رأس الحقل */}
                             <div style={{ padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",background:isExpanded?"#f0f6ff":"transparent" }}>
                               <div style={{ display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0 }}>
-                                <span style={{ fontSize:16,flexShrink:0 }}>{field.icon}</span>
+                                <span style={{ fontSize:16,flexShrink:0 }}><AppIcon glyph={field.icon} /></span>
                                 <div style={{ minWidth:0 }}>
                                   <div style={{ fontSize:12,fontWeight:700,color:isExpanded?"#0863ba":"#555" }}>{isAr?field.label_ar:field.label_en}</div>
                                   {!isExpanded&&savedVal&&<div style={{ fontSize:11,color:"#888",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:220 }}>{savedVal}</div>}
@@ -1226,7 +1227,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                                   <button
                                     onClick={()=>{ setDraftValues(p=>({...p,[field.key]:savedVal})); setExpandedField(field.key); }}
                                     style={{ padding:"6px 12px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.25)",background:"rgba(8,99,186,.07)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#0863ba",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",minHeight:34 }}>
-                                    ✏️ {isAr?"تعديل":"Edit"}
+                                    <AppIcon glyph="✏️" /> {isAr?"تعديل":"Edit"}
                                   </button>
                                 )}
                                 {isExpanded&&(
@@ -1274,7 +1275,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                   canXray
                     ? <XRaySection lang={lang} xrays={profile.xrays} onChange={imgs=>saveProfile({...profile,xrays:imgs})}/>
                     : <div style={{ textAlign:"center",padding:"48px 20px",color:"#bbb" }}>
-                        <div style={{ fontSize:48,marginBottom:12 }}>🔒</div>
+                        <div style={{ fontSize:48,marginBottom:12 }}><AppIcon glyph="🔒" /></div>
                         <div style={{ fontSize:15,fontWeight:700,color:"#888",marginBottom:8 }}>
                           {isAr?"رفع الأشعة غير متاح في خطتك":"X-Ray upload not available in your plan"}
                         </div>
@@ -1430,7 +1431,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
         </div>
 
         <div style={{ padding:"20px 24px" }}>
-          {(error||externalError)&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:18,display:"flex",alignItems:"center",gap:8 }}>⚠️ {error||externalError}</div>}
+          {(error||externalError)&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:18,display:"flex",alignItems:"center",gap:8 }}><AppIcon glyph="⚠️" /> {error||externalError}</div>}
 
           {/* ── أساسيات ── */}
           <Field label={tr.modal.name}>
@@ -1461,7 +1462,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
               const checked=form[c.key];
               return (
                 <label key={c.key} style={{ display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:10,cursor:"pointer",border:checked?`1.5px solid ${c.color}40`:"1.5px solid #eef0f3",background:checked?`${c.color}08`:"#fafbfc",transition:"all .2s" }}>
-                  <span style={{ fontSize:18 }}>{c.icon}</span>
+                  <span style={{ fontSize:18 }}><AppIcon glyph={c.icon} /></span>
                   <span style={{ fontSize:13,fontWeight:checked?700:400,color:checked?c.color:"#666",flex:1 }}>{c.label}</span>
                   <div style={{ width:18,height:18,borderRadius:5,background:checked?c.color:"transparent",border:`2px solid ${checked?c.color:"#ccc"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .2s" }}>
                     {checked&&<span style={{ color:"#fff",fontSize:10,fontWeight:900 }}>✓</span>}
@@ -1476,7 +1477,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
           {extraQs.length>0&&(
             <div style={{ borderTop:"1.5px dashed #eef0f3",paddingTop:18,marginBottom:4 }}>
               <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:14,padding:"10px 14px",background:`${meta.color}08`,borderRadius:10,border:`1px solid ${meta.color}20` }}>
-                <span style={{ fontSize:18 }}>{meta.icon}</span>
+                <span style={{ fontSize:18 }}><AppIcon glyph={meta.icon} /></span>
                 <span style={{ fontSize:13,fontWeight:700,color:meta.color }}>{tr.modal.clinicInfo} — {isAr?meta.ar:meta.en}</span>
               </div>
               {extraQs.map(q=>{
@@ -1540,7 +1541,7 @@ function DeleteModal({ lang, patient, onConfirm, onClose }: { lang:Lang; patient
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:420,padding:"0 0 32px",boxShadow:"0 -8px 40px rgba(0,0,0,.15)",animation:"slideUp .3s cubic-bezier(.4,0,.2,1)" }}>
         <div style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"12px auto 0" }}/>
         <div style={{ textAlign:"center",padding:"24px 32px 20px" }}>
-          <div style={{ width:60,height:60,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 16px" }}>🗑️</div>
+          <div style={{ width:60,height:60,borderRadius:"50%",background:"rgba(192,57,43,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 16px" }}><AppIcon glyph="🗑️" /></div>
           <h2 style={{ fontSize:18,fontWeight:800,color:"#353535",marginBottom:8 }}>{tr.deleteModal.title}</h2>
           <p style={{ fontSize:14,color:"#888",lineHeight:1.6 }}>{tr.deleteModal.msg} <strong style={{ color:"#353535" }}>{patient?.name}</strong>؟<br/><span style={{ color:"#c0392b",fontSize:12 }}>{tr.deleteModal.warning}</span></p>
         </div>
@@ -1579,7 +1580,7 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
             {(p as any).mrn && <span style={{ fontSize:10,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.08)",padding:"2px 7px",borderRadius:8,letterSpacing:.3 }}>{(p as any).mrn}</span>}
             {p.gender&&<span style={{ fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:p.gender==="male"?"rgba(41,128,185,.1)":"rgba(142,68,173,.1)",color:p.gender==="male"?"#2980b9":"#8e44ad" }}>{tr.gender[p.gender as keyof typeof tr.gender]}</span>}
             {age!=="—"&&<span style={{ fontSize:11,color:"#aaa" }}>{age} {tr.years}</span>}
-            <span style={{ fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:20,background:`${meta.color}15`,color:meta.color }}>{meta.icon}</span>
+            <span style={{ fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:20,background:`${meta.color}15`,color:meta.color }}><AppIcon glyph={meta.icon} /></span>
           </div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0,transform:expanded?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s" }}><polyline points="6 9 12 15 18 9"/></svg>
@@ -1588,7 +1589,7 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
         <div style={{ borderTop:"1px solid #f0f2f5",padding:"12px 16px 0" }}>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12 }}>
             <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.phone}</div><div style={{ fontSize:13,color:"#555",direction:"ltr",textAlign:isAr?"right":"left" }}>{p.phone||"—"}</div></div>
-            <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.dob}</div><div style={{ fontSize:13,color:"#555" }}>{p.date_of_birth?new Date(p.date_of_birth).toLocaleDateString(lang==="ar"?"ar-SA-u-ca-gregory":"en-US",{year:"numeric",month:"short",day:"numeric"}):"—"}</div></div>
+            <div><div style={{ fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",marginBottom:4 }}>{tr.table.dob}</div><div style={{ fontSize:13,color:"#555" }}>{p.date_of_birth?new Date(p.date_of_birth).toLocaleDateString(lang==="ar"?"ar-SA-u-ca-gregory-nu-latn":"en-US",{year:"numeric",month:"short",day:"numeric"}):"—"}</div></div>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr",gap:6,paddingBottom:14 }}>
             {[
@@ -1599,7 +1600,7 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
               { icon:"🗑️",label:tr.actions.delete,   fn:onDelete,     bg:"rgba(192,57,43,.06)", color:"#c0392b" },
             ].map((btn,i)=>(
               <button key={i} onClick={btn.fn} style={{ padding:"10px 0",borderRadius:10,border:"none",cursor:"pointer",background:btn.bg,display:"flex",flexDirection:"column",alignItems:"center",gap:4 }}>
-                <span style={{ fontSize:16 }}>{btn.icon}</span>
+                <span style={{ fontSize:16 }}><AppIcon glyph={btn.icon} /></span>
                 <span style={{ fontSize:9,color:btn.color,fontWeight:600 }}>{btn.label}</span>
               </button>
             ))}
@@ -1943,7 +1944,7 @@ export default function PatientsPage() {
             {/* ── بانر العيادة المشتركة — يظهر فقط للخطط المشتركة ── */}
             {isSharedPlan(plan) && (
               <div style={{ background:"rgba(14,138,110,.06)", border:"1.5px solid rgba(14,138,110,.2)", borderRadius:12, padding:"12px 18px", marginBottom:18, display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ fontSize:28, flexShrink:0 }}>🏥</div>
+                <div style={{ fontSize:28, flexShrink:0 }}><AppIcon glyph="🏥" /></div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:"#0e8a6e", marginBottom:2 }}>
                     {isAr ? "عيادة مشتركة متعددة الأطباء" : "Multi-Doctor Shared Clinic"}
@@ -1977,7 +1978,7 @@ export default function PatientsPage() {
                   <div style={{ flex:1 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                       <span style={{ fontSize:12, fontWeight:700, color:barColor }}>
-                        {full ? (isAr?"⛔ وصلت إلى الحد الأقصى للمرضى":"⛔ Patient limit reached") : near ? (isAr?"⚠️ اقتربت من الحد الأقصى":"⚠️ Approaching patient limit") : (isAr?"👥 المرضى المسجلون":"👥 Registered Patients")}
+                        {full ? (isAr?"وصلت إلى الحد الأقصى للمرضى":"Patient limit reached") : near ? (isAr?"اقتربت من الحد الأقصى":"Approaching patient limit") : (isAr?"المرضى المسجلون":"Registered Patients")}
                       </span>
                       <span style={{ fontSize:12, fontWeight:700, color:barColor }}>{count} / {limit}</span>
                     </div>
@@ -1998,7 +1999,7 @@ export default function PatientsPage() {
                 { label:tr.stats.newMonth, value:stats.newMonth, icon:"✨", color:"#0863ba" },
               ].map((s,i)=>(
                 <div key={i} className="stat-mini" style={{ animationDelay:`${i*60}ms`,animation:"fadeUp .4s ease both" }}>
-                  <div className="stat-icon" style={{ width:36,height:36,borderRadius:9,background:`${s.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}>{s.icon}</div>
+                  <div className="stat-icon" style={{ width:36,height:36,borderRadius:9,background:`${s.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}><AppIcon glyph={s.icon} /></div>
                   <div className="stat-value" style={{ fontSize:26,fontWeight:800,color:s.color,lineHeight:1 }}>{s.value}</div>
                   <div className="stat-label" style={{ fontSize:12,color:"#aaa",marginTop:4,fontWeight:500 }}>{s.label}</div>
                 </div>
@@ -2009,7 +2010,7 @@ export default function PatientsPage() {
             {/* SEARCH + FILTERS */}
             <div className="search-filter-box" style={{ background:"#fff",borderRadius:14,padding:"18px 20px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 10px rgba(8,99,186,.05)",marginBottom:16 }}>
               <div style={{ display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"10px 14px",marginBottom:10 }}>
-                <span style={{ color:"#bbb",fontSize:15 }}>🔍</span>
+                <span style={{ color:"#bbb",fontSize:15 }}><AppIcon glyph="🔍" /></span>
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr.search}
                   style={{ border:"none",outline:"none",background:"none",fontFamily:"Rubik,sans-serif",fontSize:13,color:"#353535",width:"100%",direction:isAr?"rtl":"ltr" }}/>
                 {search&&<button onClick={()=>setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",color:"#bbb",fontSize:14 }}>✕</button>}
@@ -2019,7 +2020,7 @@ export default function PatientsPage() {
                   <button key={k} className={`filter-chip${filter===k?" active":""}`} onClick={()=>setFilter(k)}>{v}</button>
                 ))}
                 <button onClick={()=>setShowHidden(!showHidden)} className="filter-chip" style={{ borderStyle:"dashed",background:showHidden?"rgba(8,99,186,.06)":"transparent",color:showHidden?"#0863ba":"#aaa",borderColor:showHidden?"#a4c4e4":"#d0d0d0" }}>
-                  {showHidden?`🙈 ${tr.hideHidden}`:`👁 ${tr.showHidden}`}
+                  {showHidden?`${tr.hideHidden}`:`${tr.showHidden}`}
                 </button>
               </div>
             </div>
@@ -2028,12 +2029,12 @@ export default function PatientsPage() {
             <div className="mobile-cards" style={{ display:"none" }}>
               {loading?(
                 <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                  <div style={{ fontSize:40,marginBottom:12,animation:"spin 1s linear infinite" }}>⚙️</div>
+                  <div style={{ fontSize:40,marginBottom:12,animation:"spin 1s linear infinite" }}><AppIcon glyph="⚙️" /></div>
                   <div style={{ fontSize:15,fontWeight:600 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
                 </div>
               ):filtered.length===0?(
                 <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                  <div style={{ fontSize:40,marginBottom:12 }}>🔍</div>
+                  <div style={{ fontSize:40,marginBottom:12 }}><AppIcon glyph="🔍" /></div>
                   <div style={{ fontSize:15,fontWeight:600 }}>{search?tr.noResults:tr.noPatients}</div>
                 </div>
               ):filtered.map(p=>(
@@ -2062,12 +2063,12 @@ export default function PatientsPage() {
 
                 {loading?(
                   <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                    <div style={{ fontSize:40,marginBottom:12,animation:"spin 1s linear infinite" }}>⚙️</div>
+                    <div style={{ fontSize:40,marginBottom:12,animation:"spin 1s linear infinite" }}><AppIcon glyph="⚙️" /></div>
                     <div style={{ fontSize:15,fontWeight:600 }}>{isAr?"جاري التحميل...":"Loading..."}</div>
                   </div>
                 ):filtered.length===0?(
                   <div style={{ textAlign:"center",padding:"60px 20px",color:"#ccc" }}>
-                    <div style={{ fontSize:40,marginBottom:12 }}>🔍</div>
+                    <div style={{ fontSize:40,marginBottom:12 }}><AppIcon glyph="🔍" /></div>
                     <div style={{ fontSize:15,fontWeight:600 }}>{search?tr.noResults:tr.noPatients}</div>
                   </div>
                 ):filtered.map(p=>(
@@ -2124,13 +2125,13 @@ export default function PatientsPage() {
                       )}
                       {/* أزرار أيقونات فقط: تعديل، إخفاء، حذف */}
                       <button className="action-icon-btn" title={isAr?"تقرير طبي":"Medical Report"} onClick={()=>handleGenerateReport(p)} disabled={reportLoadingId===p.id} style={{ opacity:reportLoadingId===p.id?0.5:1 }}>
-                        {reportLoadingId===p.id?"⏳":"📄"}
+                        <AppIcon glyph={reportLoadingId===p.id?"⏳":"📄"} />
                       </button>
-                      <button className="action-icon-btn" title={tr.actions.edit} onClick={()=>setEditPatient(p)}>✏️</button>
+                      <button className="action-icon-btn" title={tr.actions.edit} onClick={()=>setEditPatient(p)}><AppIcon glyph="✏️" /></button>
                       <button className="action-icon-btn" title={p.is_hidden?tr.actions.show:tr.actions.hide} onClick={()=>toggleHide(p.id)}>
                         {p.is_hidden?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
                       </button>
-                      <button className="action-icon-btn" title={tr.actions.delete} onClick={()=>setDeletePatient(p)} style={{ color:"#e74c3c" }}>🗑️</button>
+                      <button className="action-icon-btn" title={tr.actions.delete} onClick={()=>setDeletePatient(p)} style={{ color:"#e74c3c" }}><AppIcon glyph="🗑️" /></button>
                     </div>
                   </div>
                 ))}
@@ -2176,7 +2177,7 @@ export default function PatientsPage() {
                 <button
                   onClick={()=>{ printMedicalReportText(reportEditor.patient, reportEditor.text, clinicType, clinicName, doctorName, clinicPhone, lang); setReportEditor(null); }}
                   style={{ flex:1,padding:"13px 0",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer" }}>
-                  {isAr?"🖨️ إنشاء PDF":"🖨️ Generate PDF"}
+                  {isAr?"إنشاء PDF":"Generate PDF"}
                 </button>
                 <button onClick={()=>setReportEditor(null)} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
                   {isAr?"إلغاء":"Cancel"}

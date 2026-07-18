@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -253,8 +254,8 @@ const T = {
         passwordLabel:"كلمة سر المدفوعات",
         passwordPh:"أدخل كلمة سر مخصصة...",
         notAvailable:"هذه الميزة غير متاحة في الخطة الأساسية",
-        enabledBadge:"القفل مفعّل 🔒",
-        disabledBadge:"القفل غير مفعّل 🔓",
+        enabledBadge:"القفل مفعّل ",
+        disabledBadge:"القفل غير مفعّل ",
         saveNote:"سيتم حفظ هذا الإعداد مع بيانات العيادة",
         required:"يجب إدخال كلمة سر للمدفوعات عند تفعيل القفل",
       },
@@ -264,8 +265,8 @@ const T = {
         onlyShared:"هذه الميزة متاحة فقط للخطط المشتركة",
         enable:"تفعيل الدخول المقيّد",
         disable:"إلغاء الدخول المقيّد",
-        enabledBadge:"مفعّل 🔓",
-        disabledBadge:"غير مفعّل 🔒",
+        enabledBadge:"مفعّل ",
+        disabledBadge:"غير مفعّل ",
         pinLabel:"PIN الدخول (4-8 أرقام)",
         pinPh:"مثال: 1234",
         pinNote:"شاركه مع الأطباء فقط — لا يمنحهم صلاحية المدفوعات أو الإعدادات",
@@ -460,8 +461,8 @@ const T = {
         passwordLabel:"Payments Password",
         passwordPh:"Enter a custom password...",
         notAvailable:"This feature is not available in the Basic plan",
-        enabledBadge:"Lock enabled 🔒",
-        disabledBadge:"Lock disabled 🔓",
+        enabledBadge:"Lock enabled ",
+        disabledBadge:"Lock disabled ",
         saveNote:"This setting will be saved with clinic data",
         required:"A password is required when enabling the lock",
       },
@@ -471,8 +472,8 @@ const T = {
         onlyShared:"This feature is only available for shared plans",
         enable:"Enable Restricted Access",
         disable:"Disable Restricted Access",
-        enabledBadge:"Enabled 🔓",
-        disabledBadge:"Disabled 🔒",
+        enabledBadge:"Enabled ",
+        disabledBadge:"Disabled ",
         pinLabel:"Access PIN (4-8 digits)",
         pinPh:"e.g. 1234",
         pinNote:"Share only with doctors — grants no access to payments or settings",
@@ -581,7 +582,7 @@ const genPass = (): string => {
 };
 
 // ─── Field Wrapper — خارج كل المكونات لتجنب فقدان الـ focus ──
-// ⚠️ تعريف هذا المكون هنا خارج ClinicModal هو المفتاح لحل مشكلة الـ focus
+// <AppIcon glyph="⚠️" /> تعريف هذا المكون هنا خارج ClinicModal هو المفتاح لحل مشكلة الـ focus
 interface FieldProps {
   label: React.ReactNode;
   children: React.ReactNode;
@@ -731,9 +732,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
         {/* Header */}
         <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",background:"linear-gradient(135deg,rgba(8,99,186,.03),transparent)" }}>
           <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:form.account_type==="pharmacy"?"rgba(39,174,96,.12)":"rgba(8,99,186,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>
-              {form.account_type === "pharmacy" ? "💊" : "🏥"}
-            </div>
+            <div style={{ width:40,height:40,background:form.account_type==="pharmacy"?"rgba(39,174,96,.12)":"rgba(8,99,186,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph={form.account_type === "pharmacy" ? "💊" : "🏥"} /></div>
             <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>
               {isEdit
                 ? (form.account_type === "pharmacy" ? tr.pharmacy.editTitle : tr.modal.editTitle)
@@ -746,7 +745,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
         <div style={{ padding:"20px 26px" }}>
           {error && (
             <div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>
-              ⚠️ {error}
+              <AppIcon glyph="⚠️" /> {error}
             </div>
           )}
 
@@ -754,7 +753,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
           {savedUserId ? (
             <div>
               <div style={{ textAlign:"center",marginBottom:24 }}>
-                <div style={{ fontSize:48,marginBottom:8 }}>🎉</div>
+                <div style={{ fontSize:48,marginBottom:8 }}><AppIcon glyph="🎉" /></div>
                 <h3 style={{ fontSize:16,fontWeight:800,color:"#2e7d32" }}>
                   {form.account_type === "pharmacy"
                     ? (isAr ? tr.pharmacy.successMsg : tr.pharmacy.successMsg)
@@ -765,7 +764,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               {/* بيانات الدخول */}
               <div style={{ background:"#f7f9fc",borderRadius:12,padding:"16px",marginBottom:16,border:"1.5px solid #eef0f3" }}>
                 <div style={{ fontSize:11,color:"#aaa",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
-                  ⚠️ {tr.modal.credNote}
+                  <AppIcon glyph="⚠️" /> {tr.modal.credNote}
                 </div>
                 {[
                   { label: tr.modal.username,       value: form.email,          key: "e" as const },
@@ -788,7 +787,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               {(form.plan === "pro" || form.plan === "enterprise" || form.plan === "shared_pro" || form.plan === "shared_enterprise") && (
               <div style={{ background:"rgba(8,99,186,.06)",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,padding:"14px 16px" }}>
                 <div style={{ fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:8,textTransform:"uppercase",letterSpacing:.5 }}>
-                  🔗 {tr.modal.bookLink}
+                  <AppIcon glyph="🔗" /> {tr.modal.bookLink}
                 </div>
                 <div style={{ display:"flex",gap:8,alignItems:"center" }}>
                   <span style={{ flex:1,fontSize:12,color:"#888",direction:"ltr",wordBreak:"break-all" }}>{bookingUrl}</span>
@@ -822,7 +821,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                             plan: isPharmacy ? "pharmacy" as PlanType : "basic",
                           }))}
                           style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:8,padding:"16px 12px",border:`2px solid ${isSelected?color:"#eef0f3"}`,borderRadius:14,background:isSelected?`${color}08`:"#fafbfc",cursor:"pointer",transition:"all .18s",fontFamily:"Rubik,sans-serif",boxShadow:isSelected?`0 4px 16px ${color}18`:"none" }}>
-                          <span style={{ fontSize:28 }}>{isPharmacy?"💊":"🏥"}</span>
+                          <span style={{ fontSize:28 }}><AppIcon glyph={isPharmacy?"💊":"🏥"} /></span>
                           <span style={{ fontSize:13,fontWeight:isSelected?700:500,color:isSelected?color:"#666" }}>
                             {isPharmacy ? tr.accountType.pharmacy : tr.accountType.clinic}
                           </span>
@@ -900,7 +899,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                           fontFamily:"Rubik,sans-serif",
                           boxShadow:isSelected?"0 2px 8px rgba(5,88,168,.12)":"none",
                         }}>
-                        <span style={{ fontSize:22 }}>{CLINIC_TYPE_ICONS[ct]}</span>
+                        <span style={{ fontSize:22, display:"flex" }}><AppIcon glyph={CLINIC_TYPE_ICONS[ct]} /></span>
                         <span style={{ fontSize:10, fontWeight:isSelected?700:400, color:isSelected?"#0558a8":"#666", textAlign:"center", lineHeight:1.3 }}>
                           {tr.modal.clinicTypes[ct as keyof typeof tr.modal.clinicTypes]}
                         </span>
@@ -917,7 +916,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   <div style={{ padding:"16px",background:"rgba(39,174,96,.06)",border:"2px solid rgba(39,174,96,.25)",borderRadius:14 }}>
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                       <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                        <span style={{ fontSize:22 }}>💊</span>
+                        <span style={{ fontSize:22 }}><AppIcon glyph="💊" /></span>
                         <span style={{ fontSize:14,fontWeight:700,color:"#27ae60" }}>{tr.pharmacy.plan}</span>
                       </div>
                       <div style={{ display:"flex",alignItems:"baseline",gap:2 }}>
@@ -957,11 +956,11 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                       <div style={{ display:"flex",gap:4,background:"#f7f9fc",borderRadius:10,padding:4,marginBottom:12 }}>
                         <button type="button" onClick={() => { setPlanTab("individual"); if(isSharedSelected) setForm(prev=>({...prev,plan:"basic"})); }}
                           style={{ flex:1,padding:"7px",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:planTab==="individual"?700:400,background:planTab==="individual"?"#fff":"transparent",color:planTab==="individual"?"#0863ba":"#888",boxShadow:planTab==="individual"?"0 2px 6px rgba(8,99,186,.1)":"none",transition:"all .15s" }}>
-                          🩺 {isAr?"خطط فردية":"Individual"}
+                          <AppIcon glyph="🩺" /> {isAr?"خطط فردية":"Individual"}
                         </button>
                         <button type="button" onClick={() => { setPlanTab("shared"); if(!isSharedSelected) setForm(prev=>({...prev,plan:"shared_basic",max_doctors:2})); }}
                           style={{ flex:1,padding:"7px",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:planTab==="shared"?700:400,background:planTab==="shared"?"#fff":"transparent",color:planTab==="shared"?"#0e7c6a":"#888",boxShadow:planTab==="shared"?"0 2px 6px rgba(14,124,106,.1)":"none",transition:"all .15s" }}>
-                          👥 {isAr?"خطط مشتركة":"Shared"}
+                          <AppIcon glyph="👥" /> {isAr?"خطط مشتركة":"Shared"}
                         </button>
                       </div>
                       {/* الخطط الفردية */}
@@ -979,7 +978,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                                 <div style={{ flex:1,minWidth:0 }}>
                                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
                                     <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>
-                                      {p.emoji} {tr.clinics.plans[p.key]}
+                                      <AppIcon glyph={p.emoji} /> {tr.clinics.plans[p.key]}
                                     </span>
                                     <div style={{ display:"flex",gap:6,flexShrink:0 }}>
                                       <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:`${p.color}15`,color:p.color,fontWeight:700 }}>${pricing.monthly}{isAr?"/شهر":"/mo"}</span>
@@ -1003,7 +1002,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                       {planTab === "shared" && (
                         <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
                           <div style={{ background:"rgba(14,124,106,.05)",border:"1.5px solid rgba(14,124,106,.15)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#0e7c6a",marginBottom:4 }}>
-                            👥 {isAr?"للعيادات التي تضم أكثر من طبيب واحد — يتم تخصيص المرضى لكل طبيب بشكل مستقل":"For clinics with multiple doctors — patients are assigned per doctor"}
+                            <AppIcon glyph="👥" /> {isAr?"للعيادات التي تضم أكثر من طبيب واحد — يتم تخصيص المرضى لكل طبيب بشكل مستقل":"For clinics with multiple doctors — patients are assigned per doctor"}
                           </div>
                           {sharedPlans.map(p => {
                             const isSelected = form.plan === p.key;
@@ -1017,7 +1016,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                                 <div style={{ flex:1,minWidth:0 }}>
                                   <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
                                     <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>
-                                      {p.emoji} {tr.clinics.plans[p.key]}
+                                      <AppIcon glyph={p.emoji} /> {tr.clinics.plans[p.key]}
                                     </span>
                                     <div style={{ display:"flex",gap:6,flexShrink:0 }}>
                                       <span style={{ fontSize:10,padding:"2px 7px",borderRadius:20,background:`${p.color}15`,color:p.color,fontWeight:700 }}>${pricing.monthly}{isAr?"/شهر":"/mo"}</span>
@@ -1032,7 +1031,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                                     ))}
                                   </div>
                                   <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
-                                    👨‍⚕️ {isAr?"الأطباء:":"Doctors:"} {isAr?`حتى ${p.defaultDoctors}`:`Up to ${p.defaultDoctors}`}
+                                    <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {isAr?"الأطباء:":"Doctors:"} {isAr?`حتى ${p.defaultDoctors}`:`Up to ${p.defaultDoctors}`}
                                   </div>
                                 </div>
                               </button>
@@ -1042,7 +1041,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                           {isSharedSelected && (
                             <div style={{ background:"#f7f9fc",borderRadius:10,padding:"12px 14px",border:"1.5px solid #eef0f3",marginTop:4 }}>
                               <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:8,textTransform:"uppercase" as const }}>
-                                ✏️ {isAr?"الحد الأقصى للأطباء (قابل للتخصيص)":"Max Doctors (Customizable)"}
+                                <AppIcon glyph="✏️" /> {isAr?"الحد الأقصى للأطباء (قابل للتخصيص)":"Max Doctors (Customizable)"}
                               </label>
                               <div style={{ display:"flex",alignItems:"center",gap:10 }}>
                                 <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} max={50} value={form.max_doctors}
@@ -1051,7 +1050,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                                 />
                                 <span style={{ fontSize:12,color:"#888" }}>{isAr?"طبيب (الحد الافتراضي حسب الخطة)":"doctors (default by plan)"}</span>
                               </div>
-                              <p style={{ fontSize:11,color:"#aaa",marginTop:6 }}>⚙️ {isAr?tr.subModal.maxDoctorsNote:tr.subModal.maxDoctorsNote}</p>
+                              <p style={{ fontSize:11,color:"#aaa",marginTop:6 }}><AppIcon glyph="⚙️" /> {isAr?tr.subModal.maxDoctorsNote:tr.subModal.maxDoctorsNote}</p>
                             </div>
                           )}
                         </div>
@@ -1079,13 +1078,13 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                     onClick={handleGenCreds}
                     style={{ width:"100%",padding:"11px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px dashed rgba(8,99,186,.3)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}
                   >
-                    🔑 {tr.modal.generateCredentials}
+                    <AppIcon glyph="🔑" /> {tr.modal.generateCredentials}
                   </button>
 
                   {creds && (
                     <div style={{ marginTop:14,background:"#f7f9fc",borderRadius:12,padding:"16px",border:"1.5px solid #eef0f3",animation:"modalIn .2s ease" }}>
                       <div style={{ fontSize:11,color:"#aaa",marginBottom:12,textAlign:"center",letterSpacing:.5,textTransform:"uppercase" }}>
-                        ⚠️ {tr.modal.credNote}
+                        <AppIcon glyph="⚠️" /> {tr.modal.credNote}
                       </div>
                       {[
                         { label: tr.modal.username,       value: form.email || (isAr ? "أدخل البريد أولاً" : "Enter email first"), key: "e" as const },
@@ -1453,7 +1452,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
         <div style={{ padding:"22px 26px 0",background:"linear-gradient(135deg,rgba(8,99,186,.04),transparent)" }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
             <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-              <div style={{ width:44,height:44,background:"rgba(8,99,186,.08)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}>💳</div>
+              <div style={{ width:44,height:44,background:"rgba(8,99,186,.08)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}><AppIcon glyph="💳" /></div>
               <div>
                 <h2 style={{ fontSize:17,fontWeight:800,color:"#353535",lineHeight:1.2 }}>{sm.title}</h2>
                 <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{clinic.name}</p>
@@ -1468,7 +1467,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
             <button style={tabStyle("sub")}      onClick={() => setActiveTab("sub")}>{sm.tabSub}</button>
             {isSharedPlan && (
               <button style={tabStyle("doctors")} onClick={() => setActiveTab("doctors")}>
-                👨‍⚕️ {sm.tabDoctors}
+                <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {sm.tabDoctors}
               </button>
             )}
             <button style={tabStyle("security")} onClick={() => setActiveTab("security")}>{sm.tabSecurity}</button>
@@ -1477,7 +1476,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
         </div>
 
         <div style={{ padding:"20px 26px 0" }}>
-          {error && <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}>⚠️ {error}</div>}
+          {error && <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:14 }}><AppIcon glyph="⚠️" /> {error}</div>}
           {successMsg && <div style={{ background:"rgba(46,125,50,.06)",border:"1.5px solid rgba(46,125,50,.15)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#2e7d32",marginBottom:14 }}>{successMsg}</div>}
 
           {/* ── TAB: INFO ── */}
@@ -1512,7 +1511,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                       <button key={ct} type="button"
                         onClick={() => setForm(p => ({ ...p, clinic_type: ct }))}
                         style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",border:`1.5px solid ${isSelected?"#0558a8":"#eef0f3"}`,borderRadius:9,background:isSelected?"rgba(5,88,168,.07)":"#fafbfc",cursor:"pointer",transition:"all .15s",fontFamily:"Rubik,sans-serif",boxShadow:isSelected?"0 2px 8px rgba(5,88,168,.12)":"none" }}>
-                        <span style={{ fontSize:18 }}>{CLINIC_TYPE_ICONS[ct]}</span>
+                        <span style={{ fontSize:18, display:"flex" }}><AppIcon glyph={CLINIC_TYPE_ICONS[ct]} /></span>
                         <span style={{ fontSize:9,fontWeight:isSelected?700:400,color:isSelected?"#0558a8":"#888",textAlign:"center",lineHeight:1.3 }}>
                           {tr.modal.clinicTypes[ct as keyof typeof tr.modal.clinicTypes]}
                         </span>
@@ -1532,7 +1531,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               {clinic.account_type === "pharmacy" ? (
                 <div style={{ padding:"16px",background:"rgba(39,174,96,.06)",border:"1.5px solid rgba(39,174,96,.2)",borderRadius:14 }}>
                   <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
-                    <span style={{ fontSize:22 }}>💊</span>
+                    <span style={{ fontSize:22 }}><AppIcon glyph="💊" /></span>
                     <div>
                       <div style={{ fontSize:14,fontWeight:700,color:"#27ae60" }}>{isAr?"اشتراك صيدلية":"Pharmacy Subscription"}</div>
                       <div style={{ fontSize:11,color:"#888",marginTop:2 }}>{isAr?"خطة الصيدلية ثابتة ولا يمكن تغييرها":"Pharmacy plan is fixed and cannot be changed"}</div>
@@ -1552,7 +1551,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:10,textTransform:"uppercase",letterSpacing:.4 }}>{sm.changePlan}</label>
                 {/* قسم الخطط الفردية */}
                 <div style={{ fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:8,display:"flex",alignItems:"center",gap:6 }}>
-                  <span style={{ background:"rgba(8,99,186,.08)",padding:"2px 10px",borderRadius:20 }}>🩺 {isAr?"خطط فردية":"Individual Plans"}</span>
+                  <span style={{ background:"rgba(8,99,186,.08)",padding:"2px 10px",borderRadius:20 }}><AppIcon glyph="🩺" /> {isAr?"خطط فردية":"Individual Plans"}</span>
                   <span style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{isAr?"لطبيب واحد":"Single doctor"}</span>
                 </div>
                 <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:16 }}>
@@ -1570,7 +1569,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:4 }}>
                             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{p.emoji} {sm.plans[p.key]}</span>
+                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}><AppIcon glyph={p.emoji} /> {sm.plans[p.key]}</span>
                               {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${p.color}15`,color:p.color }}>{isAr?"الحالية":"Current"}</span>}
                             </div>
                             <div style={{ display:"flex",gap:5,flexShrink:0 }}>
@@ -1586,7 +1585,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                             ))}
                           </div>
                           <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
-                            👥 {isAr?"المرضى:":"Patients:"} {limitLabel}
+                            <AppIcon glyph="👥" /> {isAr?"المرضى:":"Patients:"} {limitLabel}
                           </div>
                         </div>
                       </button>
@@ -1595,7 +1594,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 </div>
                 {/* قسم الخطط المشتركة */}
                 <div style={{ fontSize:11,fontWeight:700,color:"#0e7c6a",marginBottom:8,display:"flex",alignItems:"center",gap:6 }}>
-                  <span style={{ background:"rgba(14,124,106,.08)",padding:"2px 10px",borderRadius:20 }}>👥 {isAr?"خطط مشتركة":"Shared Plans"}</span>
+                  <span style={{ background:"rgba(14,124,106,.08)",padding:"2px 10px",borderRadius:20 }}><AppIcon glyph="👥" /> {isAr?"خطط مشتركة":"Shared Plans"}</span>
                   <span style={{ fontSize:10,color:"#aaa",fontWeight:400 }}>{isAr?"لأكثر من طبيب":"Multi-doctor"}</span>
                 </div>
                 <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
@@ -1613,7 +1612,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:4 }}>
                             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}>{p.emoji} {sm.plans[p.key]}</span>
+                              <span style={{ fontSize:13,fontWeight:700,color:isSelected?p.color:"#353535" }}><AppIcon glyph={p.emoji} /> {sm.plans[p.key]}</span>
                               {isCurrent && <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${p.color}15`,color:p.color }}>{isAr?"الحالية":"Current"}</span>}
                             </div>
                             <div style={{ display:"flex",gap:5,flexShrink:0 }}>
@@ -1630,10 +1629,10 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                           </div>
                           <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
                             <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
-                              👥 {isAr?"المرضى:":"Patients:"} {limitLabel}
+                              <AppIcon glyph="👥" /> {isAr?"المرضى:":"Patients:"} {limitLabel}
                             </div>
                             <div style={{ fontSize:10,fontWeight:700,color:p.color,background:`${p.color}10`,display:"inline-block",padding:"2px 8px",borderRadius:20 }}>
-                              👨‍⚕️ {isAr?"افتراضي:":"Default:"} {p.defaultDoctors} {isAr?"أطباء":"doctors"}
+                              <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {isAr?"افتراضي:":"Default:"} {p.defaultDoctors} {isAr?"أطباء":"doctors"}
                             </div>
                           </div>
                         </div>
@@ -1645,7 +1644,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 {["shared_basic","shared_pro","shared_enterprise"].includes(form.plan) && (
                   <div style={{ background:"rgba(14,124,106,.04)",border:"1.5px solid rgba(14,124,106,.15)",borderRadius:10,padding:"12px 14px",marginTop:12 }}>
                     <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#0e7c6a",marginBottom:8,textTransform:"uppercase" as const }}>
-                      ✏️ {sm.maxDoctors} ({sm.maxDoctorsNote})
+                      <AppIcon glyph="✏️" /> {sm.maxDoctors} ({sm.maxDoctorsNote})
                     </label>
                     <div style={{ display:"flex",alignItems:"center",gap:10 }}>
                       <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} max={50} value={form.max_doctors}
@@ -1655,7 +1654,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                       <span style={{ fontSize:12,color:"#666" }}>{isAr?"طبيب كحد أقصى في الاشتراك":"doctors maximum in subscription"}</span>
                     </div>
                     <p style={{ fontSize:11,color:"#aaa",marginTop:6,lineHeight:1.5 }}>
-                      ⚙️ {isAr?"هذا الرقم مخصص ويتم الاتفاق عليه مع العميل — يتحكم في الحد الأقصى للأطباء المضافين في العيادة":"This is a custom number agreed with the client — it controls the maximum doctors allowed in the clinic"}
+                      <AppIcon glyph="⚙️" /> {isAr?"هذا الرقم مخصص ويتم الاتفاق عليه مع العميل — يتحكم في الحد الأقصى للأطباء المضافين في العيادة":"This is a custom number agreed with the client — it controls the maximum doctors allowed in the clinic"}
                     </p>
                   </div>
                 )}
@@ -1688,7 +1687,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 {/* Cancel */}
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:"#f7f9fc",borderRadius:12,border:"1.5px solid #eef0f3" }}>
                   <div>
-                    <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:8 }}>🚫 {sm.cancelTitle}</div>
+                    <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:8 }}><AppIcon glyph="🚫" /> {sm.cancelTitle}</div>
                     <div style={{ fontSize:11,color:"#aaa",marginTop:3 }}>{sm.cancelDesc}</div>
                   </div>
                   <button onClick={handleCancelSub} disabled={actionLoading==="cancel"||form.status==="expired"}
@@ -1700,7 +1699,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 {/* Delete */}
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:"rgba(192,57,43,.03)",borderRadius:12,border:"1.5px solid rgba(192,57,43,.12)" }}>
                   <div>
-                    <div style={{ fontSize:13,fontWeight:600,color:"#c0392b",display:"flex",alignItems:"center",gap:8 }}>🗑️ {sm.deleteTitle}</div>
+                    <div style={{ fontSize:13,fontWeight:600,color:"#c0392b",display:"flex",alignItems:"center",gap:8 }}><AppIcon glyph="🗑️" /> {sm.deleteTitle}</div>
                     <div style={{ fontSize:11,color:"#aaa",marginTop:3 }}>{sm.deleteDesc}</div>
                   </div>
                   <button onClick={() => setConfirmDelete(true)}
@@ -1720,7 +1719,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               <div style={{ background:"rgba(14,124,106,.05)",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:12,padding:"12px 16px" }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <div>
-                    <div style={{ fontSize:12,fontWeight:700,color:"#0e7c6a" }}>👨‍⚕️ {sm.doctors.capacity}</div>
+                    <div style={{ fontSize:12,fontWeight:700,color:"#0e7c6a" }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {sm.doctors.capacity}</div>
                     <div style={{ fontSize:11,color:"#888",marginTop:2 }}>
                       {doctors.filter(d=>d.is_active).length} {isAr?"نشط /":"active /"} {doctors.length} {isAr?"مضاف /":"added /"} {maxDoctors} {isAr?"حد أقصى":"max"}
                     </div>
@@ -1735,7 +1734,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 {/* تعديل الحد الأقصى مباشرة من تاب الأطباء */}
                 <div style={{ borderTop:"1px solid rgba(14,124,106,.15)",paddingTop:10,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
                   <span style={{ fontSize:11,fontWeight:700,color:"#0e7c6a",whiteSpace:"nowrap" }}>
-                    ✏️ {sm.maxDoctors}:
+                    <AppIcon glyph="✏️" /> {sm.maxDoctors}:
                   </span>
                   <input
                     type="number" min={1} max={50}
@@ -1755,7 +1754,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                     }}
                     disabled={saving}
                     style={{ padding:"5px 14px",background:"#0e7c6a",color:"#fff",border:"none",borderRadius:8,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:saving?"not-allowed":"pointer",whiteSpace:"nowrap" as const }}>
-                    {saving ? "..." : (isAr ? "💾 حفظ" : "💾 Save")}
+                    {saving ? "..." : (isAr ? "حفظ" : "Save")}
                   </button>
                   <span style={{ fontSize:10,color:"#aaa" }}>{sm.maxDoctorsNote}</span>
                 </div>
@@ -1765,12 +1764,12 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               {doctors.length < maxDoctors && !doctorForm && (
                 <button onClick={openAddDoctor}
                   style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"11px",border:"1.5px dashed rgba(14,124,106,.4)",borderRadius:12,background:"rgba(14,124,106,.03)",color:"#0e7c6a",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-                  ➕ {sm.doctors.addDoctor}
+                  <AppIcon glyph="➕" /> {sm.doctors.addDoctor}
                 </button>
               )}
               {doctors.length >= maxDoctors && !doctorForm && (
                 <div style={{ textAlign:"center",fontSize:12,color:"#aaa",padding:"8px",background:"rgba(192,57,43,.04)",border:"1.5px solid rgba(192,57,43,.1)",borderRadius:10 }}>
-                  🔒 {sm.doctors.limitReached} ({maxDoctors})
+                  <AppIcon glyph="🔒" /> {sm.doctors.limitReached} ({maxDoctors})
                 </div>
               )}
 
@@ -1781,7 +1780,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                     {doctorForm.id ? (isAr?"تعديل الطبيب":"Edit Doctor") : (isAr?"طبيب جديد":"New Doctor")}
                   </div>
                   {doctorError && (
-                    <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#c0392b",marginBottom:10 }}>⚠️ {doctorError}</div>
+                    <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#c0392b",marginBottom:10 }}><AppIcon glyph="⚠️" /> {doctorError}</div>
                   )}
                   <div style={{ display:"flex",gap:10,marginBottom:10 }}>
                     <div style={{ flex:2 }}>
@@ -1838,7 +1837,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 <div style={{ textAlign:"center",padding:"24px",color:"#aaa",fontSize:13 }}>⏳ {isAr?"جاري التحميل...":"Loading..."}</div>
               ) : doctors.length === 0 && !doctorForm ? (
                 <div style={{ textAlign:"center",padding:"32px 20px",color:"#bbb" }}>
-                  <div style={{ fontSize:40,marginBottom:8 }}>👨‍⚕️</div>
+                  <div style={{ fontSize:40,marginBottom:8 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></div>
                   <div style={{ fontSize:13 }}>{isAr?"لا يوجد أطباء مضافون بعد":"No doctors added yet"}</div>
                 </div>
               ) : (
@@ -1851,8 +1850,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                       <div style={{ flex:1,minWidth:0 }}>
                         <div style={{ fontSize:13,fontWeight:700,color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{d.name}</div>
                         <div style={{ fontSize:11,color:"#aaa",marginTop:2,display:"flex",gap:8,flexWrap:"wrap" }}>
-                          {d.specialty && <span>🏥 {d.specialty}</span>}
-                          {d.phone && <span>📞 {d.phone}</span>}
+                          {d.specialty && <span><AppIcon glyph="🏥" /> {d.specialty}</span>}
+                          {d.phone && <span><AppIcon glyph="📞" /> {d.phone}</span>}
                         </div>
                       </div>
                       <span style={{ fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:20,background:d.is_active?"rgba(46,125,50,.1)":"rgba(192,57,43,.1)",color:d.is_active?"#2e7d32":"#c0392b",flexShrink:0 }}>
@@ -1860,13 +1859,13 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                       </span>
                       <div style={{ display:"flex",gap:4,flexShrink:0 }}>
                         <button onClick={()=>openEditDoctor(d)} title={sm.doctors.edit}
-                          style={{ width:30,height:30,borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}>✏️</button>
+                          style={{ width:30,height:30,borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}><AppIcon glyph="✏️" /></button>
                         <button onClick={()=>handleToggleDoctor(d)} title={sm.doctors.toggleActive}
                           style={{ width:30,height:30,borderRadius:8,border:"1.5px solid #eef0f3",background:"#fff",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}>
                           {d.is_active?"⏸":"▶"}
                         </button>
                         <button onClick={()=>handleRemoveDoctor(d)} title={sm.doctors.remove}
-                          style={{ width:30,height:30,borderRadius:8,border:"1.5px solid rgba(192,57,43,.2)",background:"rgba(192,57,43,.04)",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}>🗑️</button>
+                          style={{ width:30,height:30,borderRadius:8,border:"1.5px solid rgba(192,57,43,.2)",background:"rgba(192,57,43,.04)",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center" }}><AppIcon glyph="🗑️" /></button>
                       </div>
                     </div>
                   ))}
@@ -1885,7 +1884,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                   <input value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="••••••••••••" style={{ ...inputSt, flex:1, fontFamily:"monospace", letterSpacing: newPass ? 2 : 0 }} />
                   <button onClick={genAndSetPass}
                     style={{ padding:"0 14px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
-                    🎲 {sm.generatePass}
+                    <AppIcon glyph="🎲" /> {sm.generatePass}
                   </button>
                 </div>
               </div>
@@ -1901,8 +1900,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               <div style={{ background:"rgba(8,99,186,.04)",border:"1.5px solid rgba(8,99,186,.1)",borderRadius:10,padding:"12px 14px" }}>
                 <p style={{ fontSize:12,color:"#666",lineHeight:1.7,margin:0 }}>
                   {isAr
-                    ? "⚠️ ستُرسَل كلمة المرور الجديدة فوراً. تأكد من إبلاغ صاحب العيادة بها قبل الإغلاق."
-                    : "⚠️ The new password will be applied immediately. Make sure to inform the clinic owner before closing."}
+                    ? "ستُرسَل كلمة المرور الجديدة فوراً. تأكد من إبلاغ صاحب العيادة بها قبل الإغلاق."
+                    : "The new password will be applied immediately. Make sure to inform the clinic owner before closing."}
                 </p>
               </div>
 
@@ -1914,7 +1913,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 return (
                   <div style={{ marginTop:6,borderTop:"1.5px solid #eef0f3",paddingTop:16 }}>
                     <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
-                      <span style={{ fontSize:18 }}>🔐</span>
+                      <span style={{ fontSize:18 }}><AppIcon glyph="🔐" /></span>
                       <div>
                         <div style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{pl.sectionTitle}</div>
                         <div style={{ fontSize:11,color:"#aaa",marginTop:1 }}>{pl.sectionDesc}</div>
@@ -1923,7 +1922,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
                     {!planSupportsPayments ? (
                       <div style={{ padding:"10px 14px",background:"rgba(192,57,43,.05)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,fontSize:12,color:"#c0392b",display:"flex",alignItems:"center",gap:8 }}>
-                        🔒 {pl.notAvailable}
+                        <AppIcon glyph="🔒" /> {pl.notAvailable}
                       </div>
                     ) : (
                       <div style={{ background:"rgba(8,99,186,.03)",border:"1.5px solid rgba(8,99,186,.12)",borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:12 }}>
@@ -1970,11 +1969,11 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                                   setForm(prev => ({ ...prev, payments_lock_password: p }));
                                 }}
                                 style={{ padding:"0 12px",background:"rgba(8,99,186,.06)",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
-                                🎲 {isAr?"توليد":"Generate"}
+                                <AppIcon glyph="🎲" /> {isAr?"توليد":"Generate"}
                               </button>
                             </div>
                             <p style={{ fontSize:11,color:"#aaa",marginTop:5,lineHeight:1.5 }}>
-                              💡 {pl.saveNote}
+                              <AppIcon glyph="💡" /> {pl.saveNote}
                             </p>
                           </div>
                         )}
@@ -2006,7 +2005,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 return (
                   <div style={{ marginTop:6,borderTop:"1.5px solid #eef0f3",paddingTop:16 }}>
                     <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
-                      <span style={{ fontSize:18 }}>🔗</span>
+                      <span style={{ fontSize:18 }}><AppIcon glyph="🔗" /></span>
                       <div>
                         <div style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{ra.sectionTitle}</div>
                         <div style={{ fontSize:11,color:"#aaa",marginTop:1 }}>{ra.sectionDesc}</div>
@@ -2015,7 +2014,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
 
                     {!isSharedPlan ? (
                       <div style={{ padding:"10px 14px",background:"rgba(192,57,43,.05)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:10,fontSize:12,color:"#c0392b",display:"flex",alignItems:"center",gap:8 }}>
-                        🔒 {ra.onlyShared}
+                        <AppIcon glyph="🔒" /> {ra.onlyShared}
                       </div>
                     ) : (
                       <div style={{ background:"rgba(14,124,106,.03)",border:"1.5px solid rgba(14,124,106,.15)",borderRadius:12,padding:"14px 16px",display:"flex",flexDirection:"column",gap:12 }}>
@@ -2062,16 +2061,14 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                                   {/* زر إظهار/إخفاء */}
                                   <button type="button" onClick={() => setShowPin(v => !v)}
                                     style={{ position:"absolute" as const,left:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,padding:0,color:"#aaa",lineHeight:1 }}
-                                    title={showPin ? "إخفاء" : "إظهار"}>
-                                    {showPin ? "🙈" : "👁️"}
-                                  </button>
+                                    title={showPin ? "إخفاء" : "إظهار"}><AppIcon glyph={showPin ? "🙈" : "👁️"} /></button>
                                 </div>
                                 <button type="button" onClick={genPin}
                                   style={{ padding:"0 14px",background:"rgba(14,124,106,.06)",color:"#0e7c6a",border:"1.5px solid rgba(14,124,106,.2)",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" as const }}>
-                                  🎲 {ra.generate}
+                                  <AppIcon glyph="🎲" /> {ra.generate}
                                 </button>
                               </div>
-                              <p style={{ fontSize:11,color:"#aaa",marginTop:5,lineHeight:1.5 }}>⚠️ {ra.pinNote}</p>
+                              <p style={{ fontSize:11,color:"#aaa",marginTop:5,lineHeight:1.5 }}><AppIcon glyph="⚠️" /> {ra.pinNote}</p>
                             </div>
 
                             {/* رابط الدخول — يظهر فقط بعد الحفظ */}
@@ -2091,7 +2088,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                                 </div>
                               ) : (
                                 <div style={{ padding:"10px 14px",background:"rgba(230,126,34,.06)",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:10,fontSize:12,color:"#e67e22",display:"flex",alignItems:"center",gap:8 }}>
-                                  💾 {isAr ? "احفظ الإعدادات أولاً لتتمكن من نسخ الرابط" : "Save settings first to copy the link"}
+                                  <AppIcon glyph="💾" /> {isAr ? "احفظ الإعدادات أولاً لتتمكن من نسخ الرابط" : "Save settings first to copy the link"}
                                 </div>
                               )}
                             </div>
@@ -2122,7 +2119,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
         {confirmDelete && (
           <div style={{ position:"absolute",inset:0,zIndex:10,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,.9)",backdropFilter:"blur(4px)",borderRadius:24 }}>
             <div style={{ textAlign:"center",padding:"40px 32px",maxWidth:340 }}>
-              <div style={{ fontSize:48,marginBottom:16 }}>🗑️</div>
+              <div style={{ fontSize:48,marginBottom:16 }}><AppIcon glyph="🗑️" /></div>
               <h3 style={{ fontSize:18,fontWeight:800,color:"#353535",marginBottom:10 }}>{sm.deleteConfirmTitle}</h3>
               <p style={{ fontSize:13,color:"#888",lineHeight:1.6,marginBottom:24 }}>
                 {sm.deleteConfirmMsg} <strong style={{ color:"#353535" }}>{clinic.name}</strong>؟<br/>
@@ -2200,11 +2197,11 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
       <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(6px)" }} />
       <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"28px",boxShadow:"0 24px 80px rgba(0,0,0,.15)",animation:"modalIn .25s ease" }}>
         <div style={{ textAlign:"center",marginBottom:20 }}>
-          <div style={{ fontSize:36,marginBottom:12 }}>🔑</div>
+          <div style={{ fontSize:36,marginBottom:12 }}><AppIcon glyph="🔑" /></div>
           <h3 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.passModal.title}</h3>
           <p style={{ fontSize:13,color:"#888",marginTop:6 }}>{clinic?.name}</p>
         </div>
-        {error && <div style={{ fontSize:13,color:"#c0392b",marginBottom:12,textAlign:"center" }}>⚠️ {error}</div>}
+        {error && <div style={{ fontSize:13,color:"#c0392b",marginBottom:12,textAlign:"center" }}><AppIcon glyph="⚠️" /> {error}</div>}
         <div style={{ marginBottom:16 }}>
           <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:8,textTransform:"uppercase",letterSpacing:.4 }}>
             {tr.passModal.newPass}
@@ -2213,13 +2210,11 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
             <div style={{ flex:1,background:"#f7f9fc",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",border:"1.5px solid #eef0f3" }}>
               <code style={{ fontSize:14,color:"#0863ba",fontFamily:"monospace",letterSpacing:1 }}>{pass}</code>
             </div>
-            <button onClick={copy} style={{ padding:"0 16px",background:copied?"rgba(46,125,50,.1)":"rgba(8,99,186,.08)",color:copied?"#2e7d32":"#0863ba",border:`1.5px solid ${copied?"rgba(46,125,50,.2)":"rgba(8,99,186,.2)"}`,borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600 }}>
-              {copied ? "✓" : "📋"}
-            </button>
+            <button onClick={copy} style={{ padding:"0 16px",background:copied?"rgba(46,125,50,.1)":"rgba(8,99,186,.08)",color:copied?"#2e7d32":"#0863ba",border:`1.5px solid ${copied?"rgba(46,125,50,.2)":"rgba(8,99,186,.2)"}`,borderRadius:10,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600 }}><AppIcon glyph={copied ? "✓" : "📋"} /></button>
           </div>
         </div>
         <button onClick={() => setPass(genPass())} style={{ width:"100%",marginBottom:12,padding:"10px",background:"#f7f9fc",color:"#666",border:"1.5px dashed #ddd",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>
-          🔄 {tr.passModal.generate}
+          <AppIcon glyph="🔄" /> {tr.passModal.generate}
         </button>
         <div style={{ display:"flex",gap:10 }}>
           <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"12px",background:saving?"#93b8dc":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:saving?"not-allowed":"pointer" }}>
@@ -2546,7 +2541,7 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1.5px solid #eef0f3", display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(135deg,rgba(8,99,186,.04),transparent)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, background: "rgba(8,99,186,.1)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🗄️</div>
+            <div style={{ width: 40, height: 40, background: "rgba(8,99,186,.1)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}><AppIcon glyph="🗄️" /></div>
             <h2 style={{ fontSize: 16, fontWeight: 800, color: "#353535" }}>{dt.title}</h2>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, background: "#f5f5f5", border: "none", cursor: "pointer", fontSize: 15 }}>✕</button>
@@ -2563,7 +2558,7 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
               boxShadow: activeMode === mode ? "0 2px 8px rgba(8,99,186,.1)" : "none",
               transition: "all .18s",
             }}>
-              {mode === "export" ? `📤 ${dt.exportBtn}` : `📥 ${dt.importBtn}`}
+              {mode === "export" ? `${dt.exportBtn}` : `${dt.importBtn}`}
             </button>
           ))}
         </div>
@@ -2586,7 +2581,7 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
             <div>
               {!selectedId ? (
                 <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb" }}>
-                  <div style={{ fontSize: 36, marginBottom: 8 }}>🏥</div>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}><AppIcon glyph="🏥" /></div>
                   <div style={{ fontSize: 13 }}>{dt.noClinicSelected}</div>
                 </div>
               ) : (
@@ -2605,13 +2600,13 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
                       onClick={() => handleExport("json")}
                       disabled={exporting}
                       style={{ padding: "14px", background: exportDone === "json" ? "rgba(46,125,50,.08)" : "rgba(8,99,186,.06)", color: exportDone === "json" ? "#2e7d32" : "#0863ba", border: `1.5px solid ${exportDone === "json" ? "rgba(46,125,50,.2)" : "rgba(8,99,186,.2)"}`, borderRadius: 12, fontFamily: "Rubik,sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .2s" }}>
-                      {exportDone === "json" ? "✓" : "📄"} {exportDone === "json" ? dt.exportSuccess : dt.exportJSON}
+                      {exportDone === "json" ? "✓" : <AppIcon glyph="📄" />} {exportDone === "json" ? dt.exportSuccess : dt.exportJSON}
                     </button>
                     <button
                       onClick={() => handleExport("csv")}
                       disabled={exporting}
                       style={{ padding: "14px", background: exportDone === "csv" ? "rgba(46,125,50,.08)" : "rgba(46,125,50,.06)", color: exportDone === "csv" ? "#2e7d32" : "#2e7d32", border: `1.5px solid ${exportDone === "csv" ? "rgba(46,125,50,.3)" : "rgba(46,125,50,.2)"}`, borderRadius: 12, fontFamily: "Rubik,sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .2s" }}>
-                      {exportDone === "csv" ? "✓" : "📊"} {exportDone === "csv" ? dt.exportSuccess : dt.exportCSV}
+                      {exportDone === "csv" ? "✓" : <AppIcon glyph="📊" />} {exportDone === "csv" ? dt.exportSuccess : dt.exportCSV}
                     </button>
                   </div>
 
@@ -2629,14 +2624,14 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
             <div>
               {!selectedId ? (
                 <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb" }}>
-                  <div style={{ fontSize: 36, marginBottom: 8 }}>🏥</div>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}><AppIcon glyph="🏥" /></div>
                   <div style={{ fontSize: 13 }}>{dt.noClinicSelected}</div>
                 </div>
               ) : importResult ? (
                 // نتيجة الاستيراد
                 <div>
                   <div style={{ textAlign: "center", marginBottom: 20 }}>
-                    <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
+                    <div style={{ fontSize: 48, marginBottom: 8 }}><AppIcon glyph="🎉" /></div>
                     <h3 style={{ fontSize: 16, fontWeight: 800, color: "#2e7d32" }}>{dt.importSuccess}</h3>
                   </div>
                   {[
@@ -2646,7 +2641,7 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
                   ].map((s, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#f7f9fc", borderRadius: 10, marginBottom: 8, border: "1.5px solid #eef0f3" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 18 }}>{s.icon}</span>
+                        <span style={{ fontSize: 18 }}><AppIcon glyph={s.icon} /></span>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "#353535" }}>{s.label}</span>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
@@ -2658,7 +2653,7 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
                   ))}
                   {importResult.errors.length > 0 && (
                     <div style={{ background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.15)", borderRadius: 10, padding: "10px 14px", marginTop: 8 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#c0392b", marginBottom: 6 }}>⚠️ {importResult.errors.length} {isAr ? "خطأ" : "error(s)"}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#c0392b", marginBottom: 6 }}><AppIcon glyph="⚠️" /> {importResult.errors.length} {isAr ? "خطأ" : "error(s)"}</div>
                       {importResult.errors.slice(0, 3).map((e, i) => <div key={i} style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>• {e}</div>)}
                     </div>
                   )}
@@ -2676,14 +2671,14 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
                       onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
                       onClick={() => fileRef.current?.click()}
                       style={{ border: `2px dashed ${dragOver ? "#0863ba" : "#c8d4e0"}`, borderRadius: 14, padding: "32px 20px", textAlign: "center", cursor: "pointer", background: dragOver ? "rgba(8,99,186,.04)" : "#fafbfc", transition: "all .2s", marginBottom: 16 }}>
-                      <div style={{ fontSize: 36, marginBottom: 8 }}>📂</div>
+                      <div style={{ fontSize: 36, marginBottom: 8 }}><AppIcon glyph="📂" /></div>
                       <div style={{ fontSize: 13, color: "#888", fontWeight: 600 }}>{dt.importDropzone}</div>
                       <div style={{ fontSize: 11, color: "#bbb", marginTop: 4 }}>NABD JSON</div>
                     </div>
                   ) : (
                     // معاينة
                     <div style={{ background: "#f7f9fc", borderRadius: 12, padding: "16px", border: "1.5px solid #eef0f3", marginBottom: 16 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#0863ba", marginBottom: 10, textTransform: "uppercase", letterSpacing: .4 }}>📋 {dt.importPreview}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#0863ba", marginBottom: 10, textTransform: "uppercase", letterSpacing: .4 }}><AppIcon glyph="📋" /> {dt.importPreview}</div>
                       <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
                         {isAr ? "المصدر:" : "Source:"} <strong style={{ color: "#353535" }}>{meta?.clinicName}</strong>
                         &nbsp;|&nbsp; {isAr ? "تاريخ:" : "Date:"} <strong style={{ color: "#353535" }}>{meta?.exportedAt}</strong>
@@ -2694,7 +2689,7 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
                         { icon: "💳", count: meta?.payments, label: isAr ? `${dt.importPayments}` : dt.importPayments },
                       ].map((s, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <span>{s.icon}</span>
+                          <span><AppIcon glyph={s.icon} /></span>
                           <span style={{ fontSize: 13, fontWeight: 700, color: "#0863ba" }}>{s.count}</span>
                           <span style={{ fontSize: 12, color: "#888" }}>{s.label}</span>
                         </div>
@@ -2706,11 +2701,11 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
                   )}
                   <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
 
-                  {importError && <div style={{ background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.15)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#c0392b", marginBottom: 12 }}>⚠️ {importError}</div>}
+                  {importError && <div style={{ background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.15)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#c0392b", marginBottom: 12 }}><AppIcon glyph="⚠️" /> {importError}</div>}
 
                   {importData && (
                     <div style={{ background: "rgba(230,126,34,.06)", border: "1.5px solid rgba(230,126,34,.2)", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#666", marginBottom: 14, lineHeight: 1.7 }}>
-                      ⚠️ {isAr
+                      <AppIcon glyph="⚠️" /> {isAr
                         ? `سيتم استيراد البيانات إلى عيادة: ${selectedClinic?.name}. المرضى الموجودون بنفس الهاتف لن يُكرَّروا.`
                         : `Data will be imported into: ${selectedClinic?.name}. Existing patients with same phone will not be duplicated.`}
                     </div>
@@ -2720,7 +2715,7 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
                     onClick={handleImport}
                     disabled={!importData || importing}
                     style={{ width: "100%", padding: "13px", background: importData && !importing ? "#0863ba" : "#ccc", color: "#fff", border: "none", borderRadius: 12, fontFamily: "Rubik,sans-serif", fontSize: 14, fontWeight: 700, cursor: importData && !importing ? "pointer" : "not-allowed", boxShadow: importData ? "0 4px 16px rgba(8,99,186,.25)" : "none", transition: "all .2s" }}>
-                    {importing ? `⏳ ${dt.importing}` : `📥 ${dt.importStart}`}
+                    {importing ? `⏳ ${dt.importing}` : `${dt.importStart}`}
                   </button>
                 </div>
               )}
@@ -2892,7 +2887,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                 borderRadius:10, padding:"10px 14px", fontSize:13, color:"#c0392b",
                 textAlign:"center", fontWeight:500,
               }}>
-                ⚠️ {error}
+                <AppIcon glyph="⚠️" /> {error}
               </div>
             )}
 
@@ -2938,9 +2933,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                     background:"none", border:"none", cursor:"pointer", fontSize:16,
                     color:"#aaa", display:"flex", alignItems:"center",
                   }}
-                >
-                  {showPass ? "🙈" : "👁️"}
-                </button>
+                ><AppIcon glyph={showPass ? "🙈" : "👁️"} /></button>
               </div>
             </div>
 
@@ -3014,8 +3007,8 @@ export default function AdminPage() {
   // ── إرسال رسالة للطبيب ─────────────────────────────────
   const getMsgTemplate = (t: string, clinicName: string) => {
     const temps: Record<string,string> = {
-      welcome: `مرحباً ${clinicName}،\nنرحب بانضمامك لمنصة نبض. يسعدنا خدمتك وتوفير أفضل تجربة لإدارة عيادتك.\n\nفريق نبض 💙`,
-      expiry:  `عزيزي ${clinicName}،\nاشتراكك في منصة نبض سينتهي قريباً. يرجى التواصل معنا للتجديد.\n\nفريق نبض 💙`,
+      welcome: `مرحباً ${clinicName}،\nنرحب بانضمامك لمنصة نبض. يسعدنا خدمتك وتوفير أفضل تجربة لإدارة عيادتك.\n\nفريق نبض `,
+      expiry:  `عزيزي ${clinicName}،\nاشتراكك في منصة نبض سينتهي قريباً. يرجى التواصل معنا للتجديد.\n\nفريق نبض `,
       custom:  "",
     };
     return temps[t] ?? "";
@@ -3073,7 +3066,7 @@ export default function AdminPage() {
       if (res.ok) {
         setMsgSuccess(true); setMsgBody(""); setMsgTemplate("custom");
         fetch("/api/push", { method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ user_id: msgClinic.user_id, title:"💬 رسالة جديدة من نبض", body: bodyText.slice(0,80), url:"/messages" }) });
+          body: JSON.stringify({ user_id: msgClinic.user_id, title:"رسالة جديدة من نبض", body: bodyText.slice(0,80), url:"/messages" }) });
         await loadMsgHistory(msgClinic.user_id);
         setTimeout(() => setMsgSuccess(false), 3000);
       }
@@ -3141,7 +3134,7 @@ export default function AdminPage() {
 
   const fmtDate = (d: string) => {
     if (!d) return "—";
-    return new Date(d).toLocaleDateString(isAr ? "ar-SA-u-ca-gregory" : "en-US", { year:"numeric", month:"short", day:"numeric" });
+    return new Date(d).toLocaleDateString(isAr ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", { year:"numeric", month:"short", day:"numeric" });
   };
   const isExpiringSoon = (d: string) => {
     const diff = new Date(d).getTime() - new Date().getTime();
@@ -3354,12 +3347,12 @@ export default function AdminPage() {
 
           <nav style={{ flex:1,padding:"16px 12px" }}>
             {Object.entries(tr.nav).map(([k, v]) => {
-              const icons = { clinics:"🏥" };
+              const icons = { clinics:"🏥" }; // rendered via AppIcon
               const isActive = activeTab === k;
               return (
                 <button key={k} onClick={() => setActiveTab(k)}
                   style={{ width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:10,marginBottom:4,border:"none",cursor:"pointer",background:isActive?"rgba(8,99,186,.08)":"transparent",color:isActive?"#0863ba":"#666",fontWeight:isActive?600:400,fontSize:13,fontFamily:"Rubik,sans-serif",transition:"all .18s",textAlign:isAr?"right":"left" }}>
-                  <span style={{ fontSize:16 }}>{icons[k as keyof typeof icons]}</span>
+                  <span style={{ fontSize:16, display:"flex" }}><AppIcon glyph={icons[k as keyof typeof icons]} /></span>
                   <span style={{ flex:1 }}>{v}</span>
                   {k === "clinics" && <span style={{ fontSize:11,background:"rgba(8,99,186,.08)",color:"#0863ba",padding:"2px 8px",borderRadius:20 }}>{clinics.length}</span>}
                 </button>
@@ -3382,7 +3375,7 @@ export default function AdminPage() {
             <div style={{ marginTop:14 }}>
               <button onClick={() => setLang(lang === "ar" ? "en" : "ar")}
                 style={{ width:"100%",padding:"7px",background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#666",transition:"all .2s",marginBottom:8 }}>
-                🌐 {lang === "ar" ? "English" : "العربية"}
+                <AppIcon glyph="🌐" /> {lang === "ar" ? "English" : "العربية"}
               </button>
               <button onClick={handleLogout}
                 style={{ width:"100%",padding:"7px",background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontSize:11,fontFamily:"Rubik,sans-serif",color:"#c0392b" }}>
@@ -3403,14 +3396,14 @@ export default function AdminPage() {
                   {tr.clinics.title}
                 </h1>
                 <p style={{ fontSize:12,color:"#aaa",marginTop:2 }}>
-                  {`${stats.active} ${isAr?"نشط من":"active of"} ${stats.total} · 🏥 ${stats.clinics} ${isAr?"عيادة":"clinics"} · 💊 ${stats.pharmacies} ${isAr?"صيدلية":"pharmacies"}`}
+                  {`${stats.active} ${isAr?"نشط من":"active of"} ${stats.total} · ${stats.clinics} ${isAr?"عيادة":"clinics"} · ${stats.pharmacies} ${isAr?"صيدلية":"pharmacies"}`}
                 </p>
               </div>
               {activeTab === "clinics" && (
                 <div style={{ display:"flex",gap:10 }}>
                   <button onClick={() => setDataToolsModal(true)}
                     style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 18px",background:"#fff",color:"#0863ba",border:"1.5px solid rgba(8,99,186,.2)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .2s" }}>
-                    🗄️ {isAr ? "أدوات البيانات" : "Data Tools"}
+                    <AppIcon glyph="🗄️" /> {isAr ? "أدوات البيانات" : "Data Tools"}
                   </button>
                   <button onClick={() => setAddModal(true)}
                     style={{ display:"flex",alignItems:"center",gap:8,padding:"10px 20px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.35)",transition:"all .2s" }}>
@@ -3435,7 +3428,7 @@ export default function AdminPage() {
               ].map((s, i) => (
                 <div key={i} className="stat-dark" style={{ animation:`fadeUp .4s ${i*50}ms ease both` }}>
                   <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:s.accent,borderRadius:"16px 16px 0 0" }} />
-                  <div style={{ width:34,height:34,background:`${s.accent}15`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}>{s.icon}</div>
+                  <div style={{ width:34,height:34,background:`${s.accent}15`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,marginBottom:10 }}><AppIcon glyph={s.icon} /></div>
                   <div style={{ fontSize:26,fontWeight:900,color:s.color,lineHeight:1 }}>{s.value}</div>
                   <div style={{ fontSize:10,color:"#aaa",marginTop:5,fontWeight:500,lineHeight:1.3 }}>{s.label}</div>
                 </div>
@@ -3480,7 +3473,7 @@ export default function AdminPage() {
                 {/* SEARCH + FILTER */}
                 <div className="search-filter-wrap" style={{ background:"#fff",borderRadius:12,padding:"14px 16px",border:"1.5px solid #eef0f3",marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
                   <div style={{ flex:1,minWidth:180,display:"flex",alignItems:"center",gap:10,background:"#f7f9fc",border:"1.5px solid #eef0f3",borderRadius:10,padding:"9px 14px" }}>
-                    <span style={{ color:"#ccc",fontSize:14 }}>🔍</span>
+                    <span style={{ color:"#ccc",fontSize:14 }}><AppIcon glyph="🔍" /></span>
                     <input
                       value={search}
                       onChange={e => setSearch(e.target.value)}
@@ -3494,7 +3487,7 @@ export default function AdminPage() {
                       <button key={k} className={`filter-chip-dark${filter===k?" active":""}`} onClick={() => setFilter(k)}>{v}</button>
                     ))}
                     <div style={{ width:1,background:"#eef0f3",margin:"0 4px" }}/>
-                    {([["all", isAr?"الكل":"All"],["clinic","🏥 "+(isAr?tr.pharmacy.filterClinics:tr.pharmacy.filterClinics)],["pharmacy","💊 "+(isAr?tr.pharmacy.filterPharmacies:tr.pharmacy.filterPharmacies)]] as [string,string][]).map(([k,v]) => (
+                    {([["all", isAr?"الكل":"All"],["clinic",(isAr?tr.pharmacy.filterClinics:tr.pharmacy.filterClinics)],["pharmacy",(isAr?tr.pharmacy.filterPharmacies:tr.pharmacy.filterPharmacies)]] as [string,string][]).map(([k,v]) => (
                       <button key={k} className={`filter-chip-dark${accountFilter===k?" active":""}`}
                         style={{ borderColor: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.3)" : undefined, background: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.08)" : undefined, color: accountFilter===k&&k==="pharmacy" ? "#27ae60" : undefined }}
                         onClick={() => setAccountFilter(k as "all"|"clinic"|"pharmacy")}>{v}</button>
@@ -3505,7 +3498,7 @@ export default function AdminPage() {
                 {/* TABLE */}
                 {loading ? (
                   <div style={{ textAlign:"center",padding:"50px",color:"#ccc" }}>
-                    <div style={{ fontSize:36,marginBottom:10,display:"inline-block",animation:"spin 1s linear infinite" }}>⚙️</div>
+                    <div style={{ fontSize:36,marginBottom:10,display:"inline-block",animation:"spin 1s linear infinite" }}><AppIcon glyph="⚙️" /></div>
                     <div style={{ fontSize:14 }}>{tr.loading}</div>
                   </div>
                 ) : (
@@ -3523,7 +3516,7 @@ export default function AdminPage() {
 
                     {filtered.length === 0 ? (
                       <div style={{ textAlign:"center",padding:"50px",color:"#ccc" }}>
-                        <div style={{ fontSize:36,marginBottom:10 }}>🔍</div>
+                        <div style={{ fontSize:36,marginBottom:10 }}><AppIcon glyph="🔍" /></div>
                         <div style={{ fontSize:14 }}>{tr.noResults}</div>
                       </div>
                     ) : (
@@ -3542,7 +3535,7 @@ export default function AdminPage() {
                                 <div title={dot.title} style={{ width:9,height:9,borderRadius:"50%",background:dot.color,flexShrink:0,boxShadow:`0 0 0 2px ${dot.color}22` }} />
                                 <div style={{ minWidth:0 }}>
                                   <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
-                                    <span style={{ fontSize:14 }}>{c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]}</span>
+                                    <span style={{ fontSize:14, display:"flex" }}><AppIcon glyph={c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]} /></span>
                                     <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{c.name}</span>
                                   </div>
                                   <div
@@ -3558,7 +3551,7 @@ export default function AdminPage() {
                               <div style={{ paddingLeft:8 }}>
                                 {c.account_type === "pharmacy" ? (
                                   <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:"rgba(39,174,96,.12)",color:"#27ae60" }}>
-                                    💊 {isAr?"صيدلية":"Pharmacy"}
+                                    <AppIcon glyph="💊" /> {isAr?"صيدلية":"Pharmacy"}
                                   </span>
                                 ) : (
                                   <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:`${planColor}18`,color:planColor }}>
@@ -3567,7 +3560,7 @@ export default function AdminPage() {
                                 )}
                                 {["shared_basic","shared_pro","shared_enterprise"].includes(c.plan) && (
                                   <div style={{ fontSize:9,color:planColor,fontWeight:600,marginTop:3 }}>
-                                    👥 {c.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[c.plan] ?? 2} {isAr?"أطباء":"drs"}
+                                    <AppIcon glyph="👥" /> {c.max_doctors ?? SHARED_PLAN_DEFAULT_DOCTORS[c.plan] ?? 2} {isAr?"أطباء":"drs"}
                                   </div>
                                 )}
                               </div>
@@ -3577,7 +3570,7 @@ export default function AdminPage() {
                                 <div style={{ fontSize:12,fontWeight:exp||expSoon?700:400,color:exp?"#c0392b":expSoon?"#e67e22":"#666",fontVariantNumeric:"tabular-nums",direction:"ltr",textAlign:"start" }}>
                                   {fmtDateEn(c.expiry)}
                                 </div>
-                                {expSoon && !exp && <div style={{ fontSize:9,color:"#e67e22",fontWeight:600,marginTop:2 }}>⚠ {isAr?"قريباً":"Soon"}</div>}
+                                {expSoon && !exp && <div style={{ fontSize:9,color:"#e67e22",fontWeight:600,marginTop:2 }}><AppIcon glyph="⚠" /> {isAr?"قريباً":"Soon"}</div>}
                                 {exp      && <div style={{ fontSize:9,color:"#c0392b",fontWeight:600,marginTop:2 }}>✗ {isAr?"منتهية":"Expired"}</div>}
                               </div>
 
@@ -3597,7 +3590,7 @@ export default function AdminPage() {
                                   title={isAr?"تعديل الاشتراك":"Edit Subscription"}
                                   onClick={e => { e.stopPropagation(); setSubClinic(c); }}
                                   style={{ width:38,height:38,fontSize:16 }}
-                                >💳</button>
+                                ><AppIcon glyph="💳" /></button>
 
                                 {/* مراسلة */}
                                 <button
@@ -3606,7 +3599,7 @@ export default function AdminPage() {
                                   onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(c.user_id) loadMsgHistory(c.user_id); }}
                                   style={{ width:38,height:38,fontSize:16,position:"relative" }}
                                 >
-                                  💬
+                                  <AppIcon glyph="💬" />
                                   {msgUnread[c.user_id ?? ""] ? (
                                     <span style={{ position:"absolute",top:-3,right:-3,width:14,height:14,borderRadius:"50%",background:"#c0392b",color:"#fff",fontSize:8,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>
                                       {msgUnread[c.user_id ?? ""]}
@@ -3624,13 +3617,13 @@ export default function AdminPage() {
 
                                 {openMenuId === c.id && (
                                   <div className="dropdown-dark">
-                                    <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
-                                    <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}>🔑 {tr.clinics.actions.resetPass}</div>
+                                    <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}><AppIcon glyph="✏️" /> {tr.clinics.actions.edit}</div>
+                                    <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}><AppIcon glyph="🔑" /> {tr.clinics.actions.resetPass}</div>
                                     <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
                                       {c.status==="active" ? "⏸ "+tr.clinics.actions.suspend : "▶ "+tr.clinics.actions.activate}
                                     </div>
                                     <div style={{ height:1,background:"#eef0f3",margin:"4px 0" }} />
-                                    <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}>🗑️ {tr.clinics.actions.delete}</div>
+                                    <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}><AppIcon glyph="🗑️" /> {tr.clinics.actions.delete}</div>
                                   </div>
                                 )}
                               </div>
@@ -3642,25 +3635,25 @@ export default function AdminPage() {
                               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                                 <div title={dot.title} style={{ width:8,height:8,borderRadius:"50%",background:dot.color,flexShrink:0 }} />
                                 <span style={{ fontSize:13,fontWeight:700,color:"#353535",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
-                                  {c.account_type==="pharmacy" ? "💊 " : CLINIC_TYPE_ICONS[c.clinic_type||"general"]+" "}{c.name}
+                                  <AppIcon glyph={c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]} style={{marginInlineEnd:5}} />{c.name}
                                 </span>
                                 <div style={{ display:"flex",gap:5,flexShrink:0 }} onClick={e => e.stopPropagation()}>
                                   <button className="icon-btn-dark" title={isAr?"معلومات":"Info"} onClick={e => { e.stopPropagation(); setInfoClinic(c); }} style={{ width:30,height:30 }}>ℹ️</button>
-                                  <button className="icon-btn-dark" title={isAr?"تعديل الاشتراك":"Edit Sub"} onClick={e => { e.stopPropagation(); setSubClinic(c); }} style={{ width:30,height:30 }}>💳</button>
+                                  <button className="icon-btn-dark" title={isAr?"تعديل الاشتراك":"Edit Sub"} onClick={e => { e.stopPropagation(); setSubClinic(c); }} style={{ width:30,height:30 }}><AppIcon glyph="💳" /></button>
                                   <button className="icon-btn-dark msg" title={isAr?"مراسلة":"Msg"} onClick={e => { e.stopPropagation(); setMsgClinic(c); setMsgTemplate("custom"); setMsgBody(""); setMsgView("history"); setMsgHistory([]); if(c.user_id) loadMsgHistory(c.user_id); }} style={{ width:30,height:30,position:"relative" }}>
-                                    💬
+                                    <AppIcon glyph="💬" />
                                     {msgUnread[c.user_id ?? ""] ? <span style={{ position:"absolute",top:-3,right:-3,width:13,height:13,borderRadius:"50%",background:"#c0392b",color:"#fff",fontSize:7,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>{msgUnread[c.user_id ?? ""]}</span> : null}
                                   </button>
                                   <button className="icon-btn-dark more" onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId===c.id?null:(c.id||null)); }} style={{ width:30,height:30 }}>⋯</button>
                                   {openMenuId === c.id && (
                                     <div className="dropdown-dark" style={{ top:"calc(100% + 4px)",right:0 }}>
-                                      <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}>✏️ {tr.clinics.actions.edit}</div>
-                                      <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}>🔑 {tr.clinics.actions.resetPass}</div>
+                                      <div className="dropdown-dark-item" onClick={() => { setEditClinic(c); setOpenMenuId(null); }}><AppIcon glyph="✏️" /> {tr.clinics.actions.edit}</div>
+                                      <div className="dropdown-dark-item" onClick={() => { setResetClinic(c); setOpenMenuId(null); }}><AppIcon glyph="🔑" /> {tr.clinics.actions.resetPass}</div>
                                       <div className="dropdown-dark-item" onClick={() => { toggleStatus(c); setOpenMenuId(null); }}>
                                         {c.status==="active" ? "⏸ "+tr.clinics.actions.suspend : "▶ "+tr.clinics.actions.activate}
                                       </div>
                                       <div style={{ height:1,background:"#eef0f3",margin:"4px 0" }} />
-                                      <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}>🗑️ {tr.clinics.actions.delete}</div>
+                                      <div className="dropdown-dark-item danger" onClick={() => { setDeleteClinic(c); setOpenMenuId(null); }}><AppIcon glyph="🗑️" /> {tr.clinics.actions.delete}</div>
                                     </div>
                                   )}
                                 </div>
@@ -3782,7 +3775,7 @@ export default function AdminPage() {
           <div style={{ position:"fixed",inset:0,zIndex:300,display:"flex",alignItems:"center",justifyContent:"center" }}>
             <div onClick={() => setDeleteClinic(null)} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)" }} />
             <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,maxWidth:380,width:"100%",padding:"32px",textAlign:"center",boxShadow:"0 24px 80px rgba(8,99,186,.15)",border:"1.5px solid #eef0f3",animation:"modalIn .25s ease" }}>
-              <div style={{ fontSize:40,marginBottom:16 }}>🗑️</div>
+              <div style={{ fontSize:40,marginBottom:16 }}><AppIcon glyph="🗑️" /></div>
               <h3 style={{ fontSize:17,fontWeight:800,color:"#353535",marginBottom:8 }}>{tr.deleteModal.title}</h3>
               <p style={{ fontSize:13,color:"#888",lineHeight:1.6 }}>
                 {tr.deleteModal.msg} <strong style={{ color:"#353535" }}>{deleteClinic.name}</strong>؟<br/>
@@ -3806,7 +3799,7 @@ export default function AdminPage() {
 
             {/* Header */}
             <div style={{ background:"#0863ba",padding:"14px 18px",display:"flex",alignItems:"center",gap:12,flexShrink:0 }}>
-              <div style={{ width:36,height:36,background:"rgba(255,255,255,.15)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>💬</div>
+              <div style={{ width:36,height:36,background:"rgba(255,255,255,.15)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="💬" /></div>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:15,fontWeight:800,color:"#fff" }}>{msgClinic.name}</div>
                 <div style={{ fontSize:11,color:"rgba(255,255,255,.7)" }}>الرسائل تُحذف تلقائياً بعد 48 ساعة</div>
@@ -3829,7 +3822,7 @@ export default function AdminPage() {
                     background: msgView===v ? "#f0f6ff" : "#fff",
                     color:      msgView===v ? "#0863ba" : "#888",
                     borderBottom: msgView===v ? "2.5px solid #0863ba" : "2.5px solid transparent" }}>
-                  {v === "history" ? "📜 سجل المحادثة" : "✏️ رسالة جديدة"}
+                  {v === "history" ? "سجل المحادثة" : "رسالة جديدة"}
                 </button>
               ))}
             </div>
@@ -3856,10 +3849,10 @@ export default function AdminPage() {
                         fontSize:13, lineHeight:1.6, whiteSpace:"pre-wrap",
                         boxShadow:"0 1px 3px rgba(0,0,0,.08)",
                       }}>
-                        {!isAdminMsg && <div style={{ fontSize:10,fontWeight:700,color:"#0863ba",marginBottom:3 }}>الطبيب 👨‍⚕️</div>}
+                        {!isAdminMsg && <div style={{ fontSize:10,fontWeight:700,color:"#0863ba",marginBottom:3 }}>الطبيب <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></div>}
                         {msg.body}
                         <div style={{ fontSize:10,opacity:.5,marginTop:3,textAlign:"left" }}>
-                          {new Date(msg.created_at).toLocaleString("ar-SA-u-ca-gregory",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
+                          {new Date(msg.created_at).toLocaleString("ar-SA-u-ca-gregory-nu-latn",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
                         </div>
                       </div>
                     </div>
@@ -3906,7 +3899,7 @@ export default function AdminPage() {
                   <button onClick={handleSendMessage}
                     disabled={msgSending || !msgBody.trim() || msgBody.length > 2000}
                     style={{ flex:1,padding:"12px 0",borderRadius:12,background:"linear-gradient(135deg,#0863ba,#0558a8)",color:"#fff",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"Rubik,sans-serif",opacity:msgSending||!msgBody.trim()?0.6:1 }}>
-                    {msgSuccess ? "✅ تم الإرسال" : msgSending ? "جارٍ الإرسال..." : "إرسال الرسالة"}
+                    {msgSuccess ? "تم الإرسال" : msgSending ? "جارٍ الإرسال..." : "إرسال الرسالة"}
                   </button>
                   <button onClick={() => setMsgView("history")}
                     style={{ padding:"12px 16px",borderRadius:12,background:"#f5f7fa",color:"#888",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:13,fontFamily:"Rubik,sans-serif" }}>
@@ -3917,7 +3910,7 @@ export default function AdminPage() {
                 <>
                   <button onClick={() => setMsgView("compose")}
                     style={{ flex:1,padding:"12px 0",borderRadius:12,background:"linear-gradient(135deg,#0863ba,#0558a8)",color:"#fff",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:"Rubik,sans-serif" }}>
-                    ✏️ رسالة جديدة
+                    <AppIcon glyph="✏️" /> رسالة جديدة
                   </button>
                   <button onClick={() => { setMsgClinic(null); setMsgHistory([]); setMsgView("history"); }}
                     style={{ padding:"12px 16px",borderRadius:12,background:"#f5f7fa",color:"#888",border:"1.5px solid #eef0f3",cursor:"pointer",fontSize:13,fontFamily:"Rubik,sans-serif" }}>
@@ -3975,7 +3968,7 @@ function ClinicInfoModal({ clinic, onClose, isAr }: { clinic: ClinicData; onClos
         <div style={{ background:"linear-gradient(135deg,#0863ba,#0558a8)", padding:"20px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={{ width:44, height:44, background:"rgba(255,255,255,.15)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
-              {clinic.account_type === "pharmacy" ? "💊" : CLINIC_TYPE_ICONS[clinic.clinic_type||"general"]}
+              <AppIcon glyph={clinic.account_type === "pharmacy" ? "💊" : CLINIC_TYPE_ICONS[clinic.clinic_type||"general"]} />
             </div>
             <div>
               <div style={{ fontSize:16, fontWeight:800, color:"#fff" }}>{clinic.name}</div>
@@ -4016,10 +4009,10 @@ function ClinicInfoModal({ clinic, onClose, isAr }: { clinic: ClinicData; onClos
           )}
           <Row label={isAr?"تاريخ الانتهاء":"Expiry"} value={fmtEn(clinic.expiry)} accent={new Date(clinic.expiry) < new Date() ? "#c0392b" : "#353535"} />
           {clinic.payments_lock_enabled && (
-            <Row label={isAr?"قفل المدفوعات":"Payments Lock"} value={isAr?"مفعّل 🔒":"Enabled 🔒"} accent="#e67e22" />
+            <Row label={isAr?"قفل المدفوعات":"Payments Lock"} value={isAr?"مفعّل ":"Enabled "} accent="#e67e22" />
           )}
           {clinic.restricted_access_enabled && (
-            <Row label={isAr?"الوصول المقيّد":"Restricted Access"} value={isAr?"مفعّل 🔑":"Enabled 🔑"} accent="#8e44ad" />
+            <Row label={isAr?"الوصول المقيّد":"Restricted Access"} value={isAr?"مفعّل ":"Enabled "} accent="#8e44ad" />
           )}
         </div>
 

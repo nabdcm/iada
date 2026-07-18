@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -129,7 +130,7 @@ export default function ClinicPlansPage({ params }: { params: Promise<{ clinicId
   if (notFound || !clinic) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "Rubik,sans-serif", gap: 8 }}>
-        <div style={{ fontSize: 40 }}>🏥</div>
+        <div style={{ fontSize: 40 }}><AppIcon glyph="🏥" /></div>
         <div style={{ fontSize: 18, fontWeight: 800, color: "#353535" }}>{tr.notFound}</div>
         <div style={{ fontSize: 13, color: "#999" }}>{tr.notFoundSub}</div>
       </div>
@@ -172,7 +173,7 @@ export default function ClinicPlansPage({ params }: { params: Promise<{ clinicId
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 30, boxShadow: "0 8px 24px rgba(8,99,186,.25)", color: "#fff",
           }}>
-            🩺
+            <AppIcon glyph="🩺" />
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 900, color: "#1c2b3a", margin: 0 }}>{displayName}</h1>
           {clinic.doctor_name && clinic.clinic_name && (
@@ -185,7 +186,7 @@ export default function ClinicPlansPage({ params }: { params: Promise<{ clinicId
         <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 20px 60px" }}>
           {packages.length === 0 ? (
             <div style={{ background: "#fff", borderRadius: 20, border: "1.5px solid #eef1f6", padding: "48px 24px", textAlign: "center" }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
+              <div style={{ fontSize: 36, marginBottom: 10 }}><AppIcon glyph="📋" /></div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#353535" }}>{tr.noPackages}</div>
               <div style={{ fontSize: 13, color: "#999", marginTop: 4 }}>{tr.noPackagesSub}</div>
               {clinic.phone && (
@@ -217,7 +218,7 @@ export default function ClinicPlansPage({ params }: { params: Promise<{ clinicId
                       background: "#0863ba", color: "#fff", fontSize: 11, fontWeight: 800,
                       padding: "4px 12px", borderRadius: 20,
                     }}>
-                      ⭐ {tr.featured}
+                      <AppIcon glyph="⭐" /> {tr.featured}
                     </div>
                   )}
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#1c2b3a", marginTop: pkg.is_featured ? 6 : 0 }}>{pkg.title}</div>

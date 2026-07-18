@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -57,7 +58,7 @@ const T = {
     },
     privacy:   "سياسة الخصوصية",
     contact:   "تواصل معنا",
-    copyright: "© ٢٠٢٦ نبض — جميع الحقوق محفوظة",
+    copyright: "© 2026 نبض — جميع الحقوق محفوظة",
   },
   en: {
     tagline: "Your Clinic's Pulse in Your Hands",
@@ -149,7 +150,7 @@ function PatientLoginForm({ lang, tr }: { lang: Lang; tr: LoginTranslation }) {
 
   return (
     <form onSubmit={handleSubmit} className="login-form" dir={isAr ? "rtl" : "ltr"}>
-      {error && <div className="err-box"><span>⚠️</span> {error}</div>}
+      {error && <div className="err-box"><span><AppIcon glyph="⚠️" /></span> {error}</div>}
       <div className="field">
         <label className="field-lbl">{tr.phone}</label>
         <input type="tel" className="field-inp" placeholder={tr.phonePh}
@@ -234,7 +235,7 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
 
   return (
     <form onSubmit={handleSubmit} className="login-form" dir={isAr ? "rtl" : "ltr"}>
-      {error && <div className="err-box" key={error}><span>⚠️</span> {error}</div>}
+      {error && <div className="err-box" key={error}><span><AppIcon glyph="⚠️" /></span> {error}</div>}
       <div className="field">
         <label className="field-lbl">{tr.email}</label>
         <input type="email" className="field-inp" placeholder={tr.emailPh}
@@ -253,9 +254,7 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
             style={{ paddingInlineEnd: "44px" }}
             required
           />
-          <button type="button" className="pass-eye" onClick={() => setShow(!showPass)}>
-            {showPass ? "🙈" : "👁️"}
-          </button>
+          <button type="button" className="pass-eye" onClick={() => setShow(!showPass)}><AppIcon glyph={showPass ? "🙈" : "👁️"} /></button>
         </div>
       </div>
       <button type="submit" className="submit-btn" disabled={loading}>
@@ -277,12 +276,12 @@ function AboutModal({ tr, isAr, onClose }: {
     <div className="modal-overlay" onClick={onClose} dir={isAr ? "rtl" : "ltr"}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <div className="modal-title">💡 {tr.title}</div>
+        <div className="modal-title"><AppIcon glyph="💡" /> {tr.title}</div>
         <p className="modal-desc">{tr.desc}</p>
         <div className="modal-features">
           {tr.features.map((f) => (
             <div key={f.text} className="modal-feat">
-              <span className="modal-feat-icon">{f.icon}</span>
+              <span className="modal-feat-icon"><AppIcon glyph={f.icon} /></span>
               <span>{f.text}</span>
             </div>
           ))}
@@ -825,7 +824,7 @@ function PortalPageContent() {
             <div className="desktop-features">
               {tr.about.features.map((f, i) => (
                 <div key={i} className="desk-feat">
-                  <span className="desk-feat-icon">{f.icon}</span>
+                  <span className="desk-feat-icon"><AppIcon glyph={f.icon} /></span>
                   <span>{f.text}</span>
                 </div>
               ))}
@@ -856,7 +855,7 @@ function PortalPageContent() {
                       {pd.badge}
                     </span>
                   )}
-                  <span className="switch-tab-icon">{pd.icon}</span>
+                  <span className="switch-tab-icon"><AppIcon glyph={pd.icon} /></span>
                   <span className="switch-tab-label" style={isActive ? { color: PORTAL_ACCENT[p].color } : {}}>
                     {pd.label}
                   </span>

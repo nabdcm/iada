@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 import React from "react";
 
 // ═══════════════════════════════════════════════════════════════
@@ -70,7 +71,7 @@ export function DesktopSidebar({
       display: "flex", flexDirection: "column", gap: 4,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "6px 8px 18px" }}>
-        <div style={{ width: 40, height: 40, borderRadius: 13, background: "linear-gradient(135deg,#0863ba,#1a8fe3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 6px 16px rgba(8,99,186,.28)", flexShrink: 0 }}>💊</div>
+        <div style={{ width: 40, height: 40, borderRadius: 13, background: "linear-gradient(135deg,#0863ba,#1a8fe3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 6px 16px rgba(8,99,186,.28)", flexShrink: 0 }}><AppIcon glyph="💊" /></div>
         <div>
           <div style={{ fontSize: 15.5, fontWeight: 800, color: "#1a2840", letterSpacing: "-.3px" }}>{isAr ? "صيدلية نبض" : "NABD Rx"}</div>
           <div style={{ fontSize: 10, color: "#9aa2ab", fontWeight: 500 }}>{isAr ? "نظام إدارة متكامل" : "Pharmacy System"}</div>

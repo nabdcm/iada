@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useRef, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
@@ -392,7 +393,7 @@ function printPrescription(prescription: Prescription, lang: Lang, clinicName: s
         <div class="header">
           <div class="clinic-info">
             <h1>${clinicName}</h1>
-            <p>👨‍⚕️ ${doctorName}</p>
+            <p>‍${doctorName}</p>
             <p style="font-size:11px; color:#999; margin-top:6px;">${tr.printTitle}</p>
           </div>
           <div class="rx-badge">℞</div>
@@ -405,16 +406,16 @@ function printPrescription(prescription: Prescription, lang: Lang, clinicName: s
           </div>
           <div class="meta-card">
             <div class="label">${tr.printDate}</div>
-            <div class="value">${new Date(prescription.date).toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+            <div class="value">${new Date(prescription.date).toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
           </div>
         </div>
 
         ${prescription.diagnosis ? `
-          <div class="section-title">🔍 ${tr.printDiagnosis}</div>
+          <div class="section-title"><AppIcon glyph="🔍" /> ${tr.printDiagnosis}</div>
           <div class="diagnosis-box">${prescription.diagnosis}</div>
         ` : ""}
 
-        <div class="section-title">💊 ${tr.printMedications}</div>
+        <div class="section-title">${tr.printMedications}</div>
         <table class="medications-table">
           <thead>
             <tr>
@@ -429,7 +430,7 @@ function printPrescription(prescription: Prescription, lang: Lang, clinicName: s
         </table>
 
         ${prescription.notes ? `
-          <div class="section-title">📝 ${tr.printNotes}</div>
+          <div class="section-title"><AppIcon glyph="📝" /> ${tr.printNotes}</div>
           <div class="notes-box">${prescription.notes}</div>
         ` : ""}
 
@@ -481,7 +482,7 @@ function MedicationRow({ med, onChange, onRemove, lang, index }: {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: "#0863ba", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{index + 1}</div>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#0863ba" }}>💊 {tr.medications}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#0863ba" }}><AppIcon glyph="💊" /> {tr.medications}</span>
         </div>
         <button onClick={onRemove} style={{ padding: "4px 10px", background: "rgba(192,57,43,.08)", border: "1.5px solid rgba(192,57,43,.15)", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#c0392b", fontFamily: "Rubik,sans-serif" }}>
           ✕ {tr.removeMedication}
@@ -757,7 +758,7 @@ export default function PrescriptionsPage() {
         {/* ── شاشة "غير متاح في خطتك" ── */}
         {!loading && !canAccess("prescriptions", plan) && (
           <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:16 }}>
-            <div style={{ fontSize:64 }}>🔒</div>
+            <div style={{ fontSize:64 }}><AppIcon glyph="🔒" /></div>
             <h2 style={{ fontSize:22,fontWeight:800,color:"#353535" }}>
               {isAr ? "الوصفات الطبية غير متاحة في خطتك الحالية" : "Prescriptions Not Available in Your Plan"}
             </h2>
@@ -768,10 +769,10 @@ export default function PrescriptionsPage() {
             </p>
             <div style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginTop:4 }}>
               <div style={{ padding:"10px 20px",background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontSize:13,color:"#e67e22",fontWeight:600 }}>
-                ✅ {isAr?"الشاملة — فردي":"Comprehensive — Individual"}
+                <AppIcon glyph="✅" /> {isAr?"الشاملة — فردي":"Comprehensive — Individual"}
               </div>
               <div style={{ padding:"10px 20px",background:"rgba(74,20,128,.08)",border:"1.5px solid rgba(74,20,128,.2)",borderRadius:12,fontSize:13,color:"#4a1480",fontWeight:600 }}>
-                ✅ {isAr?"الشاملة — مشترك":"Comprehensive — Shared"}
+                <AppIcon glyph="✅" /> {isAr?"الشاملة — مشترك":"Comprehensive — Shared"}
               </div>
             </div>
             <a href="https://wa.me/963998285483" target="_blank" rel="noopener noreferrer"
@@ -789,7 +790,7 @@ export default function PrescriptionsPage() {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 800, color: "#1a1a2e", marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: isMobile ? 22 : 28 }}>💊</span> {tr.title}
+              <span style={{ fontSize: isMobile ? 22 : 28 }}><AppIcon glyph="💊" /></span> {tr.title}
             </h1>
             <p style={{ fontSize: 13, color: "#888", fontWeight: 400 }}>{tr.subtitle}</p>
           </div>
@@ -808,7 +809,7 @@ export default function PrescriptionsPage() {
 
         {/* Search bar */}
         <div style={{ position: "relative", marginBottom: 24, maxWidth: 480 }}>
-          <span style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [isAr ? "right" : "left"]: 14, fontSize: 16, color: "#aaa" }}>🔍</span>
+          <span style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", [isAr ? "right" : "left"]: 14, fontSize: 16, color: "#aaa" }}><AppIcon glyph="🔍" /></span>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -839,7 +840,7 @@ export default function PrescriptionsPage() {
             { icon: "💊", value: String(prescriptions.reduce((s, r) => s + r.medications.length, 0)), label: tr.medications_count, color: "#7b2d8b", bg: "rgba(123,45,139,.08)" },
           ].map((s, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", background: "#fff", borderRadius: 12, border: "1.5px solid #eef0f3", boxShadow: "0 2px 8px rgba(8,99,186,.05)" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{s.icon}</div>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}><AppIcon glyph={s.icon} /></div>
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{loading ? "—" : s.value}</div>
                 <div style={{ fontSize: 11, color: "#aaa", fontWeight: 500, marginTop: 2 }}>{s.label}</div>
@@ -852,7 +853,7 @@ export default function PrescriptionsPage() {
         {isSharedPlan(plan) && doctors.length > 0 && (
           <div style={{ background:"#fff", borderRadius:14, padding:"14px 18px", border:"1.5px solid rgba(14,138,110,.2)", boxShadow:"0 2px 8px rgba(14,138,110,.07)", marginBottom:20 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-              <span style={{ fontSize:16 }}>👨‍⚕️</span>
+              <span style={{ fontSize:16 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></span>
               <span style={{ fontSize:12, fontWeight:700, color:"#0e8a6e" }}>{isAr ? "عرض حسب الطبيب" : "Filter by Doctor"}</span>
             </div>
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
@@ -888,12 +889,12 @@ export default function PrescriptionsPage() {
         {/* Prescriptions Grid */}
         {loading ? (
           <div style={{ textAlign: "center", padding: "80px 0", color: "#ccc" }}>
-            <div style={{ fontSize: 40, marginBottom: 12, animation: "pulse 1.5s ease infinite" }}>💊</div>
+            <div style={{ fontSize: 40, marginBottom: 12, animation: "pulse 1.5s ease infinite" }}><AppIcon glyph="💊" /></div>
             <div style={{ fontSize: 14 }}>{tr.loading}</div>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>{search ? "🔍" : "💊"}</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}><AppIcon glyph={search ? "🔍" : "💊"} /></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "#888", marginBottom: 8 }}>
               {search ? tr.noSearchResults : tr.noPrescriptions}
             </div>
@@ -919,13 +920,13 @@ export default function PrescriptionsPage() {
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a2e" }}>{rx.patient_name}</div>
                         <div style={{ fontSize: 11, color: "#aaa", marginTop: 2, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                          📅 {new Date(rx.date).toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          <AppIcon glyph="📅" /> {new Date(rx.date).toLocaleDateString(lang === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
                           {/* شارة الطبيب — للخطط المشتركة فقط */}
                           {isSharedPlan(plan) && rx.doctor_id && (() => {
                             const dr = doctors.find(d => d.id === rx.doctor_id);
                             return dr ? (
                               <span style={{ fontSize:10, background:"rgba(14,138,110,.1)", color:"#0e8a6e", padding:"1px 7px", borderRadius:8, fontWeight:700 }}>
-                                👨‍⚕️ {dr.name}
+                                <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {dr.name}
                               </span>
                             ) : null;
                           })()}
@@ -938,22 +939,22 @@ export default function PrescriptionsPage() {
                           ? (doctors.find(d=>d.id===rx.doctor_id)?.name ?? doctorName)
                           : doctorName;
                         printPrescription({ ...rx, doctor_name: drName, clinic_name: clinicName }, lang, clinicName, drName);
-                      }} title={tr.printPrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(46,125,50,.08)", border: "1.5px solid rgba(46,125,50,.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🖨️</button>
-                      <button className="icon-btn" onClick={() => openEdit(rx)} title={tr.editPrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(8,99,186,.08)", border: "1.5px solid rgba(8,99,186,.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✏️</button>
-                      <button className="icon-btn" onClick={() => setDeleteConfirm(rx.id)} title={tr.deletePrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.12)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🗑️</button>
+                      }} title={tr.printPrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(46,125,50,.08)", border: "1.5px solid rgba(46,125,50,.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}><AppIcon glyph="🖨️" /></button>
+                      <button className="icon-btn" onClick={() => openEdit(rx)} title={tr.editPrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(8,99,186,.08)", border: "1.5px solid rgba(8,99,186,.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}><AppIcon glyph="✏️" /></button>
+                      <button className="icon-btn" onClick={() => setDeleteConfirm(rx.id)} title={tr.deletePrescription} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(192,57,43,.06)", border: "1.5px solid rgba(192,57,43,.12)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}><AppIcon glyph="🗑️" /></button>
                     </div>
                   </div>
 
                   {rx.diagnosis && (
                     <div style={{ background: "rgba(8,99,186,.04)", border: "1.5px solid rgba(8,99,186,.1)", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#555", lineHeight: 1.6 }}>
-                      🔍 {rx.diagnosis.length > 80 ? rx.diagnosis.slice(0, 80) + "..." : rx.diagnosis}
+                      <AppIcon glyph="🔍" /> {rx.diagnosis.length > 80 ? rx.diagnosis.slice(0, 80) + "..." : rx.diagnosis}
                     </div>
                   )}
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {rx.medications.slice(0, 3).map((med, i) => (
                       <div key={i} style={{ padding: "4px 10px", background: "#f0f7ff", border: "1.5px solid #d0e4f7", borderRadius: 20, fontSize: 11, color: "#0863ba", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                        💊 {med.name}
+                        <AppIcon glyph="💊" /> {med.name}
                       </div>
                     ))}
                     {rx.medications.length > 3 && (
@@ -985,13 +986,13 @@ export default function PrescriptionsPage() {
             {/* Modal header */}
             <div style={{ padding: "20px 24px", borderBottom: "1.5px solid #eef0f3", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #0863ba, #1a7fd4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>💊</div>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #0863ba, #1a7fd4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}><AppIcon glyph="💊" /></div>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1a2e" }}>{editingId ? tr.editPrescription : tr.addPrescription}</div>
                   <div style={{ fontSize: 11, color: "#aaa" }}>
                     {clinicName}
                     {isSharedPlan(plan) && form.doctor_id
-                      ? ` — 👨‍⚕️ ${doctors.find(d=>d.id===form.doctor_id)?.name || doctorName}`
+                      ? ` — ‍${doctors.find(d=>d.id===form.doctor_id)?.name || doctorName}`
                       : ` — ${doctorName}`}
                   </div>
                 </div>
@@ -1036,7 +1037,7 @@ export default function PrescriptionsPage() {
               {isSharedPlan(plan) && doctors.length > 0 && (
                 <div style={{ marginBottom:16, padding:"14px 16px", background:"rgba(14,138,110,.05)", border:"1.5px solid rgba(14,138,110,.2)", borderRadius:12 }}>
                   <label style={{ fontSize:12, fontWeight:700, color:"#0e8a6e", display:"block", marginBottom:8 }}>
-                    👨‍⚕️ {isAr ? "الطبيب المُصدِر للوصفة *" : "Issuing Doctor *"}
+                    <AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> {isAr ? "الطبيب المُصدِر للوصفة *" : "Issuing Doctor *"}
                   </label>
                   <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                     {doctors.map(dr => {
@@ -1055,7 +1056,7 @@ export default function PrescriptionsPage() {
                     })}
                   </div>
                   {!form.doctor_id && <div style={{ fontSize:11, color:"#c0392b", marginTop:8, fontWeight:600 }}>
-                    {isAr ? "⚠️ يرجى تحديد الطبيب المُصدِر للوصفة" : "⚠️ Please select the issuing doctor"}
+                    {isAr ? "يرجى تحديد الطبيب المُصدِر للوصفة" : "Please select the issuing doctor"}
                   </div>}
                 </div>
               )}
@@ -1076,7 +1077,7 @@ export default function PrescriptionsPage() {
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                   <label style={{ fontSize: 13, fontWeight: 700, color: "#1a1a2e", display: "flex", alignItems: "center", gap: 6 }}>
-                    💊 {tr.medications}
+                    <AppIcon glyph="💊" /> {tr.medications}
                     <span style={{ padding: "2px 8px", background: "rgba(8,99,186,.1)", borderRadius: 20, fontSize: 11, color: "#0863ba", fontWeight: 700 }}>{form.medications.length}</span>
                   </label>
                   <button onClick={addMedication} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "linear-gradient(135deg, #0863ba, #1a7fd4)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: "Rubik,sans-serif" }}>
@@ -1086,7 +1087,7 @@ export default function PrescriptionsPage() {
 
                 {form.medications.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "24px", background: "#f7f9fc", borderRadius: 12, border: "1.5px dashed #dde3ed", color: "#bbb", fontSize: 13 }}>
-                    💊 {tr.noMedications}
+                    <AppIcon glyph="💊" /> {tr.noMedications}
                   </div>
                 ) : (
                   form.medications.map((med, i) => (
@@ -1151,7 +1152,7 @@ export default function PrescriptionsPage() {
           direction: isAr ? "rtl" : "ltr",
         }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "min(400px, 90vw)", boxShadow: "0 24px 80px rgba(0,0,0,.2)", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🗑️</div>
+            <div style={{ fontSize: 40, marginBottom: 16 }}><AppIcon glyph="🗑️" /></div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a2e", marginBottom: 8 }}>{tr.deletePrescription}</div>
             <div style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>{tr.confirmDelete}</div>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
@@ -1159,7 +1160,7 @@ export default function PrescriptionsPage() {
                 {tr.cancel}
               </button>
               <button onClick={() => deletePrescription(deleteConfirm)} style={{ padding: "10px 24px", background: "#c0392b", border: "none", borderRadius: 10, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "Rubik,sans-serif" }}>
-                🗑️ {tr.deletePrescription}
+                <AppIcon glyph="🗑️" /> {tr.deletePrescription}
               </button>
             </div>
           </div>

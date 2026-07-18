@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import SharedSidebar from "@/components/SharedSidebar";
@@ -45,7 +46,7 @@ const T = {
   ar: {
     title: "شاشة الانتظار", sub: "تحكّم بدور المرضى داخل العيادة",
     current: "المريض الحالي", noCurrent: "لا يوجد مريض قيد الاستقبال الآن",
-    callNext: "📞 استدعاء التالي", finish: "✅ إنهاء وخروج",
+    callNext: "استدعاء التالي", finish: "إنهاء وخروج",
     queue: "قائمة الانتظار", empty: "لا يوجد مرضى بقائمة الانتظار",
     call: "استدعاء", skip: "تخطي", recall: "إرجاع للقائمة",
     doneSection: "تم اليوم", skippedSection: "لم يحضروا",
@@ -58,7 +59,7 @@ const T = {
   en: {
     title: "Waiting Room", sub: "Control the patient queue inside your clinic",
     current: "Current Patient", noCurrent: "No patient is being served right now",
-    callNext: "📞 Call Next", finish: "✅ Finish & Checkout",
+    callNext: "Call Next", finish: "Finish & Checkout",
     queue: "Waiting Queue", empty: "No patients waiting",
     call: "Call", skip: "Skip", recall: "Back to queue",
     doneSection: "Done Today", skippedSection: "No-shows",
@@ -207,7 +208,7 @@ export default function WaitingRoomPage() {
 
           {/* رابط شاشة العرض */}
           <div style={{ ...card, marginBottom:20, background:"linear-gradient(135deg,rgba(8,99,186,.05),rgba(8,99,186,.02))", borderColor:"rgba(8,99,186,.15)" }}>
-            <div style={{ fontSize:13, fontWeight:700, color:"#0863ba", marginBottom:6 }}>🖥️ {tr.displayLink}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#0863ba", marginBottom:6 }}><AppIcon glyph="🖥️" /> {tr.displayLink}</div>
             <div style={{ fontSize:12, color:"#888", marginBottom:12, lineHeight:1.6 }}>{tr.displayHint}</div>
             <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
               <code style={{ flex:1, minWidth:220, background:"#fff", border:"1.5px solid #d0e4f7", borderRadius:8, padding:"9px 12px", fontSize:12.5, color:"#353535", overflowX:"auto", whiteSpace:"nowrap" }}>{displayUrl || "..."}</code>
@@ -237,7 +238,7 @@ export default function WaitingRoomPage() {
                 <div style={{ fontSize:12, fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:.5, marginBottom:14 }}>{tr.current}</div>
                 {current ? (
                   <div>
-                    <div style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:11, fontWeight:700, color:"#2e7d32", background:"rgba(46,125,50,.1)", borderRadius:20, padding:"4px 12px", marginBottom:12 }}>🟢 {isAr?"جارٍ الآن":"In Progress"}</div>
+                    <div style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:11, fontWeight:700, color:"#2e7d32", background:"rgba(46,125,50,.1)", borderRadius:20, padding:"4px 12px", marginBottom:12 }}><AppIcon glyph="🟢" /> {isAr?"جارٍ الآن":"In Progress"}</div>
                     <div style={{ fontSize:22, fontWeight:800, color:"#353535", marginBottom:6 }}>{getPatientName(current.patient_id)}</div>
                     <div style={{ fontSize:14, color:"#888", marginBottom:4 }}>{fmt12(current.time, isAr)}</div>
                     {shared && current.doctor_id && (
@@ -280,7 +281,7 @@ export default function WaitingRoomPage() {
                 {(doneList.length > 0 || skippedList.length > 0) && (
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
                     <div style={card}>
-                      <div style={{ fontSize:11.5, fontWeight:700, color:"#2e7d32", marginBottom:10 }}>✅ {tr.doneSection} ({doneList.length})</div>
+                      <div style={{ fontSize:11.5, fontWeight:700, color:"#2e7d32", marginBottom:10 }}><AppIcon glyph="✅" /> {tr.doneSection} ({doneList.length})</div>
                       <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:180, overflowY:"auto" }}>
                         {doneList.map(a => (
                           <div key={a.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12.5, color:"#666", padding:"6px 0", borderBottom:"1px solid #f4f6f9" }}>

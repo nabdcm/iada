@@ -1,4 +1,5 @@
 "use client";
+import AppIcon from "@/components/AppIcon";
 // ============================================================
 // PushNotifications.tsx — مكوّن طلب إذن الإشعارات
 // ============================================================
@@ -102,7 +103,7 @@ export default function PushNotifications({ userId, lang = "ar" }: PushNotificat
   if (permission === "denied") return (
     <div style={{ fontSize:12, color:"#aaa", padding:"8px 12px", background:"#fafafa",
       border:"1px solid #f0f0f0", borderRadius:8, display:"flex", alignItems:"center", gap:6 }}>
-      <span>🔕</span>
+      <span><AppIcon glyph="🔕" /></span>
       <span>{isAr ? "الإشعارات مرفوضة — فعّلها من إعدادات المتصفح" : "Notifications blocked — enable in browser settings"}</span>
     </div>
   );
@@ -122,7 +123,7 @@ export default function PushNotifications({ userId, lang = "ar" }: PushNotificat
         opacity: loading ? 0.7 : 1,
       }}
     >
-      <span style={{ fontSize:16 }}>{subscribed ? "🔔" : "🔕"}</span>
+      <span style={{ fontSize:16, display:"flex" }}><AppIcon glyph={subscribed ? "🔔" : "🔕"} /></span>
       <span>
         {loading
           ? (isAr ? "جارٍ..." : "Loading...")

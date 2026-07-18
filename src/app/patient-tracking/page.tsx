@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 // ============================================================
 // NABD - نبض | Patient Tracking — clinic_type تلقائي من الأدمن
 // التغيير الجذري: لا يختار الطبيب نوع العيادة يدوياً
@@ -171,13 +172,13 @@ function CreateLinkModal({lang,patients,doctorName,clinicName,userId,clinicTrack
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:200,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px",overflowY:"auto"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:"#fff",borderRadius:18,padding:"20px",width:"100%",maxWidth:460,boxShadow:"0 20px 60px rgba(0,0,0,.2)",direction:isAr?"rtl":"ltr",fontFamily:"Rubik,sans-serif",marginTop:"auto",marginBottom:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-          <div style={{fontSize:17,fontWeight:800,color:"#353535"}}>🔗 {isAr?"إنشاء رابط متابعة":"Create Tracking Link"}</div>
+          <div style={{fontSize:17,fontWeight:800,color:"#353535"}}><AppIcon glyph="🔗" /> {isAr?"إنشاء رابط متابعة":"Create Tracking Link"}</div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#aaa",lineHeight:1}}>×</button>
         </div>
         <div style={{marginBottom:14,padding:"12px 16px",background:am.color+"10",border:"1.5px solid "+am.color+"30",borderRadius:12,display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:22}}>{am.icon}</span>
+          <span style={{fontSize:22}}><AppIcon glyph={am.icon} /></span>
           <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:am.color}}>{isAr?am.ar:am.en}</div><div style={{fontSize:11,color:"#aaa"}}>{isAr?"نوع العيادة — محدد تلقائياً":"Clinic type — auto-set"}</div></div>
-          <div style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:12,background:tm.color+"12",border:"1px solid "+tm.color+"25"}}><span style={{fontSize:14}}>{tm.icon}</span><span style={{fontSize:11,fontWeight:600,color:tm.color}}>{isAr?tm.ar:tm.en}</span></div>
+          <div style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:12,background:tm.color+"12",border:"1px solid "+tm.color+"25"}}><span style={{fontSize:14}}><AppIcon glyph={tm.icon} /></span><span style={{fontSize:11,fontWeight:600,color:tm.color}}>{isAr?tm.ar:tm.en}</span></div>
         </div>
         <div style={{marginBottom:14,position:"relative"}}>
           <label style={{fontSize:12,fontWeight:600,color:"#888",display:"block",marginBottom:6}}>{isAr?"المريض *":"Patient *"}</label>
@@ -201,7 +202,7 @@ function CreateLinkModal({lang,patients,doctorName,clinicName,userId,clinicTrack
                   style={{...IS,paddingRight:isAr?"36px":"14px",paddingLeft:isAr?"14px":"36px"}}
                   autoComplete="off"
                 />
-                <span style={{position:"absolute",top:"50%",transform:"translateY(-50%)",right:isAr?"12px":undefined,left:isAr?undefined:"12px",color:"#aaa",fontSize:15,pointerEvents:"none"}}>🔍</span>
+                <span style={{position:"absolute",top:"50%",transform:"translateY(-50%)",right:isAr?"12px":undefined,left:isAr?undefined:"12px",color:"#aaa",fontSize:15,pointerEvents:"none"}}><AppIcon glyph="🔍" /></span>
               </div>
               {showPatDrop&&(
                 <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid #eef0f3",borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,.1)",zIndex:100,maxHeight:220,overflowY:"auto",marginTop:4}}>
@@ -268,7 +269,7 @@ function LogDetailModal({log,lang,patientName,clinicTrackingType,onClose,onSaveC
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto"}}>
       <div style={{background:"#fff",borderRadius:18,padding:28,width:"100%",maxWidth:520,boxShadow:"0 20px 60px rgba(0,0,0,.2)",direction:isAr?"rtl":"ltr",fontFamily:"Rubik,sans-serif",maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}><div><div style={{fontSize:16,fontWeight:800,color:"#353535"}}>{patientName}</div><div style={{fontSize:12,color:"#aaa",marginTop:2}}>{log.log_date}</div></div><button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#aaa",lineHeight:1}}>×</button></div>
-        <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:cfg.color+"12",border:"1px solid "+cfg.color+"25",marginBottom:16}}><span style={{fontSize:13}}>{cfg.icon}</span><span style={{fontSize:11,fontWeight:600,color:cfg.color}}>{isAr?cfg.ar:cfg.en}</span></div>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:cfg.color+"12",border:"1px solid "+cfg.color+"25",marginBottom:16}}><span style={{fontSize:13}}><AppIcon glyph={cfg.icon} /></span><span style={{fontSize:11,fontWeight:600,color:cfg.color}}>{isAr?cfg.ar:cfg.en}</span></div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
           {Object.entries(log.fields??{}).map(([k,v])=>{
             const lbl=FIELD_LABELS[k];const isBool=typeof v==="boolean";const isP=isBool&&v===true;const isN=isBool&&v===false;
@@ -342,7 +343,7 @@ export default function PatientTrackingPage() {
 
   const handleCreated=(l:TrackingLink)=>{setLinks(p=>[l,...p]);setShowCreate(false);setTab("links");};
   const copyLink=(tok:string)=>{navigator.clipboard.writeText(window.location.origin+"/daily-log/"+tok);setCopiedTok(tok);setTimeout(()=>setCopiedTok(null),2500);};
-  const shareWA=(tok:string,name:string)=>{const u=window.location.origin+"/daily-log/"+tok;const tx=isAr?"مرحباً "+name+" 👋\nرابط متابعتك اليومية من "+clinicName+":\n"+u:"Hello "+name+" 👋\nYour daily tracking link from "+clinicName+":\n"+u;window.open("https://wa.me/?text="+encodeURIComponent(tx),"_blank");};
+  const shareWA=(tok:string,name:string)=>{const u=window.location.origin+"/daily-log/"+tok;const tx=isAr?"مرحباً "+name+" \nرابط متابعتك اليومية من "+clinicName+":\n"+u:"Hello "+name+" \nYour daily tracking link from "+clinicName+":\n"+u;window.open("https://wa.me/?text="+encodeURIComponent(tx),"_blank");};
   const toggleActive=async(id:string,cur:boolean)=>{await supabase.from("tracking_links").update({active:!cur}).eq("id",id);setLinks(p=>p.map(l=>l.id===id?{...l,active:!cur}:l));};
   const saveComment=(id:string,c:string)=>{setDailyLogs(p=>p.map(l=>l.id===id?{...l,doctor_comment:c}:l));setSelLog(p=>p?{...p,doctor_comment:c}:p);};
 
@@ -358,12 +359,12 @@ export default function PatientTrackingPage() {
       <div className="pt-root">
         <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="tracking" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
         <main className="mpt" style={{[isAr?"marginRight":"marginLeft"]:sidebarWidth,padding:"32px 28px",minHeight:"100vh"}}>
-          {loading&&<div style={{textAlign:"center",padding:"80px 0"}}><div style={{fontSize:36,marginBottom:12}} className="pls">📊</div><div style={{fontSize:13,color:"#aaa"}}>{isAr?"جاري التحميل...":"Loading..."}</div></div>}
+          {loading&&<div style={{textAlign:"center",padding:"80px 0"}}><div style={{fontSize:36,marginBottom:12}} className="pls"><AppIcon glyph="📊" /></div><div style={{fontSize:13,color:"#aaa"}}>{isAr?"جاري التحميل...":"Loading..."}</div></div>}
 
           {/* ── شاشة "غير متاح في خطتك" للأساسية ── */}
           {!loading&&!canAccess("tracking",plan)&&(
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",textAlign:"center",gap:16}}>
-              <div style={{fontSize:64}}>🔒</div>
+              <div style={{fontSize:64}}><AppIcon glyph="🔒" /></div>
               <h2 style={{fontSize:22,fontWeight:800,color:"#353535"}}>
                 {isAr?"متابعة المرضى غير متاحة في خطتك الحالية":"Patient Tracking Not Available in Your Plan"}
               </h2>
@@ -374,10 +375,10 @@ export default function PatientTrackingPage() {
               </p>
               <div style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",marginTop:4}}>
                 <div style={{padding:"10px 20px",background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",borderRadius:12,fontSize:13,color:"#e67e22",fontWeight:600}}>
-                  ✅ {isAr?"الشاملة — فردي":"Comprehensive — Individual"}
+                  <AppIcon glyph="✅" /> {isAr?"الشاملة — فردي":"Comprehensive — Individual"}
                 </div>
                 <div style={{padding:"10px 20px",background:"rgba(74,20,128,.08)",border:"1.5px solid rgba(74,20,128,.2)",borderRadius:12,fontSize:13,color:"#4a1480",fontWeight:600}}>
-                  ✅ {isAr?"الشاملة — مشترك":"Comprehensive — Shared"}
+                  <AppIcon glyph="✅" /> {isAr?"الشاملة — مشترك":"Comprehensive — Shared"}
                 </div>
               </div>
               <a href="https://wa.me/963998285483" target="_blank" rel="noopener noreferrer"
@@ -392,7 +393,7 @@ export default function PatientTrackingPage() {
             <div className="fu" style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
               <div>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-                  <h1 style={{fontSize:24,fontWeight:800,color:"#353535"}}>{isAr?"📊 متابعة المرضى":"📊 Patient Tracking"}</h1>
+                  <h1 style={{fontSize:24,fontWeight:800,color:"#353535"}}>{isAr?"متابعة المرضى":"Patient Tracking"}</h1>
                   <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 12px",borderRadius:20,background:am.color+"15",border:"1.5px solid "+am.color+"30",fontSize:12,fontWeight:700,color:am.color}}>{am.icon} {isAr?am.ar:am.en}</span>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#888"}}>
@@ -403,14 +404,14 @@ export default function PatientTrackingPage() {
                 </div>
               </div>
               <button onClick={()=>setShowCreate(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"11px 20px",borderRadius:12,border:"none",background:"#0863ba",color:"#fff",fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.3)"}}>
-                <span style={{fontSize:16}}>🔗</span>{isAr?"إنشاء رابط متابعة":"Create Tracking Link"}
+                <span style={{fontSize:16}}><AppIcon glyph="🔗" /></span>{isAr?"إنشاء رابط متابعة":"Create Tracking Link"}
               </button>
             </div>
             <div className="fu" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,marginBottom:26}}>
               {[{icon:"📋",l:isAr?"تقارير اليوم":"Today's Reports",v:todayN,c:"#0863ba"},{icon:"🔗",l:isAr?"روابط نشطة":"Active Links",v:actN,c:"#2e7d32"},{icon:"⚠️",l:isAr?"لم يسجّلوا":"Not Logged",v:Math.max(actN-todayN,0),c:"#e67e22"},{icon:"📝",l:isAr?"إجمالي التقارير":"Total Reports",v:dailyLogs.length,c:"#8e44ad"}].map((s,i)=>(
                 <div key={i} style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1.5px solid #eef0f3",boxShadow:"0 2px 12px rgba(8,99,186,.05)",position:"relative",overflow:"hidden"}}>
                   <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c,borderRadius:"14px 14px 0 0"}}/>
-                  <div style={{fontSize:22,marginBottom:8}}>{s.icon}</div>
+                  <div style={{fontSize:22,marginBottom:8}}><AppIcon glyph={s.icon} /></div>
                   <div style={{fontSize:26,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
                   <div style={{fontSize:12,color:"#888",fontWeight:500}}>{s.l}</div>
                 </div>
@@ -429,7 +430,7 @@ export default function PatientTrackingPage() {
                 </select>
                 {(filterDate||selLink!=="all")&&<button onClick={()=>{setFilterDate("");setSelLink("all");}} style={{padding:"8px 14px",borderRadius:10,border:"1.5px solid rgba(192,57,43,.2)",background:"rgba(192,57,43,.06)",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,color:"#c0392b",cursor:"pointer"}}>{isAr?"مسح":"Clear"}</button>}
               </div>
-              {filtLogs.length===0?<div style={{textAlign:"center",padding:"60px 0",background:"#fff",borderRadius:14,border:"1.5px solid #eef0f3"}}><div style={{fontSize:36,marginBottom:12}}>📭</div><div style={{fontSize:14,fontWeight:700,color:"#888"}}>{isAr?"لا توجد تقارير":"No reports"}</div></div>:filtLogs.map((log,idx)=>{
+              {filtLogs.length===0?<div style={{textAlign:"center",padding:"60px 0",background:"#fff",borderRadius:14,border:"1.5px solid #eef0f3"}}><div style={{fontSize:36,marginBottom:12}}><AppIcon glyph="📭" /></div><div style={{fontSize:14,fontWeight:700,color:"#888"}}>{isAr?"لا توجد تقارير":"No reports"}</div></div>:filtLogs.map((log,idx)=>{
                 const lnk=links.find(l=>l.token===log.token);
                 const cfg=CLINIC_LABELS[log.clinic_type]??CLINIC_LABELS[trackType]??CLINIC_LABELS.general;
                 return <div key={log.id} className="log-row fu" style={{animationDelay:idx*0.05+"s"}} onClick={()=>setSelLog(log)}>
@@ -438,8 +439,8 @@ export default function PatientTrackingPage() {
                     <div style={{fontSize:14,fontWeight:700,color:"#353535",marginBottom:2}}>{lnk?.patient_name??"—"}</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:cfg.color+"12",color:cfg.color,fontWeight:600}}>{cfg.icon} {isAr?cfg.ar:cfg.en}</span>
-                      <span style={{fontSize:11,color:"#aaa"}}>📅 {log.log_date}</span>
-                      {log.doctor_comment&&<span style={{fontSize:11,color:"#2e7d32",fontWeight:600}}>💬 {isAr?"مُعلَّق":"Commented"}</span>}
+                      <span style={{fontSize:11,color:"#aaa"}}><AppIcon glyph="📅" /> {log.log_date}</span>
+                      {log.doctor_comment&&<span style={{fontSize:11,color:"#2e7d32",fontWeight:600}}><AppIcon glyph="💬" /> {isAr?"مُعلَّق":"Commented"}</span>}
                     </div>
                   </div>
                   <div style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"flex-end"}}>
@@ -450,7 +451,7 @@ export default function PatientTrackingPage() {
               })}
             </div>)}
             {tab==="links"&&(<div className="fu">
-              {links.length===0?<div style={{textAlign:"center",padding:"60px 20px",background:"#fff",borderRadius:14,border:"1.5px solid #eef0f3"}}><div style={{fontSize:36,marginBottom:12}}>🔗</div><div style={{fontSize:14,fontWeight:700,color:"#888",marginBottom:8}}>{isAr?"لا توجد روابط بعد":"No links yet"}</div><div style={{fontSize:12,color:"#bbb"}}>{isAr?"أنشئ رابطاً لمريضك للبدء":"Create a link to get started"}</div></div>:links.map((link,idx)=>{
+              {links.length===0?<div style={{textAlign:"center",padding:"60px 20px",background:"#fff",borderRadius:14,border:"1.5px solid #eef0f3"}}><div style={{fontSize:36,marginBottom:12}}><AppIcon glyph="🔗" /></div><div style={{fontSize:14,fontWeight:700,color:"#888",marginBottom:8}}>{isAr?"لا توجد روابط بعد":"No links yet"}</div><div style={{fontSize:12,color:"#bbb"}}>{isAr?"أنشئ رابطاً لمريضك للبدء":"Create a link to get started"}</div></div>:links.map((link,idx)=>{
                 const cfg=CLINIC_LABELS[link.clinic_type]??CLINIC_LABELS[trackType]??CLINIC_LABELS.general;
                 const lc=dailyLogs.filter(l=>l.token===link.token).length;
                 const last=dailyLogs.find(l=>l.token===link.token);
@@ -468,7 +469,7 @@ export default function PatientTrackingPage() {
                       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                         <span style={{fontSize:11,color:"#aaa"}}>{isAr?"تقارير:":"Reports:"} <b style={{color:"#0863ba"}}>{lc}</b></span>
                         {last&&<span style={{fontSize:11,color:"#aaa"}}>{isAr?"آخر:":"Last:"} <b style={{color:"#353535"}}>{last.log_date}</b></span>}
-                        {!loggedT&&link.active&&<span style={{fontSize:11,color:"#e67e22",fontWeight:600}}>⚠️ {isAr?"لم يسجّل اليوم":"Not logged today"}</span>}
+                        {!loggedT&&link.active&&<span style={{fontSize:11,color:"#e67e22",fontWeight:600}}><AppIcon glyph="⚠️" /> {isAr?"لم يسجّل اليوم":"Not logged today"}</span>}
                         {loggedT&&<span style={{fontSize:11,color:"#2e7d32",fontWeight:600}}>✓ {isAr?"سجّل اليوم":"Logged today"}</span>}
                       </div>
                     </div>

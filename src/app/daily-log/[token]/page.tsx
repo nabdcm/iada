@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 // ============================================================
 // NABD - نبض | Daily Log Page — Patient Self-Reporting
 // Route: /daily-log/[token]
@@ -452,14 +453,14 @@ export default function DailyLogPage() {
                 fontWeight: 600, cursor: "pointer", color: "#666"
               }}
             >
-              🌐 {isAr ? "English" : "العربية"}
+              <AppIcon glyph="🌐" /> {isAr ? "English" : "العربية"}
             </button>
           </div>
 
           {/* Loading */}
           {loading && (
             <div style={{ textAlign: "center", padding: "80px 0" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }} className="pulse">💊</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }} className="pulse"><AppIcon glyph="💊" /></div>
               <div style={{ fontSize: 14, color: "#aaa" }}>
                 {isAr ? "جاري التحميل..." : "Loading..."}
               </div>
@@ -472,7 +473,7 @@ export default function DailyLogPage() {
               textAlign: "center", padding: "60px 20px",
               background: "#fff", borderRadius: 16, border: "1.5px solid #eef0f3"
             }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }}><AppIcon glyph="⚠️" /></div>
               <div style={{ fontSize: 16, fontWeight: 700, color: "#c0392b", marginBottom: 8 }}>
                 {isAr ? "خطأ" : "Error"}
               </div>
@@ -486,7 +487,7 @@ export default function DailyLogPage() {
               textAlign: "center", padding: "60px 20px",
               background: "#fff", borderRadius: 16, border: "1.5px solid #eef0f3"
             }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+              <div style={{ fontSize: 48, marginBottom: 16 }}><AppIcon glyph="✅" /></div>
               <div style={{ fontSize: 18, fontWeight: 700, color: "#2e7d32", marginBottom: 8 }}>
                 {isAr ? "تم التسجيل اليوم" : "Already Submitted Today"}
               </div>
@@ -504,7 +505,7 @@ export default function DailyLogPage() {
               textAlign: "center", padding: "60px 20px",
               background: "#fff", borderRadius: 16, border: "1.5px solid #eef0f3"
             }}>
-              <div style={{ fontSize: 64, marginBottom: 16 }} className="success-pop">🎉</div>
+              <div style={{ fontSize: 64, marginBottom: 16 }} className="success-pop"><AppIcon glyph="🎉" /></div>
               <div style={{ fontSize: 20, fontWeight: 800, color: "#2e7d32", marginBottom: 10 }}>
                 {isAr ? "شكراً لك!" : "Thank You!"}
               </div>
@@ -518,7 +519,7 @@ export default function DailyLogPage() {
                 borderRadius: 10, border: "1px solid rgba(46,125,50,.15)"
               }}>
                 <div style={{ fontSize: 12, color: "#2e7d32", fontWeight: 600 }}>
-                  {isAr ? `📅 تاريخ التسجيل: ${todayISO()}` : `📅 Submitted for: ${todayISO()}`}
+                  {isAr ? `تاريخ التسجيل: ${todayISO()}` : `Submitted for: ${todayISO()}`}
                 </div>
               </div>
             </div>
@@ -546,7 +547,7 @@ export default function DailyLogPage() {
                   background: `${config.color}10`, border: `1.5px solid ${config.color}25`,
                   marginBottom: 14
                 }}>
-                  <span style={{ fontSize: 24 }}>{config.icon}</span>
+                  <span style={{ fontSize: 24 }}><AppIcon glyph={config.icon} /></span>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: config.color }}>
                       {isAr ? config.label_ar : config.label_en}
@@ -572,7 +573,7 @@ export default function DailyLogPage() {
                     borderRadius: 10, border: "1px solid rgba(8,99,186,.1)",
                     fontSize: 13, color: "#0863ba", lineHeight: 1.5
                   }}>
-                    💬 {trackingLink.notes_for_patient}
+                    <AppIcon glyph="💬" /> {trackingLink.notes_for_patient}
                   </div>
                 )}
               </div>
@@ -580,7 +581,7 @@ export default function DailyLogPage() {
               {/* Fields */}
               <div style={{ marginBottom: 4 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#aaa", marginBottom: 10, letterSpacing: 0.5 }}>
-                  {isAr ? "📋 أجب على الأسئلة التالية:" : "📋 Please answer the following:"}
+                  {isAr ? "أجب على الأسئلة التالية:" : "Please answer the following:"}
                 </div>
                 {activeFields.map((field, idx) => (
                   <div

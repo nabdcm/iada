@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useCallback } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
@@ -396,7 +397,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
 
   if (!doctors.length) return (
     <div style={{ textAlign:"center", padding:"60px 20px", color:"#aaa" }}>
-      <div style={{ fontSize:48, marginBottom:12 }}>👨‍⚕️</div>
+      <div style={{ fontSize:48, marginBottom:12 }}><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /></div>
       <div style={{ fontSize:15, fontWeight:600 }}>{s.noDoctors}</div>
     </div>
   );
@@ -484,7 +485,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
           {/* أيام الأسبوع */}
           <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #f0f2f5",padding:20,marginBottom:16,boxShadow:"0 2px 12px rgba(0,0,0,.04)" }}>
             <div style={{ fontSize:13,fontWeight:700,color:"#555",marginBottom:14,display:"flex",alignItems:"center",gap:6 }}>
-              <span>🗓</span> {s.workingDays}
+              <span><AppIcon glyph="🗓" /></span> {s.workingDays}
             </div>
             <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
               {[0,1,2,3,4,5,6].map(dayIdx => {
@@ -541,7 +542,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
                       <div style={{ display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,paddingInlineStart:54 }}>
                         {day.break_start ? (
                           <>
-                            <span style={{ fontSize:12,color:"#aaa" }}>☕ {s.breakTime}</span>
+                            <span style={{ fontSize:12,color:"#aaa" }}><AppIcon glyph="☕" /> {s.breakTime}</span>
                             <input type="time" value={day.break_start} onChange={e => updateDay(doc.id,dayIdx,{break_start:e.target.value})} style={timeInputSt}/>
                             <span style={{ fontSize:12,color:"#aaa" }}>-</span>
                             <input type="time" value={day.break_end??""} onChange={e => updateDay(doc.id,dayIdx,{break_end:e.target.value})} style={timeInputSt}/>
@@ -577,7 +578,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
             </div>
             {/* الحد الأقصى */}
             <div style={{ background:"#fff",borderRadius:14,border:"1.5px solid #f0f2f5",padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.03)" }}>
-              <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>📋 {s.maxDaily}</div>
+              <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}><AppIcon glyph="📋" /> {s.maxDaily}</div>
               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                 <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} min={1} max={100}
                   value={sch.max_daily_appointments}
@@ -591,7 +592,7 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
 
           {/* ملاحظات */}
           <div style={{ background:"#fff",borderRadius:14,border:"1.5px solid #f0f2f5",padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.03)" }}>
-            <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>📝 {s.notes}</div>
+            <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}><AppIcon glyph="📝" /> {s.notes}</div>
             <textarea
               value={sch.notes}
               onChange={e => updateSchedule(doc.id, s2 => ({...s2, notes:e.target.value}))}
@@ -731,7 +732,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
                   <div style={{ fontSize:13,fontWeight:700,color:isSelected?color:"#353535",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{d.name}</div>
                   {vacCount > 0 && (
                     <div style={{ fontSize:10,color:"#e67e22",fontWeight:700,marginTop:1 }}>
-                      🏖 {vacCount} {isAr?"إجازة":"vacation(s)"}
+                      <AppIcon glyph="🏖" /> {vacCount} {isAr?"إجازة":"vacation(s)"}
                     </div>
                   )}
                 </div>
@@ -747,7 +748,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
           {/* إضافة إجازة */}
           <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #f0f2f5",padding:20,marginBottom:16,boxShadow:"0 2px 12px rgba(0,0,0,.04)" }}>
             <div style={{ fontSize:13,fontWeight:700,color:"#555",marginBottom:14,display:"flex",alignItems:"center",gap:6 }}>
-              <span>➕</span> {v.addVacation}
+              <span><AppIcon glyph="➕" /></span> {v.addVacation}
             </div>
             <div style={{ display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end" }}>
               <div style={{ flex:"0 0 160px" }}>
@@ -768,7 +769,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
           {/* الإجازات القادمة */}
           <div style={{ background:"#fff",borderRadius:16,border:"1.5px solid #f0f2f5",padding:20,marginBottom:12,boxShadow:"0 2px 8px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize:13,fontWeight:700,color:"#555",marginBottom:12,display:"flex",alignItems:"center",gap:6 }}>
-              📅 {v.upcoming} ({upcomingVacations.length})
+              <AppIcon glyph="📅" /> {v.upcoming} ({upcomingVacations.length})
             </div>
             {upcomingVacations.length === 0 ? (
               <div style={{ textAlign:"center",padding:"24px",color:"#ccc",fontSize:13 }}>{v.noVacations}</div>
@@ -777,7 +778,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
                 {upcomingVacations.map(dateStr => (
                   <div key={dateStr} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"rgba(230,126,34,.05)",border:"1.5px solid rgba(230,126,34,.15)",borderRadius:10 }}>
                     <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                      <span style={{ fontSize:18 }}>🏖</span>
+                      <span style={{ fontSize:18 }}><AppIcon glyph="🏖" /></span>
                       <div>
                         <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>{formatDate(dateStr)}</div>
                         {dateStr === todayStr && <div style={{ fontSize:11,color:"#e67e22",fontWeight:600 }}>{v.today}</div>}
@@ -894,7 +895,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
     <div style={{ maxWidth: isMobile ? "100%" : 600 }}>
       {/* اسم العيادة */}
       <div style={cardSt}>
-        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}>🏥 {s.clinicName}</div>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}><AppIcon glyph="🏥" /> {s.clinicName}</div>
         <input type="text" value={clinicName} onChange={e => setClinicName(e.target.value)} placeholder={s.clinicNamePh} style={inputSt}/>
       </div>
 
@@ -902,7 +903,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       <div style={cardSt}>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
           <div>
-            <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}>🌙 {s.is24h}</div>
+            <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}><AppIcon glyph="🌙" /> {s.is24h}</div>
             <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{s.is24hSub}</div>
           </div>
           <button onClick={() => setIs24h(v => !v)}
@@ -926,7 +927,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
 
       {/* أيام العطلة */}
       <div style={cardSt}>
-        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:12 }}>🏖 {s.weekendDays}</div>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:12 }}><AppIcon glyph="🏖" /> {s.weekendDays}</div>
         <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
           {tr.weekDaysShort.map((day, idx) => {
             const isW = weekendDays.includes(idx);
@@ -1143,7 +1144,7 @@ function PlansTab({ lang, userId, isMobile }: { lang: Lang; userId: string; isMo
       {/* رابط المشاركة */}
       <div style={{ ...cardSt, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 6 }}>🔗 {tx.shareLink}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 6 }}><AppIcon glyph="🔗" /> {tx.shareLink}</div>
           <div style={{ fontSize: 13, color: "#0863ba", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 380 }}>{shareUrl}</div>
         </div>
         <button onClick={copyLink} style={{ padding: "10px 18px", background: copied ? "#2e7d32" : "#0863ba", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "Rubik,sans-serif", flexShrink: 0 }}>
@@ -1212,7 +1213,7 @@ function PlansTab({ lang, userId, isMobile }: { lang: Lang; userId: string; isMo
             {(["link", "whatsapp"] as const).map(pt => (
               <button key={pt} onClick={() => setEditing({ ...editing, payment_type: pt })}
                 style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1.5px solid ${editing.payment_type === pt ? "#0863ba" : "#eee"}`, background: editing.payment_type === pt ? "rgba(8,99,186,.08)" : "#fafbfc", color: editing.payment_type === pt ? "#0863ba" : "#888", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Rubik,sans-serif" }}>
-                {pt === "link" ? `🔗 ${tx.paymentLink}` : `💬 ${tx.paymentWhatsapp}`}
+                {pt === "link" ? `${tx.paymentLink}` : `${tx.paymentWhatsapp}`}
               </button>
             ))}
           </div>
@@ -1251,7 +1252,7 @@ function PlansTab({ lang, userId, isMobile }: { lang: Lang; userId: string; isMo
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: "#353535", display: "flex", alignItems: "center", gap: 8 }}>
                 {p.title}
-                {p.is_featured && <span style={{ fontSize: 10, background: "#0863ba", color: "#fff", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>⭐</span>}
+                {p.is_featured && <span style={{ fontSize: 10, background: "#0863ba", color: "#fff", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}><AppIcon glyph="⭐" /></span>}
                 {!p.is_active && <span style={{ fontSize: 10, background: "#eee", color: "#999", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>{isAr ? "غير مفعّلة" : "Inactive"}</span>}
               </div>
               <div style={{ fontSize: 12.5, color: "#999", marginTop: 3 }}>{p.price} {p.currency} · {p.features.length} {isAr ? "ميزة" : "features"}</div>
@@ -1412,13 +1413,13 @@ export default function ClinicManagementPage() {
           {/* إحصائيات سريعة */}
           <div style={{ display:"grid",gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:24,animation:"fadeUp .4s ease" }}>
             {[
-              { icon:"👨‍⚕️", label:tr.stats.totalDoctors,   value:doctors.length,   color:"#0863ba" },
+              { icon:"‍", label:tr.stats.totalDoctors,   value:doctors.length,   color:"#0863ba" },
               { icon:"✅", label:tr.stats.workingToday,  value:workingToday,     color:"#2e7d32" },
               { icon:"🏖", label:tr.stats.onVacation,    value:onVacation,       color:"#e67e22" },
               { icon:"⏱", label:tr.stats.avgDuration,   value:`${avgDuration} ${tr.schedule.minutes}`, color:"#7b2d8b" },
             ].map((stat, i) => (
               <div key={i} style={{ background:"#fff",borderRadius:14,border:"1.5px solid #f0f2f5",padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.04)",display:"flex",alignItems:"center",gap:12 }}>
-                <div style={{ width:42,height:42,borderRadius:12,background:`${stat.color}10`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>{stat.icon}</div>
+                <div style={{ width:42,height:42,borderRadius:12,background:`${stat.color}10`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}><AppIcon glyph={stat.icon} /></div>
                 <div>
                   <div style={{ fontSize:11,color:"#aaa",fontWeight:600 }}>{stat.label}</div>
                   <div style={{ fontSize:22,fontWeight:800,color:stat.color,lineHeight:1.1,marginTop:2 }}>{stat.value}</div>
@@ -1435,7 +1436,7 @@ export default function ClinicManagementPage() {
                 <button key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   style={{ padding:"16px 20px",background:"none",border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:activeTab===tab.key?700:500,color:activeTab===tab.key?"#0863ba":"#888",borderBottom:`2.5px solid ${activeTab===tab.key?"#0863ba":"transparent"}`,marginBottom:-2,whiteSpace:"nowrap",transition:"all .15s",display:"flex",alignItems:"center",gap:6 }}>
-                  <span>{tab.icon}</span>
+                  <span><AppIcon glyph={tab.icon} /></span>
                   <span>{tab.label}</span>
                 </button>
               ))}

@@ -1,5 +1,6 @@
 "use client";
 
+import AppIcon from "@/components/AppIcon";
 import { useState, useEffect } from "react";
 
 // ============================================================
@@ -107,7 +108,7 @@ const translations = {
       sharedTab: "مشترك",
       monthly: "شهرياً",
       annual: "سنوياً",
-      save: "شهران مجاناً 🎁",
+      save: "شهران مجاناً ",
       per_month: "$ / شهر",
       per_year: "$ / سنة",
       cta: "ابدأ الآن",
@@ -321,7 +322,7 @@ const translations = {
       sharedTab: "Shared",
       monthly: "Monthly",
       annual: "Annual",
-      save: "2 months free 🎁",
+      save: "2 months free ",
       per_month: "$ / mo",
       per_year: "$ / yr",
       cta: "Get Started",
@@ -1061,7 +1062,7 @@ export default function LandingPage() {
           <div className="features-grid">
             {t.features.items.map((f: any, i) => (
               <div className={`feature-card${f.whatsapp ? " wa-card" : ""}`} key={i}>
-                <div className={`feature-icon${f.whatsapp ? " wa-icon" : ""}`}>{f.icon}</div>
+                <div className={`feature-icon${f.whatsapp ? " wa-icon" : ""}`}><AppIcon glyph={f.icon} /></div>
                 <h3 className="feature-title">{f.title}</h3>
                 <p className="feature-desc">{f.desc}</p>
                 {f.whatsapp && (
@@ -1121,8 +1122,8 @@ export default function LandingPage() {
           <div className="pricing-grid">
             {(planTab === "individual" ? t.pricing.individualPlans : t.pricing.sharedPlans).map((plan: any, i: number) => (
               <div className={`pricing-card${plan.popular ? " popular" : ""}`} key={i}>
-                {plan.popular && <div className="popular-badge">⭐ {isAr ? "الأكثر طلباً" : "Most Popular"}</div>}
-                <div className="pricing-icon">{plan.icon}</div>
+                {plan.popular && <div className="popular-badge"><AppIcon glyph="⭐" /> {isAr ? "الأكثر طلباً" : "Most Popular"}</div>}
+                <div className="pricing-icon"><AppIcon glyph={plan.icon} /></div>
                 <div className="pricing-name">{plan.name}</div>
                 <div className="pricing-price">
                   <div className="pricing-amount">
@@ -1135,11 +1136,11 @@ export default function LandingPage() {
                   </div>
                   {pricingAnnual ? (
                     <div className="pricing-annual-save">
-                      {isAr ? "🎁 شهران مجاناً مقارنةً بالاشتراك الشهري" : "🎁 2 months free vs monthly billing"}
+                      {isAr ? "شهران مجاناً مقارنةً بالاشتراك الشهري" : "2 months free vs monthly billing"}
                     </div>
                   ) : (
                     <div className="pricing-period">
-                      {isAr ? "💡 اشترك سنوياً وادفع أقل — شهران مجاناً" : "💡 Go annual and save — 2 months free"}
+                      {isAr ? "اشترك سنوياً وادفع أقل — شهران مجاناً" : "Go annual and save — 2 months free"}
                     </div>
                   )}
                 </div>
