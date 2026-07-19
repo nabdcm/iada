@@ -50,7 +50,7 @@ export function LabSidebar({ active, onSelect, badges, labName, onNew, onLogout 
     <aside className="lab-sidebar" style={{
       position: "fixed", insetInlineStart: 0, top: 0, bottom: 0, width: 236, zIndex: 40,
       background: "#fff", borderInlineEnd: "1px solid #e6edf5", padding: "18px 14px",
-      display: "flex", flexDirection: "column", gap: 4,
+      flexDirection: "column", gap: 4,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "6px 8px 16px" }}>
         <div style={{ width: 40, height: 40, borderRadius: 13, background: "linear-gradient(135deg,#0863ba,#1a8fe3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 6px 16px rgba(8,99,186,.28)", flexShrink: 0 }}>
@@ -137,7 +137,7 @@ export function LabPillNav({ active, onSelect, badges, onNew }: {
       position: "fixed", insetInline: 12, bottom: 12, zIndex: 120, height: 66,
       background: "rgba(255,255,255,.88)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)",
       borderRadius: 22, boxShadow: "0 10px 34px rgba(16,42,80,.16), 0 2px 8px rgba(16,42,80,.08)",
-      border: "1px solid rgba(255,255,255,.7)", display: "flex", alignItems: "center", padding: "0 8px",
+      border: "1px solid rgba(255,255,255,.7)", alignItems: "center", padding: "0 8px",
     }}>
       {left.map((k) => <NavBtn key={k} k={k} />)}
       <div style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", transform: "translateY(-18px)", margin: "0 4px" }}>

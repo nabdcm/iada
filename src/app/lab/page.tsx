@@ -183,11 +183,12 @@ export default function LabPage() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
         @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
         .lab-main{margin-inline-start:236px;padding:22px 24px 40px}
-        .lab-pillnav{display:none}
+        .lab-sidebar{display:flex!important}
+        .lab-pillnav{display:none!important}
         @media(max-width:900px){
-          .lab-sidebar{display:none}
+          .lab-sidebar{display:none!important}
           .lab-main{margin-inline-start:0;padding:16px 14px 110px}
-          .lab-pillnav{display:flex}
+          .lab-pillnav{display:flex!important}
         }
         .card{background:#fff;border-radius:20px;border:1px solid ${BRAND.border};box-shadow:0 2px 12px rgba(20,40,70,.05)}
         .lab-inp{width:100%;padding:12px 14px;border:1.5px solid ${BRAND.border};border-radius:12px;font-family:'Rubik',sans-serif;font-size:14px;background:#fff;outline:none;transition:border .15s;color:${BRAND.ink}}
