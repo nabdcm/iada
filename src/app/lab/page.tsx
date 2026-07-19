@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import QRCode from "qrcode";
 import { LabSidebar, LabPillNav, Icons, type TabKey } from "./nav";
+import { CameraScanner } from "../pharmacy/scanner";
 
 // ─── BRAND (مطابق للداشبورد) ─────────────────────────────────
 const BRAND = {
@@ -81,6 +82,8 @@ export default function LabPage() {
   const [shareOrder, setShareOrder] = useState<LabOrder | null>(null);
   const [labelsOrder, setLabelsOrder] = useState<LabOrder | null>(null);
   const [payOrder, setPayOrder] = useState<LabOrder | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [focusTest, setFocusTest] = useState<number | null>(null);
 
   const showNotif = useCallback((msg: string, ok = true) => {
     setNotif({ msg, ok });
@@ -142,6 +145,20 @@ export default function LabPage() {
     const res = await apiFetch("/api/lab/orders", { method: "POST", body: JSON.stringify({ action: "delete", id }) });
     if (res.ok) { setOrders(prev => prev.filter(o => o.id !== id)); showNotif("تم الحذف"); }
   };
+
+  // مسح ملصق QR لعبوة عينة — يفتح طلبها مباشرة على التحليل المقصود
+  const handleScan = useCallback((code: string) => {
+    // الصيغة: NABD-LAB|O:{orderId}|T:{testNo}|{mrn}|{testName}
+    const m = code.match(/^NABD-LAB\|O:(\d+)\|T:(\d+)\|/);
+    if (!m) { showNotif("هذا الكود ليس ملصق عينة من نبض مخبر", false); return; }
+    const orderId = Number(m[1]);
+    const testIdx = Number(m[2]) - 1;
+    const order = orders.find(o => o.id === orderId);
+    if (!order) { showNotif(`الطلب #${orderId} غير موجود في هذا المخبر`, false); return; }
+    setFocusTest(testIdx >= 0 && testIdx < order.results.length ? testIdx : null);
+    setResultsOrder(order);
+    showNotif(`✓ ${order.patient_name} — ${order.results[testIdx]?.test_name ?? "الطلب #" + orderId}`);
+  }, [orders, showNotif]);
 
   const logout = async () => {
     if (!confirm("تسجيل الخروج من حساب المخبر؟")) return;
@@ -227,8 +244,8 @@ export default function LabPage() {
         @media print{.lab-sidebar,.lab-pillnav,.no-print{display:none!important}.lab-main{margin:0;padding:0}}
       `}</style>
 
-      <LabSidebar active={tab} onSelect={setTab} badges={badges} labName={labName} onNew={() => setShowNew(true)} onLogout={logout} />
-      <LabPillNav active={tab} onSelect={setTab} badges={badges} onNew={() => setShowNew(true)} />
+      <LabSidebar active={tab} onSelect={setTab} badges={badges} labName={labName} onNew={() => setShowNew(true)} onScan={() => setShowScanner(true)} onLogout={logout} />
+      <LabPillNav active={tab} onSelect={setTab} badges={badges} onNew={() => setShowNew(true)} onScan={() => setShowScanner(true)} />
 
       <main className="lab-main">
         {/* Header موبايل */}
@@ -289,7 +306,8 @@ export default function LabPage() {
       {resultsOrder && (
         <ResultsModal
           order={resultsOrder}
-          onClose={() => setResultsOrder(null)}
+          focusIndex={focusTest}
+          onClose={() => { setResultsOrder(null); setFocusTest(null); }}
           onLabels={() => setLabelsOrder(resultsOrder)}
           onSave={async (results, complete) => {
             const updated = await saveOrder(resultsOrder.id, { results, ...(complete ? { status: "completed" } : {}) });
@@ -314,6 +332,15 @@ export default function LabPage() {
             const updated = await saveOrder(payOrder.id, { paid: Number(payOrder.paid || 0) + amount });
             if (updated) { showNotif("✓ تم تسجيل الدفعة"); setPayOrder(null); }
           }}
+        />
+      )}
+
+      {showScanner && (
+        <CameraScanner
+          lang="ar"
+          title="مسح ملصق العينة"
+          onScan={handleScan}
+          onClose={() => setShowScanner(false)}
         />
       )}
 
@@ -759,14 +786,27 @@ function LabelsModal({ order, labName, onClose }: { order: LabOrder; labName: st
 // ═══════════════════════════════════════════════════════════════
 // المرحلة الثانية — إدخال النتائج
 // ═══════════════════════════════════════════════════════════════
-function ResultsModal({ order, onClose, onSave, onLabels }: {
+function ResultsModal({ order, onClose, onSave, onLabels, focusIndex }: {
   order: LabOrder; onClose: () => void;
   onSave: (results: ResultRow[], complete: boolean) => Promise<void>;
   onLabels: () => void;
+  focusIndex?: number | null;
 }) {
   const [rows, setRows] = useState<ResultRow[]>(order.results.map(r => ({ ...r })));
   const [saving, setSaving] = useState(false);
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+
+  // عند الفتح من ماسح QR: ركّز على حقل التحليل الممسوح مباشرة
+  useEffect(() => {
+    if (focusIndex != null) {
+      const t = setTimeout(() => {
+        const el = inputsRef.current[focusIndex];
+        el?.focus();
+        el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 350);
+      return () => clearTimeout(t);
+    }
+  }, [focusIndex]);
 
   const setVal = (i: number, v: string) =>
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, value: v } : r)));
@@ -815,8 +855,10 @@ function ResultsModal({ order, onClose, onSave, onLabels }: {
                 ? `${r.ref_low ?? ""} – ${r.ref_high ?? ""} ${r.unit ?? ""}` : "";
             return (
               <div key={i} style={{
-                display: "flex", alignItems: "center", gap: 11, padding: "12px 0",
+                display: "flex", alignItems: "center", gap: 11, padding: "12px 8px",
                 borderBottom: i < rows.length - 1 ? `1px solid ${BRAND.bg}` : "none",
+                background: i === focusIndex ? BRAND.sky : "transparent",
+                borderRadius: i === focusIndex ? 12 : 0,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 800, color: BRAND.ink }}>{r.test_name}</div>

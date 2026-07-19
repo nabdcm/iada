@@ -23,6 +23,7 @@ export const Icons = {
   search:    ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>),
   logout:    ({ size = 20 }: IconProps) => (<svg {...S(size)}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>),
   menu:      ({ size = 22 }: IconProps) => (<svg {...S(size)}><path d="M4 6h16M4 12h16M4 18h16"/></svg>),
+  scan:      ({ size = 22 }: IconProps) => (<svg {...S(size)}><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1.5" strokeWidth="1.6"/></svg>),
   money:     ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 .9-3 2.2c0 2.9 6 1.7 6 4.6 0 1.3-1.3 2.2-3 2.2s-3-1.1-3-2.5"/></svg>),
   doc:       ({ size = 18 }: IconProps) => (<svg {...S(size)}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>),
   clock:     ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>),
@@ -41,10 +42,10 @@ export const TAB_META: Record<TabKey, { ar: string; Icon: (p: IconProps) => Reac
 const TABS: TabKey[] = ["dashboard", "orders", "finance", "catalog"];
 
 // ═══ Sidebar (سطح المكتب) ═══
-export function LabSidebar({ active, onSelect, badges, labName, onNew, onLogout }: {
+export function LabSidebar({ active, onSelect, badges, labName, onNew, onScan, onLogout }: {
   active: TabKey; onSelect: (t: TabKey) => void;
   badges: Partial<Record<TabKey, number>>; labName: string;
-  onNew: () => void; onLogout: () => void;
+  onNew: () => void; onScan: () => void; onLogout: () => void;
 }) {
   return (
     <aside className="lab-sidebar" style={{
@@ -70,6 +71,14 @@ export function LabSidebar({ active, onSelect, badges, labName, onNew, onLogout 
         boxShadow: "0 6px 16px rgba(8,99,186,.3)",
       }}>
         <Icons.plus size={19} /> طلب تحاليل جديد
+      </button>
+
+      <button onClick={onScan} style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px",
+        borderRadius: 13, border: "1.5px solid #e6edf5", cursor: "pointer", fontFamily: "'Rubik',sans-serif",
+        fontSize: 13, fontWeight: 800, marginBottom: 10, background: "#fff", color: "#0863ba",
+      }}>
+        <Icons.scan size={18} /> مسح ملصق عينة
       </button>
 
       {TABS.map((k) => {
@@ -106,9 +115,9 @@ export function LabSidebar({ active, onSelect, badges, labName, onNew, onLogout 
 }
 
 // ═══ Pill Nav (الموبايل) — زر مركزي "طلب جديد" ═══
-export function LabPillNav({ active, onSelect, badges, onNew }: {
+export function LabPillNav({ active, onSelect, badges, onNew, onScan }: {
   active: TabKey; onSelect: (t: TabKey) => void;
-  badges: Partial<Record<TabKey, number>>; onNew: () => void;
+  badges: Partial<Record<TabKey, number>>; onNew: () => void; onScan: () => void;
 }) {
   const left: TabKey[] = ["dashboard", "orders"];
   const right: TabKey[] = ["finance", "catalog"];
@@ -152,6 +161,14 @@ export function LabPillNav({ active, onSelect, badges, onNew }: {
         <span style={{ fontSize: 9.5, fontWeight: 700, color: "#0863ba", marginTop: 1, fontFamily: "'Rubik',sans-serif" }}>طلب جديد</span>
       </div>
       {right.map((k) => <NavBtn key={k} k={k} />)}
+      <button onClick={onScan} aria-label="مسح" style={{
+        flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+        border: "none", background: "none", cursor: "pointer", padding: "6px 6px",
+        color: "#9aa2ab", fontFamily: "'Rubik',sans-serif",
+      }}>
+        <Icons.scan size={23} />
+        <span style={{ fontSize: 10, fontWeight: 600 }}>مسح</span>
+      </button>
     </nav>
   );
 }
