@@ -122,7 +122,7 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
   }
 
   if (status === "suspended") {
-    const isAr = typeof navigator !== "undefined" ? !navigator.language?.startsWith("en") : true;
+    const isAr = typeof window !== "undefined" ? (localStorage.getItem("lang") || "ar") !== "en" : true;
     return (
       <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f8fafc",fontFamily:"'Rubik',sans-serif",padding:20 }}>
         <div style={{ textAlign:"center",maxWidth:420,background:"#fff",borderRadius:20,padding:"40px 30px",boxShadow:"0 10px 40px rgba(0,0,0,.08)" }}>
