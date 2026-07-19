@@ -45,6 +45,7 @@ interface ClinicData {
   user_id?: string;
   account_type?: AccountType;
   clinic_type?: ClinicType;
+  plain_password?: string | null;   // كلمة السر النصية (تُملأ عند الإنشاء/إعادة التعيين)
   // للخطط المشتركة فقط
   max_doctors?: number;       // الحد الأقصى من الأطباء (قابل للتعديل من الأدمن)
   doctors_count?: number;     // عدد الأطباء الفعلي المضاف
@@ -3135,6 +3136,16 @@ export default function AdminPage() {
     navigator.clipboard.writeText(email).catch(() => {});
   };
 
+  // إظهار/نسخ كلمات السر النصية
+  const [revealedPw, setRevealedPw] = useState<Record<string, boolean>>({});
+  const [copiedPwId, setCopiedPwId] = useState<string | null>(null);
+  const togglePw = (id: string) => setRevealedPw(p => ({ ...p, [id]: !p[id] }));
+  const copyPw = (id: string, pw: string) => {
+    navigator.clipboard.writeText(pw).catch(() => {});
+    setCopiedPwId(id);
+    setTimeout(() => setCopiedPwId(c => (c === id ? null : c)), 1500);
+  };
+
   // نقطة الحالة: أصفر=نشط، أخضر=محمد(مدفوع ونشط أكثر من شهر)، أحمر=منتهي، رمادي=قارب
   const statusDot = (c: ClinicData) => {
     if (isExpired(c.expiry))           return { color:"#c0392b", title: isAr?"منتهية":"Expired" };
@@ -3526,6 +3537,28 @@ export default function AdminPage() {
                                     onClick={() => copyEmail(c.email)}
                                     style={{ fontSize:11,color:"#aaa",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:280 }}
                                   >{c.email}</div>
+                                  {/* كلمة السر النصية */}
+                                  <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:4 }}>
+                                    {c.plain_password ? (
+                                      <>
+                                        <span style={{ fontSize:11,fontWeight:600,color:"#0863ba",fontFamily:"monospace",letterSpacing:.5,userSelect:"all" }}>
+                                          {revealedPw[c.user_id!] ? c.plain_password : "•".repeat(Math.min(c.plain_password.length, 10))}
+                                        </span>
+                                        <button onClick={() => togglePw(c.user_id!)} title={isAr?"إظهار/إخفاء":"Show/Hide"}
+                                          style={{ border:"none",background:"none",cursor:"pointer",fontSize:12,padding:0,lineHeight:1,color:"#888" }}>
+                                          <AppIcon glyph={revealedPw[c.user_id!] ? "🙈" : "👁"} />
+                                        </button>
+                                        <button onClick={() => copyPw(c.user_id!, c.plain_password!)} title={isAr?"نسخ كلمة السر":"Copy password"}
+                                          style={{ border:"none",background:"none",cursor:"pointer",fontSize:12,padding:0,lineHeight:1,color: copiedPwId===c.user_id ? "#27ae60" : "#888" }}>
+                                          <AppIcon glyph={copiedPwId===c.user_id ? "✓" : "📋"} />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span style={{ fontSize:10,color:"#c4c4c4",fontStyle:"italic" }}>
+                                        {isAr?"—  تظهر بعد أول إعادة تعيين":"—  set on next reset"}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
@@ -3653,6 +3686,21 @@ export default function AdminPage() {
                                 </span>
                                 <span style={{ fontSize:11,color:exp?"#c0392b":expSoon?"#e67e22":"#aaa",fontVariantNumeric:"tabular-nums",direction:"ltr",display:"inline-block",fontWeight:exp||expSoon?700:400 }}>{fmtDateEn(c.expiry)}</span>
                               </div>
+                              {/* كلمة السر النصية (موبايل) */}
+                              {c.plain_password && (
+                                <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2 }} onClick={e => e.stopPropagation()}>
+                                  <span style={{ fontSize:9,color:"#c4c4c4",fontWeight:600 }}><AppIcon glyph="🔑" /></span>
+                                  <span style={{ fontSize:11,fontWeight:600,color:"#0863ba",fontFamily:"monospace",letterSpacing:.5,userSelect:"all" }}>
+                                    {revealedPw[c.user_id!] ? c.plain_password : "•".repeat(Math.min(c.plain_password.length, 10))}
+                                  </span>
+                                  <button onClick={() => togglePw(c.user_id!)} style={{ border:"none",background:"none",cursor:"pointer",fontSize:11,padding:0,lineHeight:1,color:"#888" }}>
+                                    <AppIcon glyph={revealedPw[c.user_id!] ? "🙈" : "👁"} />
+                                  </button>
+                                  <button onClick={() => copyPw(c.user_id!, c.plain_password!)} style={{ border:"none",background:"none",cursor:"pointer",fontSize:11,padding:0,lineHeight:1,color: copiedPwId===c.user_id ? "#27ae60" : "#888" }}>
+                                    <AppIcon glyph={copiedPwId===c.user_id ? "✓" : "📋"} />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

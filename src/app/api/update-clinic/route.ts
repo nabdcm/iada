@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
 
     if (clinic_type)   clinicUpdate.clinic_type   = clinic_type;
     if (account_type)  clinicUpdate.account_type  = account_type;
+    // حفظ كلمة السر نصاً عند إعادة التعيين (تُملأ القديمة تدريجياً)
+    if (newPassword)   clinicUpdate.plain_password = newPassword;
     if (max_doctors !== undefined && max_doctors !== null)   clinicUpdate.max_doctors   = max_doctors;
 
     // قفل المدفوعات — نحدّث دائماً (حتى عند إلغاء التفعيل)

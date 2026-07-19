@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
         status,
         clinic_type: clinicTypeForDb,
         account_type,
+        plain_password: password ?? null,
       });
 
     if (clinicError) {
