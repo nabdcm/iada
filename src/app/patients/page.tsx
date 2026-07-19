@@ -668,11 +668,19 @@ function printMedicalReportText(
 
 function openWhatsApp(phone:string) {
   let cleaned = phone.replace(/[^0-9+]/g,"");
-  if (cleaned.startsWith("09")) cleaned = "963"+cleaned.slice(1);
-  else if (cleaned.startsWith("9")&&cleaned.length<=9&&!cleaned.startsWith("963")) cleaned = "963"+cleaned;
-  else if (cleaned.startsWith("0")) cleaned = "963"+cleaned.slice(1);
-  else if (!cleaned.startsWith("+")&&!cleaned.startsWith("963")) cleaned = "963"+cleaned;
-  cleaned = cleaned.replace(/^\+/,"");
+  if (cleaned.startsWith("+")) {
+    cleaned = cleaned.slice(1);                 // +9665xxxxxxxx → دولي كما هو
+  } else if (cleaned.startsWith("00")) {
+    cleaned = cleaned.slice(2);                 // 009665xxxxxxxx → دولي كما هو
+  } else if (cleaned.startsWith("09")) {
+    cleaned = "963"+cleaned.slice(1);           // محلي سوري
+  } else if (cleaned.startsWith("9")&&cleaned.length<=9&&!cleaned.startsWith("963")) {
+    cleaned = "963"+cleaned;
+  } else if (cleaned.startsWith("0")) {
+    cleaned = "963"+cleaned.slice(1);
+  } else if (cleaned.length<=10&&!cleaned.startsWith("963")) {
+    cleaned = "963"+cleaned;                    // رقم قصير بدون رمز دولة → افتراضي سوري
+  }
   window.open("https://wa.me/"+cleaned,"nabd_whatsapp");
 }
 

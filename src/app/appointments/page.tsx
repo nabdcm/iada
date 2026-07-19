@@ -1759,13 +1759,18 @@ export default function AppointmentsPage() {
   const selLabel = selDate.length===3 ? `${parseInt(selDate[2])} ${tr.months[parseInt(selDate[1])-1]} ${selDate[0]}` : selectedKey;
 
   const sendWhatsApp = (appt: Appointment) => {
-    let rawPhone = getPatientPhone(appt.patient_id).replace(/\D/g,"");
-    if (rawPhone.startsWith("09") && rawPhone.length === 10) {
+    const origPhone = getPatientPhone(appt.patient_id).replace(/[^0-9+]/g,"");
+    let rawPhone = origPhone.replace(/\D/g,"");
+    if (origPhone.startsWith("+")) {
+      // رقم دولي بصيغة +XXX... → استخدمه كما هو بدون +
+      rawPhone = origPhone.slice(1).replace(/\D/g,"");
+    } else if (rawPhone.startsWith("00")) {
+      // رقم دولي بصيغة 00XXX... → أزل الصفرين
+      rawPhone = rawPhone.slice(2);
+    } else if (rawPhone.startsWith("09") && rawPhone.length === 10) {
       rawPhone = "963" + rawPhone.slice(1);
     } else if (rawPhone.startsWith("9") && rawPhone.length === 9) {
       rawPhone = "963" + rawPhone;
-    } else if (rawPhone.startsWith("00963")) {
-      rawPhone = rawPhone.slice(2);
     }
     const name     = getPatientName(appt.patient_id);
     const [y, mo, d] = appt.date.split("-");
