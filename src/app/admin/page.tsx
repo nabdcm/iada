@@ -1173,6 +1173,8 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     restricted_access_pin:     clinic.restricted_access_pin     ?? "",
   });
   const [newPass,       setNewPass]       = useState("");
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [copiedCurrent, setCopiedCurrent] = useState(false);
   const [copied,        setCopied]        = useState(false);
   const [copiedLink,    setCopiedLink]    = useState(false);
   const [showPin,       setShowPin]       = useState(false);
@@ -1879,6 +1881,34 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
           {/* ── TAB: SECURITY ── */}
           {activeTab === "security" && (
             <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
+              {/* ── كلمة السر الحالية ── */}
+              <div style={{ background:"linear-gradient(135deg,rgba(8,99,186,.06),rgba(8,99,186,.02))",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12,padding:"14px 16px" }}>
+                <div style={{ fontSize:11,fontWeight:800,color:"#0863ba",marginBottom:8,textTransform:"uppercase",letterSpacing:.4,display:"flex",alignItems:"center",gap:6 }}>
+                  <AppIcon glyph="🔑" /> {isAr?"كلمة السر الحالية":"Current Password"}
+                </div>
+                {clinic.plain_password ? (
+                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <code style={{ flex:1,fontSize:16,color:"#0863ba",fontFamily:"monospace",letterSpacing:1.5,wordBreak:"break-all",fontWeight:700 }}>
+                      {showCurrentPw ? clinic.plain_password : "•".repeat(Math.min(clinic.plain_password.length,12))}
+                    </code>
+                    <button onClick={() => setShowCurrentPw(v => !v)} title={isAr?"إظهار/إخفاء":"Show/Hide"}
+                      style={{ padding:"7px 12px",background:"#fff",color:"#666",border:"1.5px solid #e6edf5",borderRadius:8,cursor:"pointer",fontSize:13 }}>
+                      <AppIcon glyph={showCurrentPw ? "🙈" : "👁"} />
+                    </button>
+                    <button onClick={() => { navigator.clipboard.writeText(clinic.plain_password!).catch(()=>{}); setCopiedCurrent(true); setTimeout(()=>setCopiedCurrent(false),1500); }} title={isAr?"نسخ":"Copy"}
+                      style={{ padding:"7px 12px",background:copiedCurrent?"rgba(46,125,50,.08)":"#fff",color:copiedCurrent?"#2e7d32":"#0863ba",border:`1.5px solid ${copiedCurrent?"rgba(46,125,50,.2)":"#e6edf5"}`,borderRadius:8,cursor:"pointer",fontSize:13 }}>
+                      <AppIcon glyph={copiedCurrent ? "✓" : "📋"} />
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize:12.5,color:"#8a97a6",lineHeight:1.7 }}>
+                    {isAr
+                      ? "غير محفوظة بعد. اضبط كلمة سر جديدة أدناه لتظهر هنا مستقبلاً."
+                      : "Not stored yet. Set a new password below and it will appear here from now on."}
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.newPassword}</label>
                 <div style={{ display:"flex",gap:8 }}>
@@ -3136,16 +3166,6 @@ export default function AdminPage() {
     navigator.clipboard.writeText(email).catch(() => {});
   };
 
-  // إظهار/نسخ كلمات السر النصية
-  const [revealedPw, setRevealedPw] = useState<Record<string, boolean>>({});
-  const [copiedPwId, setCopiedPwId] = useState<string | null>(null);
-  const togglePw = (id: string) => setRevealedPw(p => ({ ...p, [id]: !p[id] }));
-  const copyPw = (id: string, pw: string) => {
-    navigator.clipboard.writeText(pw).catch(() => {});
-    setCopiedPwId(id);
-    setTimeout(() => setCopiedPwId(c => (c === id ? null : c)), 1500);
-  };
-
   // نقطة الحالة: أصفر=نشط، أخضر=محمد(مدفوع ونشط أكثر من شهر)، أحمر=منتهي، رمادي=قارب
   const statusDot = (c: ClinicData) => {
     if (isExpired(c.expiry))           return { color:"#c0392b", title: isAr?"منتهية":"Expired" };
@@ -3537,28 +3557,6 @@ export default function AdminPage() {
                                     onClick={() => copyEmail(c.email)}
                                     style={{ fontSize:11,color:"#aaa",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:280 }}
                                   >{c.email}</div>
-                                  {/* كلمة السر النصية */}
-                                  <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:4 }}>
-                                    {c.plain_password ? (
-                                      <>
-                                        <span style={{ fontSize:11,fontWeight:600,color:"#0863ba",fontFamily:"monospace",letterSpacing:.5,userSelect:"all" }}>
-                                          {revealedPw[c.user_id!] ? c.plain_password : "•".repeat(Math.min(c.plain_password.length, 10))}
-                                        </span>
-                                        <button onClick={() => togglePw(c.user_id!)} title={isAr?"إظهار/إخفاء":"Show/Hide"}
-                                          style={{ border:"none",background:"none",cursor:"pointer",fontSize:12,padding:0,lineHeight:1,color:"#888" }}>
-                                          <AppIcon glyph={revealedPw[c.user_id!] ? "🙈" : "👁"} />
-                                        </button>
-                                        <button onClick={() => copyPw(c.user_id!, c.plain_password!)} title={isAr?"نسخ كلمة السر":"Copy password"}
-                                          style={{ border:"none",background:"none",cursor:"pointer",fontSize:12,padding:0,lineHeight:1,color: copiedPwId===c.user_id ? "#27ae60" : "#888" }}>
-                                          <AppIcon glyph={copiedPwId===c.user_id ? "✓" : "📋"} />
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <span style={{ fontSize:10,color:"#c4c4c4",fontStyle:"italic" }}>
-                                        {isAr?"—  تظهر بعد أول إعادة تعيين":"—  set on next reset"}
-                                      </span>
-                                    )}
-                                  </div>
                                 </div>
                               </div>
 
@@ -3686,21 +3684,6 @@ export default function AdminPage() {
                                 </span>
                                 <span style={{ fontSize:11,color:exp?"#c0392b":expSoon?"#e67e22":"#aaa",fontVariantNumeric:"tabular-nums",direction:"ltr",display:"inline-block",fontWeight:exp||expSoon?700:400 }}>{fmtDateEn(c.expiry)}</span>
                               </div>
-                              {/* كلمة السر النصية (موبايل) */}
-                              {c.plain_password && (
-                                <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:2 }} onClick={e => e.stopPropagation()}>
-                                  <span style={{ fontSize:9,color:"#c4c4c4",fontWeight:600 }}><AppIcon glyph="🔑" /></span>
-                                  <span style={{ fontSize:11,fontWeight:600,color:"#0863ba",fontFamily:"monospace",letterSpacing:.5,userSelect:"all" }}>
-                                    {revealedPw[c.user_id!] ? c.plain_password : "•".repeat(Math.min(c.plain_password.length, 10))}
-                                  </span>
-                                  <button onClick={() => togglePw(c.user_id!)} style={{ border:"none",background:"none",cursor:"pointer",fontSize:11,padding:0,lineHeight:1,color:"#888" }}>
-                                    <AppIcon glyph={revealedPw[c.user_id!] ? "🙈" : "👁"} />
-                                  </button>
-                                  <button onClick={() => copyPw(c.user_id!, c.plain_password!)} style={{ border:"none",background:"none",cursor:"pointer",fontSize:11,padding:0,lineHeight:1,color: copiedPwId===c.user_id ? "#27ae60" : "#888" }}>
-                                    <AppIcon glyph={copiedPwId===c.user_id ? "✓" : "📋"} />
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           </div>
                         );
