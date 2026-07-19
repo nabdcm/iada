@@ -9,6 +9,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room"];
 const PHARMACY_PROTECTED = ["/pharmacy"];
+const LAB_PROTECTED = ["/lab"];
 
 async function verifySignedSession(value: string): Promise<boolean> {
   // v2.<uid>.<exp>.<sig>
@@ -50,8 +51,12 @@ export async function middleware(request: NextRequest) {
   const isPharmacyProtected =
     PHARMACY_PROTECTED.some(p => pathname.startsWith(p)) &&
     !pathname.startsWith("/pharmacy/login");
+  const isLabProtected =
+    LAB_PROTECTED.some(p => pathname.startsWith(p)) &&
+    !pathname.startsWith("/lab/login") &&
+    !pathname.startsWith("/lab-result");
 
-  if (!isProtected && !isPharmacyProtected) {
+  if (!isProtected && !isPharmacyProtected && !isLabProtected) {
     return NextResponse.next();
   }
 
@@ -65,6 +70,9 @@ export async function middleware(request: NextRequest) {
   if (!valid) {
     if (isPharmacyProtected) {
       return NextResponse.redirect(new URL("/pharmacy/login", request.url));
+    }
+    if (isLabProtected) {
+      return NextResponse.redirect(new URL("/lab/login", request.url));
     }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);

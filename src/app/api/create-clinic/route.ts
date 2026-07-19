@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
     // ─── 2. إضافة في جدول clinics ────────────────────────
     // plan: الصيدلية تأخذ "pharmacy" — العمود نوعه text ويقبل أي قيمة
     // clinic_type: الصيدلية تأخذ "general" لأن العمود NOT NULL
-    const planForDb        = account_type === "pharmacy" ? "pharmacy" : plan;
-    const clinicTypeForDb  = account_type === "pharmacy" ? "general" : (clinic_type || "general");
+    const planForDb        = account_type === "pharmacy" ? "pharmacy" : account_type === "lab" ? "lab" : plan;
+    const clinicTypeForDb  = (account_type === "pharmacy" || account_type === "lab") ? "general" : (clinic_type || "general");
 
     const { error: clinicError } = await supabaseAdmin
       .from("clinics")
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ─── 3. clinic_profiles للعيادات فقط ─────────────────
-    if (account_type !== "pharmacy") {
+    if (account_type !== "pharmacy" && account_type !== "lab") {
       const { error: profileError } = await supabaseAdmin
         .from("clinic_profiles")
         .upsert({
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       userId,
-      bookingUrl: account_type === "pharmacy" ? null : `/book/${userId}`,
+      bookingUrl: (account_type === "pharmacy" || account_type === "lab") ? null : `/book/${userId}`,
     });
 
   } catch (err) {

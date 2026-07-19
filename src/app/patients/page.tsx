@@ -1021,7 +1021,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
   const isMounted = useRef(true);
   useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
-  const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental">("info");
+  const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental"|"labresults">("info");
 
   // إذا لم يكن للخطة صلاحية الأشعة وكان التبويب النشط هو الأشعة، نعيده للمعلومات
   useEffect(() => {
@@ -1084,6 +1084,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
     { key:"medical" as const, label:t.tabs.medical, icon:"🏥" },
     ...(canXray ? [{ key:"xrays" as const, label:t.tabs.xrays, icon:"🩻" }] : []),
     ...(isDental ? [{ key:"dental" as const, label:t.tabs.dental, icon:"🦷" }] : []),
+    { key:"labresults" as const, label: isAr ? "التحاليل" : "Lab Results", icon:"🧪" },
   ];
 
   return (
@@ -1297,12 +1298,123 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                 {activeTab==="dental"&&isDental&&(
                   <DentalChartSection lang={lang} chart={profile.dental_chart} onChange={c=>saveProfile({...profile,dental_chart:c})}/>
                 )}
+
+                {/* ── LAB RESULTS (نبض مخبر — عبر MRN) ── */}
+                {activeTab==="labresults"&&(
+                  <LabResultsSection isAr={isAr} mrn={(patient as unknown as { mrn?: string }).mrn ?? null} />
+                )}
               </>
             )}
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+// ─── نتائج التحاليل من نبض مخبر (عبر MRN) ─────────────────
+type DoctorLabResultRow = {
+  test_name: string; test_name_en?: string | null; value: string;
+  unit?: string | null; ref_low?: number | null; ref_high?: number | null; ref_text?: string | null;
+};
+type DoctorLabOrder = {
+  id: number; share_token: string; patient_name: string; result_date: string | null;
+  sample_date: string | null; results: DoctorLabResultRow[]; user_id: string;
+};
+
+function LabResultsSection({ isAr, mrn }: { isAr: boolean; mrn: string | null }) {
+  const [rows, setRows] = useState<DoctorLabOrder[]>([]);
+  const [labNames, setLabNames] = useState<Record<string,string>>({});
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState<number | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!mrn) { setLoading(false); return; }
+      // سياسة RLS تسمح بقراءة الطلبات المكتملة فقط
+      const { data } = await supabase
+        .from("lab_orders")
+        .select("id, share_token, patient_name, result_date, sample_date, results, user_id")
+        .eq("mrn", mrn)
+        .eq("status", "completed")
+        .order("result_date", { ascending: false })
+        .limit(50);
+      const orders = (data ?? []) as DoctorLabOrder[];
+      setRows(orders);
+      // أسماء المخابر
+      const labIds = Array.from(new Set(orders.map(o => o.user_id)));
+      if (labIds.length) {
+        const { data: labs } = await supabase
+          .from("clinics").select("user_id, name").in("user_id", labIds);
+        const map: Record<string,string> = {};
+        (labs ?? []).forEach((l: { user_id: string; name: string }) => { map[l.user_id] = l.name; });
+        setLabNames(map);
+      }
+      setLoading(false);
+    })();
+  }, [mrn]);
+
+  const flag = (r: DoctorLabResultRow): "high"|"low"|"normal" => {
+    const v = parseFloat(r.value);
+    if (!isNaN(v)) {
+      if (r.ref_high != null && v > r.ref_high) return "high";
+      if (r.ref_low  != null && v < r.ref_low)  return "low";
+    }
+    return "normal";
+  };
+
+  if (!mrn) return <div style={{ padding:30, textAlign:"center", color:"#999", fontSize:13 }}>🪪 {isAr ? "لا يوجد رقم سجل طبي (MRN) لهذا المريض — أضف رقم هاتفه لإنشائه" : "No MRN for this patient — add a phone number to generate one"}</div>;
+  if (loading) return <div style={{ padding:30, textAlign:"center", color:"#999", fontSize:13 }}>{isAr ? "جاري تحميل التحاليل..." : "Loading lab results..."}</div>;
+  if (rows.length === 0) return <div style={{ padding:30, textAlign:"center", color:"#999" }}><div style={{ fontSize:32, marginBottom:8 }}>🧪</div><div style={{ fontSize:13 }}>{isAr ? "لا توجد نتائج تحاليل مسجلة على هذا السجل الطبي" : "No lab results recorded for this MRN"}</div></div>;
+
+  return (
+    <div>
+      <div style={{ fontSize:11, color:"#8296a8", marginBottom:12, fontWeight:700 }}>
+        🧪 {isAr ? `نتائج التحاليل المرتبطة بالسجل ${mrn} — من المخابر العاملة على نبض` : `Lab results linked to ${mrn} — from NABD labs`}
+      </div>
+      {rows.map(o => {
+        const abnormal = o.results.filter(r => flag(r) !== "normal").length;
+        const isOpen = open === o.id;
+        return (
+          <div key={o.id} style={{ border:"1px solid #e8ecf0", borderRadius:14, marginBottom:10, overflow:"hidden", background:"#fff" }}>
+            <button onClick={() => setOpen(isOpen ? null : o.id)} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"transparent", border:"none", cursor:"pointer", fontFamily:"'Rubik',sans-serif", textAlign:"start" }}>
+              <div style={{ fontSize:18 }}>🧪</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:800, color:"#233240" }}>{labNames[o.user_id] ?? (isAr ? "مخبر" : "Lab")} · {o.result_date ?? o.sample_date}</div>
+                <div style={{ fontSize:11, color:"#8296a8", marginTop:2 }}>
+                  {o.results.length} {isAr ? "تحليل" : "tests"}
+                  {abnormal > 0 && <span style={{ color:"#c0392b", fontWeight:800 }}> · ⚠️ {abnormal} {isAr ? "خارج الطبيعي" : "abnormal"}</span>}
+                </div>
+              </div>
+              <div style={{ fontSize:12, color:"#8296a8" }}>{isOpen ? "▲" : "▼"}</div>
+            </button>
+            {isOpen && (
+              <div style={{ borderTop:"1px solid #f0f4f8", padding:"6px 16px 12px" }}>
+                {o.results.map((r, i) => {
+                  const f = flag(r);
+                  const col = f === "high" ? "#c0392b" : f === "low" ? "#1f6fd6" : "#1f8a4c";
+                  const ref = r.ref_text ? r.ref_text : (r.ref_low != null || r.ref_high != null) ? `${r.ref_low ?? ""}–${r.ref_high ?? ""} ${r.unit ?? ""}` : "";
+                  return (
+                    <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom: i < o.results.length-1 ? "1px solid #f5f8fb" : "none" }}>
+                      <div>
+                        <div style={{ fontSize:12.5, fontWeight:700 }}>{r.test_name}</div>
+                        {ref && <div style={{ fontSize:10, color:"#8296a8" }}>{isAr ? "الطبيعي" : "Ref"}: {ref}</div>}
+                      </div>
+                      <div style={{ fontSize:14, fontWeight:900, color:col, direction:"ltr" }}>
+                        {r.value} <span style={{ fontSize:10, fontWeight:600 }}>{f === "high" ? "↑" : f === "low" ? "↓" : ""}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <a href={`/lab-result/${o.share_token}`} target="_blank" rel="noopener noreferrer" style={{ display:"inline-block", marginTop:10, fontSize:11, fontWeight:800, color:"#0863ba", textDecoration:"none" }}>
+                  📄 {isAr ? "فتح التقرير الكامل / PDF" : "Open full report / PDF"}
+                </a>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

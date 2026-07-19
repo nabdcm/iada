@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 // ============================================================
 
 type Lang = "ar" | "en";
-type Portal = "clinic" | "pharmacy" | "patient";
+type Portal = "clinic" | "pharmacy" | "lab" | "patient";
 
 const T = {
   ar: {
@@ -20,7 +20,8 @@ const T = {
     switchLabel: "اختر نوع الدخول",
     portals: {
       clinic:   { icon: "🏥", label: "عيادة",   sub: "للأطباء وإدارة العيادات" },
-      pharmacy: { icon: "💊", label: "صيدلية",  sub: "لإدارة الصيدليات", badge: "جديد" },
+      pharmacy: { icon: "💊", label: "صيدلية",  sub: "لإدارة الصيدليات" },
+      lab:      { icon: "🧪", label: "مخبر",    sub: "لإدارة المخابر الطبية", badge: "جديد" },
       patient:  { icon: "👤", label: "مريض",    sub: "للمرضى ومتابعة الحالة" },
     },
     login: {
@@ -66,7 +67,8 @@ const T = {
     switchLabel: "Choose access type",
     portals: {
       clinic:   { icon: "🏥", label: "Clinic",   sub: "For doctors & clinic management" },
-      pharmacy: { icon: "💊", label: "Pharmacy", sub: "For pharmacy management", badge: "New" },
+      pharmacy: { icon: "💊", label: "Pharmacy", sub: "For pharmacy management" },
+      lab:      { icon: "🧪", label: "Lab",      sub: "For medical labs", badge: "New" },
       patient:  { icon: "👤", label: "Patient",  sub: "For patients & health tracking" },
     },
     login: {
@@ -112,6 +114,7 @@ const T = {
 const PORTAL_ACCENT: Record<Portal, { color: string; glow: string }> = {
   clinic:   { color: "#1a8fe3", glow: "rgba(26,143,227,0.22)" },
   pharmacy: { color: "#2fc98f", glow: "rgba(47,201,143,0.18)" },
+  lab:      { color: "#f5a623", glow: "rgba(245,166,35,0.18)" },
   patient:  { color: "#5aa7f0", glow: "rgba(90,167,240,0.20)" },
 };
 
@@ -224,6 +227,8 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
       }
       if (accountType === "pharmacy") {
         window.location.href = redirectTo && redirectTo.startsWith("/pharmacy") ? redirectTo : "/pharmacy";
+      } else if (accountType === "lab") {
+        window.location.href = redirectTo && redirectTo.startsWith("/lab") ? redirectTo : "/lab";
       } else {
         window.location.href = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : "/dashboard";
       }
@@ -297,7 +302,7 @@ function PortalPageContent() {
   const searchParams = useSearchParams();
   const typeParam    = searchParams.get("type");
   const initialPortal: Portal =
-    typeParam === "pharmacy" || typeParam === "patient" || typeParam === "clinic"
+    typeParam === "pharmacy" || typeParam === "patient" || typeParam === "clinic" || typeParam === "lab"
       ? typeParam
       : "clinic";
   const redirectTo = searchParams.get("redirect") ?? "";
@@ -309,7 +314,7 @@ function PortalPageContent() {
   const tr   = T[lang];
   const accent = PORTAL_ACCENT[portal];
 
-  const PORTALS: Portal[] = ["clinic", "pharmacy", "patient"];
+  const PORTALS: Portal[] = ["clinic", "pharmacy", "lab", "patient"];
 
 
   return (

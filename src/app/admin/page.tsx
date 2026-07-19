@@ -29,9 +29,9 @@ type ClinicType =
 
 // الخطط الفردية: basic, pro, enterprise
 // الخطط المشتركة: shared_basic, shared_pro, shared_enterprise
-type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise" | "pharmacy";
+type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise" | "pharmacy" | "lab";
 
-type AccountType = "clinic" | "pharmacy";
+type AccountType = "clinic" | "pharmacy" | "lab";
 
 interface ClinicData {
   id?: number;
@@ -809,25 +809,26 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:8,textTransform:"uppercase" as const,letterSpacing:.4 }}>
                     {tr.accountType.label}
                   </label>
-                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-                    {(["clinic","pharmacy"] as AccountType[]).map(type => {
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10 }}>
+                    {(["clinic","pharmacy","lab"] as AccountType[]).map(type => {
                       const isSelected = form.account_type === type;
                       const isPharmacy = type === "pharmacy";
-                      const color = isPharmacy ? "#27ae60" : "#0863ba";
+                      const isLab = type === "lab";
+                      const color = isLab ? "#e08c00" : isPharmacy ? "#27ae60" : "#0863ba";
                       return (
                         <button key={type} type="button"
                           onClick={() => setForm(prev => ({
                             ...prev,
                             account_type: type,
-                            plan: isPharmacy ? "pharmacy" as PlanType : "basic",
+                            plan: (isPharmacy ? "pharmacy" : isLab ? "lab" : "basic") as PlanType,
                           }))}
                           style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:8,padding:"16px 12px",border:`2px solid ${isSelected?color:"#eef0f3"}`,borderRadius:14,background:isSelected?`${color}08`:"#fafbfc",cursor:"pointer",transition:"all .18s",fontFamily:"Rubik,sans-serif",boxShadow:isSelected?`0 4px 16px ${color}18`:"none" }}>
-                          <span style={{ fontSize:28 }}><AppIcon glyph={isPharmacy?"💊":"🏥"} /></span>
+                          <span style={{ fontSize:28 }}><AppIcon glyph={isLab?"🧪":isPharmacy?"💊":"🏥"} /></span>
                           <span style={{ fontSize:13,fontWeight:isSelected?700:500,color:isSelected?color:"#666" }}>
-                            {isPharmacy ? tr.accountType.pharmacy : tr.accountType.clinic}
+                            {isLab ? (isAr?"مخبر":"Lab") : isPharmacy ? tr.accountType.pharmacy : tr.accountType.clinic}
                           </span>
                           <span style={{ fontSize:10,color:"#aaa",textAlign:"center",lineHeight:1.4 }}>
-                            {isPharmacy ? tr.accountType.pharmacyDesc : tr.accountType.clinicDesc}
+                            {isLab ? (isAr?"نظام إدارة المخابر":"Lab management system") : isPharmacy ? tr.accountType.pharmacyDesc : tr.accountType.clinicDesc}
                           </span>
                           {isSelected && (
                             <span style={{ fontSize:10,fontWeight:700,color:color,background:`${color}12`,padding:"2px 10px",borderRadius:20 }}>✓ {isAr?"محدد":"Selected"}</span>
@@ -839,7 +840,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                 </div>
               )}
 
-              <Field label={form.account_type === "pharmacy" ? (isAr?"اسم الصيدلية *":"Pharmacy Name *") : tr.modal.clinicName}>
+              <Field label={form.account_type === "pharmacy" ? (isAr?"اسم الصيدلية *":"Pharmacy Name *") : form.account_type === "lab" ? (isAr?"اسم المخبر *":"Lab Name *") : tr.modal.clinicName}>
                 <input
                   value={form.name}
                   onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
@@ -849,7 +850,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               </Field>
 
               <div style={{ display:"flex", gap:12 }}>
-                <Field label={form.account_type === "pharmacy" ? (isAr?"اسم المدير / المالك *":"Owner / Manager *") : tr.modal.ownerName} half>
+                <Field label={(form.account_type === "pharmacy" || form.account_type === "lab") ? (isAr?"اسم المدير / المالك *":"Owner / Manager *") : tr.modal.ownerName} half>
                   <input
                     value={form.owner}
                     onChange={e => setForm(prev => ({ ...prev, owner: e.target.value }))}
@@ -878,7 +879,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               </Field>
 
               {/* نوع العيادة — فقط للعيادات */}
-              {form.account_type !== "pharmacy" && (
+              {form.account_type !== "pharmacy" && form.account_type !== "lab" && (
               <Field label={tr.modal.clinicType}>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
                   {([
@@ -912,7 +913,17 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               )}
 
               {/* الخطة — عيادة: خيارات متعددة | صيدلية: بطاقة ثابتة */}
-              {form.account_type === "pharmacy" ? (
+              {form.account_type === "lab" ? (
+                <Field label={isAr?"اشتراك مخبر":"Lab Subscription"}>
+                  <div style={{ padding:"16px",background:"rgba(224,140,0,.06)",border:"2px solid rgba(224,140,0,.25)",borderRadius:14 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:8 }}>
+                      <span style={{ fontSize:22 }}><AppIcon glyph="🧪" /></span>
+                      <span style={{ fontSize:14,fontWeight:700,color:"#e08c00" }}>{isAr?"اشتراك مخبر":"Lab Subscription"}</span>
+                    </div>
+                    <p style={{ fontSize:12,color:"#555",lineHeight:1.6 }}>{isAr?"جميع ميزات نظام المخبر (طلبات التحاليل، إدخال النتائج، مشاركة PDF وواتساب، كتالوج التحاليل، التقارير)":"All lab system features (orders, results entry, PDF/WhatsApp sharing, tests catalog, reports)"}</p>
+                  </div>
+                </Field>
+              ) : form.account_type === "pharmacy" ? (
                 <Field label={tr.pharmacy.plan}>
                   <div style={{ padding:"16px",background:"rgba(39,174,96,.06)",border:"2px solid rgba(39,174,96,.25)",borderRadius:14 }}>
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
@@ -3088,7 +3099,7 @@ export default function AdminPage() {
   };
 
   const [dataToolsModal, setDataToolsModal] = useState(false);
-  const [accountFilter, setAccountFilter] = useState<"all"|"clinic"|"pharmacy">("all");
+  const [accountFilter, setAccountFilter] = useState<"all"|"clinic"|"pharmacy"|"lab">("all");
   const [currentPage,   setCurrentPage]   = useState(1);
   const PAGE_SIZE = 20;
 
@@ -3186,6 +3197,7 @@ export default function AdminPage() {
     if (filter === "inactive" && c.status !== "inactive") return false;
     if (accountFilter === "clinic"   && c.account_type !== "clinic"   && c.account_type !== undefined) return false;
     if (accountFilter === "pharmacy" && c.account_type !== "pharmacy") return false;
+    if (accountFilter === "lab"      && c.account_type !== "lab") return false;
     return true;
   }), [clinics, search, filter, accountFilter]);
 
@@ -3197,8 +3209,9 @@ export default function AdminPage() {
 
   const stats = useMemo(() => ({
     total:      clinics.length,
-    clinics:    clinics.filter(c => c.account_type !== "pharmacy").length,
+    clinics:    clinics.filter(c => c.account_type !== "pharmacy" && c.account_type !== "lab").length,
     pharmacies: clinics.filter(c => c.account_type === "pharmacy").length,
+    labs:       clinics.filter(c => c.account_type === "lab").length,
     active:     clinics.filter(c => c.status === "active").length,
     frozen:     clinics.filter(c => c.status === "inactive").length,
     expired:    clinics.filter(c => isExpired(c.expiry)).length,
@@ -3501,10 +3514,10 @@ export default function AdminPage() {
                       <button key={k} className={`filter-chip-dark${filter===k?" active":""}`} onClick={() => setFilter(k)}>{v}</button>
                     ))}
                     <div style={{ width:1,background:"#eef0f3",margin:"0 4px" }}/>
-                    {([["all", isAr?"الكل":"All"],["clinic",(isAr?tr.pharmacy.filterClinics:tr.pharmacy.filterClinics)],["pharmacy",(isAr?tr.pharmacy.filterPharmacies:tr.pharmacy.filterPharmacies)]] as [string,string][]).map(([k,v]) => (
+                    {([["all", isAr?"الكل":"All"],["clinic",(isAr?tr.pharmacy.filterClinics:tr.pharmacy.filterClinics)],["pharmacy",(isAr?tr.pharmacy.filterPharmacies:tr.pharmacy.filterPharmacies)],["lab",(isAr?"مخابر":"Labs")]] as [string,string][]).map(([k,v]) => (
                       <button key={k} className={`filter-chip-dark${accountFilter===k?" active":""}`}
-                        style={{ borderColor: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.3)" : undefined, background: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.08)" : undefined, color: accountFilter===k&&k==="pharmacy" ? "#27ae60" : undefined }}
-                        onClick={() => setAccountFilter(k as "all"|"clinic"|"pharmacy")}>{v}</button>
+                        style={{ borderColor: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.3)" : accountFilter===k&&k==="lab" ? "rgba(224,140,0,.3)" : undefined, background: accountFilter===k&&k==="pharmacy" ? "rgba(39,174,96,.08)" : accountFilter===k&&k==="lab" ? "rgba(224,140,0,.08)" : undefined, color: accountFilter===k&&k==="pharmacy" ? "#27ae60" : accountFilter===k&&k==="lab" ? "#e08c00" : undefined }}
+                        onClick={() => setAccountFilter(k as "all"|"clinic"|"pharmacy"|"lab")}>{v}</button>
                     ))}
                   </div>
                 </div>
@@ -3549,7 +3562,7 @@ export default function AdminPage() {
                                 <div title={dot.title} style={{ width:9,height:9,borderRadius:"50%",background:dot.color,flexShrink:0,boxShadow:`0 0 0 2px ${dot.color}22` }} />
                                 <div style={{ minWidth:0 }}>
                                   <div style={{ fontSize:13,fontWeight:600,color:"#353535",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
-                                    <span style={{ fontSize:14, display:"flex" }}><AppIcon glyph={c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]} /></span>
+                                    <span style={{ fontSize:14, display:"flex" }}><AppIcon glyph={c.account_type==="lab" ? "🧪" : c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]} /></span>
                                     <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{c.name}</span>
                                   </div>
                                   <div
@@ -3649,7 +3662,7 @@ export default function AdminPage() {
                               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                                 <div title={dot.title} style={{ width:8,height:8,borderRadius:"50%",background:dot.color,flexShrink:0 }} />
                                 <span style={{ fontSize:13,fontWeight:700,color:"#353535",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
-                                  <AppIcon glyph={c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]} style={{marginInlineEnd:5}} />{c.name}
+                                  <AppIcon glyph={c.account_type==="lab" ? "🧪" : c.account_type==="pharmacy" ? "💊" : CLINIC_TYPE_ICONS[c.clinic_type||"general"]} style={{marginInlineEnd:5}} />{c.name}
                                 </span>
                                 <div style={{ display:"flex",gap:5,flexShrink:0 }} onClick={e => e.stopPropagation()}>
                                   <button className="icon-btn-dark" title={isAr?"معلومات":"Info"} onClick={e => { e.stopPropagation(); setInfoClinic(c); }} style={{ width:30,height:30 }}>ℹ️</button>
@@ -3681,7 +3694,7 @@ export default function AdminPage() {
                                 >{c.email}</span>
                                 <span style={{ width:1,height:12,background:"#eef0f3",flexShrink:0 }} />
                                 <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${planColor}15`,color:planColor }}>
-                                  {c.account_type==="pharmacy" ? (isAr?"صيدلية":"Pharmacy") : (tr.clinics.plans[c.plan as keyof typeof tr.clinics.plans]||c.plan)}
+                                  {c.account_type==="lab" ? (isAr?"مخبر":"Lab") : c.account_type==="pharmacy" ? (isAr?"صيدلية":"Pharmacy") : (tr.clinics.plans[c.plan as keyof typeof tr.clinics.plans]||c.plan)}
                                 </span>
                                 <span style={{ fontSize:11,color:exp?"#c0392b":expSoon?"#e67e22":"#aaa",fontVariantNumeric:"tabular-nums",direction:"ltr",display:"inline-block",fontWeight:exp||expSoon?700:400 }}>{fmtDateEn(c.expiry)}</span>
                               </div>
@@ -3982,12 +3995,12 @@ function ClinicInfoModal({ clinic, onClose, isAr }: { clinic: ClinicData; onClos
         <div style={{ background:"linear-gradient(135deg,#0863ba,#0558a8)", padding:"20px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={{ width:44, height:44, background:"rgba(255,255,255,.15)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
-              <AppIcon glyph={clinic.account_type === "pharmacy" ? "💊" : CLINIC_TYPE_ICONS[clinic.clinic_type||"general"]} />
+              <AppIcon glyph={clinic.account_type === "lab" ? "🧪" : clinic.account_type === "pharmacy" ? "💊" : CLINIC_TYPE_ICONS[clinic.clinic_type||"general"]} />
             </div>
             <div>
               <div style={{ fontSize:16, fontWeight:800, color:"#fff" }}>{clinic.name}</div>
               <div style={{ fontSize:11, color:"rgba(255,255,255,.7)", marginTop:2 }}>
-                {clinic.account_type === "pharmacy" ? (isAr?"صيدلية":"Pharmacy") : (isAr?"عيادة":"Clinic")} · ID #{clinic.id}
+                {clinic.account_type === "lab" ? (isAr?"مخبر":"Lab") : clinic.account_type === "pharmacy" ? (isAr?"صيدلية":"Pharmacy") : (isAr?"عيادة":"Clinic")} · ID #{clinic.id}
               </div>
             </div>
           </div>
