@@ -1,7 +1,7 @@
 "use client";
 
 import AppIcon from "@/components/AppIcon";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { use, useEffect, useState, useCallback, useRef } from "react";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface ApiAppointment {
@@ -87,9 +87,9 @@ function formatTime12(t: string): string {
 export default function DisplayPage({
   params,
 }: {
-  params: { clinicId: string };
+  params: Promise<{ clinicId: string }>;
 }) {
-  const clinicId = params.clinicId;
+  const { clinicId } = use(params);
 
   const [clinicInfo, setClinicInfo] = useState<ClinicInfo | null>(null);
   const [columns, setColumns] = useState<DisplayColumn[]>([]);
