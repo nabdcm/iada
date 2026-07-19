@@ -3121,6 +3121,7 @@ export default function AdminPage() {
         payments_lock_password: (row.payments_lock_password as string) || "",
         restricted_access_enabled: (row.restricted_access_enabled as boolean) ?? false,
         restricted_access_pin:     (row.restricted_access_pin as string) || "",
+        plain_password:            (row.plain_password as string) ?? null,
       }));
 
       setClinics(clinicsData);
