@@ -175,7 +175,7 @@ const T = {
     pharmacy: {
       plan: "اشتراك صيدلية",
       planDesc: "جميع ميزات نظام الصيدلية (المخزون، الوصفات، المبيعات، الموردين، التقارير)",
-      price: "39$",
+      price: "49$",
       period: "/شهر",
       addTitle: "إضافة صيدلية جديدة",
       editTitle: "تعديل بيانات الصيدلية",
@@ -382,7 +382,7 @@ const T = {
     pharmacy: {
       plan: "Pharmacy Subscription",
       planDesc: "Full pharmacy system (inventory, prescriptions, sales, suppliers, reports)",
-      price: "$39",
+      price: "$49",
       period: "/month",
       addTitle: "Add New Pharmacy",
       editTitle: "Edit Pharmacy",
