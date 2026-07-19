@@ -119,7 +119,7 @@ export default function DisplayPage({
     return () => clearInterval(id);
   }, []);
 
-  const DOCTOR_COLORS = ["#38bdf8", "#4ade80", "#f472b6", "#fbbf24", "#a78bfa", "#fb923c"];
+  const DOCTOR_COLORS = ["#0863ba", "#05a0c4", "#0d9488", "#7c3aed", "#be185d", "#b45309"];
 
   // ─── Fetch via API route (bypasses RLS) — يعكس اختيار الطبيب اليدوي ─
   const fetchData = useCallback(async () => {
@@ -169,7 +169,7 @@ export default function DisplayPage({
           .map((d, i) => buildColumn(d.id, d.name, d.color || DOCTOR_COLORS[i % DOCTOR_COLORS.length], appts.filter(a => a.doctor_id === d.id)))
           .filter(c => c.current || c.upcoming.length > 0 || appts.some(a => a.doctor_id === c.doctorId));
       } else {
-        newColumns = [buildColumn(null, null, "#38bdf8", appts)];
+        newColumns = [buildColumn(null, null, "#0863ba", appts)];
       }
 
       // ─── Flash عند تغيير المريض الحالي بأي عمود ───────────────
@@ -203,12 +203,14 @@ export default function DisplayPage({
     return (
       <div style={styles.errorPage}>
         <div style={styles.errorBox}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}><AppIcon glyph="🏥" /></div>
-          <h1 style={{ fontSize: 24, color: "#fff", margin: 0 }}>{error}</h1>
+          <div style={{ fontSize: 56, color: "#0863ba", marginBottom: 14 }}><AppIcon glyph="🏥" /></div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#16324f", margin: 0 }}>{error}</h1>
         </div>
       </div>
     );
   }
+
+  const multi = columns.length > 1;
 
   // ─── Render ───────────────────────────────────────────────────
   return (
@@ -228,7 +230,11 @@ export default function DisplayPage({
       {/* ── Header ── */}
       <header style={styles.header}>
         <div style={styles.headerRight}>
-          <div style={styles.logo}><AppIcon glyph="💙" /></div>
+          <div style={styles.logo}>
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12h4l2.5-6 4 12 2.5-6H22" />
+            </svg>
+          </div>
           <div>
             <div style={styles.clinicName}>{clinicInfo?.name ?? "..."}</div>
             <div style={styles.clinicSub}>{clinicInfo?.owner ?? ""}</div>
@@ -240,26 +246,49 @@ export default function DisplayPage({
         </div>
       </header>
 
+      {/* ── خط النبض — توقيع الهوية ── */}
+      <div style={styles.pulseStrip} aria-hidden>
+        <svg viewBox="0 0 1200 40" preserveAspectRatio="none" style={{ width: "200%", height: 40, display: "block" }} className="nabd-ecg">
+          <path
+            d="M0 20 H80 L95 20 L105 6 L118 34 L130 20 H230 L245 20 L255 6 L268 34 L280 20 H380 L395 20 L405 6 L418 34 L430 20 H530 L545 20 L555 6 L568 34 L580 20 H680 L695 20 L705 6 L718 34 L730 20 H830 L845 20 L855 6 L868 34 L880 20 H980 L995 20 L1005 6 L1018 34 L1030 20 H1130 L1145 20 L1155 6 L1168 34 L1180 20 H1200"
+            fill="none" stroke="url(#nabdGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          />
+          <defs>
+            <linearGradient id="nabdGrad" x1="0" x2="1">
+              <stop offset="0" stopColor="#0863ba" />
+              <stop offset="1" stopColor="#05a0c4" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
       {/* ── Body ── */}
-      <main style={columns.length > 1 ? { ...styles.body, gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` } : styles.body}>
+      <main style={multi ? { ...styles.body, gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` } : styles.body}>
         {columns.map((col) => (
-          <div key={String(col.doctorId ?? "single")} style={columns.length > 1 ? styles.doctorColumn : styles.singleColumnWrap}>
+          <div key={String(col.doctorId ?? "single")} style={multi ? styles.doctorColumn : styles.singleColumnWrap}>
             {col.doctorName && (
-              <div style={{ ...styles.doctorHeader, color: col.color }}>{"د. " + col.doctorName}</div>
+              <div style={styles.doctorHeader}>
+                <span style={{ ...styles.doctorDot, background: col.color }} />
+                {"د. " + col.doctorName}
+              </div>
             )}
+
             {/* Current patient */}
             <section style={styles.currentSection}>
-              <div style={styles.sectionLabel}>المريض الحالي</div>
+              <div style={styles.sectionLabel}>الدور الحالي</div>
               {col.current ? (
-                <div style={{ ...styles.currentCard, borderColor: `${col.color}59`, background: `linear-gradient(135deg, ${col.color}1f 0%, ${col.color}0f 100%)` }}>
-                  <div style={styles.currentBadge}><AppIcon glyph="🟢" /> جارٍ الآن</div>
-                  <div style={styles.currentName}>{col.current.maskedName}</div>
-                  <div style={{ ...styles.currentTime, color: col.color }}>{col.current.time}</div>
+                <div style={styles.currentCard} className="nabd-current">
+                  <div style={styles.currentBadge}>
+                    <span className="nabd-dot" style={styles.liveDot} />
+                    جارٍ الآن
+                  </div>
+                  <div style={multi ? styles.currentNameMulti : styles.currentName}>{col.current.maskedName}</div>
+                  <div style={styles.currentTime}>{col.current.time}</div>
                 </div>
               ) : (
                 <div style={styles.emptyCard}>
-                  <span style={{ fontSize: 40 }}><AppIcon glyph="🕐" /></span>
-                  <span style={{ marginTop: 12, fontSize: 18, color: "rgba(255,255,255,.5)" }}>
+                  <span style={{ fontSize: 40, color: "#b9c8d9" }}><AppIcon glyph="🕐" /></span>
+                  <span style={{ marginTop: 12, fontSize: 18, color: "#8aa0b6", fontWeight: 500 }}>
                     لا يوجد مريض قيد الاستقبال
                   </span>
                 </div>
@@ -274,8 +303,8 @@ export default function DisplayPage({
               ) : (
                 <div style={styles.upcomingList}>
                   {col.upcoming.map((a, i) => (
-                    <div key={a.id} style={{ ...styles.upcomingCard, animationDelay: `${i * 0.08}s` }}>
-                      <div style={{ ...styles.upcomingRank, color: col.color, background: `${col.color}1f` }}>{i + 1}</div>
+                    <div key={a.id} style={{ ...styles.upcomingCard, animationDelay: `${i * 0.07}s` }} className="nabd-row">
+                      <div style={styles.upcomingRank}>{i + 1}</div>
                       <div style={styles.upcomingName}>{a.maskedName}</div>
                       <div style={styles.upcomingTime}>{a.time}</div>
                     </div>
@@ -290,207 +319,223 @@ export default function DisplayPage({
       {/* ── Footer ── */}
       <footer style={styles.footer}>
         <span style={styles.footerBrand}>نبض — نظام إدارة العيادات</span>
-        <span style={styles.footerNote}>يتجدد تلقائياً كل 30 ثانية</span>
+        <span style={styles.footerNote}>تُحدَّث الشاشة تلقائياً كل ٣٠ ثانية</span>
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #020b18; }
+        html, body { background: #f7f9fc; }
         @keyframes fadeSlideIn {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        .nabd-row { animation: fadeSlideIn .35s ease both; }
         @keyframes flashIn {
-          0%   { opacity: 0; transform: scale(.85); }
-          15%  { opacity: 1; transform: scale(1.04); }
-          25%  { transform: scale(1); }
-          85%  { opacity: 1; transform: scale(1); }
-          100% { opacity: 0; transform: scale(.95); }
+          0%   { opacity: 0; transform: scale(.88); }
+          12%  { opacity: 1; transform: scale(1.03); }
+          20%  { transform: scale(1); }
+          88%  { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(.96); }
         }
-        @keyframes pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(56,189,248,.4); }
-          50%       { box-shadow: 0 0 0 20px rgba(56,189,248,0); }
+        @keyframes ringPulse {
+          0%, 100% { box-shadow: 0 24px 60px rgba(8,99,186,.18), 0 0 0 0 rgba(8,99,186,.28); }
+          50%      { box-shadow: 0 24px 60px rgba(8,99,186,.18), 0 0 0 18px rgba(8,99,186,0); }
         }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.4; }
+        .nabd-current { animation: ringPulse 2.6s ease-in-out infinite; }
+        @keyframes blinkDot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+        .nabd-dot { animation: blinkDot 1.4s ease infinite; }
+        @keyframes ecgScroll { from { transform: translateX(0); } to { transform: translateX(-25%); } }
+        .nabd-ecg { animation: ecgScroll 12s linear infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .nabd-ecg, .nabd-current, .nabd-dot, .nabd-row { animation: none !important; }
         }
       `}</style>
     </div>
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────
+// ─── Styles — هوية نبض: أبيض/أزرق #0863ba → #05a0c4 ────────────
 const styles: Record<string, React.CSSProperties> = {
   page: {
     fontFamily: "'Rubik', sans-serif",
-    background: "linear-gradient(160deg, #020b18 0%, #031428 50%, #050e1f 100%)",
+    background: "#f7f9fc",
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
-    color: "#fff",
+    color: "#16324f",
     overflow: "hidden",
-    position: "relative",
   },
-  flashOverlay: {
-    position: "fixed",
-    inset: 0,
-    zIndex: 999,
-    background: "rgba(2,11,24,.88)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    animation: "flashIn 8s ease forwards",
-    backdropFilter: "blur(6px)",
-  },
-  flashBox: {
-    background: "linear-gradient(135deg, #0f3460 0%, #16213e 100%)",
-    border: "3px solid #38bdf8",
-    borderRadius: 32,
-    padding: "60px 80px",
-    textAlign: "center",
-    boxShadow: "0 0 80px rgba(56,189,248,.35), 0 0 0 1px rgba(56,189,248,.15)",
-    animation: "pulse 1.5s ease-in-out infinite",
-    maxWidth: 700,
-    width: "90vw",
-  },
-  flashIcon: { fontSize: 72, marginBottom: 16, animation: "blink 1s ease infinite" },
-  flashLabel: { fontSize: 22, color: "#94d2ff", fontWeight: 600, marginBottom: 12 },
-  flashName: { fontSize: 64, fontWeight: 900, color: "#fff", letterSpacing: 2, marginBottom: 8 },
-  flashTime: { fontSize: 28, color: "#38bdf8", fontWeight: 700 },
+
+  // Header
   header: {
+    background: "#fff",
+    borderBottom: "1.5px solid #e6edf5",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "24px 48px",
-    borderBottom: "1px solid rgba(56,189,248,.12)",
-    background: "rgba(3,20,40,.6)",
-    backdropFilter: "blur(10px)",
+    padding: "20px 40px",
+    boxShadow: "0 2px 16px rgba(8,99,186,.06)",
   },
   headerRight: { display: "flex", alignItems: "center", gap: 18 },
-  logo: { fontSize: 48 },
-  clinicName: { fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1.2 },
-  clinicSub: { fontSize: 14, color: "rgba(255,255,255,.45)", marginTop: 4 },
-  clockBox: { textAlign: "left" as const },
-  clockTime: { fontSize: 52, fontWeight: 900, color: "#38bdf8", lineHeight: 1, fontVariantNumeric: "tabular-nums" },
-  clockDate: { fontSize: 14, color: "rgba(255,255,255,.4)", marginTop: 4, textAlign: "right" as const },
+  logo: {
+    width: 58, height: 58, borderRadius: 16,
+    background: "linear-gradient(135deg, #0863ba 0%, #05a0c4 100%)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    boxShadow: "0 8px 22px rgba(8,99,186,.28)",
+  },
+  clinicName: { fontSize: 30, fontWeight: 800, color: "#16324f", lineHeight: 1.2 },
+  clinicSub: { fontSize: 16, fontWeight: 500, color: "#8aa0b6", marginTop: 4 },
+  clockBox: { textAlign: "left" },
+  clockTime: {
+    fontSize: 46, fontWeight: 800, letterSpacing: 1,
+    fontVariantNumeric: "tabular-nums",
+    background: "linear-gradient(135deg, #0863ba, #05a0c4)",
+    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+    lineHeight: 1,
+  },
+  clockDate: { fontSize: 16, fontWeight: 500, color: "#8aa0b6", marginTop: 6 },
+
+  // ECG strip
+  pulseStrip: { overflow: "hidden", background: "#fff", borderBottom: "1.5px solid #e6edf5", opacity: 0.55 },
+
+  // Body
   body: {
     flex: 1,
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 32,
-    padding: "40px 48px",
-    alignItems: "start",
+    gridTemplateColumns: "1fr",
+    gap: 28,
+    padding: "34px 40px",
+    alignContent: "start",
+    overflow: "auto",
   },
+  singleColumnWrap: { maxWidth: 1000, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 30 },
+  doctorColumn: {
+    background: "#fff",
+    border: "1.5px solid #e6edf5",
+    borderRadius: 22,
+    padding: 24,
+    display: "flex", flexDirection: "column", gap: 22,
+    boxShadow: "0 4px 24px rgba(8,99,186,.05)",
+    minWidth: 0,
+  },
+  doctorHeader: {
+    display: "flex", alignItems: "center", gap: 10,
+    fontSize: 22, fontWeight: 800, color: "#16324f",
+    paddingBottom: 14, borderBottom: "1.5px solid #eef3f9",
+  },
+  doctorDot: { width: 13, height: 13, borderRadius: "50%", flexShrink: 0 },
+
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: 700,
-    letterSpacing: 3,
-    color: "rgba(56,189,248,.6)",
-    textTransform: "uppercase" as const,
-    marginBottom: 20,
+    fontSize: 15, fontWeight: 700, color: "#8aa0b6",
+    letterSpacing: 0.5, marginBottom: 14,
+    display: "flex", alignItems: "center", gap: 8,
   },
-  currentSection: { display: "flex", flexDirection: "column" },
-  doctorColumn: { display: "flex", flexDirection: "column", gap: 0, background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 20, padding: 20 },
-  singleColumnWrap: { display: "contents" },
-  doctorHeader: { fontSize: 20, fontWeight: 800, marginBottom: 16, textAlign: "center" as const },
+
+  // Current patient
+  currentSection: {},
   currentCard: {
-    background: "linear-gradient(135deg, rgba(56,189,248,.12) 0%, rgba(14,165,233,.06) 100%)",
-    border: "2px solid rgba(56,189,248,.35)",
+    background: "linear-gradient(135deg, #0863ba 0%, #0a7fc7 55%, #05a0c4 100%)",
     borderRadius: 24,
-    padding: "40px 36px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    boxShadow: "0 8px 40px rgba(56,189,248,.1)",
-    animation: "fadeSlideIn .4s ease",
+    padding: "38px 34px",
+    textAlign: "center",
+    color: "#fff",
+    position: "relative",
   },
   currentBadge: {
-    fontSize: 14,
-    fontWeight: 700,
-    color: "#4ade80",
-    background: "rgba(74,222,128,.1)",
-    border: "1px solid rgba(74,222,128,.25)",
-    borderRadius: 20,
-    padding: "4px 14px",
-    display: "inline-flex",
-    alignSelf: "flex-start",
-    gap: 6,
+    display: "inline-flex", alignItems: "center", gap: 9,
+    background: "rgba(255,255,255,.16)",
+    border: "1px solid rgba(255,255,255,.3)",
+    borderRadius: 40, padding: "8px 20px",
+    fontSize: 16, fontWeight: 700, color: "#fff",
+    marginBottom: 20,
   },
-  currentName: {
-    fontSize: 56,
-    fontWeight: 900,
-    color: "#fff",
-    lineHeight: 1.1,
-    letterSpacing: 1,
-  },
+  liveDot: { width: 10, height: 10, borderRadius: "50%", background: "#7ef2c0", display: "inline-block" },
+  currentName: { fontSize: 74, fontWeight: 900, lineHeight: 1.15, wordBreak: "break-word" },
+  currentNameMulti: { fontSize: 44, fontWeight: 900, lineHeight: 1.15, wordBreak: "break-word" },
   currentTime: {
-    fontSize: 28,
-    fontWeight: 700,
-    color: "#38bdf8",
+    marginTop: 16, fontSize: 26, fontWeight: 700,
+    color: "rgba(255,255,255,.9)", fontVariantNumeric: "tabular-nums",
   },
   emptyCard: {
-    background: "rgba(255,255,255,.03)",
-    border: "2px dashed rgba(255,255,255,.1)",
+    background: "#fff",
+    border: "2px dashed #d7e3f0",
     borderRadius: 24,
-    padding: "60px 36px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
+    padding: "46px 30px",
+    display: "flex", flexDirection: "column", alignItems: "center",
   },
-  upcomingSection: { display: "flex", flexDirection: "column" },
-  emptyUpcoming: {
-    fontSize: 16,
-    color: "rgba(255,255,255,.3)",
-    padding: "40px 0",
-    textAlign: "center" as const,
-  },
-  upcomingList: { display: "flex", flexDirection: "column", gap: 14 },
+
+  // Upcoming
+  upcomingSection: {},
+  upcomingList: { display: "flex", flexDirection: "column", gap: 12 },
   upcomingCard: {
-    display: "flex",
-    alignItems: "center",
-    gap: 18,
-    background: "rgba(255,255,255,.04)",
-    border: "1px solid rgba(255,255,255,.08)",
+    display: "flex", alignItems: "center", gap: 18,
+    background: "#fff",
+    border: "1.5px solid #e6edf5",
     borderRadius: 16,
-    padding: "18px 24px",
-    animation: "fadeSlideIn .35s ease both",
-    transition: "background .2s",
+    padding: "16px 22px",
+    boxShadow: "0 2px 10px rgba(8,99,186,.04)",
   },
   upcomingRank: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    background: "rgba(56,189,248,.12)",
-    color: "#38bdf8",
-    fontSize: 16,
-    fontWeight: 800,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
+    width: 46, height: 46, borderRadius: 13, flexShrink: 0,
+    background: "rgba(8,99,186,.08)", color: "#0863ba",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 21, fontWeight: 800, fontVariantNumeric: "tabular-nums",
   },
-  upcomingName: { flex: 1, fontSize: 22, fontWeight: 700, color: "#e2e8f0" },
-  upcomingTime: { fontSize: 18, fontWeight: 600, color: "rgba(255,255,255,.45)" },
+  upcomingName: { flex: 1, fontSize: 24, fontWeight: 700, color: "#16324f", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  upcomingTime: { fontSize: 19, fontWeight: 700, color: "#05a0c4", fontVariantNumeric: "tabular-nums", flexShrink: 0 },
+  emptyUpcoming: {
+    background: "#fff", border: "1.5px dashed #d7e3f0", borderRadius: 16,
+    padding: "26px 20px", textAlign: "center",
+    fontSize: 17, color: "#8aa0b6", fontWeight: 500,
+  },
+
+  // Footer
   footer: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "14px 48px",
-    borderTop: "1px solid rgba(255,255,255,.06)",
-    background: "rgba(3,20,40,.4)",
+    background: "#fff",
+    borderTop: "1.5px solid #e6edf5",
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "14px 40px",
   },
-  footerBrand: { fontSize: 12, color: "rgba(255,255,255,.25)", fontWeight: 600 },
-  footerNote: { fontSize: 11, color: "rgba(255,255,255,.15)" },
+  footerBrand: { fontSize: 15, fontWeight: 700, color: "#0863ba" },
+  footerNote: { fontSize: 13, fontWeight: 500, color: "#8aa0b6" },
+
+  // Flash overlay
+  flashOverlay: {
+    position: "fixed", inset: 0, zIndex: 100,
+    background: "rgba(10, 35, 66, .55)",
+    backdropFilter: "blur(8px)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  flashBox: {
+    background: "#fff",
+    borderRadius: 30,
+    border: "1.5px solid #e6edf5",
+    padding: "56px 90px",
+    textAlign: "center",
+    boxShadow: "0 40px 100px rgba(4,20,40,.35)",
+    animation: "flashIn 8s ease forwards",
+    maxWidth: "88vw",
+  },
+  flashIcon: { fontSize: 60, color: "#0863ba", marginBottom: 14 },
+  flashLabel: { fontSize: 26, fontWeight: 700, color: "#8aa0b6", marginBottom: 14 },
+  flashName: {
+    fontSize: 84, fontWeight: 900, lineHeight: 1.15,
+    background: "linear-gradient(135deg, #0863ba, #05a0c4)",
+    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+    wordBreak: "break-word",
+  },
+  flashTime: { marginTop: 18, fontSize: 30, fontWeight: 700, color: "#16324f", fontVariantNumeric: "tabular-nums" },
+
+  // Error
   errorPage: {
+    minHeight: "100vh", background: "#f7f9fc",
+    display: "flex", alignItems: "center", justifyContent: "center",
     fontFamily: "'Rubik', sans-serif",
-    background: "#020b18",
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
-  errorBox: { textAlign: "center" },
+  errorBox: {
+    background: "#fff", border: "1.5px solid #e6edf5", borderRadius: 24,
+    padding: "50px 70px", textAlign: "center",
+    boxShadow: "0 10px 40px rgba(8,99,186,.08)",
+  },
 };
