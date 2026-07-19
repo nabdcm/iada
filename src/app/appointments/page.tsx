@@ -1415,6 +1415,7 @@ export default function AppointmentsPage() {
   const [selectedKey,         setSelectedKey]         = useState(todayKey);
   const [addModal,            setAddModal]            = useState(false);
   const [editAppt,            setEditAppt]            = useState<Appointment | null>(null);
+  const [mobileApptView,      setMobileApptView]      = useState<"timeline"|"agenda">("timeline");
   const [quickSlot,           setQuickSlot]           = useState<{ doctorId: number | null; time: string; date: string } | null>(null);
   const [notification,        setNotification]        = useState<Appointment | null>(null);
 
@@ -1479,7 +1480,8 @@ export default function AppointmentsPage() {
           .then(({ data: tfData }) => { if (tfData?.time_format === "12" || tfData?.time_format === "24") setClockFmt(tfData.time_format); });
         // جلب خطة العيادة
         const { data: clinicData } = await supabase
-          .from("clinics").select("plan").eq("user_id", user.id).single();
+          .from("clinics").select("plan, settings").eq("user_id", user.id).single();
+        setMobileApptView(((clinicData?.settings as any)?.mobile_appt_view === "agenda") ? "agenda" : "timeline");
         if (clinicData?.plan) {
           const fetchedPlan = clinicData.plan as PlanType;
           setPlan(fetchedPlan);
@@ -2046,8 +2048,8 @@ export default function AppointmentsPage() {
                           ＋ {tr.addAppointment}
                         </button>
                       </div>
-                    ) : isMobile ? (
-                      /* ══ عرض أجندة مبسّط — للموبايل فقط ══ */
+                    ) : (isMobile && mobileApptView === "agenda") ? (
+                      /* ══ عرض أجندة مبسّط — يُفعّل من إعدادات العيادة ══ */
                       <div style={{ display:"flex",flexDirection:"column",gap:10,paddingTop:4 }}>
                         {[...dayAppointments].sort((a,b)=>a.time.localeCompare(b.time)).map(appt=>{
                           const sc = (tr.statusColors as Record<string,string>)[appt.status] ?? "#0863ba";
