@@ -22,7 +22,7 @@ interface Props {
 }
 
 export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
-  const [status, setStatus] = useState<"loading" | "ok" | "redirect">("loading");
+  const [status, setStatus] = useState<"loading" | "ok" | "redirect" | "suspended">("loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +52,21 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
         }
         // إصدار cookie موقّع httpOnly عبر الخادم حتى يعمل الـ middleware
         await issueSessionCookie(session.access_token);
+
+        // ── فحص حالة الاشتراك (تجميد/تعليق) — بدون تسجيل خروج ──
+        try {
+           
+          const { data: row } = await supabase
+            .from("clinics")
+            .select("status")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          if (!cancelled && row?.status === "inactive") {
+            setStatus("suspended");
+            return;
+          }
+        } catch { /* في حال فشل الفحص لا نمنع الدخول */ }
+
         setStatus("ok");
       } else {
         setStatus("redirect");
@@ -101,6 +116,20 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
             margin: "0 auto 12px",
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "suspended") {
+    const isAr = typeof navigator !== "undefined" ? !navigator.language?.startsWith("en") : true;
+    return (
+      <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f8fafc",fontFamily:"'Rubik',sans-serif",padding:20 }}>
+        <div style={{ textAlign:"center",maxWidth:420,background:"#fff",borderRadius:20,padding:"40px 30px",boxShadow:"0 10px 40px rgba(0,0,0,.08)" }}>
+          <div style={{ fontSize:48,marginBottom:16 }}>⏸️</div>
+          <h2 style={{ fontSize:20,fontWeight:800,color:"#353535",margin:"0 0 10px" }}>{isAr?"الاشتراك معلّق مؤقتاً":"Subscription Temporarily Suspended"}</h2>
+          <p style={{ fontSize:14,color:"#888",lineHeight:1.8,margin:"0 0 20px" }}>{isAr?"تم تعليق اشتراكك مؤقتاً مع الحفاظ على جميع بياناتك. يرجى التواصل مع الدعم لإعادة التفعيل.":"Your subscription has been temporarily suspended. All your data is safe. Please contact support to reactivate."}</p>
+          <a href="https://wa.me/963998285483" target="_blank" rel="noopener noreferrer" style={{ display:"inline-block",padding:"12px 28px",background:"#25D366",color:"#fff",borderRadius:12,fontSize:14,fontWeight:700,textDecoration:"none" }}>{isAr?"تواصل عبر واتساب":"Contact via WhatsApp"}</a>
         </div>
       </div>
     );
