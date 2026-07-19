@@ -207,6 +207,15 @@ export default function LabPage() {
         .res-inp.normal{border-color:#2ecc71;color:#1f8a4c;background:rgba(46,204,113,.05)}
         .stat-accent{position:absolute;inset-inline:0;top:0;height:4px;border-radius:20px 20px 0 0}
         .order-row:active{transform:scale(.995)}
+        .sheet-wrap{position:fixed;inset:0;background:rgba(16,42,80,.45);backdrop-filter:blur(4px);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
+        .sheet-box{width:min(96vw,680px);max-height:90vh;overflow-y:auto;background:#f4f8fc;border-radius:22px;animation:modalIn .3s both;font-family:'Rubik',sans-serif;overscroll-behavior:contain}
+        .sheet-box.white{background:#fff}
+        .sheet-head{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #e6edf5;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-radius:22px 22px 0 0}
+        @media(max-width:900px){
+          .sheet-wrap{align-items:flex-end;padding:0}
+          .sheet-box{width:100vw;max-height:94vh;border-radius:24px 24px 0 0}
+          .sheet-head{border-radius:24px 24px 0 0}
+        }
         @media print{.lab-sidebar,.lab-pillnav,.no-print{display:none!important}.lab-main{margin:0;padding:0}}
       `}</style>
 
@@ -273,6 +282,7 @@ export default function LabPage() {
         <ResultsModal
           order={resultsOrder}
           onClose={() => setResultsOrder(null)}
+          onLabels={() => setLabelsOrder(resultsOrder)}
           onSave={async (results, complete) => {
             const updated = await saveOrder(resultsOrder.id, { results, ...(complete ? { status: "completed" } : {}) });
             if (updated) {
@@ -556,13 +566,10 @@ function NewOrderModal({ catalog, onClose, onSaved, apiFetch, showNotif }: {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(16,42,80,.45)", backdropFilter: "blur(4px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div dir="rtl" onClick={e => e.stopPropagation()} style={{
-        width: "min(100vw,680px)", maxHeight: "94vh", overflowY: "auto", background: BRAND.bg,
-        borderRadius: "24px 24px 0 0", animation: "modalIn .3s both", fontFamily: "'Rubik',sans-serif",
-      }}>
+    <div className="sheet-wrap" onClick={onClose}>
+      <div dir="rtl" onClick={e => e.stopPropagation()} className="sheet-box">
         {/* Header sticky */}
-        <div style={{ position: "sticky", top: 0, zIndex: 5, background: "#fff", borderBottom: `1px solid ${BRAND.border}`, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: "24px 24px 0 0" }}>
+        <div className="sheet-head">
           <div>
             <div style={{ fontSize: 16, fontWeight: 900, color: BRAND.ink, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: BRAND.primary }}><Icons.plus size={19} /></span> طلب تحاليل جديد
@@ -744,9 +751,10 @@ function LabelsModal({ order, labName, onClose }: { order: LabOrder; labName: st
 // ═══════════════════════════════════════════════════════════════
 // المرحلة الثانية — إدخال النتائج
 // ═══════════════════════════════════════════════════════════════
-function ResultsModal({ order, onClose, onSave }: {
+function ResultsModal({ order, onClose, onSave, onLabels }: {
   order: LabOrder; onClose: () => void;
   onSave: (results: ResultRow[], complete: boolean) => Promise<void>;
+  onLabels: () => void;
 }) {
   const [rows, setRows] = useState<ResultRow[]>(order.results.map(r => ({ ...r })));
   const [saving, setSaving] = useState(false);
@@ -765,12 +773,9 @@ function ResultsModal({ order, onClose, onSave }: {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(16,42,80,.45)", backdropFilter: "blur(4px)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div dir="rtl" onClick={e => e.stopPropagation()} style={{
-        width: "min(100vw,620px)", maxHeight: "94vh", overflowY: "auto", background: "#fff",
-        borderRadius: "24px 24px 0 0", animation: "modalIn .3s both", fontFamily: "'Rubik',sans-serif",
-      }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 3, background: "#fff", borderBottom: `1px solid ${BRAND.border}`, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: "24px 24px 0 0" }}>
+    <div className="sheet-wrap" onClick={onClose}>
+      <div dir="rtl" onClick={e => e.stopPropagation()} className="sheet-box white" style={{ width: "min(96vw,620px)" }}>
+        <div className="sheet-head">
           <div>
             <div style={{ fontSize: 15, fontWeight: 900, color: BRAND.ink, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: BRAND.primary }}><Icons.edit size={17} /></span> المرحلة 2: نتائج {order.patient_name}
@@ -779,7 +784,12 @@ function ResultsModal({ order, onClose, onSave }: {
               {order.mrn ? `${order.mrn} · ` : ""}طلب #{order.id} · {filled}/{rows.length} نتيجة
             </div>
           </div>
-          <button onClick={onClose} style={{ background: BRAND.bg, border: "none", width: 34, height: 34, borderRadius: 10, cursor: "pointer", fontSize: 15, color: BRAND.muted }}>✕</button>
+          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <button onClick={onLabels} title="ملصقات QR" style={{ background: BRAND.sky, border: "none", height: 34, borderRadius: 10, cursor: "pointer", color: BRAND.primary, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", fontFamily: "'Rubik',sans-serif", fontSize: 12, fontWeight: 800 }}>
+              <Icons.qr size={16} /> الملصقات
+            </button>
+            <button onClick={onClose} style={{ background: BRAND.bg, border: "none", width: 34, height: 34, borderRadius: 10, cursor: "pointer", fontSize: 15, color: BRAND.muted }}>✕</button>
+          </div>
         </div>
 
         {/* progress */}
