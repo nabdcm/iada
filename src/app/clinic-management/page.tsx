@@ -837,7 +837,6 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
   const [allowOnline, setAllowOnline] = useState(true);
   const [requireApproval, setRequireApproval] = useState(false);
   const [clockFormat, setClockFormat] = useState<"12"|"24">("24");
-  const [mobileApptView, setMobileApptView] = useState<"timeline"|"agenda">("timeline");
   const [saveStatus, setSaveStatus] = useState<"idle"|"saving"|"saved">("idle");
 
   useEffect(() => {
@@ -853,7 +852,6 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
           setWeekendDays(st.weekend_days ?? [5,6]);
           setAllowOnline(st.allow_online_booking ?? true);
           setRequireApproval(st.require_approval ?? false);
-          setMobileApptView(st.mobile_appt_view ?? "timeline");
         }
       }
       const { data: prof } = await supabase.from("clinic_profiles").select("time_format").eq("id", userId).maybeSingle();
@@ -877,7 +875,6 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       weekend_days: weekendDays,
       allow_online_booking: allowOnline,
       require_approval: requireApproval,
-      mobile_appt_view: mobileApptView,
     };
     // حفظ في clinics
     await supabase.from("clinics").update({ name: clinicName, settings }).eq("user_id", userId);
@@ -1004,33 +1001,6 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       </div>
 
       {/* زر الحفظ */}
-            {/* ── شكل جدول المواعيد على الموبايل ── */}
-            <div style={{ marginBottom:22 }}>
-              <div style={{ fontSize:13,fontWeight:700,color:"#1c2b3a",marginBottom:4 }}>
-                {isAr?"شكل جدول المواعيد على الموبايل":"Appointments view on mobile"}
-              </div>
-              <div style={{ fontSize:11.5,color:"#8a97a6",marginBottom:10 }}>
-                {isAr?"اختر طريقة عرض مواعيد اليوم في صفحة المواعيد على الهاتف":"Choose how the day's appointments are displayed on phones"}
-              </div>
-              <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
-                {([
-                  { key:"timeline" as const, label:isAr?"الجدول الزمني (الكلاسيكي)":"Timeline (classic)", sub:isAr?"نفس شكل الحاسوب":"Same as desktop" },
-                  { key:"agenda"   as const, label:isAr?"الأجندة (بطاقات)":"Agenda (cards)", sub:isAr?"قائمة بطاقات مبسّطة":"Simplified card list" },
-                ]).map(opt=>(
-                  <button key={opt.key} onClick={()=>setMobileApptView(opt.key)}
-                    style={{ flex:"1 1 180px",textAlign:"start",padding:"13px 16px",borderRadius:14,cursor:"pointer",fontFamily:"Rubik,sans-serif",transition:"all .2s",
-                      border: mobileApptView===opt.key ? "2px solid #0863ba" : "1.5px solid #e6edf5",
-                      background: mobileApptView===opt.key ? "rgba(8,99,186,.06)" : "#fff",
-                      boxShadow: mobileApptView===opt.key ? "0 4px 14px rgba(8,99,186,.12)" : "none" }}>
-                    <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                      <span style={{ width:16,height:16,borderRadius:"50%",border:mobileApptView===opt.key?"5px solid #0863ba":"2px solid #cbd5e1",flexShrink:0,background:"#fff" }}/>
-                      <span style={{ fontSize:13,fontWeight:700,color:mobileApptView===opt.key?"#0863ba":"#1c2b3a" }}>{opt.label}</span>
-                    </div>
-                    <div style={{ fontSize:11,color:"#8a97a6",marginTop:4,marginInlineStart:24 }}>{opt.sub}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
 
       <button onClick={save} disabled={saveStatus==="saving"}
         style={{ padding:"13px 32px",background:saveStatus==="saved"?"#2e7d32":"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",transition:"background .3s",display:"flex",alignItems:"center",gap:8 }}>
