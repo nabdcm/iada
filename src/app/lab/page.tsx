@@ -88,11 +88,19 @@ export default function LabPage() {
   }, []);
 
   const apiFetch = useCallback(async (url: string, init?: RequestInit) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return fetch(url, {
+    const doReq = async (token: string) => fetch(url, {
       ...init,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}`, ...(init?.headers ?? {}) },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) },
     });
+    const { data: { session } } = await supabase.auth.getSession();
+    let res = await doReq(session?.access_token ?? "");
+    if (res.status === 401) {
+      // التوكن منتهٍ — نجدد الجلسة ونعيد المحاولة مرة واحدة (بدون تسجيل خروج المستخدم)
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      const newToken = refreshed?.session?.access_token;
+      if (newToken) res = await doReq(newToken);
+    }
+    return res;
   }, []);
 
   const loadAll = useCallback(async () => {
