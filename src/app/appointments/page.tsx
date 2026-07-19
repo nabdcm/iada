@@ -4,6 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import { fmtTime, type TimeFormat } from "@/lib/timeFormat";
 import type { Patient, Appointment } from "@/lib/supabase";
 
 type Lang = "ar" | "en";
@@ -326,7 +327,8 @@ type Doctor = {
 };
 
 // ─── Modal موعد ───────────────────────────────────────────
-function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, doctorSchedules = [], plan, onSave, onClose, onStatusChange, onDelete, saving, quickSlot }: {
+function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, doctorSchedules = [], plan, onSave, onClose, onStatusChange, onDelete, saving, quickSlot, clockFmt = "24" }: {
+  clockFmt?: TimeFormat;
   lang: Lang; appt: Appointment | null; defaultDate: string; patients: Patient[];
   appointments: Appointment[];
   doctors: Doctor[]; doctorSchedules?: DoctorSchedule[]; plan: PlanType;
@@ -530,7 +532,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
           )}
           <div style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.date} half><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} className="appt-input"/></Field>
-            <Field label={tr.modal.time} half><select value={form.time} onChange={e=>setForm({...form,time:e.target.value})} style={{ ...inputSt,cursor:"pointer" }} className="appt-input">{Array.from({length:15*4},(_,i)=>{const totalMin=8*60+i*15;const hh=String(Math.floor(totalMin/60)).padStart(2,"0");const mm=String(totalMin%60).padStart(2,"0");return `${hh}:${mm}`;}).map(t=><option key={t} value={t}>{t}</option>)}</select></Field>
+            <Field label={tr.modal.time} half><select value={form.time} onChange={e=>setForm({...form,time:e.target.value})} style={{ ...inputSt,cursor:"pointer" }} className="appt-input">{Array.from({length:15*4},(_,i)=>{const totalMin=8*60+i*15;const hh=String(Math.floor(totalMin/60)).padStart(2,"0");const mm=String(totalMin%60).padStart(2,"0");return `${hh}:${mm}`;}).map(t=><option key={t} value={t}>{fmtTime(t, clockFmt, lang==="ar")}</option>)}</select></Field>
           </div>
           <div style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.duration} half>
@@ -1134,13 +1136,14 @@ function NowCard({ lang }: { lang: Lang }) {
 // ════════════════════════════════════════════════════════════
 // ─── قسم طلبات الحجز المعلقة (جديد) ────────────────────────
 // ════════════════════════════════════════════════════════════
-function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove, onReject, isMobile }: {
+function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove, onReject, isMobile, clockFmt = "24" }: {
   lang: Lang;
   pendingAppointments: Appointment[];
   patients: Patient[];
   onApprove: (appt: Appointment) => Promise<void>;
   onReject:  (appt: Appointment) => Promise<void>;
   isMobile: boolean;
+  clockFmt?: TimeFormat;
 }) {
   const tr = T[lang];
   const isAr = lang === "ar";
@@ -1280,7 +1283,7 @@ function PendingBookingsSection({ lang, pendingAppointments, patients, onApprove
                   {/* تفاصيل الموعد */}
                   <div style={{ display:"flex",flexWrap:"wrap",gap:10,fontSize:12,color:"#666" }}>
                     <span><AppIcon glyph="📅" /> {dateFormatted}</span>
-                    <span><AppIcon glyph="🕐" /> {appt.time.slice(0,5)}</span>
+                    <span><AppIcon glyph="🕐" /> {fmtTime(appt.time, clockFmt, isAr)}</span>
                     {phone && <span><AppIcon glyph="📞" /> {phone}</span>}
                     {appt.type && appt.type !== "حجز إلكتروني / Online Booking" && (
                       <span><AppIcon glyph="🏷️" /> {appt.type}</span>
@@ -1404,6 +1407,7 @@ export default function AppointmentsPage() {
   const [saving,              setSaving]              = useState(false);
   const [clinicId,            setClinicId]            = useState("");
   const [plan,                setPlan]                = useState<PlanType>("basic");
+  const [clockFmt,            setClockFmt]            = useState<TimeFormat>("24");
   const [shareModal,          setShareModal]          = useState(false);
   const [copied,              setCopied]              = useState(false);
   const [viewMonth,           setViewMonth]           = useState(now.getMonth());
@@ -1470,6 +1474,9 @@ export default function AppointmentsPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         setClinicId(user.id);
+        // جلب نمط الساعة
+        supabase.from("clinic_profiles").select("time_format").eq("id", user.id).maybeSingle()
+          .then(({ data: tfData }) => { if (tfData?.time_format === "12" || tfData?.time_format === "24") setClockFmt(tfData.time_format); });
         // جلب خطة العيادة
         const { data: clinicData } = await supabase
           .from("clinics").select("plan").eq("user_id", user.id).single();
@@ -1775,7 +1782,7 @@ export default function AppointmentsPage() {
     const name     = getPatientName(appt.patient_id);
     const [y, mo, d] = appt.date.split("-");
     const dateFormatted = `${parseInt(d)} ${T[lang].months[parseInt(mo)-1]} ${y}`;
-    const msg = encodeURIComponent(T[lang].whatsappMsg(name, dateFormatted, appt.time.slice(0,5)));
+    const msg = encodeURIComponent(T[lang].whatsappMsg(name, dateFormatted, fmtTime(appt.time, clockFmt, lang==="ar")));
     if (rawPhone) {
       const desktopUrl = `whatsapp://send?phone=${rawPhone}&text=${msg}`;
       const webUrl     = `https://wa.me/${rawPhone}?text=${msg}`;
@@ -1926,6 +1933,7 @@ export default function AppointmentsPage() {
           {/* ════ قسم طلبات الحجز المعلقة — فقط للاحترافية والشاملة ════ */}
           {canAccess("payments", plan) && (
             <PendingBookingsSection
+              clockFmt={clockFmt}
               lang={lang}
               pendingAppointments={pendingAppointments}
               patients={patients}
@@ -2050,7 +2058,7 @@ export default function AppointmentsPage() {
                             <div key={appt.id} onClick={()=>setEditAppt(appt)}
                               style={{ display:"flex",alignItems:"center",gap:12,background:"#fff",border:`1.5px solid ${isNowAppt?"rgba(8,99,186,.35)":"#e6edf5"}`,borderInlineStart:`4px solid ${sc}`,borderRadius:14,padding:"12px 14px",boxShadow:isNowAppt?"0 6px 18px rgba(8,99,186,.14)":"0 2px 10px rgba(8,99,186,.05)",cursor:"pointer" }}>
                               <div style={{ minWidth:52,textAlign:"center",background:`${sc}10`,borderRadius:10,padding:"7px 4px",flexShrink:0 }}>
-                                <div style={{ fontSize:13,fontWeight:800,color:sc,fontVariantNumeric:"tabular-nums" }}>{appt.time.slice(0,5)}</div>
+                                <div style={{ fontSize:13,fontWeight:800,color:sc,fontVariantNumeric:"tabular-nums" }}>{fmtTime(appt.time, clockFmt, isAr)}</div>
                                 {appt.duration ? <div style={{ fontSize:9,color:"#8a97a6",fontWeight:600,marginTop:2 }}>{appt.duration}{isAr?" د":"m"}</div> : null}
                               </div>
                               <div style={{ width:38,height:38,borderRadius:"50%",background:`${sc}14`,color:sc,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,flexShrink:0 }}>
@@ -2187,7 +2195,7 @@ export default function AppointmentsPage() {
                                         zIndex:1,
                                         verticalAlign:"middle",
                                       }}>
-                                        <div style={{ fontSize:15,fontWeight:900,color:"#0863ba",lineHeight:1 }}>{time}</div>
+                                        <div style={{ fontSize:15,fontWeight:900,color:"#0863ba",lineHeight:1 }}>{fmtTime(time, clockFmt, isAr)}</div>
                                         {rowHasMultiple && (
                                           <div style={{ fontSize:9,color:"#0863ba",opacity:.6,marginTop:2,fontWeight:600 }}>
                                             {isAr ? "تعارض" : "overlap"}
@@ -2350,7 +2358,7 @@ export default function AppointmentsPage() {
                               }}>
                               {/* التوقيت */}
                               <div style={{ flexShrink:0,textAlign:"center",minWidth:48,background:"rgba(255,255,255,.7)",borderRadius:10,padding:"6px 8px",border:`1px solid ${bColor}20` }}>
-                                <div style={{ fontSize:15,fontWeight:800,color:bColor,lineHeight:1 }}>{appt.time.slice(0,5)}</div>
+                                <div style={{ fontSize:15,fontWeight:800,color:bColor,lineHeight:1 }}>{fmtTime(appt.time, clockFmt, isAr)}</div>
                                 <div style={{ fontSize:10,color:"#aaa",marginTop:2 }}>{appt.duration} {tr.duration.min}</div>
                               </div>
                               {/* أفاتار */}
@@ -2406,7 +2414,7 @@ export default function AppointmentsPage() {
 
         {/* Modals */}
         {(addModal||editAppt)&&(
-          <AppointmentModal lang={lang} appt={editAppt} defaultDate={quickSlot?.date ?? selectedKey} patients={patients}
+          <AppointmentModal clockFmt={clockFmt} lang={lang} appt={editAppt} defaultDate={quickSlot?.date ?? selectedKey} patients={patients}
             appointments={appointments}
             doctors={doctors} doctorSchedules={doctorSchedules} plan={plan}
             onSave={handleSave} onClose={()=>{ setAddModal(false); setEditAppt(null); setQuickSlot(null); }} quickSlot={quickSlot}

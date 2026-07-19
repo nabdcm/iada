@@ -118,6 +118,10 @@ const T = {
       is24hSub: "فتح كامل اليوم لاستقبال الحجوزات في أي وقت",
       weekendDays: "أيام العطلة الأسبوعية",
       allowOnlineBooking: "السماح بالحجز الإلكتروني",
+      clockFormat: "نمط عرض الساعة",
+      clockFormatSub: "طريقة ظهور الأوقات في نظام المواعيد",
+      clock24: "24 ساعة (16:00)",
+      clock12: "12 ساعة (4:00 م)",
       requireApproval: "يتطلب موافقة الطبيب",
       save: "حفظ الإعدادات",
       saving: "جاري الحفظ...",
@@ -208,6 +212,10 @@ const T = {
       is24hSub: "Open all day for bookings at any time",
       weekendDays: "Weekend Days",
       allowOnlineBooking: "Allow online booking",
+      clockFormat: "Clock display format",
+      clockFormatSub: "How times appear across the appointments system",
+      clock24: "24-hour (16:00)",
+      clock12: "12-hour (4:00 PM)",
       requireApproval: "Requires doctor approval",
       save: "Save Settings",
       saving: "Saving...",
@@ -828,6 +836,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
   const [weekendDays, setWeekendDays] = useState<number[]>([5,6]);
   const [allowOnline, setAllowOnline] = useState(true);
   const [requireApproval, setRequireApproval] = useState(false);
+  const [clockFormat, setClockFormat] = useState<"12"|"24">("24");
   const [saveStatus, setSaveStatus] = useState<"idle"|"saving"|"saved">("idle");
 
   useEffect(() => {
@@ -845,6 +854,8 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
           setRequireApproval(st.require_approval ?? false);
         }
       }
+      const { data: prof } = await supabase.from("clinic_profiles").select("time_format").eq("id", userId).maybeSingle();
+      if (prof?.time_format === "12" || prof?.time_format === "24") setClockFormat(prof.time_format);
     };
     load();
   }, [userId]);
@@ -875,6 +886,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       working_hours_start: effectiveFrom,
       working_hours_end:   effectiveTo,
       working_days:        workingDaysCodes,
+      time_format:         clockFormat,
     }).eq("id", userId);
     setSaveStatus("saved");
     setTimeout(() => setSaveStatus("idle"), 2500);
@@ -969,6 +981,23 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
             </button>
           </div>
         )}
+      </div>
+
+      {/* نمط الساعة */}
+      <div style={cardSt}>
+        <div style={{ fontSize:14,fontWeight:700,color:"#353535" }}><AppIcon glyph="🕐" /> {(s as any).clockFormat}</div>
+        <div style={{ fontSize:12,color:"#aaa",marginTop:2,marginBottom:12 }}>{(s as any).clockFormatSub}</div>
+        <div style={{ display:"flex",gap:10 }}>
+          {(["24","12"] as const).map(f => (
+            <button key={f} onClick={() => setClockFormat(f)}
+              style={{ flex:1,padding:"11px 0",borderRadius:10,border:"1.5px solid",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,transition:"all .15s",
+                borderColor: clockFormat===f ? "#0863ba" : "#e8eaed",
+                background:  clockFormat===f ? "rgba(8,99,186,.08)" : "#fafbfc",
+                color:       clockFormat===f ? "#0863ba" : "#888" }}>
+              {f==="24" ? (s as any).clock24 : (s as any).clock12}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* زر الحفظ */}
