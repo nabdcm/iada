@@ -120,8 +120,8 @@ function XRaySection({ xrays, saving, onChange }: { xrays: XRayImage[]; saving: 
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    if (file.size > 1024 * 1024) {
-      alert("حجم الصورة يتجاوز 1 ميغابايت — الرجاء ضغطها أو اختيار صورة أصغر");
+    if (file.size > 5 * 1024 * 1024) {
+      alert("حجم الصورة يتجاوز 5 ميغابايت — الرجاء ضغطها أو اختيار صورة أصغر");
       return;
     }
     const reader = new FileReader();

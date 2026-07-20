@@ -841,12 +841,12 @@ function XRaySection({ lang, xrays, onChange }: { lang:Lang; xrays:XRayImage[]; 
   const [pendingImg,  setPendingImg]  = useState<XRayImage|null>(null);
   const [pendingFile, setPendingFile] = useState<File|null>(null);
   const [saving,      setSaving]      = useState(false);
-  const MAX_XRAY_SIZE = 1024 * 1024; // 1MB
+  const MAX_XRAY_SIZE = 5 * 1024 * 1024; // 5MB
 
   const handleFile = (file:File) => {
     if (!file.type.startsWith("image/")) return;
     if (file.size > MAX_XRAY_SIZE) {
-      alert(isAr ? "حجم الصورة يتجاوز 1 ميغابايت — الرجاء ضغطها أو اختيار صورة أصغر" : "Image exceeds 1MB — please compress or choose a smaller file");
+      alert(isAr ? "حجم الصورة يتجاوز 5 ميغابايت — الرجاء ضغطها أو اختيار صورة أصغر" : "Image exceeds 5MB — please compress or choose a smaller file");
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
