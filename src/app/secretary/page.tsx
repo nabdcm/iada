@@ -1143,7 +1143,7 @@ export default function SecretaryPage() {
       if (clinicRow?.clinic_type) setClinicType(clinicRow.clinic_type as ClinicType);
 
       const [{ data:apptData },{ data:patData },{ data:payData },{ data:wdData },{ data:exData }] = await Promise.all([
-        supabase.from("appointments").select("*").eq("user_id",user.id).order("date",{ascending:true}).order("time",{ascending:true}),
+        supabase.from("appointments").select("*").eq("user_id",user.id).gte("date",(()=>{const d=new Date();d.setDate(d.getDate()-90);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;})()).order("date",{ascending:true}).order("time",{ascending:true}).limit(5000),
         supabase.from("patients").select("*").eq("user_id",user.id).eq("is_hidden",false).order("name"),
         supabase.from("payments").select("*").eq("user_id",user.id).order("date",{ascending:false}),
         supabase.from("clinic_withdrawals").select("*").eq("user_id",user.id).order("date",{ascending:false}),

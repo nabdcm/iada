@@ -1445,12 +1445,18 @@ export default function AppointmentsPage() {
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
 
       // ── المواعيد الفعلية (كل الحالات ما عدا pending_approval) ──
+      // جلب آخر 90 يوماً فما بعد فقط — لتجاوز حد Supabase البالغ 1000 صف
+      const cutoffD = new Date();
+      cutoffD.setDate(cutoffD.getDate() - 90);
+      const cutoffKey = `${cutoffD.getFullYear()}-${String(cutoffD.getMonth()+1).padStart(2,"0")}-${String(cutoffD.getDate()).padStart(2,"0")}`;
       const { data, error } = await supabase
         .from("appointments").select("*")
         .eq("user_id", userId)
         .neq("status", "pending_approval")   // ◀ استثناء المواعيد المعلقة
+        .gte("date", cutoffKey)
         .order("date", { ascending: true })
-        .order("time", { ascending: true });
+        .order("time", { ascending: true })
+        .limit(5000);
       if (error) throw error;
       setAppointments((data ?? []) as Appointment[]);
 
