@@ -35,7 +35,7 @@ const T = {
     code: "كود الإحالة",
     copied: "✓ نُسخ",
     clinics: "عيادة", activeClinics: "نشطة",
-    estCommission: "عمولة تقديرية/شهر",
+    estCommission: "العمولة (مرة واحدة)",
     assignTitle: "عيادات هذا الوكيل",
     assignAdd: "ربط عيادة...",
     unassign: "فك الربط",
@@ -58,7 +58,7 @@ const T = {
     code: "Referral code",
     copied: "✓ Copied",
     clinics: "clinics", activeClinics: "active",
-    estCommission: "Est. commission/mo",
+    estCommission: "Commission (one-time)",
     assignTitle: "This agent's clinics",
     assignAdd: "Link a clinic...",
     unassign: "Unlink",
@@ -137,9 +137,9 @@ export default function AgentsPanel({ isAr }: { isAr: boolean }) {
   const agentClinics = (id: number) => clinics.filter(c => c.agent_id === id);
   const unassigned   = clinics.filter(c => c.agent_id === null);
 
-  const estMonthly = (a: Agent) =>
+  // عمولة لمرة واحدة عن كل عيادة جلبها الوكيل (سعر الخطة الشهري × النسبة)
+  const estOneTime = (a: Agent) =>
     agentClinics(a.id)
-      .filter(c => c.status === "active")
       .reduce((sum, c) => sum + (PLAN_PRICES[c.plan] ?? 0), 0) * (a.commission_pct / 100);
 
   const card: React.CSSProperties = { background: "#fff", border: "1.5px solid #eef0f3", borderRadius: 14, padding: "18px 20px" };
@@ -216,7 +216,7 @@ export default function AgentsPanel({ isAr }: { isAr: boolean }) {
                   <div style={{ display: "flex", gap: 18, fontSize: 12.5, color: "#666" }}>
                     <span><b style={{ color: "#0863ba", fontSize: 15 }}>{list.length}</b> {t.clinics}</span>
                     <span><b style={{ color: "#2e7d32", fontSize: 15 }}>{activeCount}</b> {t.activeClinics}</span>
-                    <span>{t.estCommission}: <b style={{ color: "#353535" }}>${estMonthly(a).toFixed(2)}</b> <span style={{ color: "#aaa" }}>({a.commission_pct}%)</span></span>
+                    <span>{t.estCommission}: <b style={{ color: "#353535" }}>${estOneTime(a).toFixed(2)}</b> <span style={{ color: "#aaa" }}>({a.commission_pct}%)</span></span>
                   </div>
 
                   <div style={{ display: "flex", gap: 8, marginInlineStart: "auto" }}>

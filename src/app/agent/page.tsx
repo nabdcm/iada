@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 type ClinicRow = { name: string; owner: string; plan: string; status: string; created_at: string };
 type PortalData = {
   agent: { name: string; code: string; commission_pct: number };
-  stats: { total: number; active: number; est_monthly: number };
+  stats: { total: number; active: number; est_total: number };
   clinics: ClinicRow[];
 };
 
@@ -115,7 +115,7 @@ export default function AgentPortalPage() {
               {[
                 { label: "إجمالي عياداتك", value: String(data.stats.total), color: "#0863ba" },
                 { label: "النشطة حالياً", value: String(data.stats.active), color: "#2e7d32" },
-                { label: "عمولتك التقديرية/شهر", value: `$${data.stats.est_monthly}`, color: "#7b2d8b" },
+                { label: "عمولتك المستحقة (مرة واحدة)", value: `$${data.stats.est_total}`, color: "#7b2d8b" },
               ].map(s => (
                 <div key={s.label} style={{ background: "#fff", border: "1px solid #e6eef8", borderRadius: 16, padding: "20px 18px", textAlign: "center" }}>
                   <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -149,7 +149,7 @@ export default function AgentPortalPage() {
             </div>
 
             <p style={{ fontSize: 11.5, color: "#a8b2bf", textAlign: "center", marginTop: 22, lineHeight: 1.8 }}>
-              العمولة التقديرية تُحسب من العيادات النشطة × نسبتك، والتسوية النهائية مع إدارة نبض.
+              العمولة تُستحق مرة واحدة عن كل عيادة تشترك عبرك (سعر خطتها × نسبتك)، والتسوية النهائية مع إدارة نبض.
             </p>
           </>
         )}

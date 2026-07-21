@@ -48,14 +48,14 @@ export async function POST(req: NextRequest) {
     }));
 
     const activeCount = list.filter(c => c.status === "active").length;
-    const estMonthly = list
-      .filter(c => c.status === "active")
+    // عمولة لمرة واحدة عن كل عيادة (سعر خطتها الشهري × نسبة الوكيل)
+    const estOneTime = list
       .reduce((sum, c) => sum + (PLAN_PRICES[c.plan] ?? 0), 0) * (Number(agent.commission_pct) / 100);
 
     return NextResponse.json({
       ok: true,
       agent: { name: agent.name, code: agent.code, commission_pct: agent.commission_pct },
-      stats: { total: list.length, active: activeCount, est_monthly: Number(estMonthly.toFixed(2)) },
+      stats: { total: list.length, active: activeCount, est_total: Number(estOneTime.toFixed(2)) },
       clinics: list,
     });
   } catch {
