@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       plan, expiry, status, password,
       clinic_type = "general",
       account_type = "clinic",
+      country_code = "963",
     } = await req.json();
 
     // ─── 1. إنشاء المستخدم في Auth ───────────────────────
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
         status,
         clinic_type: clinicTypeForDb,
         account_type,
+        country_code: country_code || "963",
         plain_password: password ?? null,
       });
 

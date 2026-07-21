@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSPropertie
 import SharedSidebar from "@/components/SharedSidebar";
 import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase } from "@/lib/supabase";
+import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import type { Patient } from "@/lib/supabase";
 
 // ============================================================
@@ -666,21 +667,12 @@ function printMedicalReportText(
   if (w) { w.document.write(html); w.document.close(); }
 }
 
+// رمز بلد العيادة — يُحمَّل من جدول clinics ويُستخدم لتطبيع الأرقام
+let CLINIC_COUNTRY_CODE = DEFAULT_COUNTRY_CODE;
+function setClinicCountryCode(cc: string) { if (cc) CLINIC_COUNTRY_CODE = cc; }
+
 function openWhatsApp(phone:string) {
-  let cleaned = phone.replace(/[^0-9+]/g,"");
-  if (cleaned.startsWith("+")) {
-    cleaned = cleaned.slice(1);                 // +9665xxxxxxxx → دولي كما هو
-  } else if (cleaned.startsWith("00")) {
-    cleaned = cleaned.slice(2);                 // 009665xxxxxxxx → دولي كما هو
-  } else if (cleaned.startsWith("09")) {
-    cleaned = "963"+cleaned.slice(1);           // محلي سوري
-  } else if (cleaned.startsWith("9")&&cleaned.length<=9&&!cleaned.startsWith("963")) {
-    cleaned = "963"+cleaned;
-  } else if (cleaned.startsWith("0")) {
-    cleaned = "963"+cleaned.slice(1);
-  } else if (cleaned.length<=10&&!cleaned.startsWith("963")) {
-    cleaned = "963"+cleaned;                    // رقم قصير بدون رمز دولة → افتراضي سوري
-  }
+  const cleaned = normalizePhone(phone, CLINIC_COUNTRY_CODE);
   window.open("https://wa.me/"+cleaned,"nabd_whatsapp");
 }
 
@@ -1798,9 +1790,10 @@ export default function PatientsPage() {
       if (!user) return;
       const { data:settingsData } = await supabase.from("settings").select("clinic_name, doctor_name").eq("user_id",user.id).maybeSingle();
       if (settingsData?.doctor_name) setDoctorName(settingsData.doctor_name);
-      const { data } = await supabase.from("clinics").select("clinic_type, plan, max_doctors, phone, name").eq("user_id",user.id).maybeSingle();
+      const { data } = await supabase.from("clinics").select("clinic_type, plan, max_doctors, phone, name, country_code").eq("user_id",user.id).maybeSingle();
       setClinicName(settingsData?.clinic_name || data?.name || "");
       if (data?.phone) setClinicPhone(data.phone);
+      if ((data as { country_code?: string })?.country_code) setClinicCountryCode((data as { country_code?: string }).country_code!);
       if (data?.clinic_type) {
         const ct = data.clinic_type as ClinicType;
         setClinicTypeState(ct);

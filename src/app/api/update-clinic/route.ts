@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       clinic_type,
       account_type,
       max_doctors,
+      country_code,
       payments_lock_enabled,
       payments_lock_password,
       restricted_access_enabled,
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
 
     if (clinic_type)   clinicUpdate.clinic_type   = clinic_type;
     if (account_type)  clinicUpdate.account_type  = account_type;
+    if (country_code)  clinicUpdate.country_code  = country_code;
     // حفظ كلمة السر نصاً عند إعادة التعيين (تُملأ القديمة تدريجياً)
     if (newPassword)   clinicUpdate.plain_password = newPassword;
     if (max_doctors !== undefined && max_doctors !== null)   clinicUpdate.max_doctors   = max_doctors;

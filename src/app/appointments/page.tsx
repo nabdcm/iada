@@ -4,6 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import { fmtTime, type TimeFormat } from "@/lib/timeFormat";
 import type { Patient, Appointment } from "@/lib/supabase";
 
@@ -1455,6 +1456,7 @@ export default function AppointmentsPage() {
   const [clinicId,            setClinicId]            = useState("");
   const [plan,                setPlan]                = useState<PlanType>("basic");
   const [clockFmt,            setClockFmt]            = useState<TimeFormat>("24");
+  const [countryCode,         setCountryCode]         = useState<string>(DEFAULT_COUNTRY_CODE);
   const [shareModal,          setShareModal]          = useState(false);
   const [copied,              setCopied]              = useState(false);
   const [viewMonth,           setViewMonth]           = useState(now.getMonth());
@@ -1538,7 +1540,8 @@ export default function AppointmentsPage() {
           .then(({ data: tfData }) => { if (tfData?.time_format === "12" || tfData?.time_format === "24") setClockFmt(tfData.time_format); });
         // جلب خطة العيادة
         const { data: clinicData } = await supabase
-          .from("clinics").select("plan").eq("user_id", user.id).single();
+          .from("clinics").select("plan, country_code").eq("user_id", user.id).single();
+        if ((clinicData as { country_code?: string } | null)?.country_code) setCountryCode((clinicData as { country_code?: string }).country_code!);
         if (clinicData?.plan) {
           const fetchedPlan = clinicData.plan as PlanType;
           setPlan(fetchedPlan);
@@ -1867,19 +1870,7 @@ export default function AppointmentsPage() {
   const selLabel = selDate.length===3 ? `${parseInt(selDate[2])} ${tr.months[parseInt(selDate[1])-1]} ${selDate[0]}` : selectedKey;
 
   const sendWhatsApp = (appt: Appointment) => {
-    const origPhone = getPatientPhone(appt.patient_id).replace(/[^0-9+]/g,"");
-    let rawPhone = origPhone.replace(/\D/g,"");
-    if (origPhone.startsWith("+")) {
-      // رقم دولي بصيغة +XXX... → استخدمه كما هو بدون +
-      rawPhone = origPhone.slice(1).replace(/\D/g,"");
-    } else if (rawPhone.startsWith("00")) {
-      // رقم دولي بصيغة 00XXX... → أزل الصفرين
-      rawPhone = rawPhone.slice(2);
-    } else if (rawPhone.startsWith("09") && rawPhone.length === 10) {
-      rawPhone = "963" + rawPhone.slice(1);
-    } else if (rawPhone.startsWith("9") && rawPhone.length === 9) {
-      rawPhone = "963" + rawPhone;
-    }
+    const rawPhone = normalizePhone(getPatientPhone(appt.patient_id), countryCode);
     const name     = getPatientName(appt.patient_id);
     const [y, mo, d] = appt.date.split("-");
     const dateFormatted = `${parseInt(d)} ${T[lang].months[parseInt(mo)-1]} ${y}`;

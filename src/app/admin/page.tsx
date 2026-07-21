@@ -3,6 +3,7 @@
 import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { COUNTRIES } from "@/lib/phone";
 
 // ============================================================
 // TypeScript Types
@@ -55,6 +56,7 @@ interface ClinicData {
   // دخول مقيّد للأطباء (الخطط المشتركة فقط)
   restricted_access_enabled?: boolean;
   restricted_access_pin?: string;
+  country_code?: string;   // رمز بلد العيادة الدولي (لأرقام واتساب)
 }
 
 interface Doctor {
@@ -625,6 +627,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
     clinic_type:  (clinic?.clinic_type || "general") as ClinicType,
     max_doctors:  clinic?.max_doctors ?? 2,
     account_type: (clinic?.account_type || "clinic") as AccountType,
+    country_code: clinic?.country_code || "963",
   });
 
   const [creds,    setCreds]    = useState<{ password: string } | null>(null);
@@ -867,6 +870,18 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                   />
                 </Field>
               </div>
+
+              <Field label={isAr ? "بلد العيادة (رمز واتساب الدولي)" : "Clinic Country (WhatsApp code)"}>
+                <select
+                  value={form.country_code}
+                  onChange={e => setForm(prev => ({ ...prev, country_code: e.target.value }))}
+                  style={{ ...inputSt, cursor: "pointer" }}
+                >
+                  {COUNTRIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.flag} {isAr ? c.ar : c.en} (+{c.code})</option>
+                  ))}
+                </select>
+              </Field>
 
               <Field label={tr.modal.email}>
                 <input
@@ -1182,6 +1197,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     payments_lock_password: clinic.payments_lock_password ?? "",
     restricted_access_enabled: clinic.restricted_access_enabled ?? false,
     restricted_access_pin:     clinic.restricted_access_pin     ?? "",
+    country_code: clinic.country_code || "963",
   });
   const [newPass,       setNewPass]       = useState("");
   const [showCurrentPw, setShowCurrentPw] = useState(false);
@@ -1322,6 +1338,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     payments_lock_password: form.payments_lock_password,
     restricted_access_enabled: form.restricted_access_enabled,
     restricted_access_pin:     form.restricted_access_pin,
+    country_code: form.country_code,
     ...overrides,
   });
 
@@ -1507,6 +1524,14 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               <div>
                 <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{sm.phone}</label>
                 <input value={form.phone} onChange={e => setForm(p=>({...p,phone:e.target.value}))} placeholder={sm.phonePh} style={inputSt} />
+              </div>
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{isAr ? "بلد العيادة (رمز واتساب)" : "Clinic Country (WhatsApp)"}</label>
+                <select value={form.country_code} onChange={e => setForm(p=>({...p,country_code:e.target.value}))} style={{ ...inputSt, cursor:"pointer" }}>
+                  {COUNTRIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.flag} {isAr ? c.ar : c.en} (+{c.code})</option>
+                  ))}
+                </select>
               </div>
 
               {/* نوع العيادة */}
@@ -3132,6 +3157,7 @@ export default function AdminPage() {
         payments_lock_password: (row.payments_lock_password as string) || "",
         restricted_access_enabled: (row.restricted_access_enabled as boolean) ?? false,
         restricted_access_pin:     (row.restricted_access_pin as string) || "",
+        country_code:              (row.country_code as string) || "963",
         plain_password:            (row.plain_password as string) ?? null,
       }));
 
