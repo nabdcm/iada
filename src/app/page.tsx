@@ -27,29 +27,6 @@ const LOGO_SVG = (
   </svg>
 );
 
-function PulseDivider() {
-  return (
-    <div className="pulse-divider" aria-hidden="true">
-      <svg viewBox="0 0 1200 60" preserveAspectRatio="none">
-        <path
-          className="pulse-path"
-          d="M0,30 L440,30 L470,30 L490,8 L510,52 L530,18 L545,38 L560,30 L760,30 L1200,30"
-          fill="none" stroke="url(#pulseGrad)" strokeWidth="2.5" strokeLinecap="round"
-        />
-        <defs>
-          <linearGradient id="pulseGrad" x1="0" x2="1">
-            <stop offset="0" stopColor="#0863ba" stopOpacity="0" />
-            <stop offset=".35" stopColor="#0863ba" />
-            <stop offset=".5" stopColor="#5694cf" />
-            <stop offset=".65" stopColor="#0863ba" />
-            <stop offset="1" stopColor="#0863ba" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </div>
-  );
-}
-
 const WA_LINK = "https://wa.me/963998285483";
 const YT_LINK = "https://www.youtube.com/watch?v=ayeaWKZr_ZA";
 
@@ -794,13 +771,6 @@ export default function LandingPage() {
           transition: all 0.25s; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
         }
         .btn-wa:hover { background: #1da851; transform: translateY(-2px); box-shadow: 0 10px 32px rgba(37,211,102,0.45); }
-        /* ── Pulse divider (signature) ── */
-        .pulse-divider { max-width: 900px; margin: 0 auto; padding: 10px 20px; }
-        .pulse-divider svg { width: 100%; height: 44px; display: block; }
-        .pulse-path { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: pulseDraw 3.2s ease-out forwards; }
-        @keyframes pulseDraw { to { stroke-dashoffset: 0; } }
-        @media (prefers-reduced-motion: reduce) { .pulse-path { animation: none; stroke-dashoffset: 0; } }
-
         /* ── Why NABD comparison ── */
         .why-section { padding: 90px 20px; background: var(--white); }
         .why-table { max-width: 860px; margin: 48px auto 0; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 44px rgba(8,99,186,.08); border: 1px solid #e8eef6; }
@@ -1305,8 +1275,6 @@ export default function LandingPage() {
         </section>
 
         {/* ── PRICING ── */}
-        <PulseDivider />
-
         {/* ── WHY NABD ── */}
         <section className="why-section" id="why">
           <div className="section-header">
@@ -1343,8 +1311,6 @@ export default function LandingPage() {
             ))}
           </div>
         </section>
-
-        <PulseDivider />
 
         <section className="pricing-section" id="pricing">
           <div className="section-header">
@@ -1479,8 +1445,6 @@ export default function LandingPage() {
         </section>
 
         {/* ── CTA ── */}
-        <PulseDivider />
-
         {/* ── FAQ ── */}
         <section className="faq-section" id="faq">
           <div className="section-header">
