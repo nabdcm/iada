@@ -1,5 +1,6 @@
 "use client";
 
+import AdminOfflineToggle from "@/components/AdminOfflineToggle";
 import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
@@ -3415,6 +3416,7 @@ export default function AdminPage() {
 
           <div style={{ padding:"16px",borderTop:"1.5px solid #eef0f3" }}>
             <div style={{ fontSize:11,color:"#aaa",fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:12 }}>{tr.systemInfo}</div>
+            <AdminOfflineToggle isAr={isAr} />
             {[
               { l: tr.version,    v: "1.0.0" },
               { l: tr.lastBackup, v: isAr ? "منذ ساعة" : "1h ago" },

@@ -30,14 +30,21 @@ export function isOfflineFeatureEnabled(): boolean {
   try { return localStorage.getItem(FLAG_KEY) === "1"; } catch { return false; }
 }
 
-export function setOfflineFeatureEnabled(on: boolean): void {
+/**
+ * يجلب مفتاح التفعيل من السيرفر (يتحكم به الأدمن) ويخزّنه محلياً.
+ * إن تغيّرت القيمة يُعاد تحميل الصفحة مرة واحدة لتطبيقها.
+ */
+export async function refreshOfflineFlag(client: any): Promise<void> {
   try {
-    if (on) localStorage.setItem(FLAG_KEY, "1");
-    else localStorage.removeItem(FLAG_KEY);
-  } catch { /* ignore */ }
-  emit();
-  // إعادة تحميل لتبديل العميل فوراً بين الأصلي والمغلّف
-  if (typeof window !== "undefined") window.location.reload();
+    const { data } = await client.from("app_flags").select("value").eq("key", "offline_enabled").maybeSingle();
+    const server = data?.value === "1" ? "1" : "0";
+    const local = localStorage.getItem(FLAG_KEY) === "1" ? "1" : "0";
+    if (server !== local) {
+      if (server === "1") localStorage.setItem(FLAG_KEY, "1");
+      else { localStorage.removeItem(FLAG_KEY); }
+      window.location.reload();
+    }
+  } catch { /* بلا اتصال أو خطأ — نبقي الحالة الحالية */ }
 }
 
 export function wipeOfflineData(): void {

@@ -7,6 +7,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { refreshOfflineFlag } from "@/lib/offline";
 
 async function issueSessionCookie(accessToken?: string) {
   if (!accessToken) return;
@@ -68,6 +69,8 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
         } catch { /* في حال فشل الفحص لا نمنع الدخول */ }
 
         setStatus("ok");
+        // تحديث مفتاح ميزة الأوفلاين من السيرفر (غير حاجب)
+        void refreshOfflineFlag(supabase);
       } else {
         setStatus("redirect");
       }
