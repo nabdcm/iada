@@ -311,11 +311,15 @@ const Field = ({ label, children, half }: { label: string; children: React.React
   </div>
 );
 
+type RecFreq = "" | "daily" | "weekly" | "monthly";
+
 type ApptForm = {
   patient_id: number | "";
   doctor_id: number | "";   // للخطط المشتركة فقط
   date: string; time: string; duration: number;
   type: string; notes: string; status: Status;
+  recFreq: RecFreq;         // تكرار الموعد (فارغ = بدون تكرار)
+  recCount: number;         // عدد المواعيد الإجمالي (يشمل الأول)
 };
 
 // نوع الطبيب للخطط المشتركة
@@ -345,7 +349,9 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
     date: appt?.date ?? defaultDate, time: appt?.time ?? (quickSlot?.time ?? "09:00"),
     duration: appt?.duration ?? 30, type: appt?.type ?? "",
     notes: appt?.notes ?? "", status: appt?.status ?? "scheduled",
+    recFreq: "", recCount: 4,
   });
+  const [recOpen, setRecOpen] = useState(false);
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [patientSearch, setPatientSearch] = useState(() => {
@@ -542,6 +548,47 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
             </Field>
             <Field label={tr.modal.type} half><input value={form.type} onChange={e=>setForm({...form,type:e.target.value})} placeholder={tr.modal.typePh} style={inputSt} className="appt-input"/></Field>
           </div>
+          {!isEdit && (
+            <div style={{ marginBottom:16 }}>
+              <button type="button"
+                onClick={()=>{ 
+                  if (recOpen) { setRecOpen(false); setForm({...form, recFreq:""}); }
+                  else { setRecOpen(true); setForm({...form, recFreq: form.recFreq || "monthly"}); }
+                }}
+                style={{ width:"100%",padding:"11px 14px",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",
+                  border: recOpen ? "2px solid #0863ba" : "1.5px dashed #b8c9dd",
+                  background: recOpen ? "rgba(8,99,186,.06)" : "#fafbfc",
+                  color:"#0863ba",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all .2s" }}>
+                <span style={{ fontSize:15 }}>🔁</span>
+                {recOpen ? (isAr?"إلغاء التكرار":"Remove recurrence") : (isAr?"موعد متكرر":"Recurring appointment")}
+              </button>
+              {recOpen && (
+                <div style={{ marginTop:10,padding:"14px",background:"rgba(8,99,186,.04)",border:"1.5px solid rgba(8,99,186,.15)",borderRadius:12 }}>
+                  <div style={{ display:"flex",gap:10 }}>
+                    <div style={{ flex:1 }}>
+                      <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6 }}>{isAr?"نمط التكرار":"Frequency"}</label>
+                      <select value={form.recFreq} onChange={e=>setForm({...form,recFreq:e.target.value as RecFreq})} style={{ ...inputSt,cursor:"pointer",padding:"9px 12px",fontSize:13 }}>
+                        <option value="daily">{isAr?"يومي":"Daily"}</option>
+                        <option value="weekly">{isAr?"أسبوعي (نفس اليوم)":"Weekly (same day)"}</option>
+                        <option value="monthly">{isAr?"شهري (نفس التاريخ)":"Monthly (same date)"}</option>
+                      </select>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6 }}>{isAr?"عدد المواعيد":"Occurrences"}</label>
+                      <select value={form.recCount} onChange={e=>setForm({...form,recCount:Number(e.target.value)})} style={{ ...inputSt,cursor:"pointer",padding:"9px 12px",fontSize:13 }}>
+                        {Array.from({length:23},(_,i)=>i+2).map(n=><option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <p style={{ fontSize:11,color:"#0863ba",marginTop:10,lineHeight:1.6 }}>
+                    {isAr
+                      ? `سيتم إنشاء ${form.recCount} مواعيد بنفس الساعة (${form.time})، وسيتم تخطي أي تاريخ فيه تعارض مع موعد آخر.`
+                      : `${form.recCount} appointments will be created at the same time (${form.time}); conflicting dates will be skipped.`}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           <Field label={tr.modal.notes}>
             <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.modal.notesPh} rows={3} className="appt-input" style={{ ...inputSt,resize:"vertical",lineHeight:1.6 } as React.CSSProperties}/>
           </Field>
@@ -1607,6 +1654,47 @@ export default function AppointmentsPage() {
       }
       if (id) {
         await supabase.from("appointments").update(payload).eq("id",id);
+      } else if (form.recFreq && form.recCount > 1) {
+        // ── موعد متكرر: توليد كل التواريخ وإدراجها دفعة واحدة ──
+        const toMin = (t: string) => { const [h,m]=t.slice(0,5).split(":").map(Number); return h*60+m; };
+        const addOccurrence = (base: Date, i: number): string => {
+          const d = new Date(base.getTime());
+          if (form.recFreq === "daily")  d.setDate(d.getDate() + i);
+          if (form.recFreq === "weekly") d.setDate(d.getDate() + i*7);
+          if (form.recFreq === "monthly") {
+            const day = base.getDate();
+            d.setDate(1); d.setMonth(d.getMonth() + i);
+            const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+            d.setDate(Math.min(day, last)); // مثلاً 31 يناير → 28 فبراير
+          }
+          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        };
+        const [by,bm,bd] = form.date.split("-").map(Number);
+        const baseDate = new Date(by, bm-1, bd);
+        const nStart = toMin(form.time);
+        const nEnd   = nStart + (form.duration || 30);
+        const hasConflict = (dateStr: string) => appointments.some(a => {
+          if (a.date !== dateStr || a.status === "cancelled") return false;
+          if (isSharedPlan(plan) && form.doctor_id && (a as any).doctor_id) {
+            if ((a as any).doctor_id !== Number(form.doctor_id)) return false;
+          }
+          const aS = toMin(a.time); const aE = aS + (a.duration || 30);
+          return nStart < aE && nEnd > aS;
+        });
+        const rows: Record<string, unknown>[] = [];
+        const skipped: string[] = [];
+        for (let i = 0; i < form.recCount; i++) {
+          const dStr = addOccurrence(baseDate, i);
+          if (i > 0 && hasConflict(dStr)) { skipped.push(dStr); continue; }
+          rows.push({ user_id: userId, ...payload, date: dStr, status: "scheduled" });
+        }
+        const { error: insErr } = await supabase.from("appointments").insert(rows);
+        if (insErr) throw insErr;
+        if (skipped.length > 0) {
+          alert(lang === "ar"
+            ? `تم إنشاء ${rows.length} موعداً. تم تخطي ${skipped.length} بسبب تعارض:\n${skipped.join("، ")}`
+            : `Created ${rows.length} appointments. Skipped ${skipped.length} due to conflicts:\n${skipped.join(", ")}`);
+        }
       } else {
         await supabase.from("appointments").insert({ user_id:userId, ...payload, status:"scheduled" });
       }
