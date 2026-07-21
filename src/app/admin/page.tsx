@@ -1,6 +1,7 @@
 "use client";
 
 import AdminOfflineToggle from "@/components/AdminOfflineToggle";
+import AgentsPanel from "@/components/AgentsPanel";
 import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
@@ -78,7 +79,7 @@ interface Doctor {
 const T = {
   ar: {
     appName: "نبض", adminBadge: "لوحة المدير",
-    nav: { clinics:"العيادات" },
+    nav: { clinics:"العيادات", agents:"الوكلاء" },
     stats: {
       totalClinics:"إجمالي العيادات", activeClinics:"عيادات نشطة",
       totalUsers:"المستخدمون", monthRevenue:"إيرادات الشهر",
@@ -285,7 +286,7 @@ const T = {
   },
   en: {
     appName: "NABD", adminBadge: "Admin Panel",
-    nav: { clinics:"Clinics" },
+    nav: { clinics:"Clinics", agents:"Agents" },
     stats: {
       totalClinics:"Total Clinics", activeClinics:"Active Clinics",
       totalUsers:"Total Users", monthRevenue:"Monthly Revenue",
@@ -3401,7 +3402,7 @@ export default function AdminPage() {
 
           <nav style={{ flex:1,padding:"16px 12px" }}>
             {Object.entries(tr.nav).map(([k, v]) => {
-              const icons = { clinics:"🏥" }; // rendered via AppIcon
+              const icons = { clinics:"🏥", agents:"🤝" }; // rendered via AppIcon
               const isActive = activeTab === k;
               return (
                 <button key={k} onClick={() => setActiveTab(k)}
@@ -3521,6 +3522,8 @@ export default function AdminPage() {
                 </div>
               );
             })()}
+
+            {activeTab === "agents" && <AgentsPanel isAr={isAr} />}
 
             {/* CLINICS TAB */}
             {activeTab === "clinics" && (
