@@ -4,6 +4,7 @@
 
 import type { Metadata } from "next";
 import "./globals.css";
+import DemoBanner from "@/components/DemoBanner";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nabd.clinic"),
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
       <body style={{ fontFamily: "'Rubik', sans-serif", margin: 0, padding: 0, background: "#f7f9fc" }}>
+        <DemoBanner />
         {children}
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {

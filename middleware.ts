@@ -60,6 +60,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── وضع التجربة: يسمح بدخول صفحات العيادة فقط ببيانات وهمية ──
+  if (isProtected && request.cookies.get("nabd-demo")?.value === "1") {
+    return NextResponse.next();
+  }
+
   const sessionCookie = request.cookies.get("nabd-session")?.value;
 
   // مقبول: كوكي موقّع v2، أو القيمة القديمة "1" (انتقالياً — لا نُخرج أحداً)

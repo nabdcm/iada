@@ -2,6 +2,7 @@
 
 import AppIcon from "@/components/AppIcon";
 import { useState, useEffect } from "react";
+import { startDemo } from "@/lib/demo";
 
 // ============================================================
 // NABD - نبض | Landing Page
@@ -653,6 +654,15 @@ export default function LandingPage() {
           transition: all 0.25s; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
         }
         .btn-wa:hover { background: #1da851; transform: translateY(-2px); box-shadow: 0 10px 32px rgba(37,211,102,0.45); }
+        .btn-demo {
+          background: linear-gradient(135deg,#0863ba,#5694cf); color: #fff;
+          padding: 14px 32px; border-radius: 12px; font-family: 'Rubik',sans-serif;
+          font-size: 16px; font-weight: 700; border: none; cursor: pointer;
+          transition: all 0.25s; display: inline-flex; align-items: center; gap: 8px;
+          box-shadow: 0 6px 20px rgba(8,99,186,.3);
+        }
+        .btn-demo:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(8,99,186,.4); }
+
         .btn-secondary {
           background: var(--white); color: var(--dark);
           padding: 14px 32px; border-radius: 12px; font-family: 'Rubik',sans-serif;
@@ -981,6 +991,12 @@ export default function LandingPage() {
                   </svg>
                   {t.hero.cta}
                 </a>
+                <button
+                  className="btn-demo"
+                  onClick={() => { startDemo(); window.location.href = "/dashboard"; }}
+                >
+                  🧪 {lang === "ar" ? "جرّب نبض الآن مجاناً" : "Try NABD Now — Free"}
+                </button>
                 {/* Fix 6: YouTube placeholder link */}
                 <a href={YT_LINK} target="_blank" rel="noopener noreferrer" className="btn-secondary">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -3,11 +3,18 @@
 // ============================================================
 
 import { createBrowserClient } from "@supabase/ssr";
+import { isDemoActive, createDemoClient } from "./demo";
 
 const supabaseUrl     = "https://ldqaohjnlxiwvaijcsbm.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkcWFvaGpubHhpd3ZhaWpjc2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1Nzk3MDUsImV4cCI6MjA4NzE1NTcwNX0.2vo-DqFGbJqa8MEgotfujz23QjU2bfMEDIDDnbDQ1Jo";
 
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+// في وضع التجربة (Demo) نستخدم عميلاً وهمياً يعمل في الذاكرة فقط —
+// لا يمس قاعدة البيانات ولا جلسات العملاء الحقيقيين إطلاقاً
+export const supabase = (
+  isDemoActive()
+    ? (createDemoClient() as ReturnType<typeof createBrowserClient>)
+    : createBrowserClient(supabaseUrl, supabaseAnonKey)
+);
 
 // ============================================================
 // TypeScript Types
