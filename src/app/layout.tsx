@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import DemoBanner from "@/components/DemoBanner";
+import OfflineWidget from "@/components/OfflineWidget";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nabd.clinic"),
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ fontFamily: "'Rubik', sans-serif", margin: 0, padding: 0, background: "#f7f9fc" }}>
         <DemoBanner />
+        <OfflineWidget />
         {children}
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
