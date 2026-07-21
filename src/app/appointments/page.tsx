@@ -576,7 +576,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
                     <div style={{ flex:1 }}>
                       <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#555",marginBottom:6 }}>{isAr?"عدد المواعيد":"Occurrences"}</label>
                       <select value={form.recCount} onChange={e=>setForm({...form,recCount:Number(e.target.value)})} style={{ ...inputSt,cursor:"pointer",padding:"9px 12px",fontSize:13 }}>
-                        {Array.from({length:23},(_,i)=>i+2).map(n=><option key={n} value={n}>{n}</option>)}
+                        {Array.from({length:15},(_,i)=>i+2).map(n=><option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
                   </div>
@@ -1683,7 +1683,8 @@ export default function AppointmentsPage() {
         });
         const rows: Record<string, unknown>[] = [];
         const skipped: string[] = [];
-        for (let i = 0; i < form.recCount; i++) {
+        const maxOccurrences = Math.min(form.recCount, 16); // حد أقصى 16 موعداً
+        for (let i = 0; i < maxOccurrences; i++) {
           const dStr = addOccurrence(baseDate, i);
           if (i > 0 && hasConflict(dStr)) { skipped.push(dStr); continue; }
           rows.push({ user_id: userId, ...payload, date: dStr, status: "scheduled" });
