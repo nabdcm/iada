@@ -14,6 +14,7 @@ const supabaseAdmin = createClient(
 
 type Body = {
   targetEmail?: string;
+  targetUserId?: string;
   patientId?: number;
   reason?: string;
 };
@@ -29,17 +30,17 @@ export async function POST(req: NextRequest) {
     const sender = userData?.user;
     if (userErr || !sender) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-    const { targetEmail, patientId, reason } = (await req.json()) as Body;
-    if (!targetEmail?.trim() || !patientId) {
+    const { targetEmail, targetUserId, patientId, reason } = (await req.json()) as Body;
+    if ((!targetEmail?.trim() && !targetUserId) || !patientId) {
       return NextResponse.json({ error: "missing_fields" }, { status: 400 });
     }
 
-    // ── حلّ العيادة المستقبلة ──
-    const { data: target } = await supabaseAdmin
-      .from("clinics")
-      .select("user_id, name, status")
-      .eq("email", targetEmail.trim().toLowerCase())
-      .maybeSingle();
+    // ── حلّ العيادة المستقبلة (بالمعرّف أو بالبريد) ──
+    let targetQuery = supabaseAdmin.from("clinics").select("user_id, name, status");
+    targetQuery = targetUserId
+      ? targetQuery.eq("user_id", targetUserId)
+      : targetQuery.eq("email", (targetEmail ?? "").trim().toLowerCase());
+    const { data: target } = await targetQuery.maybeSingle();
 
     if (!target) return NextResponse.json({ error: "clinic_not_found" }, { status: 404 });
     if (target.user_id === sender.id) {

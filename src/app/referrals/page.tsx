@@ -41,8 +41,10 @@ const T = {
     newReferral: "تحويل مريض جديد",
     patient: "المريض",
     selectPatient: "اختر المريض...",
-    targetEmail: "بريد العيادة المستقبلة",
-    targetPh: "clinic@example.com",
+    targetDoctor: "الطبيب / العيادة المستقبلة",
+    targetPh: "اكتب اسم الطبيب أو العيادة...",
+    searching: "جارٍ البحث...",
+    noMatch: "لا نتائج — تأكد من الاسم أو جرّب اسم العيادة",
     reason: "سبب التحويل / ملخص الحالة",
     reasonPh: "مثال: يحتاج استشارة قلبية — لديه ارتفاع ضغط غير مستقر",
     send: "إرسال التحويل",
@@ -58,9 +60,9 @@ const T = {
     acceptedNote: "أُضيف المريض إلى قائمة مرضاك",
     empty: "لا توجد تحويلات",
     errors: {
-      clinic_not_found: "لا توجد عيادة بهذا البريد على نبض.",
+      clinic_not_found: "لم يتم العثور على هذه العيادة على نبض.",
       self_referral: "لا يمكنك التحويل إلى عيادتك نفسها.",
-      missing_fields: "اختر المريض وأدخل بريد العيادة.",
+      missing_fields: "اختر المريض ثم اختر الطبيب المستقبِل من نتائج البحث.",
       generic: "حدث خطأ. حاول مجدداً.",
     },
     diabetes: "سكري",
@@ -75,8 +77,10 @@ const T = {
     newReferral: "New Referral",
     patient: "Patient",
     selectPatient: "Select patient...",
-    targetEmail: "Receiving clinic email",
-    targetPh: "clinic@example.com",
+    targetDoctor: "Receiving doctor / clinic",
+    targetPh: "Type doctor or clinic name...",
+    searching: "Searching...",
+    noMatch: "No results — check the name or try the clinic name",
     reason: "Referral reason / case summary",
     reasonPh: "e.g. Needs cardiology consult — unstable hypertension",
     send: "Send Referral",
@@ -92,9 +96,9 @@ const T = {
     acceptedNote: "Patient added to your list",
     empty: "No referrals",
     errors: {
-      clinic_not_found: "No clinic found with this email on NABD.",
+      clinic_not_found: "This clinic was not found on NABD.",
       self_referral: "You can't refer to your own clinic.",
-      missing_fields: "Select a patient and enter the clinic email.",
+      missing_fields: "Select a patient, then pick the receiving doctor from search results.",
       generic: "Something went wrong. Try again.",
     },
     diabetes: "Diabetes",
@@ -102,6 +106,26 @@ const T = {
     notesLbl: "Notes",
   },
 };
+
+const CLINIC_TYPES: Record<string, { ar: string; en: string; icon: string }> = {
+  general:          { ar: "طب عام",        en: "General",          icon: "🏥" },
+  dental:           { ar: "طب أسنان",      en: "Dentistry",        icon: "🦷" },
+  dermatology:      { ar: "جلدية",         en: "Dermatology",      icon: "🧴" },
+  cosmetic:         { ar: "تجميل",         en: "Cosmetic",         icon: "💆" },
+  pediatrics:       { ar: "أطفال",         en: "Pediatrics",       icon: "👶" },
+  physical_therapy: { ar: "علاج فيزيائي",  en: "Physiotherapy",    icon: "🏃" },
+  mental_health:    { ar: "صحة نفسية",     en: "Mental Health",    icon: "🧠" },
+  nutrition:        { ar: "تغذية",         en: "Nutrition",        icon: "🥗" },
+  ophthalmology:    { ar: "عينية",         en: "Ophthalmology",    icon: "👁️" },
+  orthopedic:       { ar: "عظمية",         en: "Orthopedics",      icon: "🦴" },
+  cardiology:       { ar: "قلبية",         en: "Cardiology",       icon: "❤️" },
+  gynecology:       { ar: "نسائية",        en: "Gynecology",       icon: "🌸" },
+  ent:              { ar: "أذن أنف حنجرة", en: "ENT",              icon: "👂" },
+  urology:          { ar: "بولية",         en: "Urology",          icon: "💧" },
+  other:            { ar: "أخرى",          en: "Other",            icon: "🏨" },
+};
+
+type DoctorResult = { user_id: string; clinic_name: string; doctor_name: string; clinic_type: string };
 
 const STATUS_STYLE: Record<Referral["status"], { bg: string; color: string }> = {
   pending:  { bg: "rgba(230,126,34,.12)", color: "#c96a12" },
@@ -122,7 +146,10 @@ export default function ReferralsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [selPatient, setSelPatient] = useState<string>("");
-  const [targetEmail, setTargetEmail] = useState("");
+  const [docQuery, setDocQuery] = useState("");
+  const [docResults, setDocResults] = useState<DoctorResult[]>([]);
+  const [docSearching, setDocSearching] = useState(false);
+  const [selDoctor, setSelDoctor] = useState<DoctorResult | null>(null);
   const [reason, setReason] = useState("");
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -162,9 +189,29 @@ export default function ReferralsPage() {
     })();
   }, [loadAll]);
 
+  // بحث حي عن الأطباء مع تأخير بسيط
+  useEffect(() => {
+    if (selDoctor || docQuery.trim().length < 2) { setDocResults([]); return; }
+    const id = setTimeout(async () => {
+      setDocSearching(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch("/api/refer/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+          body: JSON.stringify({ q: docQuery.trim() }),
+        });
+        const json = (await res.json()) as { results?: DoctorResult[] };
+        setDocResults(json.results ?? []);
+      } catch { setDocResults([]); }
+      setDocSearching(false);
+    }, 350);
+    return () => clearTimeout(id);
+  }, [docQuery, selDoctor]);
+
   async function sendReferral() {
     setNotice(null);
-    if (!selPatient || !targetEmail.trim()) {
+    if (!selPatient || !selDoctor) {
       setNotice({ kind: "err", text: t.errors.missing_fields });
       return;
     }
@@ -178,7 +225,7 @@ export default function ReferralsPage() {
           Authorization: `Bearer ${session?.access_token ?? ""}`,
         },
         body: JSON.stringify({
-          targetEmail: targetEmail.trim(),
+          targetUserId: selDoctor.user_id,
           patientId: Number(selPatient),
           reason,
         }),
@@ -186,7 +233,7 @@ export default function ReferralsPage() {
       const json = (await res.json()) as { ok?: boolean; toClinic?: string; error?: string };
       if (json.ok) {
         setNotice({ kind: "ok", text: `${t.sentOk} ${json.toClinic ?? ""}` });
-        setSelPatient(""); setTargetEmail(""); setReason(""); setShowForm(false);
+        setSelPatient(""); setDocQuery(""); setSelDoctor(null); setReason(""); setShowForm(false);
         await loadAll(userId);
         setTab("sent");
       } else {
@@ -286,9 +333,46 @@ export default function ReferralsPage() {
                       {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label style={lbl}>{t.targetEmail}</label>
-                    <input dir="ltr" value={targetEmail} onChange={e => setTargetEmail(e.target.value)} placeholder={t.targetPh} style={inp} />
+                  <div style={{ position: "relative" }}>
+                    <label style={lbl}>{t.targetDoctor}</label>
+                    {selDoctor ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, border: "1.5px solid #0863ba", background: "rgba(8,99,186,.05)", borderRadius: 12, padding: "10px 14px" }}>
+                        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#0863ba,#5694cf)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>
+                          {(CLINIC_TYPES[selDoctor.clinic_type] ?? CLINIC_TYPES.other).icon}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14.5, fontWeight: 800, color: "#2c3e50" }}>{selDoctor.doctor_name || selDoctor.clinic_name}</div>
+                          <div style={{ fontSize: 12.5, color: "#5a6b80" }}>
+                            {(CLINIC_TYPES[selDoctor.clinic_type] ?? CLINIC_TYPES.other)[isAr ? "ar" : "en"]} • {selDoctor.clinic_name}
+                          </div>
+                        </div>
+                        <button onClick={() => { setSelDoctor(null); setDocQuery(""); }} style={{ background: "none", border: "none", color: "#c0392b", fontSize: 18, cursor: "pointer", fontWeight: 700 }}>✕</button>
+                      </div>
+                    ) : (
+                      <>
+                        <input value={docQuery} onChange={e => setDocQuery(e.target.value)} placeholder={t.targetPh} style={inp} />
+                        {(docSearching || docResults.length > 0 || (docQuery.trim().length >= 2 && !docSearching)) && (
+                          <div style={{ position: "absolute", insetInline: 0, top: "100%", marginTop: 6, background: "#fff", border: "1px solid #dbe4ef", borderRadius: 14, boxShadow: "0 14px 40px rgba(15,40,80,.14)", zIndex: 50, overflow: "hidden", maxHeight: 280, overflowY: "auto" }}>
+                            {docSearching && <div style={{ padding: "14px 16px", fontSize: 13, color: "#8a94a3" }}>{t.searching}</div>}
+                            {!docSearching && docResults.length === 0 && docQuery.trim().length >= 2 && (
+                              <div style={{ padding: "14px 16px", fontSize: 13, color: "#8a94a3" }}>{t.noMatch}</div>
+                            )}
+                            {!docSearching && docResults.map(r => {
+                              const ct = CLINIC_TYPES[r.clinic_type] ?? CLINIC_TYPES.other;
+                              return (
+                                <button key={r.user_id} onClick={() => { setSelDoctor(r); setDocResults([]); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 16px", background: "none", border: "none", borderBottom: "1px solid #f0f4f9", cursor: "pointer", textAlign: "start", fontFamily: "'Rubik',sans-serif" }}>
+                                  <span style={{ fontSize: 20 }}>{ct.icon}</span>
+                                  <span style={{ flex: 1 }}>
+                                    <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#2c3e50" }}>{r.doctor_name || r.clinic_name}</span>
+                                    <span style={{ display: "block", fontSize: 12, color: "#8a94a3" }}>{ct[isAr ? "ar" : "en"]} • {r.clinic_name}</span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                   <div>
                     <label style={lbl}>{t.reason}</label>
