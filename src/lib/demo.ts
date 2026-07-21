@@ -46,7 +46,7 @@ function seedPatients(): Row[] {
     id: i + 1,
     user_id: DEMO_UID,
     name,
-    phone: `09${(31000000 + i * 137913).toString().slice(0, 8)}`,
+    phone: `09000000${(i + 1).toString().padStart(2, "0")}`,
     gender: i % 2 === 0 ? "male" : "female",
     date_of_birth: `${1960 + i * 3}-0${(i % 9) + 1}-1${i % 9}`,
     has_diabetes: i % 4 === 0,
