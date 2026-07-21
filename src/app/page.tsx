@@ -27,6 +27,29 @@ const LOGO_SVG = (
   </svg>
 );
 
+function PulseDivider() {
+  return (
+    <div className="pulse-divider" aria-hidden="true">
+      <svg viewBox="0 0 1200 60" preserveAspectRatio="none">
+        <path
+          className="pulse-path"
+          d="M0,30 L440,30 L470,30 L490,8 L510,52 L530,18 L545,38 L560,30 L760,30 L1200,30"
+          fill="none" stroke="url(#pulseGrad)" strokeWidth="2.5" strokeLinecap="round"
+        />
+        <defs>
+          <linearGradient id="pulseGrad" x1="0" x2="1">
+            <stop offset="0" stopColor="#0863ba" stopOpacity="0" />
+            <stop offset=".35" stopColor="#0863ba" />
+            <stop offset=".5" stopColor="#5694cf" />
+            <stop offset=".65" stopColor="#0863ba" />
+            <stop offset="1" stopColor="#0863ba" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  );
+}
+
 const WA_LINK = "https://wa.me/963998285483";
 const YT_LINK = "https://www.youtube.com/watch?v=ayeaWKZr_ZA";
 
@@ -240,9 +263,63 @@ const translations = {
       subtitle: "انضم إلى العيادات التي تثق بنبض لإدارة عملها اليومي",
       btn: "تواصل معنا عبر واتساب",
     },
+    why: {
+      title: "لماذا",
+      titleHighlight: "نبض؟",
+      subtitle: "الفرق بين الدفاتر الورقية ونظام يعمل معك",
+      paper: "الطريقة التقليدية",
+      nabd: "مع نبض",
+      rows: [
+        { paper: "دفاتر ورقية تضيع وتتلف", nabd: "سجلات رقمية آمنة تبقى للأبد" },
+        { paper: "مواعيد متضاربة ومرضى ينتظرون", nabd: "تقويم ذكي وتنبيهات تلقائية" },
+        { paper: "اتصالات هاتفية لتذكير كل مريض", nabd: "تذكير واتساب بضغطة واحدة" },
+        { paper: "حسابات نهاية الشهر على الآلة الحاسبة", nabd: "إيرادات ومصاريف محسوبة لحظياً" },
+        { paper: "المريض لا يعرف شيئاً عن حالته", nabd: "بوابة خاصة لكل مريض لمتابعة صحته" },
+      ],
+    },
+    security: {
+      title: "بيانات مرضاك",
+      titleHighlight: "أمانة",
+      subtitle: "نتعامل مع البيانات الطبية بأعلى معايير الحماية",
+      items: [
+        { icon: "🔐", title: "اتصال مشفّر بالكامل", desc: "كل البيانات تنتقل عبر HTTPS مشفّرة من جهازك حتى الخادم." },
+        { icon: "🗄️", title: "نسخ احتياطي دائم", desc: "بياناتك محفوظة على بنية سحابية موثوقة مع نسخ احتياطية مستمرة." },
+        { icon: "👤", title: "صلاحيات محكمة", desc: "كل عيادة معزولة تماماً — لا يمكن لأي طرف الاطلاع على بيانات غيره." },
+        { icon: "📤", title: "بياناتك ملكك", desc: "يمكنك تصدير كامل بياناتك في أي وقت بصيغة قابلة للنقل." },
+      ],
+    },
+    testimonials: {
+      title: "ماذا يقول",
+      titleHighlight: "الأطباء؟",
+      subtitle: "آراء من عيادات تستخدم نبض يومياً",
+      items: [
+        { quote: "قبل نبض كنت أضيّع وقتاً طويلاً في تنظيم المواعيد. الآن كل شيء أمامي في شاشة واحدة، وتذكير الواتساب قلّل حالات الغياب بشكل ملحوظ.", name: "د. م. الخطيب", role: "طب أسنان" },
+        { quote: "أكثر ما أعجبني هو متابعة المدفوعات — أعرف إيرادات عيادتي أولاً بأول بدون دفاتر ولا حسابات آخر الشهر.", name: "د. ر. سليمان", role: "طب عام" },
+        { quote: "بوابة المريض وفّرت عليّ عشرات المكالمات. المريض يتابع حالته ووصفته بنفسه من رابط خاص به.", name: "د. أ. حداد", role: "أمراض جلدية" },
+      ],
+    },
+    faq: {
+      title: "أسئلة",
+      titleHighlight: "شائعة",
+      subtitle: "كل ما تريد معرفته قبل البدء",
+      items: [
+        { q: "هل بيانات مرضاي آمنة؟", a: "نعم. البيانات مشفّرة أثناء النقل ومخزّنة على بنية سحابية موثوقة، وكل عيادة معزولة تماماً عن غيرها بصلاحيات صارمة." },
+        { q: "هل أحتاج خبرة تقنية لاستخدام نبض؟", a: "إطلاقاً. النظام مصمم ليكون بسيطاً — إن كنت تستخدم واتساب فستستخدم نبض بسهولة. كما نوفّر شرحاً ودعماً مباشراً عند البدء." },
+        { q: "هل يعمل على الموبايل؟", a: "نعم، نبض يعمل على الموبايل والكمبيوتر والتابلت من المتصفح مباشرة، ويمكن تثبيته كتطبيق على شاشتك الرئيسية." },
+        { q: "ماذا يحدث لبياناتي إذا ألغيت الاشتراك؟", a: "بياناتك تبقى ملكك — يمكنك تصديرها كاملة قبل الإلغاء، ولا نحذف شيئاً دون علمك." },
+        { q: "هل يمكن لأكثر من طبيب استخدام نفس الحساب؟", a: "نعم، الخطط المشتركة تدعم حتى 5 أطباء في العيادة الواحدة مع تخصيص المرضى لكل طبيب." },
+        { q: "كيف أبدأ؟", a: "جرّب النظام مجاناً من زر التجربة، وعندما تكون جاهزاً تواصل معنا عبر واتساب لتفعيل حسابك خلال دقائق." },
+      ],
+    },
+    cookie: {
+      text: "نستخدم ملفات تعريف ارتباط (كوكيز) ضرورية لتشغيل الموقع وتسجيل الدخول فقط — لا إعلانات ولا تتبّع.",
+      link: "سياسة الخصوصية",
+      btn: "حسناً، فهمت",
+    },
     footer: {
       tagline: "نبض عيادتك في يدك",
       copy: "© 2026 نبض. جميع الحقوق محفوظة.",
+      links: { features: "المميزات", pricing: "الأسعار", faq: "الأسئلة الشائعة", privacy: "سياسة الخصوصية", contact: "تواصل معنا" },
     },
   },
   en: {
@@ -454,15 +531,78 @@ const translations = {
       subtitle: "Join the clinics that trust NABD for daily management",
       btn: "Contact Us on WhatsApp",
     },
+    why: {
+      title: "Why",
+      titleHighlight: "NABD?",
+      subtitle: "The difference between paper records and a system that works with you",
+      paper: "The old way",
+      nabd: "With NABD",
+      rows: [
+        { paper: "Paper records get lost and damaged", nabd: "Secure digital records that last forever" },
+        { paper: "Conflicting appointments, waiting patients", nabd: "Smart calendar with automatic alerts" },
+        { paper: "Phone calls to remind every patient", nabd: "One-tap WhatsApp reminders" },
+        { paper: "End-of-month math on a calculator", nabd: "Live revenue & expense tracking" },
+        { paper: "Patients know nothing about their status", nabd: "A personal portal for every patient" },
+      ],
+    },
+    security: {
+      title: "Your Patients' Data is a",
+      titleHighlight: "Trust",
+      subtitle: "We handle medical data with the highest protection standards",
+      items: [
+        { icon: "🔐", title: "Fully encrypted connection", desc: "All data travels over encrypted HTTPS from your device to the server." },
+        { icon: "🗄️", title: "Continuous backups", desc: "Your data lives on trusted cloud infrastructure with ongoing backups." },
+        { icon: "👤", title: "Strict access control", desc: "Every clinic is fully isolated — no one can see anyone else's data." },
+        { icon: "📤", title: "Your data is yours", desc: "Export your complete data anytime in a portable format." },
+      ],
+    },
+    testimonials: {
+      title: "What Do",
+      titleHighlight: "Doctors Say?",
+      subtitle: "From clinics using NABD every day",
+      items: [
+        { quote: "Before NABD I wasted so much time organizing appointments. Now everything is on one screen, and WhatsApp reminders noticeably reduced no-shows.", name: "Dr. M. Alkhatib", role: "Dentistry" },
+        { quote: "What I love most is payment tracking — I know my clinic's revenue in real time, no notebooks, no end-of-month math.", name: "Dr. R. Suleiman", role: "General Medicine" },
+        { quote: "The patient portal saved me dozens of calls. Patients follow their status and prescriptions from their own link.", name: "Dr. A. Haddad", role: "Dermatology" },
+      ],
+    },
+    faq: {
+      title: "Frequently Asked",
+      titleHighlight: "Questions",
+      subtitle: "Everything you want to know before starting",
+      items: [
+        { q: "Is my patients' data safe?", a: "Yes. Data is encrypted in transit and stored on trusted cloud infrastructure, with every clinic fully isolated under strict access rules." },
+        { q: "Do I need technical skills to use NABD?", a: "Not at all. If you can use WhatsApp, you can use NABD. We also provide onboarding help and direct support." },
+        { q: "Does it work on mobile?", a: "Yes — NABD works on mobile, desktop, and tablet right from the browser, and can be installed as an app on your home screen." },
+        { q: "What happens to my data if I cancel?", a: "Your data stays yours — you can export everything before canceling, and nothing is deleted without your knowledge." },
+        { q: "Can multiple doctors share one clinic?", a: "Yes, shared plans support up to 5 doctors per clinic with patients assigned to each doctor." },
+        { q: "How do I start?", a: "Try the free demo, and when you're ready, contact us on WhatsApp to activate your account within minutes." },
+      ],
+    },
+    cookie: {
+      text: "We use only essential cookies to run the site and keep you signed in — no ads, no tracking.",
+      link: "Privacy Policy",
+      btn: "Got it",
+    },
     footer: {
       tagline: "Your Clinic's Pulse in Your Hands",
       copy: "© 2026 NABD. All rights reserved.",
+      links: { features: "Features", pricing: "Pricing", faq: "FAQ", privacy: "Privacy Policy", contact: "Contact Us" },
     },
   },
 };
 
 export default function LandingPage() {
   const [lang, setLang] = useState("ar");
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [showCookie, setShowCookie] = useState(false);
+  useEffect(() => {
+    try { if (!localStorage.getItem("nabd_cookie_ok")) setShowCookie(true); } catch { /* ignore */ }
+  }, []);
+  const acceptCookies = () => {
+    try { localStorage.setItem("nabd_cookie_ok", "1"); } catch { /* ignore */ }
+    setShowCookie(false);
+  };
   const [scrolled, setScrolled] = useState(false);
   const [pricingAnnual, setPricingAnnual] = useState(false);
   const [planTab, setPlanTab] = useState<"individual" | "shared">("individual");
@@ -654,6 +794,76 @@ export default function LandingPage() {
           transition: all 0.25s; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
         }
         .btn-wa:hover { background: #1da851; transform: translateY(-2px); box-shadow: 0 10px 32px rgba(37,211,102,0.45); }
+        /* ── Pulse divider (signature) ── */
+        .pulse-divider { max-width: 900px; margin: 0 auto; padding: 10px 20px; }
+        .pulse-divider svg { width: 100%; height: 44px; display: block; }
+        .pulse-path { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: pulseDraw 3.2s ease-out forwards; }
+        @keyframes pulseDraw { to { stroke-dashoffset: 0; } }
+        @media (prefers-reduced-motion: reduce) { .pulse-path { animation: none; stroke-dashoffset: 0; } }
+
+        /* ── Why NABD comparison ── */
+        .why-section { padding: 90px 20px; background: var(--white); }
+        .why-table { max-width: 860px; margin: 48px auto 0; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 44px rgba(8,99,186,.08); border: 1px solid #e8eef6; }
+        .why-head { display: grid; grid-template-columns: 1fr 1fr; }
+        .why-head > div { padding: 18px; text-align: center; font-weight: 800; font-size: 16px; }
+        .why-head .wh-paper { background: #f4f6f9; color: #8a94a3; }
+        .why-head .wh-nabd { background: linear-gradient(135deg,#0863ba,#5694cf); color: #fff; }
+        .why-row { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #eef2f7; }
+        .why-cell { padding: 18px 22px; font-size: 14.5px; line-height: 1.7; display: flex; align-items: center; gap: 10px; }
+        .why-cell.paper { color: #98a1ae; background: #fbfcfe; }
+        .why-cell.nabd { color: #2c3e50; font-weight: 600; }
+        .why-cell .mark { flex-shrink: 0; font-size: 15px; }
+
+        /* ── Security ── */
+        .security-section { padding: 90px 20px; background: linear-gradient(180deg,#f4f8fd,#fff); }
+        .security-grid { max-width: 1000px; margin: 48px auto 0; display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 20px; }
+        .security-card { background: var(--white); border: 1px solid #e6eef8; border-radius: 18px; padding: 28px 22px; text-align: center; transition: all .25s; }
+        .security-card:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(8,99,186,.1); border-color: #cfe0f3; }
+        .security-icon { font-size: 34px; margin-bottom: 14px; }
+        .security-title { font-size: 15.5px; font-weight: 800; color: #2c3e50; margin-bottom: 8px; }
+        .security-desc { font-size: 13.5px; color: #7d8896; line-height: 1.8; }
+
+        /* ── Testimonials ── */
+        .testi-section { padding: 90px 20px; background: var(--white); }
+        .testi-grid { max-width: 1080px; margin: 48px auto 0; display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 22px; }
+        .testi-card { background: #f8fafd; border: 1px solid #e8eef6; border-radius: 20px; padding: 28px 24px; position: relative; }
+        .testi-card::before { content: "“"; position: absolute; top: 8px; inset-inline-start: 18px; font-size: 64px; color: rgba(8,99,186,.12); font-family: Georgia, serif; line-height: 1; }
+        .testi-quote { font-size: 14.5px; color: #3d4a5c; line-height: 2; margin: 18px 0 20px; position: relative; }
+        .testi-person { display: flex; align-items: center; gap: 12px; }
+        .testi-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg,#0863ba,#5694cf); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; }
+        .testi-name { font-size: 14px; font-weight: 800; color: #2c3e50; }
+        .testi-role { font-size: 12.5px; color: #8a94a3; }
+
+        /* ── FAQ ── */
+        .faq-section { padding: 90px 20px; background: linear-gradient(180deg,#fff,#f4f8fd); }
+        .faq-list { max-width: 760px; margin: 44px auto 0; display: flex; flex-direction: column; gap: 12px; }
+        .faq-item { background: var(--white); border: 1px solid #e6eef8; border-radius: 16px; overflow: hidden; transition: border-color .2s; }
+        .faq-item.open { border-color: #9dc0e8; box-shadow: 0 8px 26px rgba(8,99,186,.08); }
+        .faq-q { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 22px; background: none; border: none; cursor: pointer; font-family: 'Rubik',sans-serif; font-size: 15px; font-weight: 700; color: #2c3e50; text-align: start; }
+        .faq-q:focus-visible { outline: 2px solid #0863ba; outline-offset: -2px; }
+        .faq-chev { flex-shrink: 0; transition: transform .25s; color: #0863ba; }
+        .faq-item.open .faq-chev { transform: rotate(180deg); }
+        .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+        .faq-item.open .faq-a { max-height: 260px; }
+        .faq-a p { margin: 0; padding: 0 22px 20px; font-size: 14px; color: #6b7684; line-height: 2; }
+
+        /* ── Cookie bar ── */
+        .cookie-bar { position: fixed; bottom: 16px; inset-inline: 16px; z-index: 10000; max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #dfe8f4; border-radius: 16px; box-shadow: 0 16px 48px rgba(15,40,80,.18); padding: 16px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; animation: cookieUp .4s ease; }
+        @keyframes cookieUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+        .cookie-text { flex: 1 1 300px; font-size: 13px; color: #4b5563; line-height: 1.8; }
+        .cookie-text a { color: #0863ba; font-weight: 700; text-decoration: none; }
+        .cookie-btn { background: linear-gradient(135deg,#0863ba,#5694cf); color: #fff; border: none; border-radius: 10px; padding: 10px 22px; font-family: 'Rubik',sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+        /* ── Footer links ── */
+        .footer-links { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin: 6px 0 22px; }
+        .footer-links a { color: rgba(255,255,255,.65); font-size: 13.5px; text-decoration: none; transition: color .2s; }
+        .footer-links a:hover { color: #fff; }
+
+        @media (max-width: 640px) {
+          .why-cell { padding: 14px; font-size: 13px; }
+          .why-head > div { font-size: 14px; padding: 14px; }
+        }
+
         .btn-demo {
           background: linear-gradient(135deg,#0863ba,#5694cf); color: #fff;
           padding: 14px 32px; border-radius: 12px; font-family: 'Rubik',sans-serif;
@@ -1095,6 +1305,47 @@ export default function LandingPage() {
         </section>
 
         {/* ── PRICING ── */}
+        <PulseDivider />
+
+        {/* ── WHY NABD ── */}
+        <section className="why-section" id="why">
+          <div className="section-header">
+            <h2 className="section-title">{t.why.title} <span>{t.why.titleHighlight}</span></h2>
+            <p className="section-subtitle">{t.why.subtitle}</p>
+          </div>
+          <div className="why-table">
+            <div className="why-head">
+              <div className="wh-paper">{t.why.paper}</div>
+              <div className="wh-nabd">{t.why.nabd}</div>
+            </div>
+            {t.why.rows.map((r, i) => (
+              <div className="why-row" key={i}>
+                <div className="why-cell paper"><span className="mark">✕</span>{r.paper}</div>
+                <div className="why-cell nabd"><span className="mark">✓</span>{r.nabd}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── SECURITY ── */}
+        <section className="security-section" id="security">
+          <div className="section-header">
+            <h2 className="section-title">{t.security.title} <span>{t.security.titleHighlight}</span></h2>
+            <p className="section-subtitle">{t.security.subtitle}</p>
+          </div>
+          <div className="security-grid">
+            {t.security.items.map((it, i) => (
+              <div className="security-card" key={i}>
+                <div className="security-icon">{it.icon}</div>
+                <div className="security-title">{it.title}</div>
+                <div className="security-desc">{it.desc}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <PulseDivider />
+
         <section className="pricing-section" id="pricing">
           <div className="section-header">
             <h2 className="section-title">
@@ -1179,6 +1430,28 @@ export default function LandingPage() {
         </section>
 
         {/* ── HOW IT WORKS — Fix 3: 4th WhatsApp step ── */}
+        {/* ── TESTIMONIALS ── */}
+        <section className="testi-section" id="testimonials">
+          <div className="section-header">
+            <h2 className="section-title">{t.testimonials.title} <span>{t.testimonials.titleHighlight}</span></h2>
+            <p className="section-subtitle">{t.testimonials.subtitle}</p>
+          </div>
+          <div className="testi-grid">
+            {t.testimonials.items.map((it, i) => (
+              <div className="testi-card" key={i}>
+                <p className="testi-quote">{it.quote}</p>
+                <div className="testi-person">
+                  <div className="testi-avatar">{it.name.replace(/^(د\.|Dr\.)\s*/, "").charAt(0)}</div>
+                  <div>
+                    <div className="testi-name">{it.name}</div>
+                    <div className="testi-role">{it.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="hiw-section" id="how">
           <div className="hiw-inner">
             <div className="section-header">
@@ -1206,6 +1479,27 @@ export default function LandingPage() {
         </section>
 
         {/* ── CTA ── */}
+        <PulseDivider />
+
+        {/* ── FAQ ── */}
+        <section className="faq-section" id="faq">
+          <div className="section-header">
+            <h2 className="section-title">{t.faq.title} <span>{t.faq.titleHighlight}</span></h2>
+            <p className="section-subtitle">{t.faq.subtitle}</p>
+          </div>
+          <div className="faq-list">
+            {t.faq.items.map((it, i) => (
+              <div className={openFaq === i ? "faq-item open" : "faq-item"} key={i}>
+                <button className="faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={openFaq === i}>
+                  {it.q}
+                  <svg className="faq-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div className="faq-a"><p>{it.a}</p></div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="cta-section" id="cta">
           <div className="cta-content">
             <h2 className="cta-title">{t.cta.title}</h2>
@@ -1227,8 +1521,26 @@ export default function LandingPage() {
             {isAr ? "نبض" : "NABD"}
           </div>
           <p className="footer-tagline">{t.footer.tagline}</p>
+          <div className="footer-links">
+            <a href="#features">{t.footer.links.features}</a>
+            <a href="#pricing">{t.footer.links.pricing}</a>
+            <a href="#faq">{t.footer.links.faq}</a>
+            <a href="/privacy-policy">{t.footer.links.privacy}</a>
+            <a href={WA_LINK} target="_blank" rel="noopener noreferrer">{t.footer.links.contact}</a>
+          </div>
           <p className="footer-copy">{t.footer.copy}</p>
         </footer>
+
+        {/* ── Cookie consent ── */}
+        {showCookie && (
+          <div className="cookie-bar" role="dialog" aria-label="cookies">
+            <div className="cookie-text">
+              🍪 {t.cookie.text}{" "}
+              <a href="/privacy-policy">{t.cookie.link}</a>
+            </div>
+            <button className="cookie-btn" onClick={acceptCookies}>{t.cookie.btn}</button>
+          </div>
+        )}
 
       </div>
     </>
