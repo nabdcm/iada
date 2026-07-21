@@ -299,19 +299,35 @@ export default function ReferralsPage() {
           planLoading={loading}
           onCollapse={(c) => setSidebarWidth(c ? 70 : 240)}
         />
-        <div style={{ [isAr ? "marginRight" : "marginLeft"]: sidebarWidth, padding: "28px 24px 80px", transition: "margin .25s" } as React.CSSProperties}>
-          <div style={{ maxWidth: 860, margin: "0 auto" }}>
+        <style>{`
+          .ref-main { padding: 28px 24px 80px; transition: margin .25s; }
+          .ref-wrap { max-width: 860px; margin: 0 auto; }
+          .ref-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
+          .ref-new-btn { background: linear-gradient(135deg,#0863ba,#5694cf); color:#fff; border:none; border-radius:12px; padding:12px 22px; font-family:'Rubik',sans-serif; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 6px 18px rgba(8,99,186,.25); }
+          .ref-card-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+          .ref-actions { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+          @media (max-width: 768px) {
+            .ref-main { margin: 0 !important; padding: 18px 14px 110px; }
+            .ref-head { flex-direction: column; align-items: stretch; }
+            .ref-head h1 { font-size: 20px !important; }
+            .ref-new-btn { width: 100%; padding: 14px; }
+            .ref-tabs button { flex: 1; justify-content: center; }
+            .ref-card-row { flex-direction: column; }
+            .ref-actions { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+            .ref-actions .ref-btns { display: flex; gap: 8px; flex: 1; }
+            .ref-actions .ref-btns button { flex: 1; padding: 12px 8px !important; }
+          }
+        `}</style>
+        <div className="ref-main" style={{ [isAr ? "marginRight" : "marginLeft"]: sidebarWidth } as React.CSSProperties}>
+          <div className="ref-wrap">
 
             {/* رأس الصفحة */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14, marginBottom: 22 }}>
+            <div className="ref-head">
               <div>
                 <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#2c3e50" }}>{t.title}</h1>
                 <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#8a94a3" }}>{t.subtitle}</p>
               </div>
-              <button
-                onClick={() => { setShowForm(v => !v); setNotice(null); }}
-                style={{ background: "linear-gradient(135deg,#0863ba,#5694cf)", color: "#fff", border: "none", borderRadius: 12, padding: "12px 22px", fontFamily: "'Rubik',sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 18px rgba(8,99,186,.25)" }}
-              >
+              <button className="ref-new-btn" onClick={() => { setShowForm(v => !v); setNotice(null); }}>
                 + {t.newReferral}
               </button>
             </div>
@@ -390,7 +406,7 @@ export default function ReferralsPage() {
             )}
 
             {/* التبويبات */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+            <div className="ref-tabs" style={{ display: "flex", gap: 8, marginBottom: 18 }}>
               {(["received", "sent"] as const).map(k => (
                 <button key={k} onClick={() => setTab(k)} style={{
                   padding: "10px 22px", borderRadius: 12, border: "1px solid",
@@ -424,7 +440,7 @@ export default function ReferralsPage() {
                   const isReceived = ref.to_user_id === userId;
                   return (
                     <div key={ref.id} style={{ background: "#fff", border: "1px solid #e6eef8", borderRadius: 16, padding: "18px 20px" }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <div className="ref-card-row">
                         <div style={{ flex: "1 1 260px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                             <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#0863ba,#5694cf)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15 }}>
@@ -450,12 +466,12 @@ export default function ReferralsPage() {
                             </div>
                           )}
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+                        <div className="ref-actions">
                           <span style={{ background: st.bg, color: st.color, borderRadius: 20, padding: "4px 14px", fontSize: 12, fontWeight: 700 }}>
                             {statusLabel}
                           </span>
                           {isReceived && ref.status === "pending" && (
-                            <div style={{ display: "flex", gap: 8 }}>
+                            <div className="ref-btns" style={{ display: "flex", gap: 8 }}>
                               <button
                                 onClick={() => respond(ref, true)}
                                 disabled={actingId === ref.id}
