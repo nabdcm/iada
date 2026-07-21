@@ -123,6 +123,12 @@ const Icons = {
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
     </svg>
   ),
+  referrals: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+      <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+    </svg>
+  ),
   more: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/>
@@ -166,7 +172,7 @@ const NAV_LABELS = {
     dashboard: "الرئيسية", patients: "المرضى", appointments: "المواعيد",
     payments: "المدفوعات", prescriptions: "الوصفات",
     tracking: "متابعة", clinicManagement: "إدارة العيادة",
-    messages: "الرسائل",
+    messages: "الرسائل", referrals: "تحويل المرضى",
     more: "المزيد",
     signOut: "خروج", plan: "خطة", clinic: "عيادة",
     notAvailable: "غير متاح في خطتك",
@@ -179,7 +185,7 @@ const NAV_LABELS = {
     dashboard: "Dashboard", patients: "Patients", appointments: "Appointments",
     payments: "Payments", prescriptions: "Prescriptions",
     tracking: "Tracking", clinicManagement: "Clinic Mgmt",
-    messages: "Messages",
+    messages: "Messages", referrals: "Referrals",
     more: "More",
     signOut: "Sign Out", plan: "Plan", clinic: "Clinic",
     notAvailable: "Not available in your plan",
@@ -216,6 +222,7 @@ const SECONDARY_NAV = [
   { key: "tracking",         href: "/patient-tracking",  icon: "tracking"         },
   { key: "clinicManagement", href: "/clinic-management", icon: "clinicManagement" },
   { key: "messages",         href: "/messages",           icon: "messages"         },
+  { key: "referrals",        href: "/referrals",          icon: "referrals"        },
 ];
 
 // ─── Component ───────────────────────────────────────────────
@@ -863,6 +870,7 @@ export default function SharedSidebar({
   const pairedNavItems = [
     { key: "clinicManagement", href: "/clinic-management", icon: "clinicManagement" },
     { key: "messages",         href: "/messages",           icon: "messages"         },
+  { key: "referrals",        href: "/referrals",          icon: "referrals"        },
   ];
 
   const sideWidth = collapsed ? 70 : 240;

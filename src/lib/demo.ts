@@ -154,6 +154,7 @@ function buildSeed(): Record<string, Row[]> {
     master_patients: [],
     patient_profiles: [],
     lab_orders: [],
+    referrals: [],
     profiles: [],
   };
 }
