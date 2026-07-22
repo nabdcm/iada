@@ -322,6 +322,7 @@ type ApptForm = {
   type: string; notes: string; status: Status;
   recFreq: RecFreq;         // تكرار الموعد (فارغ = بدون تكرار)
   recCount: number;         // عدد المواعيد الإجمالي (يشمل الأول)
+  is_online: boolean;       // موعد كشف عن بُعد
 };
 
 // نوع الطبيب للخطط المشتركة
@@ -333,7 +334,7 @@ type Doctor = {
 };
 
 // ─── Modal موعد ───────────────────────────────────────────
-function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, doctorSchedules = [], plan, onSave, onClose, onStatusChange, onDelete, saving, quickSlot, clockFmt = "24" }: {
+function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doctors, doctorSchedules = [], plan, onSave, onClose, onStatusChange, onDelete, saving, quickSlot, clockFmt = "24", teleEnabled = false }: {
   clockFmt?: TimeFormat;
   lang: Lang; appt: Appointment | null; defaultDate: string; patients: Patient[];
   appointments: Appointment[];
@@ -342,6 +343,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
   onStatusChange: (id: number, status: Status) => void;
   onDelete: (id: number) => void; saving: boolean;
   quickSlot?: { doctorId: number | null; time: string; date: string } | null;
+  teleEnabled?: boolean;
 }) {
   const tr = T[lang]; const isAr = lang === "ar"; const isEdit = !!appt?.id;
   const isShared = isSharedPlan(plan);
@@ -352,6 +354,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
     duration: appt?.duration ?? 30, type: appt?.type ?? "",
     notes: appt?.notes ?? "", status: appt?.status ?? "scheduled",
     recFreq: "", recCount: 4,
+    is_online: (appt as any)?.is_online ?? false,
   });
   const [recOpen, setRecOpen] = useState(false);
   const [error, setError] = useState("");
@@ -550,6 +553,21 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
             </Field>
             <Field label={tr.modal.type} half><input value={form.type} onChange={e=>setForm({...form,type:e.target.value})} placeholder={tr.modal.typePh} style={inputSt} className="appt-input"/></Field>
           </div>
+          {teleEnabled && (
+            <div style={{ marginBottom:16, background: form.is_online ? "rgba(123,45,139,.06)" : "#f7f9fc", border: `1.5px solid ${form.is_online ? "rgba(123,45,139,.3)" : "#eef0f3"}`, borderRadius:12, padding:"12px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, transition:"all .2s" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:20 }}>🎥</span>
+                <div>
+                  <div style={{ fontSize:13.5, fontWeight:700, color:"#2c3e50" }}>{isAr ? "كشف عن بُعد (أونلاين)" : "Online visit"}</div>
+                  <div style={{ fontSize:11.5, color:"#8a94a3" }}>{isAr ? "مكالمة فيديو داخل نبض بدل الحضور" : "In-app video call instead of in-person"}</div>
+                </div>
+              </div>
+              <button type="button" onClick={()=>setForm({...form, is_online: !form.is_online})}
+                style={{ position:"relative", width:44, height:24, borderRadius:20, border:"none", cursor:"pointer", background: form.is_online ? "#7b2d8b" : "#cbd5e1", transition:"background .2s", flexShrink:0 }}>
+                <span style={{ position:"absolute", top:2, insetInlineStart: form.is_online ? 22 : 2, width:20, height:20, borderRadius:"50%", background:"#fff", transition:"inset-inline-start .2s", boxShadow:"0 1px 3px rgba(0,0,0,.25)" }} />
+              </button>
+            </div>
+          )}
           {!isEdit && (
             <div style={{ marginBottom:16 }}>
               <button type="button"
@@ -1456,6 +1474,7 @@ export default function AppointmentsPage() {
   const [saving,              setSaving]              = useState(false);
   const [clinicId,            setClinicId]            = useState("");
   const [plan,                setPlan]                = useState<PlanType>("basic");
+  const [teleEnabled,         setTeleEnabled]         = useState(false);
   const [clockFmt,            setClockFmt]            = useState<TimeFormat>("24");
   const [countryCode,         setCountryCode]         = useState<string>(DEFAULT_COUNTRY_CODE);
   const [shareModal,          setShareModal]          = useState(false);
@@ -1541,8 +1560,9 @@ export default function AppointmentsPage() {
           .then(({ data: tfData }) => { if (tfData?.time_format === "12" || tfData?.time_format === "24") setClockFmt(tfData.time_format); });
         // جلب خطة العيادة
         const { data: clinicData } = await supabase
-          .from("clinics").select("plan, country_code").eq("user_id", user.id).single();
+          .from("clinics").select("plan, country_code, telemedicine_enabled").eq("user_id", user.id).single();
         if ((clinicData as { country_code?: string } | null)?.country_code) setCountryCode((clinicData as { country_code?: string }).country_code!);
+        if ((clinicData as { telemedicine_enabled?: boolean } | null)?.telemedicine_enabled) setTeleEnabled(true);
         if (clinicData?.plan) {
           const fetchedPlan = clinicData.plan as PlanType;
           setPlan(fetchedPlan);
@@ -1651,6 +1671,7 @@ export default function AppointmentsPage() {
         type: form.type||null,
         notes: form.notes||null,
         status: form.status,
+        is_online: form.is_online,
       };
       // إضافة doctor_id فقط في الخطط المشتركة
       if (isSharedPlan(plan) && form.doctor_id) {
@@ -1875,7 +1896,13 @@ export default function AppointmentsPage() {
     const name     = getPatientName(appt.patient_id);
     const [y, mo, d] = appt.date.split("-");
     const dateFormatted = `${parseInt(d)} ${T[lang].months[parseInt(mo)-1]} ${y}`;
-    const msg = encodeURIComponent(T[lang].whatsappMsg(name, dateFormatted, fmtTime(appt.time, clockFmt, lang==="ar")));
+    const baseMsg = T[lang].whatsappMsg(name, dateFormatted, fmtTime(appt.time, clockFmt, lang==="ar"));
+    const onlineExtra = (appt as any).is_online
+      ? (lang==="ar"
+          ? `\n\nهذا الموعد كشف عن بُعد. ادخل من الرابط في وقت موعدك:\n${window.location.origin}/visit/${appt.id}`
+          : `\n\nThis is an online visit. Join from this link at your appointment time:\n${window.location.origin}/visit/${appt.id}`)
+      : "";
+    const msg = encodeURIComponent(baseMsg + onlineExtra);
     if (rawPhone) {
       const desktopUrl = `whatsapp://send?phone=${rawPhone}&text=${msg}`;
       const webUrl     = `https://wa.me/${rawPhone}?text=${msg}`;
@@ -2431,6 +2458,7 @@ export default function AppointmentsPage() {
                               <div style={{ flex:1,minWidth:0 }}>
                                 <div style={{ fontSize:14,fontWeight:700,color:"#353535",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{name}</div>
                                 <div style={{ fontSize:11,color:"#999",marginTop:2 }}>
+                                  {(appt as any).is_online && <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"rgba(123,45,139,.1)",color:"#7b2d8b",border:"1px solid rgba(123,45,139,.25)",marginInlineEnd:6 }}>🎥 {isAr?"أونلاين":"Online"}</span>}
                                   {appt.type && <span>{appt.type} · </span>}
                                   <span style={{ fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:20,background:"#fff",color:bColor,border:`1px solid ${bColor}30` }}>
                                     {tr.statuses[appt.status as Status]}
@@ -2439,6 +2467,24 @@ export default function AppointmentsPage() {
                               </div>
                               {/* أزرار */}
                               <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                                {(appt as any).is_online && (
+                                  <>
+                                    <button
+                                      title={isAr?"دخول الكشف":"Join call"}
+                                      onClick={e=>{ e.stopPropagation(); window.location.href = `/call/${appt.id}`; }}
+                                      style={{ height:34,padding:"0 12px",borderRadius:9,background:"linear-gradient(135deg,#7b2d8b,#a23bb5)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#fff",fontSize:12,fontWeight:700,fontFamily:"'Rubik',sans-serif" }}
+                                    >
+                                      🎥 {isAr?"دخول":"Join"}
+                                    </button>
+                                    <button
+                                      title={isAr?"نسخ رابط المريض":"Copy patient link"}
+                                      onClick={e=>{ e.stopPropagation(); const url=`${window.location.origin}/visit/${appt.id}`; navigator.clipboard?.writeText(url).catch(()=>{}); const el=e.currentTarget; const o=el.innerHTML; el.innerHTML="✓"; setTimeout(()=>{el.innerHTML=o;},1400); }}
+                                      style={{ width:34,height:34,borderRadius:9,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }}
+                                    >
+                                      🔗
+                                    </button>
+                                  </>
+                                )}
                                 {canAccess("payments", plan) && (
                                 <button
                                   title="WhatsApp"
@@ -2476,7 +2522,7 @@ export default function AppointmentsPage() {
 
         {/* Modals */}
         {(addModal||editAppt)&&(
-          <AppointmentModal clockFmt={clockFmt} lang={lang} appt={editAppt} defaultDate={quickSlot?.date ?? selectedKey} patients={patients}
+          <AppointmentModal clockFmt={clockFmt} lang={lang} appt={editAppt} defaultDate={quickSlot?.date ?? selectedKey} patients={patients} teleEnabled={teleEnabled}
             appointments={appointments}
             doctors={doctors} doctorSchedules={doctorSchedules} plan={plan}
             onSave={handleSave} onClose={()=>{ setAddModal(false); setEditAppt(null); setQuickSlot(null); }} quickSlot={quickSlot}
