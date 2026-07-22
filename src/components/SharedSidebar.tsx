@@ -128,6 +128,11 @@ const Icons = {
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
     </svg>
   ),
+  telemedicine: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m23 7-7 5 7 5V7Z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+    </svg>
+  ),
   referrals: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
@@ -177,7 +182,7 @@ const NAV_LABELS = {
     dashboard: "الرئيسية", patients: "المرضى", appointments: "المواعيد",
     payments: "المدفوعات", prescriptions: "الوصفات",
     tracking: "متابعة", clinicManagement: "إدارة العيادة",
-    messages: "الرسائل", referrals: "تحويل المرضى",
+    messages: "الرسائل", referrals: "تحويل المرضى", telemedicine: "العيادة الأونلاين",
     more: "المزيد",
     signOut: "خروج", plan: "خطة", clinic: "عيادة", account: "حسابي",
     notAvailable: "غير متاح في خطتك",
@@ -190,7 +195,7 @@ const NAV_LABELS = {
     dashboard: "Dashboard", patients: "Patients", appointments: "Appointments",
     payments: "Payments", prescriptions: "Prescriptions",
     tracking: "Tracking", clinicManagement: "Clinic Mgmt",
-    messages: "Messages", referrals: "Referrals",
+    messages: "Messages", referrals: "Referrals", telemedicine: "Online Clinic",
     more: "More",
     signOut: "Sign Out", plan: "Plan", clinic: "Clinic", account: "My Account",
     notAvailable: "Not available in your plan",
@@ -255,6 +260,7 @@ export default function SharedSidebar({
   const [pushPerm,     setPushPerm]     = useState<"default"|"granted"|"denied"|"unsupported">("default");
   const [pushLoading,  setPushLoading]  = useState(false);
   const [selfUserId,   setSelfUserId]   = useState<string>("");
+  const [teleEnabled,  setTeleEnabled]  = useState(false);
   const [unreadMsgs,   setUnreadMsgs]   = useState(0);
 
   // ─── Pill nav: drag-to-scroll + auto-center active pill ────
@@ -297,6 +303,13 @@ export default function SharedSidebar({
       if (data.user) setSelfUserId(data.user.id);
     });
   }, [userId]);
+
+  // جلب حالة تفعيل ميزة العيادة الأونلاين (تظهر في القائمة فقط إن كانت مفعّلة)
+  useEffect(() => {
+    if (!selfUserId) return;
+    supabase.from("clinics").select("telemedicine_enabled").eq("user_id", selfUserId).maybeSingle()
+      .then(({ data }) => { if (data?.telemedicine_enabled) setTeleEnabled(true); });
+  }, [selfUserId]);
 
   // ─── صوت إشعار وصول رسالة (Web Audio API) ─────────────────
   const playMsgSound = () => {
@@ -590,7 +603,7 @@ export default function SharedSidebar({
 
           {/* Secondary nav items */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-            {SECONDARY_NAV.map(item => {
+            {[...SECONDARY_NAV, ...(teleEnabled ? [{ key: "telemedicine", href: "/telemedicine", icon: "telemedicine" }] : [])].map(item => {
               const isActive = item.key === activePage;
               const isLocked = !planLoading && !canAccess(item.key, plan);
               const icon = Icons[item.icon as keyof typeof Icons] ?? Icons.dashboard;
@@ -885,6 +898,7 @@ export default function SharedSidebar({
     { key: "dashboard",    href: "/dashboard",      icon: "dashboardSm"    },
     { key: "patients",     href: "/patients",        icon: "patientsSm"     },
     { key: "appointments", href: "/appointments",    icon: "appointmentsSm" },
+    ...(teleEnabled ? [{ key: "telemedicine", href: "/telemedicine", icon: "telemedicine" }] : []),
     { key: "payments",     href: "/payments",        icon: "paymentsSm"     },
     { key: "prescriptions",href: "/prescriptions",   icon: "prescriptions"  },
     { key: "tracking",     href: "/patient-tracking",icon: "tracking"       },

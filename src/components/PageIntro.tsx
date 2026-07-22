@@ -111,6 +111,18 @@ const INTROS: Record<string, IntroContent> = {
       en: "Your account hub: edit your info, change your password, and access clinic management and preferences in one place.",
     },
   },
+  telemedicine: {
+    icon: "🎥",
+    title: { ar: "العيادة الأونلاين", en: "Online Clinic" },
+    body: {
+      ar: "كل مواعيد الكشف عن بُعد في مكان واحد. ادخل غرفة الفيديو مع مريضك، وأرسل له رابط الدخول عبر واتساب.",
+      en: "All your telemedicine visits in one place. Enter the video room with your patient and send them the join link via WhatsApp.",
+    },
+    points: [
+      { ar: "المواعيد تُنشأ من صفحة المواعيد بتفعيل خيار «كشف عن بُعد».", en: "Visits are created from Appointments by enabling the online option." },
+      { ar: "زر «دخول الكشف» يفتح غرفة الفيديو داخل نبض مباشرة.", en: "The join button opens the video room right inside NABD." },
+    ],
+  },
 };
 
 export default function PageIntro({ pageKey, lang = "ar" }: { pageKey: string; lang?: "ar" | "en" }) {
