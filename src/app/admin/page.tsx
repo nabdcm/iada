@@ -59,6 +59,7 @@ interface ClinicData {
   restricted_access_enabled?: boolean;
   restricted_access_pin?: string;
   country_code?: string;   // رمز بلد العيادة الدولي (لأرقام واتساب)
+  telemedicine_enabled?: boolean;  // ميزة العيادة الأونلاين (تفعيل مدفوع)
 }
 
 interface Doctor {
@@ -1200,6 +1201,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     restricted_access_enabled: clinic.restricted_access_enabled ?? false,
     restricted_access_pin:     clinic.restricted_access_pin     ?? "",
     country_code: clinic.country_code || "963",
+    telemedicine_enabled: clinic.telemedicine_enabled ?? false,
   });
   const [newPass,       setNewPass]       = useState("");
   const [showCurrentPw, setShowCurrentPw] = useState(false);
@@ -1341,6 +1343,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     restricted_access_enabled: form.restricted_access_enabled,
     restricted_access_pin:     form.restricted_access_pin,
     country_code: form.country_code,
+    telemedicine_enabled: form.telemedicine_enabled,
     ...overrides,
   });
 
@@ -1972,6 +1975,33 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                     ? "ستُرسَل كلمة المرور الجديدة فوراً. تأكد من إبلاغ صاحب العيادة بها قبل الإغلاق."
                     : "The new password will be applied immediately. Make sure to inform the clinic owner before closing."}
                 </p>
+              </div>
+
+              {/* ── العيادة الأونلاين (ميزة مدفوعة) ── */}
+              <div style={{ marginTop:6,borderTop:"1.5px solid #eef0f3",paddingTop:16 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                  <span style={{ fontSize:18 }}><AppIcon glyph="🖥️" /></span>
+                  <div>
+                    <div style={{ fontSize:13,fontWeight:700,color:"#353535" }}>{isAr ? "العيادة الأونلاين (Telemedicine)" : "Online Clinic (Telemedicine)"}</div>
+                    <div style={{ fontSize:11,color:"#aaa",marginTop:1 }}>{isAr ? "ميزة مدفوعة — كشف بالفيديو داخل نبض" : "Paid add-on — in-app video consultations"}</div>
+                  </div>
+                </div>
+                <div style={{ background:"rgba(123,45,139,.03)",border:"1.5px solid rgba(123,45,139,.14)",borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                  <span style={{ fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                    background: form.telemedicine_enabled ? "rgba(46,125,50,.1)" : "rgba(150,150,150,.12)",
+                    color: form.telemedicine_enabled ? "#2e7d32" : "#888" }}>
+                    {form.telemedicine_enabled ? (isAr ? "مفعّلة" : "Enabled") : (isAr ? "غير مفعّلة" : "Disabled")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, telemedicine_enabled: !p.telemedicine_enabled }))}
+                    style={{ padding:"7px 16px",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",transition:"all .2s",
+                      background: form.telemedicine_enabled ? "rgba(192,57,43,.06)" : "rgba(123,45,139,.08)",
+                      color: form.telemedicine_enabled ? "#c0392b" : "#7b2d8b",
+                      borderColor: form.telemedicine_enabled ? "rgba(192,57,43,.2)" : "rgba(123,45,139,.25)" }}>
+                    {form.telemedicine_enabled ? (isAr ? "إلغاء التفعيل" : "Disable") : (isAr ? "تفعيل" : "Enable")}
+                  </button>
+                </div>
               </div>
 
               {/* ── قفل صفحة المدفوعات ── */}
