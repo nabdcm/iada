@@ -31,9 +31,13 @@ const INTROS: Record<string, IntroContent> = {
     icon: "👥",
     title: { ar: "المرضى", en: "Patients" },
     body: {
-      ar: "سجل مرضاك الكامل. أضف مريضاً جديداً، ابحث، وافتح ملف أي مريض لعرض تاريخه الطبي وزياراته.",
-      en: "Your full patient registry. Add a new patient, search, and open any file to view history and visits.",
+      ar: "سجل مرضاك الكامل. أضف مريضاً جديداً، ابحث، وافتح ملف أي مريض لعرض بياناته وزياراته.",
+      en: "Your full patient registry. Add a new patient, search, and open any file to view data and visits.",
     },
+    points: [
+      { ar: "السجل الطبي: لكل مريض ملف يجمع تاريخه المرضي، أدويته، حساسياته، وملاحظاتك عبر الزيارات.", en: "Medical record: each patient has a file gathering history, medications, allergies, and your notes across visits." },
+      { ar: "متابعة التحاليل المخبرية: سجّل نتائج تحاليل المريض وتابع تطورها زيارة بعد زيارة.", en: "Lab tracking: record the patient's test results and follow their progress visit after visit." },
+    ],
   },
   appointments: {
     icon: "📅",
@@ -42,6 +46,10 @@ const INTROS: Record<string, IntroContent> = {
       ar: "نظّم مواعيد عيادتك على التقويم. أضف موعداً، حدّد حالته (مكتمل/غياب)، وذكّر مرضاك عبر واتساب.",
       en: "Organize your clinic calendar. Add appointments, set status (done/no-show), and remind patients via WhatsApp.",
     },
+    points: [
+      { ar: "رابط الحجز: شارك رابطاً خاصاً بعيادتك ليحجز المرضى مواعيدهم بأنفسهم دون اتصال.", en: "Booking link: share your clinic's link so patients book their own appointments without calling." },
+      { ar: "شاشة الانتظار: اعرض دور المرضى على شاشة في صالة الانتظار بشكل احترافي.", en: "Waiting screen: display the patient queue on a screen in your waiting room, professionally." },
+    ],
   },
   payments: {
     icon: "💰",
