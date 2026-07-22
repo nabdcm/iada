@@ -123,6 +123,11 @@ const Icons = {
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
     </svg>
   ),
+  account: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
   referrals: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
@@ -883,12 +888,12 @@ export default function SharedSidebar({
     { key: "payments",     href: "/payments",        icon: "paymentsSm"     },
     { key: "prescriptions",href: "/prescriptions",   icon: "prescriptions"  },
     { key: "tracking",     href: "/patient-tracking",icon: "tracking"       },
+    { key: "referrals",    href: "/referrals",       icon: "referrals"      },
   ];
 
   const pairedNavItems = [
+    { key: "account",          href: "/account",           icon: "account"          },
     { key: "clinicManagement", href: "/clinic-management", icon: "clinicManagement" },
-    { key: "messages",         href: "/messages",           icon: "messages"         },
-  { key: "referrals",        href: "/referrals",          icon: "referrals"        },
   ];
 
   const sideWidth = collapsed ? 70 : 240;
@@ -943,6 +948,32 @@ export default function SharedSidebar({
             <img src="/Logo_Nabd.svg" alt="NABD" style={{ width: 28, height: 28, filter: "brightness(0) invert(1)" }} />
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {!collapsed && (
+              <a
+                href="/messages"
+                title={tr.messages}
+                style={{
+                  position: "relative", width: 30, height: 30, borderRadius: 8,
+                  background: activePage === "messages" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)",
+                  border: "1.5px solid rgba(255,255,255,0.22)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "rgba(255,255,255,0.92)", flexShrink: 0, textDecoration: "none",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.22)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = activePage === "messages" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)"; }}
+              >
+                {Icons.messages}
+                {unreadMsgs > 0 && (
+                  <span style={{
+                    position: "absolute", top: -5, [isAr ? "left" : "right"]: -5,
+                    minWidth: 15, height: 15, padding: "0 3px", borderRadius: "50%",
+                    background: "#e53935", color: "#fff", fontSize: 9, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    border: "1.5px solid #0558a8", lineHeight: 1,
+                  }}>{unreadMsgs > 9 ? "9+" : unreadMsgs}</span>
+                )}
+              </a>
+            )}
             {!collapsed && <NotificationBell userId={selfUserId} lang={lang} variant="light" />}
             <button
               onClick={() => setCollapsed(c => !c)}
@@ -1028,27 +1059,6 @@ export default function SharedSidebar({
 
         {/* ── Footer ── */}
         <div style={{ padding: collapsed ? "12px 10px" : "12px 12px", borderTop: `1px solid ${SB_BORDER}`, background: "rgba(0,0,0,0.12)" }}>
-          {/* حسابي */}
-          <a
-            href="/account"
-            title={tr.account}
-            style={{
-              display: "flex", alignItems: "center", gap: collapsed ? 0 : 10,
-              justifyContent: collapsed ? "center" : "flex-start",
-              padding: collapsed ? "10px 0" : "10px 12px", borderRadius: 12, marginBottom: 8,
-              background: activePage === "account" ? "rgba(255,255,255,.16)" : "rgba(255,255,255,.06)",
-              border: "1.5px solid rgba(255,255,255,.14)", textDecoration: "none",
-              transition: "background .2s",
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.16)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = activePage === "account" ? "rgba(255,255,255,.16)" : "rgba(255,255,255,.06)"; }}
-          >
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            {!collapsed && <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{tr.account}</span>}
-          </a>
-
           {!collapsed && userId && pushPerm !== "unsupported" && pushPerm !== "denied" && (
             <button
               onClick={handlePushToggle}
