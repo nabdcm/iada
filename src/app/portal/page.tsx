@@ -477,7 +477,8 @@ function PortalPageContent() {
           background: ${accent.color}22;
           box-shadow: inset 0 0 0 1.5px ${accent.color}66;
         }
-        .switch-tab-icon { font-size: 22px; line-height: 1; }
+        .switch-tab-icon { font-size: 22px; line-height: 1; color: rgba(255,255,255,0.55); transition: color .25s; }
+        .switch-tab.active .switch-tab-icon { color: ${accent.color}; }
         .switch-tab-label {
           font-size: 13px; font-weight: 700;
           color: rgba(255,255,255,0.4);
@@ -524,6 +525,7 @@ function PortalPageContent() {
           border-radius: 12px;
           display: flex; align-items: center; justify-content: center;
           font-size: 22px;
+          color: ${accent.color};
           flex-shrink: 0;
         }
         .login-portal-title { font-size: 17px; font-weight: 800; color: #fff; }

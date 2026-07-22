@@ -134,6 +134,8 @@ const ICONS: Record<string, PathSpec[]> = {
   siren:       [P("M6 21h12"), P("M7 21v-5a5 5 0 0 1 10 0v5"), P("M12 3v2"), P("M5 6.5 6.5 8"), P("M19 6.5 17.5 8")],
   candy:       [C(12, 12, 4.5), P("M16 9.5 20 5l-1 4 4-1-4.5 4"), P("M8 14.5 4 19l1-4-4 1 4.5-4")],
   monkey:      [C(12, 12, 8), P("M9 10h.01"), P("M15 10h.01"), P("M9.5 15h5"), P("M4 10a2 2 0 1 1 0-1"), P("M20 10a2 2 0 1 0 0-1")],
+  testTube:    [P("M15 2 6.5 10.5a3.5 3.5 0 0 0 5 5L20 7"), P("M9 5 19 15"), P("M8.5 12.5c1.5-1 3 .5 4.5-.5")],
+  microscope:  [P("M6 18h8"), P("M3 22h18"), P("M14 22a7 7 0 1 0 0-14h-1"), P("M9 14h.01"), P("M8 6h4"), P("M9 3v3"), P("M11 3v3")],
 };
 
 // ─── تحويل الإيموجي → اسم الأيقونة ──────────────────────────
@@ -181,6 +183,7 @@ const EMOJI_MAP: Record<string, string> = {
   "🗒️": "note", "🗒": "note", "📱": "mobile", "🛡️": "shield", "🛡": "shield",
   "🚨": "siren", "🍬": "candy", "👃": "nose", "🫘": "bean",
   "📷": "camera", "🎗": "flower", "🟢": "checkCircle",
+  "🧪": "testTube", "⚗️": "testTube", "⚗": "testTube", "🔬": "microscope",
 };
 
 export interface AppIconProps {
