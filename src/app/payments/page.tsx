@@ -4,6 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { type CSSProperties, useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 import type { Patient, Payment } from "@/lib/supabase";
 
 // ============================================================
@@ -2273,6 +2274,7 @@ ${doctorSettlementRows}
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
+        <PageIntro pageKey="payments" lang={lang as "ar" | "en"} />
         <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="payments" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="page-anim main-content" style={{ transition:"margin .3s" }}>

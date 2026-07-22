@@ -7,6 +7,7 @@ import AppIcon from "@/components/AppIcon";
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 import SharedSidebar from "@/components/SharedSidebar";
 
 type Lang = "ar" | "en";
@@ -335,6 +336,7 @@ export default function MessagesPage() {
         className="msg-root"
         style={{ direction: isAr ? "rtl" : "ltr" }}
       >
+        <PageIntro pageKey="messages" lang={lang} />
         <SharedSidebar
           lang={lang as "ar"|"en"}
           setLang={setLang as (l:"ar"|"en")=>void}

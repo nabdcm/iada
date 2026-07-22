@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, type JSX, type DragEvent } from "reac
 import SharedSidebar from "@/components/SharedSidebar";
 import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 
 // ============================================================
 // NABD - نبض | Dashboard v2 — إعادة تصميم كاملة
@@ -753,6 +754,7 @@ export default function DashboardPage() {
       `}</style>
 
       <div style={{ fontFamily: "'Rubik',sans-serif", direction: isAr ? "rtl" : "ltr", minHeight: "100vh", background: BRAND.bg }}>
+        <PageIntro pageKey="dashboard" lang={lang} />
         <SharedSidebar
           lang={lang} setLang={setLang} activePage="dashboard"
           plan={plan} planLoading={loadingStats}

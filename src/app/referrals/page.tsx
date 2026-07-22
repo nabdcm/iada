@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 import SharedSidebar from "@/components/SharedSidebar";
 import AuthGuard from "@/components/AuthGuard";
 
@@ -283,6 +284,8 @@ export default function ReferralsPage() {
             .ref-actions .ref-btns button{flex:1}
           }
         `}</style>
+
+        <PageIntro pageKey="referrals" lang={lang} />
 
         <SharedSidebar
           lang={lang} setLang={setLang} activePage="referrals"

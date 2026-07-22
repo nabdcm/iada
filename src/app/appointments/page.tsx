@@ -4,6 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import { fmtTime, type TimeFormat } from "@/lib/timeFormat";
 import type { Patient, Appointment } from "@/lib/supabase";
@@ -1933,6 +1934,7 @@ export default function AppointmentsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
+        <PageIntro pageKey="appointments" lang={lang} />
         <SharedSidebar lang={lang} setLang={setLang} activePage="appointments" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="appt-main-content" style={{ padding:isMobile?"0 14px 48px":"0 28px 48px", minHeight:"100vh", transition:"margin .3s" }}>

@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSPropertie
 import SharedSidebar from "@/components/SharedSidebar";
 import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import type { Patient } from "@/lib/supabase";
 
@@ -2027,6 +2028,7 @@ export default function PatientsPage() {
       `}</style>
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
+        <PageIntro pageKey="patients" lang={lang} />
         <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>

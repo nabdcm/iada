@@ -4,6 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useRef, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 
 // ============================================================
 // NABD - نبض | Prescriptions Page — الوصفات الطبية
@@ -742,6 +743,8 @@ export default function PrescriptionsPage() {
           .med-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
+
+      <PageIntro pageKey="prescriptions" lang={lang} />
 
       <SharedSidebar lang={lang as "ar"|"en"} setLang={setLang as (l:"ar"|"en")=>void} activePage="prescriptions" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(isMobile ? 0 : (c ? 70 : 240))} />
 

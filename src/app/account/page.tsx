@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import PageIntro from "@/components/PageIntro";
 import SharedSidebar from "@/components/SharedSidebar";
 import AuthGuard from "@/components/AuthGuard";
 import ChangePasswordCard from "@/components/ChangePasswordCard";
@@ -166,6 +167,8 @@ export default function AccountPage() {
             .acc-grid2{grid-template-columns:1fr!important}
           }
         `}</style>
+
+        <PageIntro pageKey="account" lang={lang} />
 
         <SharedSidebar
           lang={lang} setLang={setLang} activePage="account"
