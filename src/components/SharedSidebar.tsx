@@ -9,7 +9,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import NotificationBell from "@/components/NotificationBell";
-import UserMenu from "@/components/UserMenu";
 
 // ─── Types ───────────────────────────────────────────────────
 export type PlanType =
@@ -550,19 +549,6 @@ export default function SharedSidebar({
         {/* ── Safe area spacer at bottom ── */}
         <div style={{ height: 96, flexShrink: 0 }} />
 
-        {/* ── User button (top, always reachable) ── */}
-        <div style={{
-          position: "fixed", top: "calc(10px + env(safe-area-inset-top,0px))",
-          insetInlineEnd: 12, zIndex: 57,
-        }}>
-          <div style={{
-            background: "linear-gradient(135deg, rgba(8,99,186,.95), rgba(4,64,124,.95))",
-            borderRadius: 999, padding: 4, boxShadow: "0 6px 20px rgba(5,88,168,.4)",
-            border: "1px solid rgba(255,255,255,.2)",
-          }}>
-            <UserMenu lang={lang} variant="light" isMobile />
-          </div>
-        </div>
 
         {/* ── More drawer overlay ── */}
         {moreOpen && (
@@ -646,6 +632,23 @@ export default function SharedSidebar({
               );
             })}
           </div>
+
+          {/* حسابي */}
+          <a
+            href="/account"
+            onClick={() => setMoreOpen(false)}
+            style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+              borderRadius: 14, marginBottom: 12, textDecoration: "none",
+              background: activePage === "account" ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.08)",
+              border: "1px solid rgba(255,255,255,.14)",
+            }}
+          >
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,.16)", border: "1px solid rgba(255,255,255,.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "Rubik,sans-serif" }}>{tr.account}</span>
+          </a>
 
           {/* Divider */}
           <div style={{ height: 1, background: SB_BORDER, marginBottom: 12 }} />
@@ -851,7 +854,7 @@ export default function SharedSidebar({
             }}
             aria-label={tr.more}
           >
-            {Icons.more}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             {unreadMsgs > 0 && (
               <span style={{
                 position: "absolute", top: 2, [isAr ? "left" : "right"]: 0,
