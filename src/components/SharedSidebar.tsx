@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import NotificationBell from "@/components/NotificationBell";
+import UserMenu from "@/components/UserMenu";
 
 // ─── Types ───────────────────────────────────────────────────
 export type PlanType =
@@ -174,7 +175,7 @@ const NAV_LABELS = {
     tracking: "متابعة", clinicManagement: "إدارة العيادة",
     messages: "الرسائل", referrals: "تحويل المرضى",
     more: "المزيد",
-    signOut: "خروج", plan: "خطة", clinic: "عيادة",
+    signOut: "خروج", plan: "خطة", clinic: "عيادة", account: "حسابي",
     notAvailable: "غير متاح في خطتك",
     expand: "توسيع القائمة", collapse: "طي القائمة",
     lang: "English",
@@ -187,7 +188,7 @@ const NAV_LABELS = {
     tracking: "Tracking", clinicManagement: "Clinic Mgmt",
     messages: "Messages", referrals: "Referrals",
     more: "More",
-    signOut: "Sign Out", plan: "Plan", clinic: "Clinic",
+    signOut: "Sign Out", plan: "Plan", clinic: "Clinic", account: "My Account",
     notAvailable: "Not available in your plan",
     expand: "Expand sidebar", collapse: "Collapse sidebar",
     lang: "العربية",
@@ -548,6 +549,20 @@ export default function SharedSidebar({
       <>
         {/* ── Safe area spacer at bottom ── */}
         <div style={{ height: 96, flexShrink: 0 }} />
+
+        {/* ── User button (top, always reachable) ── */}
+        <div style={{
+          position: "fixed", top: "calc(10px + env(safe-area-inset-top,0px))",
+          insetInlineEnd: 12, zIndex: 57,
+        }}>
+          <div style={{
+            background: "linear-gradient(135deg, rgba(8,99,186,.95), rgba(4,64,124,.95))",
+            borderRadius: 999, padding: 4, boxShadow: "0 6px 20px rgba(5,88,168,.4)",
+            border: "1px solid rgba(255,255,255,.2)",
+          }}>
+            <UserMenu lang={lang} variant="light" isMobile />
+          </div>
+        </div>
 
         {/* ── More drawer overlay ── */}
         {moreOpen && (
@@ -926,6 +941,7 @@ export default function SharedSidebar({
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {!collapsed && <NotificationBell userId={selfUserId} lang={lang} variant="light" />}
+            {!collapsed && <UserMenu lang={lang} variant="light" />}
             <button
               onClick={() => setCollapsed(c => !c)}
               title={collapsed ? tr.expand : tr.collapse}

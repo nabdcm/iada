@@ -7,7 +7,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room", "/referrals"];
+const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room", "/referrals", "/account"];
 const PHARMACY_PROTECTED = ["/pharmacy"];
 const LAB_PROTECTED = ["/lab"];
 
