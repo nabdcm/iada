@@ -1,6 +1,7 @@
 "use client";
 
 import AppIcon from "@/components/AppIcon";
+import ChangePasswordCard from "@/components/ChangePasswordCard";
 import { useState, useEffect, useCallback } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
@@ -905,6 +906,10 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
 
   return (
     <div style={{ maxWidth: isMobile ? "100%" : 600 }}>
+      {/* تغيير كلمة سر الحساب */}
+      <div style={{ marginBottom: 16 }}>
+        <ChangePasswordCard lang={lang} />
+      </div>
       {/* اسم العيادة */}
       <div style={cardSt}>
         <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}><AppIcon glyph="🏥" /> {s.clinicName}</div>
