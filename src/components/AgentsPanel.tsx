@@ -137,10 +137,10 @@ export default function AgentsPanel({ isAr }: { isAr: boolean }) {
   const agentClinics = (id: number) => clinics.filter(c => c.agent_id === id);
   const unassigned   = clinics.filter(c => c.agent_id === null);
 
-  // عمولة لمرة واحدة عن كل عيادة جلبها الوكيل (سعر الخطة الشهري × النسبة)
+  // عمولة لمرة واحدة عن كل عيادة: القيمة السنوية للخطة (شهري × 12) × نسبة الوكيل
   const estOneTime = (a: Agent) =>
     agentClinics(a.id)
-      .reduce((sum, c) => sum + (PLAN_PRICES[c.plan] ?? 0), 0) * (a.commission_pct / 100);
+      .reduce((sum, c) => sum + (PLAN_PRICES[c.plan] ?? 0) * 12, 0) * (a.commission_pct / 100);
 
   const card: React.CSSProperties = { background: "#fff", border: "1.5px solid #eef0f3", borderRadius: 14, padding: "18px 20px" };
   const inp: React.CSSProperties  = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #eef0f3", fontFamily: "Rubik,sans-serif", fontSize: 13, background: "#f7f9fc", outline: "none" };

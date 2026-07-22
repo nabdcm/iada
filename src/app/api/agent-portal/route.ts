@@ -48,9 +48,9 @@ export async function POST(req: NextRequest) {
     }));
 
     const activeCount = list.filter(c => c.status === "active").length;
-    // عمولة لمرة واحدة عن كل عيادة (سعر خطتها الشهري × نسبة الوكيل)
+    // عمولة لمرة واحدة عن كل عيادة: القيمة السنوية للخطة (شهري × 12) × نسبة الوكيل
     const estOneTime = list
-      .reduce((sum, c) => sum + (PLAN_PRICES[c.plan] ?? 0), 0) * (Number(agent.commission_pct) / 100);
+      .reduce((sum, c) => sum + (PLAN_PRICES[c.plan] ?? 0) * 12, 0) * (Number(agent.commission_pct) / 100);
 
     return NextResponse.json({
       ok: true,
