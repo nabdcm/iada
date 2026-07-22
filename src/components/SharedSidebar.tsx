@@ -916,7 +916,29 @@ export default function SharedSidebar({
             : "4px 0 32px rgba(5,88,168,.45)",
         }}
       >
-        {/* زخارف — طبقة خلفية مقصوصة لا تؤثر على القوائم المنبثقة */}
+        {/* شريط الطي الرفيع على الحافة الداخلية */}
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          title={collapsed ? tr.expand : tr.collapse}
+          aria-label={collapsed ? tr.expand : tr.collapse}
+          style={{
+            position: "absolute", top: "50%", transform: "translateY(-50%)",
+            [isAr ? "left" : "right"]: -11,
+            width: 22, height: 54, borderRadius: 8,
+            background: "linear-gradient(180deg,#0663bd,#0558a8)",
+            border: "1.5px solid rgba(255,255,255,0.28)",
+            boxShadow: "0 4px 14px rgba(5,88,168,0.5)",
+            cursor: "pointer", color: "rgba(255,255,255,0.95)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 60, padding: 0, fontSize: 15, lineHeight: 1,
+            transition: "background .18s",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(180deg,#0a72d1,#0663bd)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(180deg,#0663bd,#0558a8)"; }}
+        >
+          {collapsed ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
+        </button>
+
         <div style={{ position:"absolute", inset:0, overflow:"hidden", pointerEvents:"none", zIndex:0 }}>
           <div style={{ position:"absolute", top:-70, insetInlineStart:-50, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,.05)" }}/>
           <div style={{ position:"absolute", bottom:120, insetInlineEnd:-70, width:180, height:180, borderRadius:"50%", background:"rgba(255,255,255,.04)" }}/>
@@ -953,44 +975,28 @@ export default function SharedSidebar({
                 href="/messages"
                 title={tr.messages}
                 style={{
-                  position: "relative", width: 30, height: 30, borderRadius: 8,
-                  background: activePage === "messages" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)",
-                  border: "1.5px solid rgba(255,255,255,0.22)",
+                  position: "relative", width: 40, height: 40, borderRadius: 10,
+                  background: activePage === "messages" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.10)",
+                  border: "1.5px solid rgba(255,255,255,0.20)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "rgba(255,255,255,0.92)", flexShrink: 0, textDecoration: "none",
+                  transition: "background .18s",
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.22)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = activePage === "messages" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = activePage === "messages" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.10)"; }}
               >
-                {Icons.messages}
+                <span style={{ display: "flex", transform: "scale(1.15)" }}>{Icons.messages}</span>
                 {unreadMsgs > 0 && (
                   <span style={{
-                    position: "absolute", top: -5, [isAr ? "left" : "right"]: -5,
-                    minWidth: 15, height: 15, padding: "0 3px", borderRadius: "50%",
-                    background: "#e53935", color: "#fff", fontSize: 9, fontWeight: 700,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    border: "1.5px solid #0558a8", lineHeight: 1,
+                    position: "absolute", top: 4, insetInlineEnd: 4,
+                    minWidth: 16, height: 16, padding: "0 4px", borderRadius: 8,
+                    background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
                   }}>{unreadMsgs > 9 ? "9+" : unreadMsgs}</span>
                 )}
               </a>
             )}
             {!collapsed && <NotificationBell userId={selfUserId} lang={lang} variant="light" />}
-            <button
-              onClick={() => setCollapsed(c => !c)}
-              title={collapsed ? tr.expand : tr.collapse}
-              style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: "rgba(255,255,255,0.12)",
-                border: "1.5px solid rgba(255,255,255,0.22)",
-                cursor: "pointer", color: "rgba(255,255,255,0.9)",
-                fontSize: 14, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.22)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; }}
-            >
-              {collapsed ? (isAr ? "‹" : "›") : (isAr ? "›" : "‹")}
-            </button>
           </div>
         </div>
 
