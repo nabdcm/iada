@@ -35,6 +35,7 @@ export default function UserMenu({ lang = "ar", variant = "light", isMobile = fa
   const t = T[lang];
   const isAr = lang === "ar";
   const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<{ top: number; right: number } | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -56,6 +57,15 @@ export default function UserMenu({ lang = "ar", variant = "light", isMobile = fa
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open, isMobile]);
 
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  function toggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setRect({ top: r.bottom + 10, right: window.innerWidth - r.right });
+    }
+    setOpen(o => !o);
+  }
   const initial = (name || "؟").charAt(0).toUpperCase();
   const btnBorder = variant === "light" ? "rgba(255,255,255,.35)" : BRAND.border;
   const btnBg = variant === "light" ? "rgba(255,255,255,.16)" : "#fff";
@@ -101,7 +111,8 @@ export default function UserMenu({ lang = "ar", variant = "light", isMobile = fa
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-flex" }}>
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={toggle}
         aria-label={t.account}
         style={{
           width: isMobile ? 40 : 32, height: isMobile ? 40 : 32, borderRadius: "50%",
@@ -112,16 +123,21 @@ export default function UserMenu({ lang = "ar", variant = "light", isMobile = fa
         {UserIcon}
       </button>
 
-      {/* DESKTOP dropdown */}
-      {open && !isMobile && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 10px)", insetInlineEnd: 0,
-          width: 260, background: "#fff", borderRadius: 16, border: `1px solid ${BRAND.border}`,
-          boxShadow: "0 18px 50px rgba(15,40,80,.2)", zIndex: 200, overflow: "hidden",
-          direction: isAr ? "rtl" : "ltr",
-        }}>
-          {MenuList}
-        </div>
+      {/* DESKTOP dropdown — fixed so it never clips inside the sidebar */}
+      {open && !isMobile && rect && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 999 }} />
+          <div style={{
+            position: "fixed", top: rect.top,
+            right: Math.max(10, rect.right),
+            width: 260, maxWidth: "calc(100vw - 20px)",
+            background: "#fff", borderRadius: 16, border: `1px solid ${BRAND.border}`,
+            boxShadow: "0 18px 50px rgba(15,40,80,.2)", zIndex: 1000, overflow: "hidden",
+            direction: isAr ? "rtl" : "ltr",
+          }}>
+            {MenuList}
+          </div>
+        </>
       )}
 
       {/* MOBILE sheet */}

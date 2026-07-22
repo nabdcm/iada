@@ -941,7 +941,6 @@ export default function SharedSidebar({
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {!collapsed && <NotificationBell userId={selfUserId} lang={lang} variant="light" />}
-            {!collapsed && <UserMenu lang={lang} variant="light" />}
             <button
               onClick={() => setCollapsed(c => !c)}
               title={collapsed ? tr.expand : tr.collapse}
@@ -1026,6 +1025,27 @@ export default function SharedSidebar({
 
         {/* ── Footer ── */}
         <div style={{ padding: collapsed ? "12px 10px" : "12px 12px", borderTop: `1px solid ${SB_BORDER}`, background: "rgba(0,0,0,0.12)" }}>
+          {/* حسابي */}
+          <a
+            href="/account"
+            title={tr.account}
+            style={{
+              display: "flex", alignItems: "center", gap: collapsed ? 0 : 10,
+              justifyContent: collapsed ? "center" : "flex-start",
+              padding: collapsed ? "10px 0" : "10px 12px", borderRadius: 12, marginBottom: 8,
+              background: activePage === "account" ? "rgba(255,255,255,.16)" : "rgba(255,255,255,.06)",
+              border: "1.5px solid rgba(255,255,255,.14)", textDecoration: "none",
+              transition: "background .2s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,.16)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = activePage === "account" ? "rgba(255,255,255,.16)" : "rgba(255,255,255,.06)"; }}
+          >
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            {!collapsed && <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{tr.account}</span>}
+          </a>
+
           {!collapsed && userId && pushPerm !== "unsupported" && pushPerm !== "denied" && (
             <button
               onClick={handlePushToggle}
