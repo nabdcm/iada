@@ -65,6 +65,7 @@ const T = {
     accept: "قبول وإضافة المريض", reject: "رفض",
     accepted: "مقبول", rejected: "مرفوض", pending: "قيد الانتظار",
     acceptedNote: "أُضيف المريض إلى قائمة مرضاك", empty: "لا توجد تحويلات",
+    delete: "حذف", confirmDelete: "حذف هذا التحويل نهائياً؟",
     diabetes: "سكري", hypertension: "ضغط", notesLbl: "ملاحظات",
     errors: {
       clinic_not_found: "لم يتم العثور على هذه العيادة على نبض.",
@@ -86,6 +87,7 @@ const T = {
     accept: "Accept & Add Patient", reject: "Reject",
     accepted: "Accepted", rejected: "Rejected", pending: "Pending",
     acceptedNote: "Patient added to your list", empty: "No referrals",
+    delete: "Delete", confirmDelete: "Delete this referral permanently?",
     diabetes: "Diabetes", hypertension: "Hypertension", notesLbl: "Notes",
     errors: {
       clinic_not_found: "This clinic was not found on NABD.",
@@ -135,6 +137,7 @@ export default function ReferralsPage() {
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [actingId, setActingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const isAr = lang === "ar";
   const t = T[lang];
@@ -235,6 +238,17 @@ export default function ReferralsPage() {
       await loadAll(userId);
     } catch (e) { console.error(e); setNotice({ kind: "err", text: t.errors.generic }); }
     setActingId(null);
+  }
+
+  async function deleteReferral(ref: Referral) {
+    if (!confirm(t.confirmDelete)) return;
+    setDeletingId(ref.id);
+    try {
+      const { error } = await supabase.from("referrals").delete().eq("id", ref.id);
+      if (error) throw error;
+      setReferrals(prev => prev.filter(r => r.id !== ref.id));
+    } catch (e) { console.error(e); setNotice({ kind: "err", text: t.errors.generic }); }
+    setDeletingId(null);
   }
 
   const received = referrals.filter(r => r.to_user_id === userId);
@@ -455,6 +469,14 @@ export default function ReferralsPage() {
                         {isReceived && ref.status === "accepted" && (
                           <span style={{ fontSize: 12, color: BRAND.green }}>{t.acceptedNote}</span>
                         )}
+                        <button
+                          onClick={() => deleteReferral(ref)}
+                          disabled={deletingId === ref.id}
+                          title={t.delete}
+                          style={{ background: "none", border: "none", color: BRAND.muted, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Rubik',sans-serif", display: "flex", alignItems: "center", gap: 4, opacity: deletingId === ref.id ? .5 : 1 }}
+                        >
+                          🗑 {t.delete}
+                        </button>
                       </div>
                     </div>
                   </div>
