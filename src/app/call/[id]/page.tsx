@@ -50,7 +50,8 @@ export default function DoctorCallPage() {
   const [lang, setLang] = useState<Lang>("ar");
   const [phase, setPhase] = useState<"loading" | "ready" | "error" | "disabled">("loading");
   const [errMsg, setErrMsg] = useState("");
-  const [roomName, setRoomName] = useState("");
+  const [roomUrl, setRoomUrl] = useState("");
+  const [token, setToken] = useState("");
   const [doctorName, setDoctorName] = useState("");
   const [patientName, setPatientName] = useState("");
   const [patientId, setPatientId] = useState<number | null>(null);
@@ -98,9 +99,10 @@ export default function DoctorCallPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ appointmentId: apptId }),
       });
-      const json = (await res.json()) as { ok?: boolean; roomName?: string; error?: string };
-      if (json.ok && json.roomName) { setRoomName(json.roomName); setPhase("ready"); }
+      const json = (await res.json()) as { ok?: boolean; roomUrl?: string; token?: string; error?: string };
+      if (json.ok && json.roomUrl) { setRoomUrl(json.roomUrl); setToken(json.token ?? ""); setPhase("ready"); }
       else if (json.error === "feature_disabled") { setPhase("disabled"); }
+      else if (json.error === "not_configured") { setPhase("error"); setErrMsg(isAr ? "خدمة الفيديو غير مهيأة. أضف مفتاح Daily في إعدادات الخادم." : "Video service not configured."); }
       else { setPhase("error"); setErrMsg(t.notFound); }
     } catch { setPhase("error"); setErrMsg(t.err); }
   }, [apptId, t]);
@@ -200,7 +202,7 @@ export default function DoctorCallPage() {
                 </button>
               </div>
               <div style={{ flex: 1, minHeight: 0 }}>
-                <VideoRoom roomName={roomName} displayName={doctorName} isDoctor lang={lang} onLeave={endCall} />
+                <VideoRoom roomUrl={roomUrl} token={token} displayName={doctorName} lang={lang} onLeave={endCall} />
               </div>
             </div>
 

@@ -15,7 +15,9 @@ export default function PatientVisitPage() {
   const apptId = Number(params?.id);
 
   const [phase, setPhase] = useState<"loading" | "waiting" | "ready" | "error">("loading");
-  const [roomName, setRoomName] = useState("");
+  const [roomUrl, setRoomUrl] = useState("");
+  const [token, setToken] = useState("");
+  const [joining, setJoining] = useState(false);
   const [clinicName, setClinicName] = useState("");
   const [name, setName] = useState("");
   const [entered, setEntered] = useState(false);
@@ -25,11 +27,11 @@ export default function PatientVisitPage() {
   const check = useCallback(async () => {
     try {
       const res = await fetch(`/api/video/room?appt=${apptId}`);
-      const json = (await res.json()) as { ok?: boolean; waiting?: boolean; roomName?: string; clinicName?: string; error?: string };
+      const json = (await res.json()) as { ok?: boolean; waiting?: boolean; ready?: boolean; clinicName?: string; error?: string };
       if (!json.ok) { setPhase("error"); return; }
       setClinicName(json.clinicName ?? "");
       if (json.waiting) { setPhase("waiting"); }
-      else if (json.roomName) { setRoomName(json.roomName); setPhase("ready"); }
+      else if (json.ready) { setPhase("ready"); }
     } catch { setPhase("error"); }
   }, [apptId]);
 
@@ -87,18 +89,27 @@ export default function PatientVisitPage() {
               style={{ width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, border: `1.5px solid ${BRAND.border}`, fontFamily: "'Rubik',sans-serif", fontSize: 15, textAlign: "center", background: "#fbfdff", outline: "none", marginBottom: 14 }}
             />
             <button
-              onClick={() => name.trim() && setEntered(true)}
-              disabled={!name.trim()}
+              onClick={async () => {
+                if (!name.trim() || joining) return;
+                setJoining(true);
+                try {
+                  const res = await fetch(`/api/video/room?appt=${apptId}&name=${encodeURIComponent(name.trim())}`);
+                  const j = (await res.json()) as { ok?: boolean; roomUrl?: string; token?: string };
+                  if (j.ok && j.roomUrl) { setRoomUrl(j.roomUrl); setToken(j.token ?? ""); setEntered(true); }
+                } catch { /* ignore */ }
+                setJoining(false);
+              }}
+              disabled={!name.trim() || joining}
               style={{ width: "100%", background: `linear-gradient(135deg,${BRAND.primary},${BRAND.primaryLight})`, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontFamily: "'Rubik',sans-serif", fontSize: 15, fontWeight: 700, cursor: "pointer", opacity: name.trim() ? 1 : .6 }}
             >
-              انضمّ الآن
+              {joining ? "جارٍ الدخول..." : "انضمّ الآن"}
             </button>
           </div>
         )}
 
         {phase === "ready" && entered && (
           <div style={{ width: "100%", maxWidth: 1000, height: "calc(100vh - 120px)" }}>
-            <VideoRoom roomName={roomName} displayName={name} lang="ar" onLeave={() => setEntered(false)} />
+            <VideoRoom roomUrl={roomUrl} token={token} displayName={name} lang="ar" onLeave={() => setEntered(false)} />
           </div>
         )}
       </div>
