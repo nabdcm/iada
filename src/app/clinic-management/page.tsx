@@ -2,6 +2,7 @@
 
 import AppIcon from "@/components/AppIcon";
 import ChangePasswordCard from "@/components/ChangePasswordCard";
+import { currencyOptions, DEFAULT_CURRENCY, currencySymbol } from "@/lib/currency";
 import { useState, useEffect, useCallback } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
@@ -839,6 +840,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
   const [allowOnline, setAllowOnline] = useState(true);
   const [requireApproval, setRequireApproval] = useState(false);
   const [clockFormat, setClockFormat] = useState<"12"|"24">("24");
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [saveStatus, setSaveStatus] = useState<"idle"|"saving"|"saved">("idle");
 
   useEffect(() => {
@@ -846,6 +848,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       const { data } = await supabase.from("clinics").select("*").eq("user_id", userId).single();
       if (data) {
         setClinicName(data.name ?? "");
+        if (data.currency) setCurrency(data.currency as string);
         if (data.settings) {
           const st = typeof data.settings === "string" ? JSON.parse(data.settings) : data.settings;
           setDefaultFrom(st.default_from ?? "08:00");
@@ -879,7 +882,7 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       require_approval: requireApproval,
     };
     // حفظ في clinics
-    await supabase.from("clinics").update({ name: clinicName, settings }).eq("user_id", userId);
+    await supabase.from("clinics").update({ name: clinicName, settings, currency }).eq("user_id", userId);
     // مزامنة مع clinic_profiles لتنعكس على صفحة الحجز
     const workingDaysCodes = ["sun","mon","tue","wed","thu","fri","sat"]
       .filter((_,i) => !weekendDays.includes(i));
@@ -915,6 +918,19 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       <div style={cardSt}>
         <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}><AppIcon glyph="🏥" /> {s.clinicName}</div>
         <input type="text" value={clinicName} onChange={e => setClinicName(e.target.value)} placeholder={s.clinicNamePh} style={inputSt}/>
+      </div>
+
+      {/* عملة العيادة */}
+      <div style={cardSt}>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:10 }}><AppIcon glyph="💰" /> {isAr ? "عملة العيادة" : "Clinic currency"}</div>
+        <select value={currency} onChange={e => setCurrency(e.target.value)} style={{ ...inputSt, cursor:"pointer" }}>
+          {currencyOptions(isAr).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <div style={{ fontSize:11.5,color:"#aaa",marginTop:8,lineHeight:1.7 }}>
+          {isAr
+            ? `ستظهر جميع المبالغ في صفحة المدفوعات والتقارير بـ «${currencySymbol(currency, true)}».`
+            : `All amounts in Payments and reports will show as "${currencySymbol(currency, false)}".`}
+        </div>
       </div>
 
       {/* ساعات العمل */}

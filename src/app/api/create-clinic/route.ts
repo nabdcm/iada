@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       name, owner, email, phone,
       plan, expiry, status, password,
       clinic_type = "general",
+      currency = "SYP",
       account_type = "clinic",
       country_code = "963",
     } = await req.json();
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
         expiry,
         status,
         clinic_type: clinicTypeForDb,
+        currency,
         account_type,
         country_code: country_code || "963",
         plain_password: password ?? null,

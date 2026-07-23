@@ -4,6 +4,10 @@ import AppIcon from "@/components/AppIcon";
 import { type CSSProperties, useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import { currencySymbol, DEFAULT_CURRENCY } from "@/lib/currency";
+
+// رمز عملة العيادة الحالي — يُحدَّث عند تحميل بيانات العيادة
+let CUR = currencySymbol(DEFAULT_CURRENCY, true);
 import PageIntro from "@/components/PageIntro";
 import type { Patient, Payment } from "@/lib/supabase";
 
@@ -36,7 +40,7 @@ const T = {
     modal:{
       addTitle:"تسجيل دفعة جديدة",
       patient:"المريض *", selectPatient:"اختر المريض",
-      amount:"المبلغ (ل.س) *", amountPh:"0.00",
+      amount:"المبلغ *", amountPh:"0.00",
       description:"الوصف", descPh:"مثال: رسوم استشارة، تحاليل...",
       method:"طريقة الدفع *",
       date:"التاريخ *",
@@ -88,7 +92,7 @@ const T = {
     expenseBtn:"مصروف",
     withdrawModal:{
       title:"تسجيل سحب",
-      amount:"المبلغ المسحوب (ل.س) *",
+      amount:"المبلغ المسحوب *",
       reason:"سبب السحب *",
       reasonPh:"مثال: مصروف شخصي، راتب، ...",
       date:"التاريخ *",
@@ -100,7 +104,7 @@ const T = {
     },
     expenseModal:{
       title:"تسجيل مصروف عيادة",
-      amount:"المبلغ (ل.س) *",
+      amount:"المبلغ *",
       category:"التصنيف *",
       categories:{ rent:"إيجار", supplies:"مستلزمات طبية", salary:"رواتب موظفين", utilities:"فواتير كهرباء/ماء", maintenance:"صيانة", other:"أخرى" },
       description:"الوصف *",
@@ -160,7 +164,7 @@ const T = {
     modal:{
       addTitle:"Record New Payment",
       patient:"Patient *", selectPatient:"Select patient",
-      amount:"Amount (SYP) *", amountPh:"0.00",
+      amount:"Amount *", amountPh:"0.00",
       description:"Description", descPh:"e.g. Consultation fee, Lab tests...",
       method:"Payment Method *",
       date:"Date *",
@@ -212,7 +216,7 @@ const T = {
     expenseBtn:"Expense",
     withdrawModal:{
       title:"Record Withdrawal",
-      amount:"Withdrawn Amount (SYP) *",
+      amount:"Withdrawn Amount *",
       reason:"Reason *",
       reasonPh:"e.g. Personal expense, salary...",
       date:"Date *",
@@ -224,7 +228,7 @@ const T = {
     },
     expenseModal:{
       title:"Record Clinic Expense",
-      amount:"Amount (SYP) *",
+      amount:"Amount *",
       category:"Category *",
       categories:{ rent:"Rent", supplies:"Medical Supplies", salary:"Staff Salary", utilities:"Utilities", maintenance:"Maintenance", other:"Other" },
       description:"Description *",
@@ -748,7 +752,7 @@ function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHi
       gradient: "linear-gradient(90deg,#2e7d32,#66bb6a)",
       icon: "💰",
       iconBg: "rgba(46,125,50,.1)",
-      value: `${maskVal(stats.totalMonth)} ل.س`,
+      value: `${maskVal(stats.totalMonth)} ${CUR}`,
       valueColor: "#2e7d32",
       label: tr.stats.totalMonth,
       sub: `↑ 12% ${tr.stats.vsLast}`,
@@ -761,7 +765,7 @@ function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHi
       gradient: "linear-gradient(90deg,#0863ba,#a4c4e4)",
       icon: "📊",
       iconBg: "rgba(8,99,186,.08)",
-      value: `${maskVal(stats.totalYear)} ل.س`,
+      value: `${maskVal(stats.totalYear)} ${CUR}`,
       valueColor: "#0863ba",
       label: tr.stats.totalYear,
       sub: `${stats.paidCount} ${tr.stats.transactions}`,
@@ -774,7 +778,7 @@ function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHi
       gradient: "linear-gradient(90deg,#e67e22,#f39c12)",
       icon: "⏳",
       iconBg: "rgba(230,126,34,.08)",
-      value: `${maskVal(stats.pendingAmt)} ل.س`,
+      value: `${maskVal(stats.pendingAmt)} ${CUR}`,
       valueColor: "#e67e22",
       label: tr.stats.pending,
       sub: `${stats.pendingCount} ${tr.stats.unpaidCount}`,
@@ -860,7 +864,7 @@ function RevenueChart({ lang, months, revenueData }: { lang: string; months: str
           const h = Math.round((v/max)*100);
           return (
             <div key={i} style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
-              <div style={{ fontSize:10,color:isLast?"#2e7d32":"#ccc",fontWeight:isLast?700:400 }}>{v>=1000?(v/1000).toFixed(0)+"k":v} ل.س</div>
+              <div style={{ fontSize:10,color:isLast?"#2e7d32":"#ccc",fontWeight:isLast?700:400 }}>{v>=1000?(v/1000).toFixed(0)+"k":v} {CUR}</div>
               <div style={{ width:"100%",position:"relative",height:100,display:"flex",alignItems:"flex-end" }}>
                 <div style={{
                   width:"100%",borderRadius:"6px 6px 0 0",
@@ -1015,6 +1019,7 @@ export default function PaymentsPage() {
 
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [lang, setLang] = useState("ar");
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const isAr = lang==="ar";
   const tr = T[lang];
 
@@ -1101,9 +1106,12 @@ export default function PaymentsPage() {
 
       // جلب خطة العيادة دائماً — مستقلة عن مصدر الاسم
       const { data: clinicRow } = await supabase
-        .from("clinics").select("name, plan, payments_lock_enabled, payments_lock_password").eq("user_id", user.id).single();
+        .from("clinics").select("name, plan, payments_lock_enabled, payments_lock_password, currency").eq("user_id", user.id).single();
       if (clinicRow?.name && !clinicMeta) setClinicName(prev => prev || clinicRow.name);
       if (clinicRow?.plan) setPlan(clinicRow.plan as PlanType);
+      const cCode = (clinicRow as { currency?: string } | null)?.currency || DEFAULT_CURRENCY;
+      CUR = currencySymbol(cCode, lang === "ar");
+      setCurrency(cCode);
       // قفل المدفوعات
       if (clinicRow?.payments_lock_enabled) {
         setPaymentsLockEnabled(true);
@@ -1245,7 +1253,7 @@ export default function PaymentsPage() {
         </div>
         <span style={{ fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20,background:`${color}12`,color,flexShrink:0 }}>{label}</span>
         <span style={{ fontSize:14,fontWeight:800,color,whiteSpace:"nowrap",flexShrink:0,fontVariantNumeric:"tabular-nums" }}>
-          -{numbersHidden ? "••••" : item.amount.toLocaleString()} ل.س
+          -{numbersHidden ? "••••" : item.amount.toLocaleString()} {CUR}
         </span>
         <button
           onClick={()=> isW ? setReverseWithdrawalId(item.id) : setReverseExpenseId(item.id)}
@@ -1528,7 +1536,7 @@ export default function PaymentsPage() {
         <td>${p.description}</td>
         <td>${methodMap[p.method] || p.method}</td>
         <td class="status-${p.status}">${statusMap[p.status] || p.status}</td>
-        <td class="amount-green">+${p.amount.toLocaleString()} ل.س</td>
+        <td class="amount-green">+${p.amount.toLocaleString()} ${CUR}</td>
       </tr>`;
     }).join("");
 
@@ -1536,7 +1544,7 @@ export default function PaymentsPage() {
         <td>${fmtDateGregorian(w.date)}</td>
         <td colspan="3">${w.reason}</td>
         <td><span style="background:rgba(192,57,43,.1);color:#c0392b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">سحب</span></td>
-        <td class="amount-red">-${w.amount.toLocaleString()} ل.س</td>
+        <td class="amount-red">-${w.amount.toLocaleString()} ${CUR}</td>
       </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد سحوبات هذا الشهر</td></tr>`;
 
     const catLabelsAr: Record<string,string> = { rent:"إيجار", supplies:"مستلزمات طبية", salary:"رواتب موظفين", utilities:"فواتير كهرباء/ماء", maintenance:"صيانة", other:"أخرى" };
@@ -1545,7 +1553,7 @@ export default function PaymentsPage() {
         <td colspan="2">${e.description}</td>
         <td>${catLabelsAr[e.category] || e.category}</td>
         <td><span style="background:rgba(123,45,139,.1);color:#7b2d8b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">مصروف</span></td>
-        <td class="amount-purple">-${e.amount.toLocaleString()} ل.س</td>
+        <td class="amount-purple">-${e.amount.toLocaleString()} ${CUR}</td>
       </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد مصروفات هذا الشهر</td></tr>`;
 
     // ── محاسبة الأطباء — للعيادات المشتركة فقط ─────────────
@@ -1567,9 +1575,9 @@ export default function PaymentsPage() {
         return `<tr>
           <td>${isAr ? "د. " : "Dr. "}${doc.name}</td>
           <td>${docPayments.length}</td>
-          <td class="amount-blue">${totalRevenue.toLocaleString()} ل.س</td>
-          <td class="amount-green">${docShare.toLocaleString()} ل.س${unspecifiedCount > 0 ? ` <span style="color:#e67e22;font-size:10px">(${unspecifiedCount} بدون نسبة محددة)</span>` : ""}</td>
-          <td class="amount-purple">${(totalRevenue - docShare).toLocaleString()} ل.س</td>
+          <td class="amount-blue">${totalRevenue.toLocaleString()} ${CUR}</td>
+          <td class="amount-green">${docShare.toLocaleString()} ${CUR}${unspecifiedCount > 0 ? ` <span style="color:#e67e22;font-size:10px">(${unspecifiedCount} بدون نسبة محددة)</span>` : ""}</td>
+          <td class="amount-purple">${(totalRevenue - docShare).toLocaleString()} ${CUR}</td>
         </tr>`;
       }).filter(Boolean).join("");
       if (!rows) return "";
@@ -1667,19 +1675,19 @@ export default function PaymentsPage() {
 
   <div class="stats">
     <div class="stat">
-      <div class="stat-val green">+${totalPaid.toLocaleString()} ل.س</div>
+      <div class="stat-val green">+${totalPaid.toLocaleString()} ${CUR}</div>
       <div class="stat-label">إجمالي الدخل المدفوع</div>
     </div>
     <div class="stat">
-      <div class="stat-val orange">${totalPending.toLocaleString()} ل.س</div>
+      <div class="stat-val orange">${totalPending.toLocaleString()} ${CUR}</div>
       <div class="stat-label">إجمالي المعلّق</div>
     </div>
     <div class="stat">
-      <div class="stat-val red">-${totalWD.toLocaleString()} ل.س</div>
+      <div class="stat-val red">-${totalWD.toLocaleString()} ${CUR}</div>
       <div class="stat-label">إجمالي السحوبات</div>
     </div>
     <div class="stat">
-      <div class="stat-val purple">-${totalEX.toLocaleString()} ل.س</div>
+      <div class="stat-val purple">-${totalEX.toLocaleString()} ${CUR}</div>
       <div class="stat-label">مصروفات العيادة</div>
     </div>
     <div class="stat">
@@ -1700,7 +1708,7 @@ export default function PaymentsPage() {
       ${paymentRows || `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد مدفوعات هذا الشهر</td></tr>`}
       <tr class="total-row">
         <td colspan="5">الإجمالي المدفوع</td>
-        <td>+${totalPaid.toLocaleString()} ل.س</td>
+        <td>+${totalPaid.toLocaleString()} {CUR}</td>
       </tr>
     </tbody>
   </table>
@@ -1715,7 +1723,7 @@ export default function PaymentsPage() {
     </thead>
     <tbody>
       ${withdrawalRows}
-      ${monthWithdrawals.length > 0 ? `<tr class="total-row"><td colspan="5" style="color:#c0392b">إجمالي السحوبات</td><td style="color:#c0392b">-${totalWD.toLocaleString()} ل.س</td></tr>` : ""}
+      ${monthWithdrawals.length > 0 ? `<tr class="total-row"><td colspan="5" style="color:#c0392b">إجمالي السحوبات</td><td style="color:#c0392b">-${totalWD.toLocaleString()} ${CUR}</td></tr>` : ""}
     </tbody>
   </table>
 
@@ -1729,7 +1737,7 @@ export default function PaymentsPage() {
     </thead>
     <tbody>
       ${expenseRows}
-      ${monthExpenses.length > 0 ? `<tr class="total-row"><td colspan="5" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ل.س</td></tr>` : ""}
+      ${monthExpenses.length > 0 ? `<tr class="total-row"><td colspan="5" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ${CUR}</td></tr>` : ""}
     </tbody>
   </table>
 ${doctorSettlementRows}
@@ -1741,7 +1749,7 @@ ${doctorSettlementRows}
       <div style="font-size:11px;color:#888;margin-top:2px">الدخل المدفوع − السحوبات − المصروفات</div>
     </div>
     <div style="font-size:24px;font-weight:900;color:${netBalance >= 0 ? "#2e7d32" : "#c0392b"}">
-      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} ل.س
+      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} {CUR}
     </div>
   </div>
 
@@ -1807,7 +1815,7 @@ ${doctorSettlementRows}
             <td>${p.description}</td>
             <td>${methodMapAr[p.method] || p.method}</td>
             <td class="status-${p.status}">${statusMapAr[p.status] || p.status}</td>
-            <td class="amount-green">+${p.amount.toLocaleString()} ل.س</td>
+            <td class="amount-green">+${p.amount.toLocaleString()} ${CUR}</td>
           </tr>`;
         }).join("")
       : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد مدفوعات اليوم</td></tr>`;
@@ -1816,7 +1824,7 @@ ${doctorSettlementRows}
       ? todayWithdrawals.map(w => `<tr>
           <td colspan="3">${w.reason}${w.is_reversed ? ' <span style="color:#bbb;font-size:10px">(مُلغى)</span>' : ""}</td>
           <td><span style="background:rgba(192,57,43,.1);color:#c0392b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">سحب</span></td>
-          <td class="${w.is_reversed?"":"amount-red"}" style="${w.is_reversed?"color:#bbb;text-decoration:line-through":""}">-${w.amount.toLocaleString()} ل.س</td>
+          <td class="${w.is_reversed?"":"amount-red"}" style="${w.is_reversed?"color:#bbb;text-decoration:line-through":""}">-${w.amount.toLocaleString()} ${CUR}</td>
         </tr>`).join("")
       : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد سحوبات اليوم</td></tr>`;
 
@@ -1825,7 +1833,7 @@ ${doctorSettlementRows}
           <td colspan="2">${e.description}</td>
           <td>${catLabelsAr[e.category] || e.category}</td>
           <td><span style="background:rgba(123,45,139,.1);color:#7b2d8b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">مصروف</span></td>
-          <td class="amount-purple">-${e.amount.toLocaleString()} ل.س</td>
+          <td class="amount-purple">-${e.amount.toLocaleString()} ${CUR}</td>
         </tr>`).join("")
       : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد مصروفات اليوم</td></tr>`;
 
@@ -1920,19 +1928,19 @@ ${doctorSettlementRows}
   <!-- إحصائيات سريعة -->
   <div class="stats">
     <div class="stat stat-income">
-      <div class="stat-val green">+${totalPaid.toLocaleString()} ل.س</div>
+      <div class="stat-val green">+${totalPaid.toLocaleString()} ${CUR}</div>
       <div class="stat-label">إجمالي الدخل اليوم</div>
     </div>
     <div class="stat stat-pending">
-      <div class="stat-val orange">${totalPending.toLocaleString()} ل.س</div>
+      <div class="stat-val orange">${totalPending.toLocaleString()} ${CUR}</div>
       <div class="stat-label">⏳ مستحقات معلّقة</div>
     </div>
     <div class="stat stat-withdraw">
-      <div class="stat-val red">-${totalWD.toLocaleString()} ل.س</div>
+      <div class="stat-val red">-${totalWD.toLocaleString()} ${CUR}</div>
       <div class="stat-label">سحوبات اليوم</div>
     </div>
     <div class="stat stat-expense">
-      <div class="stat-val purple">-${totalEX.toLocaleString()} ل.س</div>
+      <div class="stat-val purple">-${totalEX.toLocaleString()} ${CUR}</div>
       <div class="stat-label">مصروفات اليوم</div>
     </div>
   </div>
@@ -1945,7 +1953,7 @@ ${doctorSettlementRows}
     </thead>
     <tbody>
       ${paymentRows}
-      ${todayPayments.length > 0 ? `<tr class="total-row"><td colspan="4">الإجمالي المدفوع</td><td>+${totalPaid.toLocaleString()} ل.س</td></tr>` : ""}
+      ${todayPayments.length > 0 ? `<tr class="total-row"><td colspan="4">الإجمالي المدفوع</td><td>+${totalPaid.toLocaleString()} ${CUR}</td></tr>` : ""}
     </tbody>
   </table>
 
@@ -1957,7 +1965,7 @@ ${doctorSettlementRows}
     </thead>
     <tbody>
       ${withdrawalRows}
-      ${todayWithdrawals.filter(w=>!w.is_reversed).length > 0 ? `<tr class="total-row"><td colspan="4" style="color:#c0392b">إجمالي السحوبات</td><td style="color:#c0392b">-${totalWD.toLocaleString()} ل.س</td></tr>` : ""}
+      ${todayWithdrawals.filter(w=>!w.is_reversed).length > 0 ? `<tr class="total-row"><td colspan="4" style="color:#c0392b">إجمالي السحوبات</td><td style="color:#c0392b">-${totalWD.toLocaleString()} ${CUR}</td></tr>` : ""}
     </tbody>
   </table>
 
@@ -1969,7 +1977,7 @@ ${doctorSettlementRows}
     </thead>
     <tbody>
       ${expenseRows}
-      ${todayExpenses.length > 0 ? `<tr class="total-row"><td colspan="4" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ل.س</td></tr>` : ""}
+      ${todayExpenses.length > 0 ? `<tr class="total-row"><td colspan="4" style="color:#7b2d8b">إجمالي المصروفات</td><td style="color:#7b2d8b">-${totalEX.toLocaleString()} ${CUR}</td></tr>` : ""}
     </tbody>
   </table>
 
@@ -1980,7 +1988,7 @@ ${doctorSettlementRows}
       <div class="net-sub">الدخل المدفوع (${totalPaid.toLocaleString()}) − السحوبات (${totalWD.toLocaleString()}) − المصروفات (${totalEX.toLocaleString()})</div>
     </div>
     <div class="net-val" style="color:${netBalance >= 0 ? "#2e7d32" : "#c0392b"}">
-      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} ل.س
+      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} {CUR}
     </div>
   </div>
 
@@ -2029,8 +2037,8 @@ ${doctorSettlementRows}
     <h3 style="color:#0891b2">محاسبة الطبيب</h3>
     <div class="info-row"><span>الطبيب المعالج</span><span>د. ${doctor.name}</span></div>
     <div class="info-row"><span>النسبة المحتسبة للطبيب</span><span>${pctNum != null ? pctNum + " %" : "غير محددة"}</span></div>
-    ${doctorShareAmount != null ? `<div class="info-row"><span>حصة الطبيب</span><span style="color:#2e7d32">${doctorShareAmount.toLocaleString()} ل.س</span></div>
-    <div class="info-row"><span>حصة العيادة</span><span style="color:#0863ba">${clinicShareAmount!.toLocaleString()} ل.س</span></div>` : ""}
+    ${doctorShareAmount != null ? `<div class="info-row"><span>حصة الطبيب</span><span style="color:#2e7d32">${doctorShareAmount.toLocaleString()} ${CUR}</span></div>
+    <div class="info-row"><span>حصة العيادة</span><span style="color:#0863ba">${clinicShareAmount!.toLocaleString()} ${CUR}</span></div>` : ""}
   </div>` : "";
 
     const html = `<!DOCTYPE html>
@@ -2099,9 +2107,9 @@ ${doctorSettlementRows}
       <tr>
         <td>${payment.description || "—"}</td>
         <td>${(payment as any).session_type ? (sessionTypeMap[(payment as any).session_type] || "—") : "—"}</td>
-        <td>${payment.amount.toLocaleString()} ل.س</td>
+        <td>${payment.amount.toLocaleString()} {CUR}</td>
       </tr>
-      <tr class="total-row"><td colspan="2">الإجمالي</td><td>${payment.amount.toLocaleString()} ل.س</td></tr>
+      <tr class="total-row"><td colspan="2">الإجمالي</td><td>${payment.amount.toLocaleString()} ${CUR}</td></tr>
     </tbody>
   </table>
 
@@ -2357,7 +2365,7 @@ ${doctorSettlementRows}
                     style={{ width:32,height:32,borderRadius:8,background:"rgba(46,125,50,.08)",border:"1.5px solid rgba(46,125,50,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#2e7d32",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#2e7d32",lineHeight:1 }}>
-                  {maskNumber(stats.totalMonth)} ل.س
+                  {maskNumber(stats.totalMonth)} {CUR}
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.totalMonth}</div>
                 <div style={{ fontSize:11,color:"#2e7d32",marginTop:4,fontWeight:600 }}>↑ 12% {tr.stats.vsLast}</div>
@@ -2371,7 +2379,7 @@ ${doctorSettlementRows}
                     style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#0863ba",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#0863ba",lineHeight:1 }}>
-                  {maskNumber(stats.totalYear)} ل.س
+                  {maskNumber(stats.totalYear)} {CUR}
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.totalYear}</div>
                 <div style={{ fontSize:11,color:"#888",marginTop:4 }}>{stats.paidCount} {tr.stats.transactions}</div>
@@ -2385,7 +2393,7 @@ ${doctorSettlementRows}
                     style={{ width:32,height:32,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e67e22",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#e67e22",lineHeight:1 }}>
-                  {maskNumber(stats.pendingAmt)} ل.س
+                  {maskNumber(stats.pendingAmt)} {CUR}
                 </div>
                 <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{tr.stats.pending}</div>
                 <div style={{ fontSize:11,color:"#e67e22",marginTop:4,fontWeight:600 }}>{stats.pendingCount} {tr.stats.unpaidCount}</div>
@@ -2426,7 +2434,7 @@ ${doctorSettlementRows}
                   <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
                     style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
-                <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${stats.netBalance.toLocaleString()}`} ل.س</div>
+                <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${stats.netBalance.toLocaleString()}`} {CUR}</div>
                 <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
               </div>
               {/* إجمالي السحوبات */}
@@ -2440,7 +2448,7 @@ ${doctorSettlementRows}
                     <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
                   </div>
                 </div>
-                <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{numbersHidden ? "••••••" : `${stats.totalWithdrawals.toLocaleString()}`} ل.س</div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{numbersHidden ? "••••••" : `${stats.totalWithdrawals.toLocaleString()}`} {CUR}</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{withdrawals.length} {isAr?"عملية سحب":"withdrawals"}</div>
               </div>
               {/* مصروفات العيادة */}
@@ -2454,7 +2462,7 @@ ${doctorSettlementRows}
                     <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
                   </div>
                 </div>
-                <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{numbersHidden ? "••••••" : `${stats.totalExpenses.toLocaleString()}`} ل.س</div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{numbersHidden ? "••••••" : `${stats.totalExpenses.toLocaleString()}`} {CUR}</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{expenses.length} {isAr?"مصروف مسجّل":"recorded expenses"}</div>
               </div>
             </div>
@@ -2556,7 +2564,7 @@ ${doctorSettlementRows}
                                   </div>
                                 </div>
                                 <div style={{ textAlign:"end" }}>
-                                  <div style={{ fontSize:15,fontWeight:800,color:amtColor }}>{p.amount.toLocaleString()} ل.س</div>
+                                  <div style={{ fontSize:15,fontWeight:800,color:amtColor }}>{p.amount.toLocaleString()} {CUR}</div>
                                   <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:ss.bg,color:ss.color,marginTop:3,display:"inline-block" }}>{ss.label}</span>
                                 </div>
                               </div>
@@ -2645,7 +2653,7 @@ ${doctorSettlementRows}
                                 <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>{ss.label}</span>
                               </div>
                               <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
-                                {p.amount.toLocaleString()} ل.س
+                                {p.amount.toLocaleString()} {CUR}
                               </div>
                               <div style={{ display:"flex",justifyContent:"flex-end",gap:6 }}>
                                 <button className="tx-action-btn tx-action-view" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}>
@@ -2703,7 +2711,7 @@ ${doctorSettlementRows}
                   <div style={{ display:"flex",justifyContent:"flex-end",alignItems:"center",gap:16,marginTop:14,padding:"12px 20px",background:"#fff",borderRadius:12,border:"1.5px solid #eef0f3" }}>
                     <span style={{ fontSize:13,color:"#888" }}>{isAr?"المجموع:":"Total:"}</span>
                     <span style={{ fontSize:18,fontWeight:900,color:"#2e7d32" }}>
-                      {filtered.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0).toLocaleString()} ل.س
+                      {filtered.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0).toLocaleString()} {CUR}
                     </span>
                   </div>
                 )}
@@ -2744,11 +2752,11 @@ ${doctorSettlementRows}
                               </span>
                             </div>
                             <div style={{ textAlign:"end" }}>
-                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{numbersHidden ? "••••••" : doc.shareRevenue.toLocaleString()} ل.س</span>
+                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{numbersHidden ? "••••••" : doc.shareRevenue.toLocaleString()} {CUR}</span>
                               <span style={{ fontSize:10,color:"#aaa",marginInlineStart:6 }}>({doc.count} {isAr?"معاملة":"tx"})</span>
                               {!numbersHidden && doc.shareRevenue !== doc.monthlyRevenue && (
                                 <div style={{ fontSize:9.5,color:"#8a97a6",marginTop:2 }}>
-                                  {isAr?"الإجمالي:":"Gross:"} {doc.monthlyRevenue.toLocaleString()} ل.س
+                                  {isAr?"الإجمالي:":"Gross:"} {doc.monthlyRevenue.toLocaleString()} {CUR}
                                   {doc.unspecified>0 && <span style={{ color:"#e67e22" }}> · {doc.unspecified} {isAr?"بدون نسبة":"no %"}</span>}
                                 </div>
                               )}
@@ -2791,7 +2799,7 @@ ${doctorSettlementRows}
                             <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
                           </div>
                           <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6 }}>
-                            <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>{p.amount.toLocaleString()} ل.س</span>
+                            <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>{p.amount.toLocaleString()} {CUR}</span>
                             <button onClick={()=>markPaid(p.id)}
                               style={{ padding:"7px 14px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px rgba(46,125,50,.25)",transition:"all .15s" }}
                               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#1b5e20"; }}
@@ -2881,7 +2889,7 @@ ${doctorSettlementRows}
                 const w = withdrawals.find(x=>x.id===reverseWithdrawalId);
                 return w ? (
                   <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:12,padding:"10px 16px",marginBottom:20,display:"inline-flex",alignItems:"center",gap:8 }}>
-                    <span style={{ fontSize:13,fontWeight:700,color:"#c0392b" }}>+{w.amount.toLocaleString()} ل.س</span>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#c0392b" }}>+{w.amount.toLocaleString()} {CUR}</span>
                     <span style={{ fontSize:12,color:"#888" }}>{w.reason}</span>
                   </div>
                 ) : null;
@@ -2915,7 +2923,7 @@ ${doctorSettlementRows}
                 const exp = expenses.find(x=>x.id===reverseExpenseId);
                 return exp ? (
                   <div style={{ background:"rgba(123,45,139,.06)",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:12,padding:"10px 16px",marginBottom:20,display:"inline-flex",alignItems:"center",gap:8 }}>
-                    <span style={{ fontSize:13,fontWeight:700,color:"#7b2d8b" }}>+{exp.amount.toLocaleString()} ل.س</span>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#7b2d8b" }}>+{exp.amount.toLocaleString()} {CUR}</span>
                     <span style={{ fontSize:12,color:"#888" }}>{exp.description}</span>
                   </div>
                 ) : null;

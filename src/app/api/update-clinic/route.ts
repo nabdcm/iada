@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       restricted_access_enabled,
       restricted_access_pin,
       telemedicine_enabled,
+      currency,
     } = await req.json();
 
     if (!userId)
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
     if (newPassword)   clinicUpdate.plain_password = newPassword;
     if (max_doctors !== undefined && max_doctors !== null)   clinicUpdate.max_doctors   = max_doctors;
     if (telemedicine_enabled !== undefined) clinicUpdate.telemedicine_enabled = telemedicine_enabled;
+    if (currency !== undefined && currency) clinicUpdate.currency = currency;
 
     // قفل المدفوعات — نحدّث دائماً (حتى عند إلغاء التفعيل)
     if (payments_lock_enabled !== undefined) {

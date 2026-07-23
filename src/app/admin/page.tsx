@@ -2,6 +2,7 @@
 
 import AdminOfflineToggle from "@/components/AdminOfflineToggle";
 import AgentsPanel from "@/components/AgentsPanel";
+import { currencyOptions, DEFAULT_CURRENCY } from "@/lib/currency";
 import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
@@ -60,6 +61,7 @@ interface ClinicData {
   restricted_access_pin?: string;
   country_code?: string;   // رمز بلد العيادة الدولي (لأرقام واتساب)
   telemedicine_enabled?: boolean;  // ميزة العيادة الأونلاين (تفعيل مدفوع)
+  currency?: string;               // عملة العيادة
 }
 
 interface Doctor {
@@ -631,6 +633,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
     max_doctors:  clinic?.max_doctors ?? 2,
     account_type: (clinic?.account_type || "clinic") as AccountType,
     country_code: clinic?.country_code || "963",
+    currency:     clinic?.currency     || DEFAULT_CURRENCY,
   });
 
   const [creds,    setCreds]    = useState<{ password: string } | null>(null);
@@ -882,6 +885,18 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                 >
                   {COUNTRIES.map(c => (
                     <option key={c.code} value={c.code}>{c.flag} {isAr ? c.ar : c.en} (+{c.code})</option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label={isAr ? "عملة العيادة" : "Clinic Currency"}>
+                <select
+                  value={form.currency}
+                  onChange={e => setForm(prev => ({ ...prev, currency: e.target.value }))}
+                  style={{ ...inputSt, cursor: "pointer" }}
+                >
+                  {currencyOptions(isAr).map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </Field>
@@ -1201,6 +1216,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     restricted_access_enabled: clinic.restricted_access_enabled ?? false,
     restricted_access_pin:     clinic.restricted_access_pin     ?? "",
     country_code: clinic.country_code || "963",
+    currency: clinic.currency || DEFAULT_CURRENCY,
     telemedicine_enabled: clinic.telemedicine_enabled ?? false,
   });
   const [newPass,       setNewPass]       = useState("");
@@ -1344,6 +1360,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     restricted_access_pin:     form.restricted_access_pin,
     country_code: form.country_code,
     telemedicine_enabled: form.telemedicine_enabled,
+    currency: form.currency,
     ...overrides,
   });
 
@@ -1535,6 +1552,14 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                 <select value={form.country_code} onChange={e => setForm(p=>({...p,country_code:e.target.value}))} style={{ ...inputSt, cursor:"pointer" }}>
                   {COUNTRIES.map(c => (
                     <option key={c.code} value={c.code}>{c.flag} {isAr ? c.ar : c.en} (+{c.code})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display:"block",fontSize:11,fontWeight:700,color:"#666",marginBottom:6,textTransform:"uppercase",letterSpacing:.4 }}>{isAr ? "عملة العيادة" : "Clinic Currency"}</label>
+                <select value={form.currency} onChange={e => setForm(p=>({...p,currency:e.target.value}))} style={{ ...inputSt, cursor:"pointer" }}>
+                  {currencyOptions(isAr).map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </div>
@@ -3191,6 +3216,8 @@ export default function AdminPage() {
         restricted_access_pin:     (row.restricted_access_pin as string) || "",
         country_code:              (row.country_code as string) || "963",
         plain_password:            (row.plain_password as string) ?? null,
+        telemedicine_enabled:      (row.telemedicine_enabled as boolean) ?? false,
+        currency:                  (row.currency as string) || DEFAULT_CURRENCY,
       }));
 
       setClinics(clinicsData);
