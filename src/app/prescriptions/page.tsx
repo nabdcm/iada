@@ -4,6 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useRef, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import type { TablesInsert } from "@/lib/database.types";
 import PageIntro from "@/components/PageIntro";
 
 // ============================================================
@@ -673,7 +674,7 @@ export default function PrescriptionsPage() {
         if (dr) resolvedDoctorName = dr.name;
       }
 
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"prescriptions"> & Record<string, unknown> = {
         patient_id: form.patient_id,
         date: form.date,
         diagnosis: form.diagnosis,
@@ -682,7 +683,7 @@ export default function PrescriptionsPage() {
         doctor_name: resolvedDoctorName,
         clinic_name: clinicName,
         user_id: userId,
-        ...(isSharedPlan(plan) && form.doctor_id ? { doctor_id: form.doctor_id } : {}),
+        ...(isSharedPlan(plan) && form.doctor_id ? { doctor_id: Number(form.doctor_id) } : {}),
       };
 
       if (editingId) {

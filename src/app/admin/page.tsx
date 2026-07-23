@@ -5,6 +5,7 @@ import AgentsPanel from "@/components/AgentsPanel";
 import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import type { TablesInsert } from "@/lib/database.types";
 import { COUNTRIES } from "@/lib/phone";
 
 // ============================================================
@@ -2454,14 +2455,14 @@ async function importClinicData(
             user_id:          targetUserId,
             name:             p.name as string,
             phone,
-            gender:           p.gender || null,
-            date_of_birth:    p.date_of_birth || null,
-            has_diabetes:     p.has_diabetes ?? false,
-            has_hypertension: p.has_hypertension ?? false,
-            notes:            p.notes || null,
+            gender:           (p.gender as string | null) || null,
+            date_of_birth:    (p.date_of_birth as string | null) || null,
+            has_diabetes:     (p.has_diabetes as boolean | null) ?? false,
+            has_hypertension: (p.has_hypertension as boolean | null) ?? false,
+            notes:            (p.notes as string | null) || null,
             is_hidden:        false,
             mrn,
-          })
+          } satisfies TablesInsert<"patients">)
           .select("id")
           .single();
 
@@ -2495,13 +2496,13 @@ async function importClinicData(
       const { error } = await supabase.from("appointments").insert({
         user_id:    targetUserId,
         patient_id: newPatientId,
-        date:       a.date,
-        time:       a.time,
-        duration:   a.duration ?? 30,
-        type:       a.type || null,
-        notes:      a.notes || null,
-        status:     a.status ?? "scheduled",
-      });
+        date:       a.date as string,
+        time:       a.time as string,
+        duration:   (a.duration as number | null) ?? 30,
+        type:       (a.type as string | null) || null,
+        notes:      (a.notes as string | null) || null,
+        status:     (a.status as string | null) ?? "scheduled",
+      } satisfies TablesInsert<"appointments">);
 
       if (error) { result.errors.push(`Appointment error: ${error.message}`); continue; }
       result.appointments.new++;
@@ -2519,13 +2520,13 @@ async function importClinicData(
       const { error } = await supabase.from("payments").insert({
         user_id:     targetUserId,
         patient_id:  newPatientId,
-        amount:      pay.amount,
-        description: pay.description,
-        method:      pay.method ?? "cash",
-        date:        pay.date,
-        status:      pay.status ?? "paid",
-        notes:       pay.notes || null,
-      });
+        amount:      pay.amount as number,
+        description: (pay.description as string | null) ?? null,
+        method:      (pay.method as string | null) ?? "cash",
+        date:        pay.date as string,
+        status:      (pay.status as string | null) ?? "paid",
+        notes:       (pay.notes as string | null) || null,
+      } satisfies TablesInsert<"payments">);
 
       if (error) { result.errors.push(`Payment error: ${error.message}`); continue; }
       result.payments.new++;

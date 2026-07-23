@@ -8,6 +8,7 @@ import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import { fmtTime, type TimeFormat } from "@/lib/timeFormat";
 import type { Patient, Appointment } from "@/lib/supabase";
+import type { TablesInsert } from "@/lib/database.types";
 
 type Lang = "ar" | "en";
 type Status = "scheduled" | "completed" | "cancelled" | "no-show";
@@ -352,7 +353,7 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
     doctor_id: (appt as any)?.doctor_id ?? (quickSlot?.doctorId ?? ""),
     date: appt?.date ?? defaultDate, time: appt?.time ?? (quickSlot?.time ?? "09:00"),
     duration: appt?.duration ?? 30, type: appt?.type ?? "",
-    notes: appt?.notes ?? "", status: appt?.status ?? "scheduled",
+    notes: appt?.notes ?? "", status: (appt?.status as Status) ?? "scheduled",
     recFreq: "", recCount: 4,
     is_online: (appt as any)?.is_online ?? false,
   });
@@ -1664,8 +1665,8 @@ export default function AppointmentsPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
-      const payload: Record<string, unknown> = {
-        patient_id: form.patient_id,
+      const payload: TablesInsert<"appointments"> & Record<string, unknown> = {
+        patient_id: form.patient_id === "" ? null : form.patient_id,
         date: form.date, time: form.time,
         duration: form.duration,
         type: form.type||null,
@@ -1706,7 +1707,7 @@ export default function AppointmentsPage() {
           const aS = toMin(a.time); const aE = aS + (a.duration || 30);
           return nStart < aE && nEnd > aS;
         });
-        const rows: Record<string, unknown>[] = [];
+        const rows: TablesInsert<"appointments">[] = [];
         const skipped: string[] = [];
         const maxOccurrences = Math.min(form.recCount, 16); // حد أقصى 16 موعداً
         for (let i = 0; i < maxOccurrences; i++) {

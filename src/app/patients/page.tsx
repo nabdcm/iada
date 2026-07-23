@@ -683,10 +683,10 @@ async function loadProfileFromDB(patientId:number): Promise<PatientProfile|null>
     const { data, error } = await supabase.from("patient_profiles").select("*").eq("patient_id",patientId).maybeSingle();
     if (error||!data) return null;
     return {
-      medical_fields:    data.medical_fields    ?? {},
-      dental_chart:      data.dental_chart      ?? {},
-      xrays:             data.xrays             ?? [],
-      extra_form_fields: data.extra_form_fields ?? {},
+      medical_fields:    (data.medical_fields    as PatientProfile["medical_fields"])    ?? {},
+      dental_chart:      (data.dental_chart      as PatientProfile["dental_chart"])      ?? {},
+      xrays:             (data.xrays             as PatientProfile["xrays"])             ?? [],
+      extra_form_fields: (data.extra_form_fields as PatientProfile["extra_form_fields"]) ?? {},
     };
   } catch { return null; }
 }

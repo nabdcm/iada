@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react"
 import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase } from "@/lib/supabase";
 import type { Patient, Appointment, Payment } from "@/lib/supabase";
+import type { TablesInsert } from "@/lib/database.types";
 
 // ════════════════════════════════════════════════════════════
 // TYPES
@@ -116,10 +117,10 @@ async function loadProfileFromDB(patientId:number): Promise<PatientProfile|null>
     const { data, error } = await supabase.from("patient_profiles").select("*").eq("patient_id",patientId).maybeSingle();
     if (error||!data) return null;
     return {
-      medical_fields:    data.medical_fields    ?? {},
-      dental_chart:      data.dental_chart      ?? {},
-      xrays:             data.xrays             ?? [],
-      extra_form_fields: data.extra_form_fields ?? {},
+      medical_fields:    (data.medical_fields    as PatientProfile["medical_fields"])    ?? {},
+      dental_chart:      (data.dental_chart      as PatientProfile["dental_chart"])      ?? {},
+      xrays:             (data.xrays             as PatientProfile["xrays"])             ?? [],
+      extra_form_fields: (data.extra_form_fields as PatientProfile["extra_form_fields"]) ?? {},
     };
   } catch { return null; }
 }
@@ -1185,7 +1186,7 @@ export default function SecretaryPage() {
       const { data:{user} } = await supabase.auth.getUser();
       if (!user) return;
       // بناء الـ payload بنفس طريقة صفحة المواعيد
-      const payload: Record<string,unknown> = {
+      const payload: TablesInsert<"appointments"> & Record<string,unknown> = {
         patient_id: form.patient_id,
         date:       form.date,
         time:       form.time,

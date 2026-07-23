@@ -186,13 +186,13 @@ const Ico = {
 // ─── Types ────────────────────────────────────────────────
 type Appt = {
   id: number; patient_id: number; date: string; time: string;
-  duration?: number; type?: string; status: string; doctor_id?: string | null;
+  duration?: number; type?: string; status: string; doctor_id?: number | null;
   patientName: string; doctorName: string;
 };
 type TopPatient = { id: number; name: string; count: number };
-type Doctor = { id: string; name: string; name_en?: string; color?: string };
-type PatientRow = { id: number; name: string; created_at?: string | null; doctor_id?: string | null };
-type ApptRow = { id: number; patient_id: number; date: string | null; time: string | null; duration?: number | null; type?: string | null; status: string; doctor_id?: string | null };
+type Doctor = { id: number; name: string; name_en?: string; color?: string };
+type PatientRow = { id: number; name: string; created_at?: string | null; doctor_id?: number | null };
+type ApptRow = { id: number; patient_id: number; date: string | null; time: string | null; duration?: number | null; type?: string | null; status: string; doctor_id?: number | null };
 
 // ─── StatCard v2 — تدرج لوني وشريط تقدم ──────────────────
 function StatCard({ icon, label, value, sub, accent, accentSoft, delay, loading, progress }: {
@@ -506,7 +506,7 @@ export default function DashboardPage() {
       duration: (a.duration as number | undefined) ?? undefined,
       type: (a.type as string | undefined) ?? undefined,
       status: a.status as string,
-      doctor_id: (a.doctor_id as string | null | undefined) ?? null,
+      doctor_id: (a.doctor_id as number | null | undefined) ?? null,
       patientName: patientMap[a.patient_id as number] ?? (isAr ? "مريض" : "Patient"),
       doctorName: a.doctor_id ? (doctorMap[String(a.doctor_id)] ?? "") : "",
     })));

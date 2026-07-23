@@ -10,6 +10,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import type { Json } from "@/lib/database.types";
 import PageIntro from "@/components/PageIntro";
 
 type Lang = "ar" | "en";
@@ -165,8 +166,8 @@ function CreateLinkModal({lang,patients,doctorName,clinicName,userId,clinicTrack
     const tok=crypto.randomUUID().replace(/-/g,"").slice(0,20);
     const p=patients.find(x=>x.id===Number(pid));
     const ea=exp?new Date(Date.now()+Number(exp)*86400000).toISOString():null;
-    const {data,error}=await supabase.from("tracking_links").insert([{token:tok,patient_id:Number(pid),patient_name:p?.name??"",clinic_type:clinicTrackingType,doctor_name:doctorName,clinic_name:clinicName,notes_for_patient:notes,active:true,expires_at:ea,user_id:userId,custom_questions:cqs.length>0?cqs:null}]).select().single();
-    if(!error&&data)onCreated(data);
+    const {data,error}=await supabase.from("tracking_links").insert([{token:tok,patient_id:Number(pid),patient_name:p?.name??"",clinic_type:clinicTrackingType,doctor_name:doctorName,clinic_name:clinicName,notes_for_patient:notes,active:true,expires_at:ea,user_id:userId,custom_questions:cqs.length>0?(cqs as unknown as Json):null}]).select().single();
+    if(!error&&data)onCreated(data as unknown as TrackingLink);
     setCreating(false);
   }
   return (
@@ -336,9 +337,9 @@ export default function PatientTrackingPage() {
     const {data:pats}=await supabase.from("patients").select("id,name").eq("user_id",user.id).eq("is_hidden",false);
     setPatients(pats??[]);
     const {data:lks}=await supabase.from("tracking_links").select("*").eq("user_id",user.id).order("created_at",{ascending:false});
-    setLinks(lks??[]);
+    setLinks((lks??[]) as unknown as TrackingLink[]);
     const toks=(lks??[]).map(l=>l.token);
-    if(toks.length>0){const {data:logs}=await supabase.from("daily_logs").select("*").in("token",toks).order("log_date",{ascending:false});setDailyLogs(logs??[]);}
+    if(toks.length>0){const {data:logs}=await supabase.from("daily_logs").select("*").in("token",toks).order("log_date",{ascending:false});setDailyLogs((logs??[]) as unknown as DailyLog[]);}
     setLoading(false);
   }
 
