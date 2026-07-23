@@ -457,21 +457,56 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
   );
 
   return (
-    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.35)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
-        <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-          <div>
-            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{isEdit?tr.modal.editTitle:tr.modal.addTitle}</h2>
-            {isEdit&&<p style={{ fontSize:11,color:"#aaa",marginTop:2 }}>ID: #{appt!.id}</p>}
+    <div className="am-overlay">
+      <style>{`
+        .am-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+        .am-sheet{position:relative;z-index:1;background:#fff;border-radius:22px;width:100%;max-width:500px;
+          max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+          box-shadow:0 24px 70px rgba(8,99,186,.28);animation:amPop .28s cubic-bezier(.4,0,.2,1)}
+        @keyframes amPop{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+        .am-body{flex:1;overflow-y:auto;padding:20px 26px;min-height:0}
+        .am-body::-webkit-scrollbar{width:8px}
+        .am-body::-webkit-scrollbar-thumb{background:#dde5ef;border-radius:8px}
+        .am-grip{display:none}
+        @media(max-width:640px){
+          .am-overlay{align-items:flex-end;padding:0}
+          .am-sheet{max-width:100%;max-height:94vh;border-radius:22px 22px 0 0;animation:amUp .3s cubic-bezier(.4,0,.2,1)}
+          @keyframes amUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+          .am-grip{display:block}
+          .am-body{padding:16px}
+          .am-head{padding:12px 16px 14px!important}
+          .am-foot{padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))!important}
+          .am-row2{flex-direction:column!important;gap:12px!important}
+        }
+      `}</style>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(10,25,50,.5)",backdropFilter:"blur(4px)" }}/>
+      <div className="am-sheet">
+        <div className="am-grip" style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"10px auto 0",flexShrink:0 }}/>
+
+        {/* ── رأس ثابت ── */}
+        <div className="am-head" style={{ padding:"18px 26px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0,background:"linear-gradient(135deg, rgba(8,99,186,.05), transparent)" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12,minWidth:0 }}>
+            <div style={{ width:44,height:44,borderRadius:13,background:"rgba(8,99,186,.09)",border:"1.5px solid rgba(8,99,186,.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>
+              <AppIcon glyph="📅" />
+            </div>
+            <div style={{ minWidth:0 }}>
+              <h2 style={{ fontSize:17,fontWeight:800,color:"#2c3e50",margin:0 }}>{isEdit?tr.modal.editTitle:tr.modal.addTitle}</h2>
+              {isEdit&&<p style={{ fontSize:11,color:"#a8b2bf",marginTop:2 }}>ID: #{appt!.id}</p>}
+            </div>
           </div>
-          <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-            {isEdit&&<button onClick={()=>setShowDeleteConfirm(true)} style={{ width:36,height:36,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",color:"#c0392b" }}><AppIcon glyph="🗑️" /></button>}
-            <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+          <div style={{ display:"flex",gap:8,alignItems:"center",flexShrink:0 }}>
+            {isEdit&&<button onClick={()=>setShowDeleteConfirm(true)} style={{ width:34,height:34,borderRadius:10,background:"rgba(192,57,43,.07)",border:"1.5px solid rgba(192,57,43,.18)",cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",color:"#c0392b" }}><AppIcon glyph="🗑️" /></button>}
+            <button onClick={onClose} aria-label="close" style={{ width:34,height:34,borderRadius:10,background:"#f2f5f9",border:"1.5px solid #e8eaed",cursor:"pointer",fontSize:15,color:"#7d8896",display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
           </div>
         </div>
-        <div style={{ padding:"20px 26px" }}>
+
+        {/* ── المحتوى القابل للتمرير ── */}
+        <div className="am-body">
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
+          <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:12 }}>
+            <span style={{ width:4,height:16,borderRadius:3,background:"#0863ba",flexShrink:0 }} />
+            <span style={{ fontSize:12.5,fontWeight:800,color:"#0863ba",letterSpacing:.2 }}>{isAr?"المريض":"Patient"}</span>
+          </div>
           <Field label={tr.modal.patient}>
             <div ref={patientRef} style={{ position:"relative" }}>
               <div style={{ position:"relative" }}>
@@ -541,7 +576,11 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
               </select>
             </Field>
           )}
-          <div style={{ display:"flex",gap:12 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:8,margin:"6px 0 12px",paddingTop:12,borderTop:"1.5px dashed #eef0f3" }}>
+            <span style={{ width:4,height:16,borderRadius:3,background:"#16a085",flexShrink:0 }} />
+            <span style={{ fontSize:12.5,fontWeight:800,color:"#16a085",letterSpacing:.2 }}>{isAr?"الموعد والتفاصيل":"Schedule & details"}</span>
+          </div>
+          <div className="am-row2" style={{ display:"flex",gap:12 }}>
             <Field label={tr.modal.date} half><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={inputSt} className="appt-input"/></Field>
             <Field label={tr.modal.time} half><select value={form.time} onChange={e=>setForm({...form,time:e.target.value})} style={{ ...inputSt,cursor:"pointer" }} className="appt-input">{Array.from({length:15*4},(_,i)=>{const totalMin=8*60+i*15;const hh=String(Math.floor(totalMin/60)).padStart(2,"0");const mm=String(totalMin%60).padStart(2,"0");return `${hh}:${mm}`;}).map(t=><option key={t} value={t}>{fmtTime(t, clockFmt, lang==="ar")}</option>)}</select></Field>
           </div>
@@ -634,12 +673,13 @@ function AppointmentModal({ lang, appt, defaultDate, patients, appointments, doc
             </div>
           )}
         </div>
-        <div style={{ padding:"14px 26px 22px",display:"flex",gap:12,borderTop:"1.5px solid #eef0f3" }}>
+        {/* ── تذييل ثابت: أزرار الحفظ ظاهرة دائماً ── */}
+        <div className="am-foot" style={{ padding:"14px 26px 18px",display:"flex",gap:12,borderTop:"1.5px solid #eef0f3",background:"#fff",flexShrink:0,boxShadow:"0 -6px 20px rgba(15,40,80,.06)" }}>
+          <button onClick={onClose} style={{ padding:"13px 22px",background:"#f2f5f9",color:"#6b7684",border:"1.5px solid #e8eaed",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer",flexShrink:0 }}>{tr.modal.cancel}</button>
           <button onClick={handleSave} disabled={saving}
-            style={{ flex:1,padding:"13px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1,boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
+            style={{ flex:1,padding:"13px",background:"linear-gradient(135deg,#0863ba,#3d8fd6)",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",opacity:saving?0.7:1,boxShadow:"0 6px 18px rgba(8,99,186,.3)" }}>
             {saving?(lang==="ar"?"جاري الحفظ...":"Saving..."):isEdit?tr.modal.update:tr.modal.save}
           </button>
-          <button onClick={onClose} style={{ padding:"13px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>{tr.modal.cancel}</button>
         </div>
       </div>
     </div>
