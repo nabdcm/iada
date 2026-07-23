@@ -6,6 +6,7 @@ import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import type { TablesInsert } from "@/lib/database.types";
+import { CLINIC_TYPE_ICONS } from "@/lib/clinic-types";
 import { COUNTRIES } from "@/lib/phone";
 
 // ============================================================
@@ -560,23 +561,6 @@ const PLAN_FEATURES: Record<string, { ar: string[]; en: string[] }> = {
 };
 
 // Clinic type icons
-const CLINIC_TYPE_ICONS: Record<string, string> = {
-  general:          "🏥",
-  dental:           "🦷",
-  dermatology:      "🧴",
-  cosmetic:         "💆",
-  pediatrics:       "👶",
-  physical_therapy: "🏃",
-  mental_health:    "🧠",
-  nutrition:        "🥗",
-  ophthalmology:    "👁️",
-  orthopedic:       "🦴",
-  cardiology:       "❤️",
-  gynecology:       "🌸",
-  ent:              "👂",
-  urology:          "💧",
-  other:            "🏨",
-};
 const STATUS_COLORS = {
   active:   { bg:"rgba(46,125,50,.1)",   color:"#2e7d32" },
   inactive: { bg:"rgba(230,126,34,.1)",  color:"#e67e22" },
