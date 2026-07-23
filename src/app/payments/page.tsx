@@ -431,21 +431,41 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
   };
 
   return (
-    <div className="modal-sheet" style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
-      <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(8,99,186,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
-        {/* Header */}
-        <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-          {/* Drag handle — mobile only */}
-          <div style={{ position:"absolute",top:8,left:"50%",transform:"translateX(-50%)",width:40,height:4,borderRadius:4,background:"#e0e0e0" }}/>
-          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph="💳" /></div>
-            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.modal.addTitle}</h2>
+    <div className="pay-overlay">
+      <style>{`
+        .pay-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+        .pay-sheet{position:relative;z-index:1;background:#fff;border-radius:22px;width:100%;
+          max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+          animation:payPop .28s cubic-bezier(.4,0,.2,1)}
+        @keyframes payPop{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+        .pay-body{flex:1;overflow-y:auto;padding:20px 26px;min-height:0}
+        .pay-body::-webkit-scrollbar{width:8px}
+        .pay-body::-webkit-scrollbar-thumb{background:#dde5ef;border-radius:8px}
+        .pay-grip{display:none}
+        @media(max-width:640px){
+          .pay-overlay{align-items:flex-end;padding:0}
+          .pay-sheet{max-width:100%!important;max-height:94vh;border-radius:22px 22px 0 0;animation:payUp .3s cubic-bezier(.4,0,.2,1)}
+          @keyframes payUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+          .pay-grip{display:block}
+          .pay-body{padding:16px}
+          .pay-head{padding:12px 16px 14px!important}
+          .pay-foot{padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))!important;flex-wrap:wrap}
+          .pay-row2{flex-direction:column!important;gap:12px!important}
+        }
+      `}</style>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(10,25,50,.5)",backdropFilter:"blur(4px)" }}/>
+      <div className="pay-sheet" style={{ maxWidth:480,boxShadow:"0 24px 70px rgba(46,125,50,.25)" }}>
+        <div className="pay-grip" style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"10px auto 0",flexShrink:0 }}/>
+        {/* رأس ثابت */}
+        <div className="pay-head" style={{ padding:"18px 26px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0,background:"linear-gradient(135deg, rgba(46,125,50,.06), transparent)" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12,minWidth:0 }}>
+            <div style={{ width:44,height:44,background:"rgba(46,125,50,.1)",border:"1.5px solid rgba(46,125,50,.2)",borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}><AppIcon glyph="💳" /></div>
+            <h2 style={{ fontSize:17,fontWeight:800,color:"#2c3e50",margin:0 }}>{tr.modal.addTitle}</h2>
           </div>
-          <button onClick={onClose} style={{ width:36,height:36,borderRadius:10,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
+          <button onClick={onClose} aria-label="close" style={{ width:34,height:34,borderRadius:10,background:"#f2f5f9",border:"1.5px solid #e8eaed",cursor:"pointer",fontSize:15,color:"#7d8896",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
         </div>
-        {/* Body */}
-        <div style={{ padding:"20px 26px" }}>
+        {/* المحتوى القابل للتمرير */}
+        <div className="pay-body">
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
           <F label={tr.modal.patient}>
             <div ref={patientDropRef} style={{ position:"relative" }}>
@@ -584,7 +604,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
               )}
             </F>
           )}
-          <div style={{ display:"flex",gap:12 }}>
+          <div className="pay-row2" style={{ display:"flex",gap:12 }}>
             <F label={tr.modal.amount} half>
               <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder={tr.modal.amountPh} style={inputSt} onFocus={e=>e.target.style.borderColor="#2e7d32"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
             </F>
@@ -667,7 +687,7 @@ function PaymentModal({ lang, patients, doctors, isSharedClinic, onSave, onClose
           </F>
         </div>
         {/* Footer */}
-        <div style={{ padding:"14px 26px 22px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3" }}>
+        <div className="pay-foot" style={{ padding:"14px 26px 18px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3",background:"#fff",flexShrink:0,boxShadow:"0 -6px 20px rgba(15,40,80,.06)" }}>
           <button
   onClick={() => handleSave(false)}
   disabled={saving}
@@ -907,19 +927,41 @@ function WithdrawModal({ lang, onSave, onClose }: { lang: string; onSave: (data:
   };
 
   return (
-    <div className="modal-sheet" style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
-      <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:420,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(192,57,43,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
-        <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:"rgba(192,57,43,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph="💸" /></div>
-            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.withdrawModal.title}</h2>
+    <div className="pay-overlay">
+      <style>{`
+        .pay-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+        .pay-sheet{position:relative;z-index:1;background:#fff;border-radius:22px;width:100%;
+          max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+          animation:payPop .28s cubic-bezier(.4,0,.2,1)}
+        @keyframes payPop{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+        .pay-body{flex:1;overflow-y:auto;padding:20px 26px;min-height:0}
+        .pay-body::-webkit-scrollbar{width:8px}
+        .pay-body::-webkit-scrollbar-thumb{background:#dde5ef;border-radius:8px}
+        .pay-grip{display:none}
+        @media(max-width:640px){
+          .pay-overlay{align-items:flex-end;padding:0}
+          .pay-sheet{max-width:100%!important;max-height:94vh;border-radius:22px 22px 0 0;animation:payUp .3s cubic-bezier(.4,0,.2,1)}
+          @keyframes payUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+          .pay-grip{display:block}
+          .pay-body{padding:16px}
+          .pay-head{padding:12px 16px 14px!important}
+          .pay-foot{padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))!important;flex-wrap:wrap}
+          .pay-row2{flex-direction:column!important;gap:12px!important}
+        }
+      `}</style>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(10,25,50,.5)",backdropFilter:"blur(4px)" }}/>
+      <div className="pay-sheet" style={{ maxWidth:440,boxShadow:"0 24px 70px rgba(192,57,43,.25)" }}>
+        <div className="pay-grip" style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"10px auto 0",flexShrink:0 }}/>
+        <div className="pay-head" style={{ padding:"18px 26px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0,background:"linear-gradient(135deg, rgba(192,57,43,.06), transparent)" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12,minWidth:0 }}>
+            <div style={{ width:44,height:44,background:"rgba(192,57,43,.1)",border:"1.5px solid rgba(192,57,43,.2)",borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}><AppIcon glyph="💸" /></div>
+            <h2 style={{ fontSize:17,fontWeight:800,color:"#2c3e50",margin:0 }}>{tr.withdrawModal.title}</h2>
           </div>
-          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+          <button onClick={onClose} aria-label="close" style={{ width:34,height:34,borderRadius:10,background:"#f2f5f9",border:"1.5px solid #e8eaed",cursor:"pointer",fontSize:15,color:"#7d8896",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
         </div>
-        <div style={{ padding:"20px 26px" }}>
+        <div className="pay-body">
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
-          <div style={{ display:"flex",gap:12 }}>
+          <div className="pay-row2" style={{ display:"flex",gap:12 }}>
             <F label={tr.withdrawModal.amount} half>
               <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={inputSt} onFocus={e=>e.target.style.borderColor="#c0392b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
             </F>
@@ -934,7 +976,7 @@ function WithdrawModal({ lang, onSave, onClose }: { lang: string; onSave: (data:
             <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.withdrawModal.notesPh} rows={2} style={{ ...inputSt,resize:"vertical",lineHeight:1.6 }} onFocus={e=>e.target.style.borderColor="#c0392b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
           </F>
         </div>
-        <div style={{ padding:"14px 26px 22px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3" }}>
+        <div className="pay-foot" style={{ padding:"14px 26px 18px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3",background:"#fff",flexShrink:0,boxShadow:"0 -6px 20px rgba(15,40,80,.06)" }}>
           <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"13px",background:saving?"#e57373":"#c0392b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(192,57,43,.25)",transition:"all .2s" }}>
             {saving?(isAr?"جاري الحفظ...":"Saving..."):tr.withdrawModal.save}
           </button>
@@ -963,17 +1005,39 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
   };
 
   return (
-    <div className="modal-sheet" style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(4px)" }}/>
-      <div className="modal-inner" style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:20,width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 24px 80px rgba(123,45,139,.18)",animation:"modalIn .25s cubic-bezier(.4,0,.2,1)" }}>
-        <div style={{ padding:"22px 26px 18px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,background:"rgba(123,45,139,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph="🏪" /></div>
-            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{tr.expenseModal.title}</h2>
+    <div className="pay-overlay">
+      <style>{`
+        .pay-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+        .pay-sheet{position:relative;z-index:1;background:#fff;border-radius:22px;width:100%;
+          max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+          animation:payPop .28s cubic-bezier(.4,0,.2,1)}
+        @keyframes payPop{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+        .pay-body{flex:1;overflow-y:auto;padding:20px 26px;min-height:0}
+        .pay-body::-webkit-scrollbar{width:8px}
+        .pay-body::-webkit-scrollbar-thumb{background:#dde5ef;border-radius:8px}
+        .pay-grip{display:none}
+        @media(max-width:640px){
+          .pay-overlay{align-items:flex-end;padding:0}
+          .pay-sheet{max-width:100%!important;max-height:94vh;border-radius:22px 22px 0 0;animation:payUp .3s cubic-bezier(.4,0,.2,1)}
+          @keyframes payUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+          .pay-grip{display:block}
+          .pay-body{padding:16px}
+          .pay-head{padding:12px 16px 14px!important}
+          .pay-foot{padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))!important;flex-wrap:wrap}
+          .pay-row2{flex-direction:column!important;gap:12px!important}
+        }
+      `}</style>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(10,25,50,.5)",backdropFilter:"blur(4px)" }}/>
+      <div className="pay-sheet" style={{ maxWidth:480,boxShadow:"0 24px 70px rgba(123,45,139,.25)" }}>
+        <div className="pay-grip" style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"10px auto 0",flexShrink:0 }}/>
+        <div className="pay-head" style={{ padding:"18px 26px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0,background:"linear-gradient(135deg, rgba(123,45,139,.06), transparent)" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12,minWidth:0 }}>
+            <div style={{ width:44,height:44,background:"rgba(123,45,139,.1)",border:"1.5px solid rgba(123,45,139,.2)",borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}><AppIcon glyph="🏪" /></div>
+            <h2 style={{ fontSize:17,fontWeight:800,color:"#2c3e50",margin:0 }}>{tr.expenseModal.title}</h2>
           </div>
-          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:15 }}>✕</button>
+          <button onClick={onClose} aria-label="close" style={{ width:34,height:34,borderRadius:10,background:"#f2f5f9",border:"1.5px solid #e8eaed",cursor:"pointer",fontSize:15,color:"#7d8896",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
         </div>
-        <div style={{ padding:"20px 26px" }}>
+        <div className="pay-body">
           {error&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:16 }}><AppIcon glyph="⚠️" /> {error}</div>}
           {/* Category Selector */}
           <F label={tr.expenseModal.category}>
@@ -986,7 +1050,7 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
               ))}
             </div>
           </F>
-          <div style={{ display:"flex",gap:12 }}>
+          <div className="pay-row2" style={{ display:"flex",gap:12 }}>
             <F label={tr.expenseModal.amount} half>
               <input type="number" onWheel={e=>(e.target as HTMLInputElement).blur()} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0.00" style={inputSt} onFocus={e=>e.target.style.borderColor="#7b2d8b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
             </F>
@@ -1001,7 +1065,7 @@ function ExpenseModal({ lang, onSave, onClose }: { lang: string; onSave: (data: 
             <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder={tr.expenseModal.notesPh} rows={2} style={{ ...inputSt,resize:"vertical",lineHeight:1.6 }} onFocus={e=>e.target.style.borderColor="#7b2d8b"} onBlur={e=>e.target.style.borderColor="#e8eaed"}/>
           </F>
         </div>
-        <div style={{ padding:"14px 26px 22px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3" }}>
+        <div className="pay-foot" style={{ padding:"14px 26px 18px",display:"flex",gap:10,borderTop:"1.5px solid #eef0f3",background:"#fff",flexShrink:0,boxShadow:"0 -6px 20px rgba(15,40,80,.06)" }}>
           <button onClick={handleSave} disabled={saving} style={{ flex:1,padding:"13px",background:saving?"#ba68c8":"#7b2d8b",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",boxShadow:"0 4px 16px rgba(123,45,139,.25)",transition:"all .2s" }}>
             {saving?(isAr?"جاري الحفظ...":"Saving..."):tr.expenseModal.save}
           </button>
