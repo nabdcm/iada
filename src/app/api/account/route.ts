@@ -49,14 +49,17 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   try {
-    const { owner, phone, clinic_name } = (await req.json()) as {
+    const { owner, phone, clinic_name, currency, settings } = (await req.json()) as {
       owner?: string; phone?: string; clinic_name?: string;
+      currency?: string; settings?: Record<string, unknown>;
     };
 
     const clinicUpdate: Record<string, unknown> = {};
     if (owner !== undefined)       clinicUpdate.owner = String(owner).trim();
     if (phone !== undefined)       clinicUpdate.phone = String(phone).trim();
     if (clinic_name !== undefined) clinicUpdate.name = String(clinic_name).trim();
+    if (currency !== undefined && currency) clinicUpdate.currency = String(currency).toUpperCase();
+    if (settings !== undefined)    clinicUpdate.settings = settings;
 
     if (Object.keys(clinicUpdate).length === 0) {
       return NextResponse.json({ error: "nothing_to_update" }, { status: 400 });

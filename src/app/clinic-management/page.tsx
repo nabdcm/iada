@@ -881,8 +881,15 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       allow_online_booking: allowOnline,
       require_approval: requireApproval,
     };
-    // حفظ في clinics
-    await supabase.from("clinics").update({ name: clinicName, settings, currency }).eq("user_id", userId);
+    // حفظ في clinics عبر API آمن (سياسات RLS تمنع التعديل المباشر من العميل)
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch("/api/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ clinic_name: clinicName, settings, currency }),
+      });
+    } catch { /* تُلتقط أدناه بمزامنة clinic_profiles */ }
     // مزامنة مع clinic_profiles لتنعكس على صفحة الحجز
     const workingDaysCodes = ["sun","mon","tue","wed","thu","fri","sat"]
       .filter((_,i) => !weekendDays.includes(i));
