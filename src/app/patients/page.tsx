@@ -1,11 +1,11 @@
 "use client";
 
-import AppIcon from "@/components/AppIcon";
+import AppIcon, { appIconSvg } from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSProperties } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase } from "@/lib/supabase";
-import { CLINIC_TYPE_META, type ClinicType } from "@/lib/clinic-types";
+import { CLINIC_TYPE_META, CLINIC_TYPE_ICON_NAME, type ClinicType } from "@/lib/clinic-types";
 import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import type { Patient } from "@/lib/supabase";
@@ -385,163 +385,6 @@ const AVATAR_COLORS = ["#0863ba","#2e7d32","#c0392b","#7b2d8b","#e67e22","#16a08
 const getColor    = (id:number) => AVATAR_COLORS[(id-1)%AVATAR_COLORS.length];
 const getInitials = (name:string) => name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
 
-// ─── Print Medical Report ──────────────────────────────────
-function printMedicalReport(
-  patient: Patient,
-  medicalFields: Record<string,string>,
-  medFieldDefs: MedicalField[],
-  clinicType: ClinicType,
-  clinicName: string,
-  doctorName: string,
-  clinicPhone: string,
-  lang: Lang,
-) {
-  const isAr = lang === "ar";
-  const dir = isAr ? "rtl" : "ltr";
-  const meta = CLINIC_TYPE_META[clinicType] ?? CLINIC_TYPE_META.general;
-
-  const calcAgeLocal = (dob?:string|null) => {
-    if (!dob) return "—";
-    const b = new Date(dob), n = new Date();
-    let age = n.getFullYear()-b.getFullYear();
-    if (n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate())) age--;
-    return age>=0 ? String(age) : "—";
-  };
-  const genderLabel = patient.gender ? (isAr?(patient.gender==="male"?"ذكر":"أنثى"):(patient.gender==="male"?"Male":"Female")) : "—";
-  const age = calcAgeLocal(patient.date_of_birth);
-
-  const filledFields = medFieldDefs.filter(f => (medicalFields?.[f.key]??"").trim().length>0);
-
-  const sectionsHTML = filledFields.length
-    ? filledFields.map(f => `
-      <div class="section-title">${f.icon} ${isAr?f.label_ar:f.label_en}</div>
-      <div class="notes-box" style="margin-bottom:20px; white-space:pre-wrap;">${(medicalFields[f.key]||"").replace(/</g,"&lt;")}</div>
-    `).join("")
-    : `<div class="notes-box" style="text-align:center; color:#aaa;">${isAr?"لا توجد بيانات مسجلة في السجل الطبي":"No data recorded in the medical record"}</div>`;
-
-  const genDate = new Date().toLocaleDateString(isAr?"ar-SA-u-ca-gregory-nu-latn":"en-US",{ year:"numeric", month:"long", day:"numeric" });
-
-  const html = `
-    <!DOCTYPE html>
-    <html dir="${dir}" lang="${lang}">
-    <head>
-      <meta charset="UTF-8" />
-      <title>${isAr?"تقرير طبي":"Medical Report"}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-          font-family: ${isAr ? "'Noto Naskh Arabic', serif" : "'Noto Sans', sans-serif"};
-          direction: ${dir};
-          background: #fff;
-          color: #1a1a2e;
-          font-size: 13px;
-          line-height: 1.6;
-        }
-        .page { max-width: 800px; margin: 0 auto; padding: 40px; }
-        .header {
-          display: flex; justify-content: space-between; align-items: flex-start;
-          padding-bottom: 24px; border-bottom: 3px solid ${meta.color}; margin-bottom: 28px;
-        }
-        .clinic-info h1 { font-size: 24px; font-weight: 800; color: ${meta.color}; margin-bottom: 4px; }
-        .clinic-info p { font-size: 13px; color: #666; margin-bottom: 2px; }
-        .rx-badge {
-          width: 64px; height: 64px;
-          background: linear-gradient(135deg, ${meta.color}, ${meta.color}cc);
-          border-radius: 16px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 28px; color: white;
-          box-shadow: 0 4px 16px ${meta.color}40;
-        }
-        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-        .meta-card { background: #f7f9fc; border: 1.5px solid #eef0f3; border-radius: 12px; padding: 14px 18px; }
-        .meta-card .label { font-size: 10px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-        .meta-card .value { font-size: 15px; font-weight: 700; color: #1a1a2e; }
-        .section-title {
-          font-size: 13px; font-weight: 700; color: ${meta.color};
-          text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .section-title::after { content: ""; flex: 1; height: 1.5px; background: linear-gradient(90deg, ${meta.color}20, transparent); }
-        .notes-box {
-          background: rgba(0,0,0,.02);
-          border: 1.5px solid #eef0f3;
-          border-radius: 10px;
-          padding: 14px 18px;
-          font-size: 13px;
-          color: #333;
-          line-height: 1.8;
-        }
-        .footer {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
-          padding-top: 24px; border-top: 1.5px solid #eef0f3; margin-top: 32px;
-        }
-        .signature-area { text-align: center; }
-        .signature-line { border-bottom: 1.5px dashed #ccc; margin-bottom: 8px; height: 60px; }
-        .signature-label { font-size: 11px; color: #888; }
-        .footer-note { text-align: center; font-size: 10px; color: #bbb; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f0f2f5; }
-        @media print {
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .page { padding: 20px; }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="page">
-        <div class="header">
-          <div class="clinic-info">
-            <h1>${clinicName || (isAr?"عيادة نبض":"NABD Clinic")}</h1>
-            ${doctorName?`<p><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> ${doctorName}</p>`:""}
-            ${clinicPhone?`<p><AppIcon glyph="📞" /> ${clinicPhone}</p>`:""}
-            <p style="font-size:11px; color:#999; margin-top:6px;">${isAr?"تقرير طبي":"Medical Report"} — ${isAr?meta.ar:meta.en}</p>
-          </div>
-          <div class="rx-badge">${meta.icon}</div>
-        </div>
-
-        <div class="meta-grid">
-          <div class="meta-card">
-            <div class="label">${isAr?"اسم المريض":"Patient Name"}</div>
-            <div class="value">${patient.name}</div>
-          </div>
-          <div class="meta-card">
-            <div class="label">${isAr?"تاريخ التقرير":"Report Date"}</div>
-            <div class="value">${genDate}</div>
-          </div>
-          <div class="meta-card">
-            <div class="label">${isAr?"الجنس":"Gender"}</div>
-            <div class="value">${genderLabel}</div>
-          </div>
-          <div class="meta-card">
-            <div class="label">${isAr?"العمر":"Age"}</div>
-            <div class="value">${age!=="—"?`${age} ${isAr?"سنة":"yrs"}`:"—"}</div>
-          </div>
-        </div>
-
-        <div class="section-title">${isAr?"محتوى السجل الطبي":"Medical Record Content"}</div>
-        ${sectionsHTML}
-
-        <div class="footer">
-          <div class="signature-area">
-            <div class="signature-line"></div>
-            <div class="signature-label">${isAr?"توقيع الطبيب":"Doctor's Signature"}</div>
-          </div>
-          <div class="signature-area">
-            <div class="signature-line"></div>
-            <div class="signature-label">${isAr?"ختم العيادة":"Clinic Stamp"}</div>
-          </div>
-        </div>
-
-        <div class="footer-note">نبض — نظام إدارة العيادة | NABD Clinic Management System</div>
-      </div>
-      <script>window.onload = () => { window.print(); }</script>
-    </body>
-    </html>
-  `;
-
-  const w = window.open("", "_blank");
-  if (w) { w.document.write(html); w.document.close(); }
-}
-
 function buildDefaultReportText(medicalFields: Record<string,string>, medFieldDefs: MedicalField[], isAr: boolean): string {
   const filled = medFieldDefs.filter(f => (medicalFields?.[f.key]??"").trim().length>0);
   if (!filled.length) return "";
@@ -589,8 +432,9 @@ function printMedicalReportText(
         .page { max-width: 800px; margin: 0 auto; padding: 40px; }
         .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; border-bottom: 3px solid ${meta.color}; margin-bottom: 28px; }
         .clinic-info h1 { font-size: 24px; font-weight: 800; color: ${meta.color}; margin-bottom: 4px; }
-        .clinic-info p { font-size: 13px; color: #666; margin-bottom: 2px; }
-        .rx-badge { width: 64px; height: 64px; background: linear-gradient(135deg, ${meta.color}, ${meta.color}cc); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: white; box-shadow: 0 4px 16px ${meta.color}40; }
+        .clinic-info p { font-size: 13px; color: #666; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+        .clinic-info p svg { color: ${meta.color}; }
+        .rx-badge { width: 64px; height: 64px; background: linear-gradient(135deg, ${meta.color}, ${meta.color}cc); border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 16px ${meta.color}40; }
         .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
         .meta-card { background: #f7f9fc; border: 1.5px solid #eef0f3; border-radius: 12px; padding: 14px 18px; }
         .meta-card .label { font-size: 10px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
@@ -611,11 +455,11 @@ function printMedicalReportText(
         <div class="header">
           <div class="clinic-info">
             <h1>${clinicName || (isAr?"عيادة نبض":"NABD Clinic")}</h1>
-            ${doctorName?`<p><AppIcon glyph="👨" />‍<AppIcon glyph="⚕️" /> ${doctorName}</p>`:""}
-            ${clinicPhone?`<p><AppIcon glyph="📞" /> ${clinicPhone}</p>`:""}
+            ${doctorName?`<p>${appIconSvg("stethoscope")} ${doctorName}</p>`:""}
+            ${clinicPhone?`<p>${appIconSvg("phone")} ${clinicPhone}</p>`:""}
             <p style="font-size:11px; color:#999; margin-top:6px;">${isAr?"تقرير طبي":"Medical Report"} — ${isAr?meta.ar:meta.en}</p>
           </div>
-          <div class="rx-badge">${meta.icon}</div>
+          <div class="rx-badge">${appIconSvg(CLINIC_TYPE_ICON_NAME[clinicType] ?? "hospital", 30)}</div>
         </div>
         <div class="meta-grid">
           <div class="meta-card"><div class="label">${isAr?"اسم المريض":"Patient Name"}</div><div class="value">${patient.name}</div></div>

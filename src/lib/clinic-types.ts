@@ -43,3 +43,25 @@ export const CLINIC_TYPE_KEYS = Object.keys(CLINIC_TYPE_META) as ClinicType[];
 export const CLINIC_TYPE_ICONS: Record<string, string> = Object.fromEntries(
   CLINIC_TYPE_KEYS.map(k => [k, CLINIC_TYPE_META[k].icon])
 );
+
+/**
+ * اسم أيقونة outline لكل تخصص — للاستخدام مع appIconSvg
+ * في قوالب HTML (الطباعة والتقارير) حيث لا تُصيَّر مكوّنات React.
+ */
+export const CLINIC_TYPE_ICON_NAME: Record<ClinicType, string> = {
+  general:          "stethoscope",
+  dental:           "tooth",
+  dermatology:      "lotion",
+  cosmetic:         "scalpel",
+  pediatrics:       "baby",
+  physical_therapy: "bone",
+  mental_health:    "brain",
+  nutrition:        "salad",
+  ophthalmology:    "eye",
+  orthopedic:       "bone",
+  cardiology:       "heart",
+  gynecology:       "flower",
+  ent:              "ear",
+  urology:          "drop",
+  other:            "hospital",
+};
