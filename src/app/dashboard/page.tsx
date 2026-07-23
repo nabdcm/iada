@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, type JSX, type DragEvent } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
-import NotificationBell from "@/components/NotificationBell";
 import { supabase } from "@/lib/supabase";
 import PageIntro from "@/components/PageIntro";
 

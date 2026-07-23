@@ -12,9 +12,6 @@ import type { TablesInsert } from "@/lib/database.types";
 // ════════════════════════════════════════════════════════════
 type Lang = "ar" | "en";
 type Tab  = "appointments" | "patients" | "finance";
-type ApptStatus = "scheduled"|"completed"|"cancelled"|"no-show";
-type PayStatus  = "paid"|"pending"|"cancelled";
-type PayMethod  = "cash"|"card"|"transfer";
 
 type PatientForm = {
   name:string; phone:string; gender:string; date_of_birth:string;

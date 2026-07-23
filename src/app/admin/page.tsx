@@ -561,11 +561,6 @@ const PLAN_FEATURES: Record<string, { ar: string[]; en: string[] }> = {
 };
 
 // Clinic type icons
-const STATUS_COLORS = {
-  active:   { bg:"rgba(46,125,50,.1)",   color:"#2e7d32" },
-  inactive: { bg:"rgba(230,126,34,.1)",  color:"#e67e22" },
-  expired:  { bg:"rgba(192,57,43,.1)",  color:"#c0392b" },
-};
 
 const genPass = (): string => {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#";

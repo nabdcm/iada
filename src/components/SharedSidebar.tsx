@@ -29,18 +29,9 @@ const PLAN_ACCESS: Record<string, string[]> = {
 const canAccess = (feature: string, plan: PlanType): boolean =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 
-const PLAN_BADGE: Record<PlanType, { label: { ar: string; en: string }; color: string; isShared?: boolean }> = {
-  basic:             { label: { ar: "الأساسية",           en: "Basic"          }, color: "#0863ba" },
-  pro:               { label: { ar: "الاحترافية",         en: "Professional"   }, color: "#7b2d8b" },
-  enterprise:        { label: { ar: "الشاملة",            en: "Comprehensive"  }, color: "#e67e22" },
-  shared_basic:      { label: { ar: "مشتركة - أساسية",   en: "Shared - Basic" }, color: "#0e8a6e", isShared: true },
-  shared_pro:        { label: { ar: "مشتركة - احترافية", en: "Shared - Pro"   }, color: "#6a1fa8", isShared: true },
-  shared_enterprise: { label: { ar: "مشتركة - شاملة",    en: "Shared - Full"  }, color: "#c0620a", isShared: true },
-};
 
 // ─── Colour tokens ───────────────────────────────────────────
 const SB_BG        = "#0558a8";
-const SB_HEADER    = "#044d96";
 const SB_ACTIVE_BG = "rgba(255,255,255,0.15)";
 const SB_ACTIVE    = "#ffffff";
 const SB_IDLE      = "rgba(255,255,255,0.65)";
@@ -48,10 +39,8 @@ const SB_BORDER    = "rgba(255,255,255,0.1)";
 const SB_INDICATOR = "#7dd3fc";
 
 // Bottom nav colours
-const BN_BG        = "#0558a8";
 const BN_ACTIVE    = "#ffffff";
 const BN_IDLE      = "rgba(255,255,255,0.55)";
-const BN_INDICATOR = "#7dd3fc";
 
 // ─── SVG Icons ───────────────────────────────────────────────
 const Icons = {

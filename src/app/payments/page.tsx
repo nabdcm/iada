@@ -270,27 +270,8 @@ const fmt = (d: Date) => d.toISOString().split("T")[0];
 
 // ─── Sidebar ──────────────────────────────────────────────
 // Design tokens
-const SB_BG          = "#0558a8";
-const SB_BG_HEADER   = "#044d96";
-const SB_BG_FOOTER   = "#044d96";
-const SB_ACTIVE_BG   = "rgba(255,255,255,0.15)";
-const SB_ACTIVE_TEXT = "#ffffff";
-const SB_IDLE_TEXT   = "rgba(255,255,255,0.62)";
-const SB_BORDER      = "rgba(255,255,255,0.1)";
-const SB_INDICATOR   = "#7dd3fc";
 
-const PillIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7z"/>
-    <line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>
-  </svg>
-);
 
-const TrackingIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-  </svg>
-);
 
 // ─── Plan access rules ────────────────────────────────────
 type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" | "shared_enterprise";
@@ -300,18 +281,8 @@ const SHARED_CLINIC_PLANS: PlanType[] = ["shared_basic", "shared_pro", "shared_e
 const isSharedClinicPlan = (plan: PlanType) => SHARED_CLINIC_PLANS.includes(plan);
 
 // حدود الأطباء لكل خطة مشتركة
-const CLINIC_PLAN_DOCTOR_LIMITS: Record<string, number> = {
-  shared_basic:      2,
-  shared_pro:        3,
-  shared_enterprise: 5,
-};
 
 // أسعار الخطط المشتركة (دولار)
-const CLINIC_PLAN_PRICING = {
-  shared_basic:      { monthly: 7.99,  yearly: 79  },
-  shared_pro:        { monthly: 13.99, yearly: 139 },
-  shared_enterprise: { monthly: 21.99, yearly: 219 },
-};
 
 const PLAN_ACCESS: Record<string, string[]> = {
   payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
@@ -324,14 +295,6 @@ const PLAN_ACCESS: Record<string, string[]> = {
 const canAccess = (feature: string, plan: PlanType): boolean =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
 
-const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string;isShared?:boolean}> = {
-  basic:             {label:{ar:"الأساسية",            en:"Basic"},             color:"#0863ba"},
-  pro:               {label:{ar:"الاحترافية",          en:"Professional"},      color:"#7b2d8b"},
-  enterprise:        {label:{ar:"الشاملة",             en:"Comprehensive"},     color:"#e67e22"},
-  shared_basic:      {label:{ar:"مشتركة — أساسية",    en:"Shared — Basic"},    color:"#0e7c6a", isShared:true},
-  shared_pro:        {label:{ar:"مشتركة — احترافية",  en:"Shared — Pro"},      color:"#b5451b", isShared:true},
-  shared_enterprise: {label:{ar:"مشتركة — شاملة",    en:"Shared — Full"},     color:"#4a1480", isShared:true},
-};
 
 
 // ─── Field wrapper — خارج كل المكونات لتجنب مشكلة focus ────

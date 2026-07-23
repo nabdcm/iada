@@ -267,12 +267,6 @@ const defaultSchedule = (doctor_id: number, user_id: string): DoctorSchedule => 
 });
 
 // ─── Sidebar الشريط الجانبي (مطابق لصفحة المواعيد) ───────────
-const SB_BG        = "#0558a8";
-const SB_BG_HEADER = "#044d96";
-const SB_BG_FOOTER = "#044d96";
-const SB_ACTIVE_BG = "rgba(255,255,255,0.15)";
-const SB_IDLE_TEXT = "rgba(255,255,255,0.62)";
-const SB_BORDER    = "rgba(255,255,255,0.1)";
 
 const PLAN_BADGE_COLOR: Record<string, string> = {
   basic: "#0863ba", pro: "#7b2d8b", enterprise: "#e67e22",
