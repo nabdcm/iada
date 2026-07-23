@@ -1531,26 +1531,60 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
   const setExtra = (key:string, val:string|boolean) => setForm(p=>({...p,extra_fields:{...p.extra_fields,[key]:val}}));
 
   return (
-    <div style={{ position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)" }}/>
-      <div style={{ position:"relative",zIndex:1,background:"#fff",borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",boxShadow:"0 -8px 40px rgba(8,99,186,.18)",animation:"slideUp .3s cubic-bezier(.4,0,.2,1)" }}>
-        <div style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"12px auto 0",flexShrink:0 }}/>
-        <div style={{ padding:"16px 24px 16px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-          <div>
-            <h2 style={{ fontSize:17,fontWeight:800,color:"#353535" }}>{isEdit?tr.modal.editTitle:tr.modal.addTitle}</h2>
-            <div style={{ fontSize:11,color:meta.color,marginTop:3,fontWeight:600 }}>{meta.icon} {isAr?meta.ar:meta.en}</div>
+    <div className="pm-overlay">
+      <style>{`
+        .pm-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+        .pm-sheet{position:relative;z-index:1;background:#fff;border-radius:22px;width:100%;max-width:560px;
+          max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+          box-shadow:0 24px 70px rgba(8,99,186,.28);animation:pmPop .3s cubic-bezier(.4,0,.2,1)}
+        @keyframes pmPop{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+        .pm-body{flex:1;overflow-y:auto;padding:20px 24px;min-height:0}
+        .pm-body::-webkit-scrollbar{width:8px}
+        .pm-body::-webkit-scrollbar-thumb{background:#dde5ef;border-radius:8px}
+        .pm-grip{display:none}
+        .pm-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        @media(max-width:640px){
+          .pm-overlay{align-items:flex-end;padding:0}
+          .pm-sheet{max-width:100%;max-height:94vh;border-radius:22px 22px 0 0;animation:pmUp .3s cubic-bezier(.4,0,.2,1)}
+          @keyframes pmUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+          .pm-grip{display:block}
+          .pm-body{padding:16px 16px}
+          .pm-head{padding:12px 16px 14px!important}
+          .pm-foot{padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))!important}
+          .pm-grid2{grid-template-columns:1fr;gap:12px}
+        }
+      `}</style>
+      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(10,25,50,.5)",backdropFilter:"blur(4px)" }}/>
+      <div className="pm-sheet">
+        <div className="pm-grip" style={{ width:40,height:4,background:"#e0e0e0",borderRadius:4,margin:"10px auto 0",flexShrink:0 }}/>
+
+        {/* ── رأس ثابت ── */}
+        <div className="pm-head" style={{ padding:"18px 24px",borderBottom:"1.5px solid #eef0f3",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0,background:`linear-gradient(135deg, ${meta.color}0a, transparent)` }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12,minWidth:0 }}>
+            <div style={{ width:44,height:44,borderRadius:13,background:`${meta.color}14`,border:`1.5px solid ${meta.color}2e`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0 }}>
+              <AppIcon glyph={meta.icon} />
+            </div>
+            <div style={{ minWidth:0 }}>
+              <h2 style={{ fontSize:17,fontWeight:800,color:"#2c3e50",margin:0 }}>{isEdit?tr.modal.editTitle:tr.modal.addTitle}</h2>
+              <div style={{ fontSize:11.5,color:meta.color,marginTop:2,fontWeight:700 }}>{isAr?meta.ar:meta.en}</div>
+            </div>
           </div>
-          <button onClick={onClose} style={{ width:34,height:34,borderRadius:8,background:"#f5f5f5",border:"none",cursor:"pointer",fontSize:16 }}>✕</button>
+          <button onClick={onClose} aria-label="close" style={{ width:34,height:34,borderRadius:10,background:"#f2f5f9",border:"1.5px solid #e8eaed",cursor:"pointer",fontSize:15,color:"#7d8896",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
         </div>
 
-        <div style={{ padding:"20px 24px" }}>
+        {/* ── المحتوى القابل للتمرير ── */}
+        <div className="pm-body">
           {(error||externalError)&&<div style={{ background:"rgba(255,181,181,.15)",border:"1.5px solid rgba(255,181,181,.5)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#c0392b",marginBottom:18,display:"flex",alignItems:"center",gap:8 }}><AppIcon glyph="⚠️" /> {error||externalError}</div>}
 
           {/* ── أساسيات ── */}
+          <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:12 }}>
+            <span style={{ width:4,height:16,borderRadius:3,background:"#0863ba",flexShrink:0 }} />
+            <span style={{ fontSize:12.5,fontWeight:800,color:"#0863ba",letterSpacing:.2 }}>{isAr?"المعلومات الأساسية":"Basic information"}</span>
+          </div>
           <Field label={tr.modal.name}>
             <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder={tr.modal.namePh} style={inputSt}/>
           </Field>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
+          <div className="pm-grid2">
             <Field label={isAr ? "رقم الهاتف *" : "Phone Number *"}>
               <input value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} placeholder={tr.modal.phonePh} style={inputSt}/>
             </Field>
@@ -1567,7 +1601,11 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
           </Field>
 
           {/* ── حالات مزمنة عامة ── */}
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:18 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:8,margin:"6px 0 12px" }}>
+            <span style={{ width:4,height:16,borderRadius:3,background:"#e67e22",flexShrink:0 }} />
+            <span style={{ fontSize:12.5,fontWeight:800,color:"#e67e22",letterSpacing:.2 }}>{isAr?"الحالة الصحية":"Health status"}</span>
+          </div>
+          <div className="pm-grid2" style={{ marginBottom:18 }}>
             {([
               { key:"has_diabetes" as const,     label:tr.modal.diabetes,     icon:"🩸",color:"#c0392b" },
               { key:"has_hypertension" as const, label:tr.modal.hypertension, icon:"💊",color:"#e67e22" },
@@ -1627,17 +1665,22 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
           )}
 
           {/* ملاحظات */}
+          <div style={{ display:"flex",alignItems:"center",gap:8,margin:"14px 0 12px",paddingTop:14,borderTop:"1.5px dashed #eef0f3" }}>
+            <span style={{ width:4,height:16,borderRadius:3,background:"#7b2d8b",flexShrink:0 }} />
+            <span style={{ fontSize:12.5,fontWeight:800,color:"#7b2d8b",letterSpacing:.2 }}>{isAr?"ملاحظات إضافية":"Additional notes"}</span>
+          </div>
           <Field label={tr.modal.notes}>
             <textarea value={form.notes??""} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder={tr.modal.notesPh} rows={3} style={{ ...inputSt,resize:"vertical" as const,lineHeight:1.6 }}/>
           </Field>
         </div>
 
-        <div style={{ padding:"12px 24px 32px",display:"flex",gap:12,borderTop:"1.5px solid #eef0f3" }}>
-          <button onClick={handleSave} style={{ flex:1,padding:"14px",background:"#0863ba",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(8,99,186,.25)" }}>
-            {isEdit?tr.modal.update:tr.modal.save}
-          </button>
-          <button onClick={onClose} style={{ padding:"14px 20px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,cursor:"pointer" }}>
+        {/* ── تذييل ثابت: أزرار الحفظ ظاهرة دائماً ── */}
+        <div className="pm-foot" style={{ padding:"14px 24px 18px",display:"flex",gap:12,borderTop:"1.5px solid #eef0f3",background:"#fff",flexShrink:0,boxShadow:"0 -6px 20px rgba(15,40,80,.06)" }}>
+          <button onClick={onClose} style={{ padding:"14px 22px",background:"#f2f5f9",color:"#6b7684",border:"1.5px solid #e8eaed",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:14,fontWeight:600,cursor:"pointer",flexShrink:0 }}>
             {tr.modal.cancel}
+          </button>
+          <button onClick={handleSave} style={{ flex:1,padding:"14px",background:"linear-gradient(135deg,#0863ba,#3d8fd6)",color:"#fff",border:"none",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 6px 18px rgba(8,99,186,.3)" }}>
+            {isEdit?tr.modal.update:tr.modal.save}
           </button>
         </div>
       </div>
