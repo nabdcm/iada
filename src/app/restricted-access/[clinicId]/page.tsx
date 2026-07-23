@@ -65,7 +65,6 @@ const APPT_DOC_COLORS = ["#6d28d9","#0863ba","#2e7d32","#c0392b","#e67e22","#089
 const toKeyAppt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
 // ─── نفس حقول السجل الطبي الموجودة في النظام الأصلي ──────────
-type ClinicType = "general"|"dental"|"dermatology"|"cosmetic"|"pediatrics"|"physical_therapy"|"mental_health"|"nutrition"|"ophthalmology"|"orthopedic"|"cardiology"|"gynecology"|"ent"|"urology"|"other";
 
 type MedicalField = { key:string; label_ar:string; icon:string };
 

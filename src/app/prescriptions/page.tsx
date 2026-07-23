@@ -1,9 +1,10 @@
 "use client";
 
 import AppIcon from "@/components/AppIcon";
-import { useState, useEffect, useRef, type JSX } from "react";
+import { useState, useEffect } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase } from "@/lib/supabase";
+import type { TablesInsert } from "@/lib/database.types";
 import PageIntro from "@/components/PageIntro";
 
 // ============================================================
@@ -176,27 +177,8 @@ interface Prescription {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────
-const SB_BG          = "#0558a8";
-const SB_BG_HEADER   = "#044d96";
-const SB_BG_FOOTER   = "#044d96";
-const SB_ACTIVE_BG   = "rgba(255,255,255,0.15)";
-const SB_ACTIVE_TEXT = "#ffffff";
-const SB_IDLE_TEXT   = "rgba(255,255,255,0.62)";
-const SB_BORDER      = "rgba(255,255,255,0.1)";
-const SB_INDICATOR   = "#7dd3fc";
 
-const PillIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7z"/>
-    <line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>
-  </svg>
-);
 
-const TrackingIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-  </svg>
-);
 
 // ─── Plan access rules ────────────────────────────────────
 // individual: basic | pro | enterprise
@@ -206,10 +188,6 @@ type PlanType = "basic" | "pro" | "enterprise" | "shared_basic" | "shared_pro" |
 const isSharedPlan = (plan: PlanType): boolean =>
   plan === "shared_basic" || plan === "shared_pro" || plan === "shared_enterprise";
 
-const SHARED_PLAN_MAX_DOCTORS: Record<PlanType, number> = {
-  basic: 1, pro: 1, enterprise: 1,
-  shared_basic: 2, shared_pro: 3, shared_enterprise: 5,
-};
 
 const PLAN_ACCESS: Record<string, string[]> = {
   payments:         ["pro", "enterprise", "shared_pro", "shared_enterprise"],
@@ -221,14 +199,6 @@ const PLAN_ACCESS: Record<string, string[]> = {
 
 const canAccess = (feature: string, plan: PlanType): boolean =>
   PLAN_ACCESS[feature] ? PLAN_ACCESS[feature].includes(plan) : true;
-const PLAN_BADGE: Record<PlanType,{label:{ar:string;en:string};color:string}> = {
-  basic:             {label:{ar:"الأساسية",          en:"Basic"},           color:"#0863ba"},
-  pro:               {label:{ar:"الاحترافية",        en:"Professional"},    color:"#7b2d8b"},
-  enterprise:        {label:{ar:"الشاملة",           en:"Comprehensive"},   color:"#e67e22"},
-  shared_basic:      {label:{ar:"مشتركة - أساسية",  en:"Shared - Basic"},  color:"#0e8a6e"},
-  shared_pro:        {label:{ar:"مشتركة - احترافية",en:"Shared - Pro"},    color:"#6a1fa8"},
-  shared_enterprise: {label:{ar:"مشتركة - شاملة",   en:"Shared - Full"},   color:"#c0620a"},
-};
 
 
 // ─── Print Prescription ────────────────────────────────────
@@ -673,7 +643,7 @@ export default function PrescriptionsPage() {
         if (dr) resolvedDoctorName = dr.name;
       }
 
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"prescriptions"> & Record<string, unknown> = {
         patient_id: form.patient_id,
         date: form.date,
         diagnosis: form.diagnosis,
@@ -682,7 +652,7 @@ export default function PrescriptionsPage() {
         doctor_name: resolvedDoctorName,
         clinic_name: clinicName,
         user_id: userId,
-        ...(isSharedPlan(plan) && form.doctor_id ? { doctor_id: form.doctor_id } : {}),
+        ...(isSharedPlan(plan) && form.doctor_id ? { doctor_id: Number(form.doctor_id) } : {}),
       };
 
       if (editingId) {

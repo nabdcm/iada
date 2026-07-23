@@ -117,7 +117,7 @@ export default function MessagesPage() {
       .order("created_at", { ascending: true });
 
     if (fetchError) { console.error("loadMessages:", fetchError); return; }
-    setMessages(data ?? []);
+    setMessages((data ?? []) as Message[]);
   }
 
   async function sendMessage() {
