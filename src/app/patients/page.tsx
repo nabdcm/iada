@@ -681,7 +681,10 @@ function openWhatsApp(phone:string) {
 async function loadProfileFromDB(patientId:number): Promise<PatientProfile|null> {
   try {
     const { data, error } = await supabase.from("patient_profiles").select("*").eq("patient_id",patientId).maybeSingle();
-    if (error||!data) return null;
+    // ملاحظة مهمة: عند حدوث خطأ نعيد null — لذا يجب ألا يعتمد أي مسار حفظ
+    // على هذه الدالة لبناء صف كامل، وإلا تُمحى بيانات موجودة. استخدم patchProfileInDB.
+    if (error) { console.error("loadProfileFromDB:", error); return null; }
+    if (!data) return null;
     return {
       medical_fields:    data.medical_fields    ?? {},
       dental_chart:      data.dental_chart      ?? {},
@@ -691,16 +694,60 @@ async function loadProfileFromDB(patientId:number): Promise<PatientProfile|null>
   } catch { return null; }
 }
 
-async function saveProfileToDB(patientId:number, userId:string, profile:PatientProfile) {
-  await supabase.from("patient_profiles").upsert({
+async function saveProfileToDB(patientId:number, userId:string, profile:PatientProfile): Promise<{ ok:boolean; message?:string }> {
+  // ضمان وجود معرّف المستخدم — لا نعتمد على الحالة وحدها
+  let uid = userId;
+  if (!uid) {
+    const { data:{ user } } = await supabase.auth.getUser();
+    uid = user?.id ?? "";
+  }
+  if (!uid) return { ok:false, message:"no_session" };
+
+  const { error } = await supabase.from("patient_profiles").upsert({
     patient_id:        patientId,
-    user_id:           userId,
+    user_id:           uid,
     medical_fields:    profile.medical_fields,
     dental_chart:      profile.dental_chart,
     xrays:             profile.xrays,
     extra_form_fields: profile.extra_form_fields,
     updated_at:        new Date().toISOString(),
   },{ onConflict:"patient_id" });
+
+  if (error) {
+    console.error("saveProfileToDB:", error);
+    return { ok:false, message:error.message };
+  }
+  return { ok:true };
+}
+
+/**
+ * تحديث جزئي آمن لملف المريض — يكتب الحقول المُمرَّرة فقط،
+ * ولا يمسّ medical_fields أو dental_chart أو xrays إطلاقاً.
+ */
+async function patchProfileInDB(
+  patientId:number,
+  userId:string,
+  patch: Partial<Pick<PatientProfile,"medical_fields"|"dental_chart"|"xrays"|"extra_form_fields">>
+): Promise<{ ok:boolean; message?:string }> {
+  let uid = userId;
+  if (!uid) {
+    const { data:{ user } } = await supabase.auth.getUser();
+    uid = user?.id ?? "";
+  }
+  if (!uid) return { ok:false, message:"no_session" };
+
+  const { error } = await supabase.from("patient_profiles").upsert({
+    patient_id: patientId,
+    user_id:    uid,
+    ...patch,
+    updated_at: new Date().toISOString(),
+  },{ onConflict:"patient_id" });
+
+  if (error) {
+    console.error("patchProfileInDB:", error);
+    return { ok:false, message:error.message };
+  }
+  return { ok:true };
 }
 
 // ─── Dental Chart ─────────────────────────────────────────
@@ -1028,6 +1075,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
   const [draftValues,    setDraftValues]    = useState<Record<string,string>>({});
   const [fieldSaving,    setFieldSaving]    = useState<string|null>(null);
   const [fieldSaved,     setFieldSaved]     = useState<string|null>(null);
+  const [saveError,      setSaveError]      = useState<string>("");
 
   useEffect(()=>{
     (async()=>{
@@ -1040,12 +1088,21 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
     })();
   },[patient.id]);
 
-  const saveProfile = async (updated:PatientProfile) => {
-    setProfile(updated);
-    if (!userId) return;
+  // تحديث جزئي فقط — لا يمسّ بقية أقسام الملف (السجل الطبي/الأشعة/خريطة الأسنان)
+  const saveProfile = async (patch: Partial<PatientProfile>) => {
+    setProfile(prev => ({ ...prev, ...patch }));
     setSaving(true);
-    await saveProfileToDB(patient.id,userId,updated);
+    setSaveError("");
+    const res = await patchProfileInDB(patient.id, userId, patch);
+    if (!isMounted.current) return;
     setSaving(false);
+    if (!res.ok) {
+      setSaveError(
+        res.message === "no_session"
+          ? (isAr ? "انتهت جلستك. أعد تحميل الصفحة ثم احفظ مجدداً." : "Your session expired. Reload the page and save again.")
+          : (isAr ? "تعذّر حفظ البيانات. تحقق من الإنترنت وحاول مجدداً." : "Couldn't save. Check your connection and try again.")
+      );
+    }
   };
 
   const saveField = async (key:string) => {
@@ -1055,15 +1112,27 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
       medical_fields: { ...profile.medical_fields, [key]: value },
     };
     setFieldSaving(key);
-    // نُحدِّث الحالة المحلية فوراً حتى لا تُفقَد البيانات
+    setSaveError("");
+    // نُحدِّث الحالة المحلية فوراً حتى لا تُفقَد البيانات أمام المستخدم
     setProfile(updated);
-    if (userId) {
-      await saveProfileToDB(patient.id, userId, updated);
-    }
+
+    const res = await patchProfileInDB(patient.id, userId, { medical_fields: updated.medical_fields });
+
+    if (!isMounted.current) return;
     setFieldSaving(null);
+
+    if (!res.ok) {
+      // فشل الحفظ — نُبقي الحقل مفتوحاً ونُعلم المستخدم بدل ادّعاء النجاح
+      setSaveError(
+        res.message === "no_session"
+          ? (isAr ? "انتهت جلستك. أعد تحميل الصفحة ثم احفظ مجدداً." : "Your session expired. Reload the page and save again.")
+          : (isAr ? "تعذّر حفظ البيانات. تحقق من الإنترنت وحاول مجدداً." : "Couldn't save. Check your connection and try again.")
+      );
+      return;
+    }
+
     setFieldSaved(key);
     setExpandedField(null);
-    // نُخفي علامة "تم الحفظ" بعد ثانيتين
     setTimeout(() => { if(isMounted.current) setFieldSaved(prev => prev===key ? null : prev); }, 2000);
   };
 
@@ -1194,6 +1263,11 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                       <span style={{ fontSize:16 }}><AppIcon glyph={meta.icon} /></span>
                       <span style={{ fontSize:12,fontWeight:700,color:meta.color }}>{isAr?meta.ar:meta.en} — {t.medicalRecord}</span>
                     </div>
+                    {saveError && (
+                      <div style={{ background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.25)",borderRadius:10,padding:"11px 14px",fontSize:12.5,color:"#c0392b",fontWeight:600,marginBottom:12,lineHeight:1.7 }}>
+                        ⚠️ {saveError}
+                      </div>
+                    )}
                     <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
                       {medFields.map(field=>{
                         const isExpanded = expandedField===field.key;
@@ -1275,7 +1349,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                 {/* ── X-RAYS ── */}
                 {activeTab==="xrays"&&(
                   canXray
-                    ? <XRaySection lang={lang} xrays={profile.xrays} onChange={imgs=>saveProfile({...profile,xrays:imgs})}/>
+                    ? <XRaySection lang={lang} xrays={profile.xrays} onChange={imgs=>saveProfile({ xrays:imgs })}/>
                     : <div style={{ textAlign:"center",padding:"48px 20px",color:"#bbb" }}>
                         <div style={{ fontSize:48,marginBottom:12 }}><AppIcon glyph="🔒" /></div>
                         <div style={{ fontSize:15,fontWeight:700,color:"#888",marginBottom:8 }}>
@@ -1289,7 +1363,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
 
                 {/* ── DENTAL ── */}
                 {activeTab==="dental"&&isDental&&(
-                  <DentalChartSection lang={lang} chart={profile.dental_chart} onChange={c=>saveProfile({...profile,dental_chart:c})}/>
+                  <DentalChartSection lang={lang} chart={profile.dental_chart} onChange={c=>saveProfile({ dental_chart:c })}/>
                 )}
 
                 {/* ── LAB RESULTS (نبض مخبر — عبر MRN) ── */}
@@ -1939,11 +2013,13 @@ export default function PatientsPage() {
           has_hypertension:form.has_hypertension, notes:form.notes||null,
           ...(mrn ? { mrn } : {}),
         }).eq("id",id);
-        // حفظ extra_fields في patient_profiles
+        // حفظ extra_fields فقط — تحديث جزئي يحافظ على السجل الطبي وخريطة الأسنان والأشعة
         if (Object.keys(form.extra_fields).length) {
-          const prof = await loadProfileFromDB(id);
-          const updated = { ...(prof??{ medical_fields:{},dental_chart:{},xrays:[],extra_form_fields:{} }), extra_form_fields:form.extra_fields };
-          await saveProfileToDB(id,userId,updated);
+          const res = await patchProfileInDB(id, userId, { extra_form_fields: form.extra_fields });
+          if (!res.ok) {
+            setSaveError(isAr ? "تعذّر حفظ بيانات العيادة. حاول مجدداً." : "Couldn't save clinic fields. Try again.");
+            return;
+          }
         }
       } else {
         // إضافة جديد — تحقق من تكرار الهاتف أولاً
