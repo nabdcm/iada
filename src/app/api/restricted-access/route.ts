@@ -99,8 +99,9 @@ export async function POST(req: Request) {
         .select("*")
         .eq("user_id", clinicId)
         .neq("status", "pending_approval")
-        .order("date", { ascending: true })
-        .order("time", { ascending: true });
+        .order("date", { ascending: false })
+        .order("time", { ascending: true })
+        .range(0, 4999);
 
       return NextResponse.json({ appointments: appointments || [] });
     }
