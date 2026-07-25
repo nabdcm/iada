@@ -334,21 +334,25 @@ export default function RestrictedAccessPage() {
   };
 
   // ── جلب مواعيد العيادة ─────────────────────────────────────
+  const [apptLoaded, setApptLoaded] = useState(false);
   const loadAppointments = async () => {
+    // نضمن توفّر PIN من الحالة أو من التخزين المؤقت (تفادياً لسباق الحالة)
+    const pin = enteredPin || (typeof window !== "undefined" ? sessionStorage.getItem(`ra_${clinicId}`) || "" : "");
+    if (!pin) return;
     setApptLoading(true);
     try {
-      const { ok, data } = await callRA("appointments", { pin: enteredPin });
-      if (ok) setAppointments((data.appointments as Appointment[]) || []);
+      const { ok, data } = await callRA("appointments", { pin });
+      if (ok) { setAppointments((data.appointments as Appointment[]) || []); setApptLoaded(true); }
     } catch (err) { console.error(err); }
     finally { setApptLoading(false); }
   };
 
   useEffect(() => {
-    if (activeTab === "appointments" && stage === "patients" && appointments.length === 0 && !apptLoading) {
+    if (activeTab === "appointments" && stage === "patients" && !apptLoaded && !apptLoading) {
       loadAppointments();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, stage]);
+  }, [activeTab, stage, enteredPin, apptLoaded]);
 
   const handlePinSubmit = async () => {
     if (!clinicInfo) return;
@@ -820,6 +824,24 @@ function AppointmentsTab({
 
   const countByKey: Record<string,number> = {};
   appointments.forEach(a => { countByKey[a.date] = (countByKey[a.date]||0)+1; });
+
+  // عند تحميل المواعيد: إن كان اليوم المحدد فارغاً، ننتقل تلقائياً لأقرب يوم فيه مواعيد
+  const didAutoJump = useRef(false);
+  useEffect(() => {
+    if (didAutoJump.current) return;
+    if (appointments.length === 0) return;
+    if (countByKey[selectedKey]) { didAutoJump.current = true; return; }
+    // أقرب يوم قادم فيه مواعيد، وإلا آخر يوم ماضٍ فيه مواعيد
+    const dates = [...new Set(appointments.map(a => a.date))].sort();
+    const upcoming = dates.find(d => d >= todayKey);
+    const target = upcoming ?? dates[dates.length - 1];
+    if (target) {
+      const [y, m, d] = target.split("-").map(Number);
+      setViewYear(y); setViewMonth(m - 1); setSelectedKey(target);
+    }
+    didAutoJump.current = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appointments]);
 
   const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
