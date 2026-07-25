@@ -1515,6 +1515,9 @@ export default function AppointmentsPage() {
   const [clinicId,            setClinicId]            = useState("");
   const [plan,                setPlan]                = useState<PlanType>("basic");
   const [teleEnabled,         setTeleEnabled]         = useState(false);
+  const [waMode,              setWaMode]              = useState<"basic"|"custom">("basic");
+  const [waTemplate,          setWaTemplate]          = useState("");
+  const [clinicNameForWa,     setClinicNameForWa]     = useState("");
   const [clockFmt,            setClockFmt]            = useState<TimeFormat>("24");
   const [countryCode,         setCountryCode]         = useState<string>(DEFAULT_COUNTRY_CODE);
   const [shareModal,          setShareModal]          = useState(false);
@@ -1600,9 +1603,17 @@ export default function AppointmentsPage() {
           .then(({ data: tfData }) => { if (tfData?.time_format === "12" || tfData?.time_format === "24") setClockFmt(tfData.time_format); });
         // جلب خطة العيادة
         const { data: clinicData } = await supabase
-          .from("clinics").select("plan, country_code, telemedicine_enabled").eq("user_id", user.id).single();
+          .from("clinics").select("plan, country_code, telemedicine_enabled, name, settings").eq("user_id", user.id).single();
         if ((clinicData as { country_code?: string } | null)?.country_code) setCountryCode((clinicData as { country_code?: string }).country_code!);
         if ((clinicData as { telemedicine_enabled?: boolean } | null)?.telemedicine_enabled) setTeleEnabled(true);
+        if ((clinicData as { name?: string } | null)?.name) setClinicNameForWa((clinicData as { name?: string }).name!);
+        {
+          const raw = (clinicData as { settings?: unknown } | null)?.settings;
+          const st = typeof raw === "string" ? (()=>{ try { return JSON.parse(raw); } catch { return {}; } })() : (raw ?? {});
+          if (st.wa_template_mode === "custom" && typeof st.wa_template_text === "string" && st.wa_template_text.trim()) {
+            setWaMode("custom"); setWaTemplate(st.wa_template_text);
+          }
+        }
         if (clinicData?.plan) {
           const fetchedPlan = clinicData.plan as PlanType;
           setPlan(fetchedPlan);
@@ -1936,7 +1947,14 @@ export default function AppointmentsPage() {
     const name     = getPatientName(appt.patient_id);
     const [y, mo, d] = appt.date.split("-");
     const dateFormatted = `${parseInt(d)} ${T[lang].months[parseInt(mo)-1]} ${y}`;
-    const baseMsg = T[lang].whatsappMsg(name, dateFormatted, fmtTime(appt.time, clockFmt, lang==="ar"));
+    const timeStr = fmtTime(appt.time, clockFmt, lang==="ar");
+    const baseMsg = (waMode === "custom" && waTemplate.trim())
+      ? waTemplate
+          .replace(/\{name\}/g, name)
+          .replace(/\{date\}/g, dateFormatted)
+          .replace(/\{time\}/g, timeStr)
+          .replace(/\{clinic\}/g, clinicNameForWa)
+      : T[lang].whatsappMsg(name, dateFormatted, timeStr);
     const onlineExtra = (appt as any).is_online
       ? (lang==="ar"
           ? `\n\nهذا الموعد كشف عن بُعد. ادخل من الرابط في وقت موعدك:\n${window.location.origin}/visit/${appt.id}`

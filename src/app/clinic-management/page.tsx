@@ -839,6 +839,8 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
   const [weekendDays, setWeekendDays] = useState<number[]>([5,6]);
   const [allowOnline, setAllowOnline] = useState(true);
   const [requireApproval, setRequireApproval] = useState(false);
+  const [waMode, setWaMode] = useState<"basic"|"custom">("basic");
+  const [waTemplate, setWaTemplate] = useState("");
   const [clockFormat, setClockFormat] = useState<"12"|"24">("24");
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [saveStatus, setSaveStatus] = useState<"idle"|"saving"|"saved">("idle");
@@ -857,6 +859,8 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
           setWeekendDays(st.weekend_days ?? [5,6]);
           setAllowOnline(st.allow_online_booking ?? true);
           setRequireApproval(st.require_approval ?? false);
+          setWaMode(st.wa_template_mode === "custom" ? "custom" : "basic");
+          setWaTemplate(st.wa_template_text ?? "");
         }
       }
       const { data: prof } = await supabase.from("clinic_profiles").select("time_format").eq("id", userId).maybeSingle();
@@ -880,6 +884,8 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
       weekend_days: weekendDays,
       allow_online_booking: allowOnline,
       require_approval: requireApproval,
+      wa_template_mode: waMode,
+      wa_template_text: waTemplate.trim(),
     };
     // حفظ في clinics عبر API آمن (سياسات RLS تمنع التعديل المباشر من العميل)
     try {
@@ -1027,6 +1033,65 @@ function SettingsTab({ lang, userId, isMobile }: { lang: Lang; userId: string; i
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ── قالب رسالة واتساب ── */}
+      <div style={cardSt}>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",marginBottom:4 }}><AppIcon glyph="💬" /> {isAr ? "قالب رسالة واتساب للتذكير" : "WhatsApp reminder template"}</div>
+        <div style={{ fontSize:11.5,color:"#aaa",marginBottom:14,lineHeight:1.7 }}>
+          {isAr ? "اختر القالب الأساسي الجاهز، أو خصّص نصك الخاص. يمكنك استخدام المتغيّرات ليُدرَج تلقائياً اسم المريض وتاريخ الموعد ووقته." : "Use the ready basic template or write your own. Insert variables to auto-fill the patient's name, date and time."}
+        </div>
+
+        {/* اختيار القالب */}
+        <div style={{ display:"flex",gap:10,marginBottom:16 }}>
+          {(["basic","custom"] as const).map(m => (
+            <button key={m} onClick={()=>setWaMode(m)}
+              style={{ flex:1,padding:"12px",borderRadius:12,border:"1.5px solid",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,transition:"all .15s",
+                borderColor: waMode===m ? "#0863ba" : "#e8eaed",
+                background:  waMode===m ? "rgba(8,99,186,.06)" : "#fafbfc",
+                color:       waMode===m ? "#0863ba" : "#888" }}>
+              {m==="basic" ? (isAr?"القالب الأساسي":"Basic") : (isAr?"قالب مخصّص":"Custom")}
+            </button>
+          ))}
+        </div>
+
+        {waMode === "basic" ? (
+          <div style={{ background:"rgba(8,99,186,.04)",border:"1.5px dashed rgba(8,99,186,.2)",borderRadius:12,padding:"14px 16px",fontSize:13.5,color:"#4b5563",lineHeight:2 }}>
+            {isAr
+              ? "مرحباً [اسم المريض]، نذكّركم بموعدكم في عيادتنا بتاريخ [التاريخ] الساعة [الوقت]. نتطلع لرؤيتكم"
+              : "Hello [patient], this is a reminder for your appointment on [date] at [time]. We look forward to seeing you"}
+          </div>
+        ) : (
+          <>
+            {/* أزرار إدراج المتغيّرات */}
+            <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:10 }}>
+              {[
+                { token:"{name}",   label: isAr?"اسم المريض":"Patient name" },
+                { token:"{date}",   label: isAr?"تاريخ الموعد":"Date" },
+                { token:"{time}",   label: isAr?"وقت الموعد":"Time" },
+                { token:"{clinic}", label: isAr?"اسم العيادة":"Clinic" },
+              ].map(v => (
+                <button key={v.token} type="button"
+                  onClick={()=>setWaTemplate(prev => (prev ? prev + " " : "") + v.token)}
+                  style={{ padding:"6px 12px",borderRadius:20,border:"1.5px solid rgba(8,99,186,.25)",background:"rgba(8,99,186,.06)",color:"#0863ba",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer" }}>
+                  + {v.label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={waTemplate}
+              onChange={e=>setWaTemplate(e.target.value)}
+              placeholder={isAr
+                ? "مثال: مرحباً {name}، موعدك في عيادتنا يوم {date} الساعة {time}. نرجو الحضور قبل الموعد بعشر دقائق."
+                : "e.g. Hi {name}, your appointment is on {date} at {time}. Please arrive 10 minutes early."}
+              rows={4}
+              style={{ ...inputSt, resize:"vertical", lineHeight:1.9, minHeight:110 }}
+            />
+            <div style={{ fontSize:11.5,color:"#aaa",marginTop:8,lineHeight:1.7 }}>
+              {isAr ? "المتغيّرات {name} و{date} و{time} و{clinic} تُستبدل تلقائياً بالقيم الحقيقية عند إرسال الرسالة لكل مريض." : "The {name}, {date}, {time} and {clinic} variables are replaced automatically for each patient."}
+            </div>
+          </>
+        )}
       </div>
 
       {/* زر الحفظ */}
