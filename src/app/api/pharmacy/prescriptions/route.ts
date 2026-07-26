@@ -144,6 +144,12 @@ export async function POST(req: Request) {
     }
 
     if (action === "delete") {
+      // تحقق من ملكية الوصفة قبل أي حذف
+      const { data: owned } = await supabaseAdmin
+        .from("pharmacy_prescriptions").select("id").eq("id", id).eq("user_id", user_id).maybeSingle();
+      if (!owned) return NextResponse.json({ error: "not found" }, { status: 404 });
+      // حذف البنود أولاً (في حال عدم وجود ON DELETE CASCADE)
+      await supabaseAdmin.from("pharmacy_prescription_items").delete().eq("prescription_id", id);
       const { error } = await supabaseAdmin
         .from("pharmacy_prescriptions").delete().eq("id", id).eq("user_id", user_id);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });

@@ -1242,6 +1242,7 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
   const [safety,setSafety]=useState<{rx:Prescription;interactions:Interaction[];allergies:AllergyHit[];loading:boolean}|null>(null);
   const [partial,setPartial]=useState<{rx:Prescription;qtys:Record<number,number>}|null>(null);
   const [ackSafety,setAckSafety]=useState(false);
+  const [delRx,setDelRx]=useState<Prescription|null>(null); const [deleting,setDeleting]=useState(false); const [delErr,setDelErr]=useState("");
 
   const stFilter=(p:Prescription)=>{const s=p.status||(p.dispensed?"dispensed":"waiting");
     if(pF==="all")return true; if(pF==="dispensed")return s==="dispensed"; return s===pF;};
@@ -1337,7 +1338,23 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
   };
 
   const canAdd=currentUser.role==="doctor"||currentUser.role==="manager";
+  const confirmDelete=async()=>{
+    if(!delRx)return;
+    if(!userId){setDelErr(isAr?"تعذّر التحقق من الجلسة":"Session error");return;}
+    setDeleting(true); setDelErr("");
+    try{
+      const res=await apiFetch("/api/pharmacy/prescriptions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete",user_id:userId,id:delRx.id})});
+      const json=await res.json();
+      if(!res.ok||!json.success){setDelErr(json.error||(isAr?"فشل الحذف":"Delete failed"));setDeleting(false);return;}
+      setPrescriptions(prev=>prev.filter(p=>p.id!==delRx.id));
+      setDelRx(null); onRefresh();
+    }catch{
+      setDelErr(isAr?"خطأ في الاتصال":"Network error");
+    }
+    setDeleting(false);
+  };
   const canDispense=currentUser.role==="pharmacist"||currentUser.role==="manager";
+  const canDelete=currentUser.role==="manager"||currentUser.role==="pharmacist";
   const hasSafetyIssue=safety&&!safety.loading&&(safety.interactions.length>0||safety.allergies.length>0);
 
   return (
@@ -1399,6 +1416,9 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
                       {(["urgent","high","normal","low"] as RxPriority[]).map(p=><option key={p} value={p}>{isAr?prioMeta[p].ar:prioMeta[p].en}</option>)}
                     </select>
                   )}
+                  {canDelete&&(
+                    <button onClick={()=>{setDelErr("");setDelRx(rx);}} title={isAr?"حذف الوصفة":"Delete prescription"} style={{padding:"5px 9px",background:"rgba(231,76,60,.08)",color:"#e74c3c",border:"1.5px solid rgba(231,76,60,.25)",borderRadius:8,fontFamily:"'Rubik',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 {isAr?"حذف":"Delete"}</button>
+                  )}
                 </div>
               </div>
               <div style={{padding:"12px 17px"}}>
@@ -1421,6 +1441,29 @@ function PrescriptionsTab({lang,prescriptions,setPrescriptions,currentUser,addLo
               </div>
             </div>
           );})}
+        </div>
+      )}
+
+      {/* نافذة تأكيد حذف الوصفة */}
+      {delRx&&(
+        <div style={{position:"fixed",inset:0,zIndex:260,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(6px)"}} onClick={()=>!deleting&&setDelRx(null)}/>
+          <div style={{position:"relative",background:"#fff",borderRadius:20,padding:"24px",width:"min(94vw,420px)",boxShadow:"0 24px 80px rgba(0,0,0,.2)"}}>
+            <h2 style={{fontSize:15,fontWeight:800,color:"#353535",marginBottom:10}}>🗑 {isAr?"حذف الوصفة":"Delete prescription"}</h2>
+            <div style={{fontSize:12.5,color:"#6b7683",lineHeight:1.7,marginBottom:14}}>
+              {isAr?`سيتم حذف الوصفة ${delRx.id} للمريض ${delRx.patient_name} وجميع بنودها نهائياً.`:`Prescription ${delRx.id} for ${delRx.patient_name} and all its items will be permanently deleted.`}
+            </div>
+            {(delRx.status==="dispensed"||delRx.dispensed)&&(
+              <div style={{background:"rgba(230,126,34,.08)",border:"1px solid rgba(230,126,34,.28)",borderRadius:10,padding:"9px 12px",fontSize:11.5,color:"#c0670e",fontWeight:600,marginBottom:12}}>
+                {isAr?"⚠️ هذه الوصفة مصروفة — الحذف لا يعيد الكميات إلى المخزون.":"⚠️ Dispensed — deleting does not restore stock."}
+              </div>
+            )}
+            {delErr&&<div style={{background:"rgba(231,76,60,.08)",border:"1px solid rgba(231,76,60,.28)",borderRadius:10,padding:"9px 12px",fontSize:11.5,color:"#c0392b",fontWeight:600,marginBottom:12}}>{delErr}</div>}
+            <div style={{display:"flex",gap:9}}>
+              <button onClick={confirmDelete} disabled={deleting} style={{flex:1,padding:"10px 14px",background:"#e74c3c",color:"#fff",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:700,cursor:deleting?"default":"pointer",opacity:deleting?.6:1}}>{deleting?(isAr?"جاري الحذف...":"Deleting..."):(isAr?"تأكيد الحذف":"Confirm delete")}</button>
+              <button onClick={()=>setDelRx(null)} disabled={deleting} style={{padding:"10px 16px",background:"#f2f5f9",color:"#6b7683",border:"none",borderRadius:10,fontFamily:"'Rubik',sans-serif",fontSize:12.5,fontWeight:700,cursor:"pointer"}}>{isAr?"إلغاء":"Cancel"}</button>
+            </div>
+          </div>
         </div>
       )}
 
