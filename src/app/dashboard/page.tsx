@@ -334,6 +334,7 @@ export default function DashboardPage() {
 
   // data
   const [plan, setPlan] = useState<PlanType>("basic");
+  const [expiry, setExpiry] = useState<string | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [totalPatients, setTotalPatients] = useState(0);
   const [newThisMonth, setNewThisMonth] = useState(0);
@@ -441,7 +442,8 @@ export default function DashboardPage() {
 
     // plan
     const { data: profileData } = await supabase
-      .from("clinics").select("plan, max_doctors").eq("user_id", userId).maybeSingle();
+      .from("clinics").select("plan, max_doctors, expiry").eq("user_id", userId).maybeSingle();
+    setExpiry((profileData?.expiry as string | null | undefined) ?? null);
     const fetchedPlan = ((profileData?.plan as PlanType | undefined) ?? "basic");
     setPlan(fetchedPlan);
     const fetchedMax: number =
@@ -787,8 +789,44 @@ export default function DashboardPage() {
                   {toWestern(dateStr)} · {tr.header.subtitle}
                 </p>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              </div>
+              {expiry && (() => {
+                const end = new Date(expiry + "T00:00:00");
+                const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+                const days = Math.round((end.getTime() - today.getTime()) / 86400000);
+                const expired = days < 0;
+                const soon = days >= 0 && days <= 14;
+                const tone = expired
+                  ? { bg: "rgba(192,57,43,.22)", bd: "rgba(255,255,255,.45)", icon: "⛔" }
+                  : soon
+                    ? { bg: "rgba(230,126,34,.28)", bd: "rgba(255,255,255,.45)", icon: "⏳" }
+                    : { bg: "rgba(255,255,255,.16)", bd: "rgba(255,255,255,.35)", icon: "✓" };
+                const dateLabel = end.toLocaleDateString(isAr ? "ar-SY" : "en-US",
+                  { day: "numeric", month: "long", year: "numeric" });
+                const status = expired
+                  ? (isAr ? "انتهى الاشتراك" : "Subscription expired")
+                  : days === 0
+                    ? (isAr ? "ينتهي اليوم" : "Expires today")
+                    : soon
+                      ? (isAr ? `يتبقّى ${toWestern(days)} ${days === 1 ? "يوم" : "يوماً"}` : `${days} days left`)
+                      : (isAr ? "اشتراك فعّال" : "Active subscription");
+                return (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 11,
+                    background: tone.bg, border: `1.5px solid ${tone.bd}`,
+                    borderRadius: 16, padding: "11px 18px", backdropFilter: "blur(4px)",
+                  }}>
+                    <span style={{ fontSize: 18 }}>{tone.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>
+                        {status}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: "rgba(255,255,255,.85)", marginTop: 3 }}>
+                        {isAr ? "ينتهي في" : "Ends on"} {toWestern(dateLabel)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
