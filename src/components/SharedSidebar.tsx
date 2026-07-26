@@ -139,6 +139,12 @@ const Icons = {
       <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
     </svg>
   ),
+  labRequests: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 2v6.6a2 2 0 0 1-.3 1L4 18.4A2 2 0 0 0 5.7 21h12.6a2 2 0 0 0 1.7-2.6l-4.7-8.8a2 2 0 0 1-.3-1V2"/>
+      <path d="M8 2h8"/><path d="M7.5 14h9"/>
+    </svg>
+  ),
   more: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/>
@@ -183,6 +189,7 @@ const NAV_LABELS = {
     payments: "المدفوعات", prescriptions: "الوصفات",
     tracking: "متابعة المرضى", clinicManagement: "إدارة العيادة",
     messages: "الرسائل", referrals: "تحويل المرضى", telemedicine: "العيادة الأونلاين",
+    labRequests: "طلبات المخبر",
     more: "المزيد",
     signOut: "خروج", plan: "خطة", clinic: "عيادة", account: "حسابي",
     notAvailable: "غير متاح في خطتك",
@@ -196,6 +203,7 @@ const NAV_LABELS = {
     payments: "Payments", prescriptions: "Prescriptions",
     tracking: "Tracking", clinicManagement: "Clinic Mgmt",
     messages: "Messages", referrals: "Referrals", telemedicine: "Online Clinic",
+    labRequests: "Lab Requests",
     more: "More",
     signOut: "Sign Out", plan: "Plan", clinic: "Clinic", account: "My Account",
     notAvailable: "Not available in your plan",
@@ -233,6 +241,7 @@ const SECONDARY_NAV = [
   { key: "clinicManagement", href: "/clinic-management", icon: "clinicManagement" },
   { key: "messages",         href: "/messages",           icon: "messages"         },
   { key: "referrals",        href: "/referrals",          icon: "referrals"        },
+  { key: "labRequests",      href: "/lab-requests",       icon: "labRequests"      },
 ];
 
 // ─── Component ───────────────────────────────────────────────
@@ -903,6 +912,7 @@ export default function SharedSidebar({
     { key: "prescriptions",href: "/prescriptions",   icon: "prescriptions"  },
     { key: "tracking",     href: "/patient-tracking",icon: "tracking"       },
     { key: "referrals",    href: "/referrals",       icon: "referrals"      },
+    { key: "labRequests",  href: "/lab-requests",    icon: "labRequests"    },
   ];
 
   const pairedNavItems = [

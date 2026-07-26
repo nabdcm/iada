@@ -7,7 +7,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room", "/referrals", "/account", "/call", "/telemedicine"];
+const PROTECTED = ["/dashboard", "/patients", "/appointments", "/payments", "/secretary", "/messages", "/prescriptions", "/waiting-room", "/referrals", "/lab-requests", "/account", "/call", "/telemedicine"];
 const PHARMACY_PROTECTED = ["/pharmacy"];
 const LAB_PROTECTED = ["/lab"];
 
@@ -54,7 +54,8 @@ export async function middleware(request: NextRequest) {
   const isLabProtected =
     LAB_PROTECTED.some(p => pathname.startsWith(p)) &&
     !pathname.startsWith("/lab/login") &&
-    !pathname.startsWith("/lab-result");
+    !pathname.startsWith("/lab-result") &&
+    !pathname.startsWith("/lab-requests");
 
   if (!isProtected && !isPharmacyProtected && !isLabProtected) {
     return NextResponse.next();

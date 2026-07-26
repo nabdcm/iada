@@ -30,16 +30,17 @@ export const Icons = {
   check:     ({ size = 18 }: IconProps) => (<svg {...S(size)}><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg>),
 };
 
-export type TabKey = "dashboard" | "orders" | "finance" | "catalog";
+export type TabKey = "dashboard" | "orders" | "requests" | "finance" | "catalog";
 
 export const TAB_META: Record<TabKey, { ar: string; Icon: (p: IconProps) => React.JSX.Element }> = {
   dashboard: { ar: "الرئيسية", Icon: Icons.dashboard },
   orders:    { ar: "الطلبات",  Icon: Icons.orders },
+  requests:  { ar: "طلبات العيادات", Icon: Icons.flask },
   finance:   { ar: "المالية",  Icon: Icons.finance },
   catalog:   { ar: "الكتالوج", Icon: Icons.catalog },
 };
 
-const TABS: TabKey[] = ["dashboard", "orders", "finance", "catalog"];
+const TABS: TabKey[] = ["dashboard", "orders", "requests", "finance", "catalog"];
 
 // ═══ Sidebar (سطح المكتب) ═══
 export function LabSidebar({ active, onSelect, badges, labName, onNew, onScan, onLogout }: {
@@ -119,7 +120,7 @@ export function LabPillNav({ active, onSelect, badges, onNew, onScan }: {
   active: TabKey; onSelect: (t: TabKey) => void;
   badges: Partial<Record<TabKey, number>>; onNew: () => void; onScan: () => void;
 }) {
-  const left: TabKey[] = ["dashboard", "orders"];
+  const left: TabKey[] = ["dashboard", "orders", "requests"];
   const right: TabKey[] = ["finance", "catalog"];
 
   const NavBtn = ({ k }: { k: TabKey }) => {

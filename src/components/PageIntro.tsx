@@ -123,6 +123,19 @@ const INTROS: Record<string, IntroContent> = {
       { ar: "زر «دخول الكشف» يفتح غرفة الفيديو داخل نبض مباشرة.", en: "The join button opens the video room right inside NABD." },
     ],
   },
+  labRequests: {
+    icon: "🧪",
+    title: { ar: "طلبات المخبر", en: "Lab Requests" },
+    body: {
+      ar: "أرسل طلب تحليل إلى أي مخبر على نبض، ويصل المريض إليه مطابَقاً برقم سجله الطبي (MRN). تصلك النتيجة داخل التطبيق فور صدورها.",
+      en: "Send a test request to any NABD lab; the patient is matched by their Medical Record Number (MRN). Results reach you in-app as soon as they are ready.",
+    },
+    points: [
+      { ar: "اختر المريض من قائمتك ليُرسل رقم سجله الطبي تلقائياً.", en: "Pick the patient from your list so their MRN is sent automatically." },
+      { ar: "حدّد التحاليل من الدليل أو أضف تحليلاً باسم مخصّص.", en: "Select tests from the catalog or add a custom test name." },
+      { ar: "عند صدور النتيجة يصلك إشعار، وتفتحها من زر «عرض النتيجة».", en: "You get a notification when results are out; open them from “View result”." },
+    ],
+  },
 };
 
 export default function PageIntro({ pageKey, lang = "ar" }: { pageKey: string; lang?: "ar" | "en" }) {

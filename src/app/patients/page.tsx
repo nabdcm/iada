@@ -5,6 +5,10 @@ import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSPropertie
 import SharedSidebar from "@/components/SharedSidebar";
 import { getOrCreateMRN } from "@/lib/mrn";
 import { supabase, fetchAll } from "@/lib/supabase";
+import BodyMapSection from "@/components/BodyMapSection";
+import VaccinationsSection from "@/components/VaccinationsSection";
+import PregnancySection from "@/components/PregnancySection";
+import type { BodyMap } from "@/lib/bodyMap";
 import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import type { Patient } from "@/lib/supabase";
@@ -362,6 +366,7 @@ type PatientProfile = {
   dental_chart: DentalChart;
   xrays: XRayImage[];
   extra_form_fields: Record<string,string|boolean>;
+  body_map: BodyMap;
 };
 
 
@@ -668,6 +673,7 @@ async function loadProfileFromDB(patientId:number): Promise<PatientProfile|null>
       dental_chart:      data.dental_chart      ?? {},
       xrays:             data.xrays             ?? [],
       extra_form_fields: data.extra_form_fields ?? {},
+      body_map:          data.body_map          ?? {},
     };
   } catch { return null; }
 }
@@ -688,6 +694,7 @@ async function saveProfileToDB(patientId:number, userId:string, profile:PatientP
     dental_chart:      profile.dental_chart,
     xrays:             profile.xrays,
     extra_form_fields: profile.extra_form_fields,
+    body_map:          profile.body_map,
     updated_at:        new Date().toISOString(),
   },{ onConflict:"patient_id" });
 
@@ -700,12 +707,12 @@ async function saveProfileToDB(patientId:number, userId:string, profile:PatientP
 
 /**
  * تحديث جزئي آمن لملف المريض — يكتب الحقول المُمرَّرة فقط،
- * ولا يمسّ medical_fields أو dental_chart أو xrays إطلاقاً.
+ * ولا يمسّ medical_fields أو dental_chart أو xrays أو body_map إطلاقاً.
  */
 async function patchProfileInDB(
   patientId:number,
   userId:string,
-  patch: Partial<Pick<PatientProfile,"medical_fields"|"dental_chart"|"xrays"|"extra_form_fields">>
+  patch: Partial<Pick<PatientProfile,"medical_fields"|"dental_chart"|"xrays"|"extra_form_fields"|"body_map">>
 ): Promise<{ ok:boolean; message?:string }> {
   let uid = userId;
   if (!uid) {
@@ -1039,13 +1046,13 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
   const isMounted = useRef(true);
   useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
-  const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental"|"labresults">("info");
+  const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental"|"labresults"|"bodymap"|"vaccines"|"pregnancy">("info");
 
   // إذا لم يكن للخطة صلاحية الأشعة وكان التبويب النشط هو الأشعة، نعيده للمعلومات
   useEffect(() => {
     if (activeTab === "xrays" && !canXray) setActiveTab("info");
   }, [canXray, activeTab]);
-  const [profile,   setProfile]   = useState<PatientProfile>({ medical_fields:{}, dental_chart:{}, xrays:[], extra_form_fields:{} });
+  const [profile,   setProfile]   = useState<PatientProfile>({ medical_fields:{}, dental_chart:{}, xrays:[], extra_form_fields:{}, body_map:{} });
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving,         setSaving]         = useState(false);
   const [userId,         setUserId]         = useState<string>("");
@@ -1125,6 +1132,11 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
     ...(canXray ? [{ key:"xrays" as const, label:t.tabs.xrays, icon:"🩻" }] : []),
     ...(isDental ? [{ key:"dental" as const, label:t.tabs.dental, icon:"🦷" }] : []),
     { key:"labresults" as const, label: isAr ? "التحاليل" : "Lab Results", icon:"🧪" },
+    { key:"bodymap" as const, label: isAr ? "مخطط الجسم" : "Body Map", icon:"🧍" },
+    { key:"vaccines" as const, label: isAr ? "اللقاحات" : "Vaccines", icon:"💉" },
+    ...(patient.gender === "female"
+      ? [{ key:"pregnancy" as const, label: isAr ? "متابعة الحمل" : "Pregnancy", icon:"🤰" }]
+      : []),
   ];
 
   return (
@@ -1342,6 +1354,21 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                 {/* ── DENTAL ── */}
                 {activeTab==="dental"&&isDental&&(
                   <DentalChartSection lang={lang} chart={profile.dental_chart} onChange={c=>saveProfile({ dental_chart:c })}/>
+                )}
+
+                {/* ── BODY MAP ── */}
+                {activeTab==="bodymap"&&(
+                  <BodyMapSection lang={lang} map={profile.body_map} onChange={m=>saveProfile({ body_map:m })}/>
+                )}
+
+                {/* ── VACCINATIONS ── */}
+                {activeTab==="vaccines"&&userId&&(
+                  <VaccinationsSection lang={lang} patientId={patient.id} userId={userId} dob={patient.date_of_birth ?? null}/>
+                )}
+
+                {/* ── PREGNANCY ── */}
+                {activeTab==="pregnancy"&&userId&&patient.gender==="female"&&(
+                  <PregnancySection lang={lang} patientId={patient.id} userId={userId}/>
                 )}
 
                 {/* ── LAB RESULTS (نبض مخبر — عبر MRN) ── */}
@@ -2027,7 +2054,7 @@ export default function PatientsPage() {
           const np = newPatient as Patient;
           // حفظ extra_fields
           if (Object.keys(form.extra_fields).length) {
-            await saveProfileToDB(np.id,userId,{ medical_fields:{},dental_chart:{},xrays:[],extra_form_fields:form.extra_fields });
+            await saveProfileToDB(np.id,userId,{ medical_fields:{},dental_chart:{},xrays:[],extra_form_fields:form.extra_fields,body_map:{} });
           }
           setAnimIds(prev=>[...prev,np.id]);
           setTimeout(()=>{ if(isMounted.current) setAnimIds(prev=>prev.filter(x=>x!==np.id)); },600);

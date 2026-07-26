@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import QRCode from "qrcode";
 import { LabSidebar, LabPillNav, Icons, type TabKey } from "./nav";
 import { CameraScanner } from "../pharmacy/scanner";
+import RequestsTab from "./RequestsTab";
 
 // ─── BRAND (مطابق للداشبورد) ─────────────────────────────────
 const BRAND = {
@@ -71,6 +72,13 @@ export default function LabPage() {
   const [loading, setLoading] = useState(true);
   const [labName, setLabName] = useState("المخبر");
   const [tab, setTab] = useState<TabKey>("dashboard");
+
+  // فتح التبويب المطلوب عند القدوم من إشعار مثل /lab?tab=requests
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("tab");
+    const valid: TabKey[] = ["dashboard", "orders", "requests", "finance", "catalog"];
+    if (q && (valid as string[]).includes(q)) setTab(q as TabKey);
+  }, []);
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [catalog, setCatalog] = useState<CatalogTest[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -84,6 +92,7 @@ export default function LabPage() {
   const [payOrder, setPayOrder] = useState<LabOrder | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [focusTest, setFocusTest] = useState<number | null>(null);
+  const [clinicReqCount, setClinicReqCount] = useState(0);
 
   const showNotif = useCallback((msg: string, ok = true) => {
     setNotif({ msg, ok });
@@ -195,7 +204,10 @@ export default function LabPage() {
     );
   }
 
-  const badges: Partial<Record<TabKey, number>> = { orders: stats.pending > 0 ? stats.pending : undefined };
+  const badges: Partial<Record<TabKey, number>> = {
+    orders: stats.pending > 0 ? stats.pending : undefined,
+    requests: clinicReqCount > 0 ? clinicReqCount : undefined,
+  };
 
   return (
     <div dir="rtl" style={{ minHeight: "100vh", background: BRAND.bg, fontFamily: "'Rubik',sans-serif", color: BRAND.ink }}>
@@ -252,11 +264,12 @@ export default function LabPage() {
         <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, gap: 10 }}>
           <div>
             <div style={{ fontSize: 19, fontWeight: 900, color: BRAND.ink }}>
-              {tab === "dashboard" ? `مرحباً 👋` : tab === "orders" ? "طلبات التحاليل" : tab === "finance" ? "الإدارة المالية" : "كتالوج التحاليل"}
+              {tab === "dashboard" ? `مرحباً 👋` : tab === "orders" ? "طلبات التحاليل" : tab === "requests" ? "طلبات العيادات" : tab === "finance" ? "الإدارة المالية" : "كتالوج التحاليل"}
             </div>
             <div style={{ fontSize: 12, color: BRAND.muted, marginTop: 2 }}>
               {tab === "dashboard" ? `إليك ملخص نشاط ${labName} اليوم` :
                tab === "orders" ? "مرحلتان: طلب وملصقات ← ثم إدخال النتائج" :
+               tab === "requests" ? "طلبات تحاليل واردة من عيادات نبض عبر رقم السجل الطبي" :
                tab === "finance" ? "الإيرادات والديون والمصاريف" : "التحاليل والمجالات الطبيعية والأسعار"}
             </div>
           </div>
@@ -273,6 +286,18 @@ export default function LabPage() {
             onLabels={setLabelsOrder}
             onPay={setPayOrder}
             onDelete={deleteOrder}
+          />
+        )}
+        {tab === "requests" && (
+          <RequestsTab
+            notify={showNotif}
+            onCount={setClinicReqCount}
+            onConverted={() => { void loadAll(); }}
+            onOpenOrder={(orderId) => {
+              const o = orders.find(x => x.id === orderId);
+              if (o) { setTab("orders"); setResultsOrder(o); }
+              else { void loadAll(); setTab("orders"); }
+            }}
           />
         )}
         {tab === "finance" && (

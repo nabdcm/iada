@@ -1,6 +1,7 @@
 "use client";
 
 import AppIcon from "@/components/AppIcon";
+import SafetyAlert from "@/components/SafetyAlert";
 import { useState, useEffect, useRef, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase, fetchAll } from "@/lib/supabase";
@@ -1088,6 +1089,12 @@ export default function PrescriptionsPage() {
                     + {tr.addMedication}
                   </button>
                 </div>
+
+                <SafetyAlert
+                  lang={lang}
+                  patientId={form.patient_id || null}
+                  medicines={form.medications.map(m => m.name)}
+                />
 
                 {form.medications.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "24px", background: "#f7f9fc", borderRadius: 12, border: "1.5px dashed #dde3ed", color: "#bbb", fontSize: 13 }}>
