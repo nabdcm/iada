@@ -944,7 +944,7 @@ export default function SharedSidebar({
             boxShadow: "0 4px 14px rgba(5,88,168,0.5)",
             cursor: "pointer", color: "rgba(255,255,255,0.95)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 60, padding: 0, fontSize: 13, lineHeight: 1,
+            zIndex: 10, padding: 0, fontSize: 13, lineHeight: 1,
             transition: "background .18s",
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(180deg,#0a72d1,#0663bd)"; }}
