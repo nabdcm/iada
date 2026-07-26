@@ -137,11 +137,11 @@ function exportDailyReportHTML(payments:Payment[], withdrawals:any[], expenses:a
     const pat = patients.find(x=>x.id===p.patient_id);
     const sm:Record<string,string>={paid:"مدفوع",pending:"معلّق",cancelled:"ملغي"};
     const mm:Record<string,string>={cash:"نقداً",card:"بطاقة",transfer:"تحويل"};
-    return `<tr><td>${fmt(p.date)}</td><td>${pat?.name||"—"}</td><td>${p.description}</td><td>${mm[p.method]||p.method}</td><td>${sm[p.status]||p.status}</td><td style="color:#2e7d32;font-weight:700">+${p.amount.toLocaleString()} ل.س</td></tr>`;
+    return `<tr><td>${fmt(p.date)}</td><td>${pat?.name||"—"}</td><td>${p.description}</td><td>${mm[p.method]||p.method}</td><td>${sm[p.status]||p.status}</td><td style="color:#2e7d32;font-weight:700">+${Number(p.amount ?? 0).toLocaleString()} ل.س</td></tr>`;
   }).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa">لا توجد مدفوعات اليوم</td></tr>`;
 
-  const wRows = todayW.length ? todayW.map(w=>`<tr><td>${fmt(w.date)}</td><td colspan="3">${w.reason}</td><td>سحب</td><td style="color:#c0392b;font-weight:700">-${w.amount.toLocaleString()} ل.س</td></tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa">لا توجد سحوبات</td></tr>`;
-  const eRows = todayE.length ? todayE.map(e=>`<tr><td>${fmt(e.date)}</td><td colspan="2">${e.description}</td><td>${e.category}</td><td>مصروف</td><td style="color:#7b2d8b;font-weight:700">-${e.amount.toLocaleString()} ل.س</td></tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa">لا توجد مصروفات</td></tr>`;
+  const wRows = todayW.length ? todayW.map(w=>`<tr><td>${fmt(w.date)}</td><td colspan="3">${w.reason}</td><td>سحب</td><td style="color:#c0392b;font-weight:700">-${Number(w.amount ?? 0).toLocaleString()} ل.س</td></tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa">لا توجد سحوبات</td></tr>`;
+  const eRows = todayE.length ? todayE.map(e=>`<tr><td>${fmt(e.date)}</td><td colspan="2">${e.description}</td><td>${e.category}</td><td>مصروف</td><td style="color:#7b2d8b;font-weight:700">-${Number(e.amount ?? 0).toLocaleString()} ل.س</td></tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa">لا توجد مصروفات</td></tr>`;
 
   const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"/><title>تقرير يومي</title>
 <style>@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700;800&display=swap');
@@ -1872,7 +1872,7 @@ export default function SecretaryPage() {
                     </div>
                   </div>
                   <div style={{ textAlign:"end",flexShrink:0 }}>
-                    <div style={{ fontSize:15,fontWeight:800,color }}>{sign}{tx.amount?.toLocaleString()} {isAr?"ل.س":"SYP"}</div>
+                    <div style={{ fontSize:15,fontWeight:800,color }}>{sign}{Number(tx.amount ?? 0).toLocaleString()} {isAr?"ل.س":"SYP"}</div>
                   </div>
                 </div>
                 {/* cancel/delete action */}

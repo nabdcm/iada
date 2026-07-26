@@ -2175,9 +2175,9 @@ ${doctorSettlementRows}
       <tr>
         <td>${payment.description || "—"}</td>
         <td>${(payment as any).session_type ? (sessionTypeMap[(payment as any).session_type] || "—") : "—"}</td>
-        <td>${payment.amount.toLocaleString()} {CUR}</td>
+        <td>${Number(payment.amount ?? 0).toLocaleString()} {CUR}</td>
       </tr>
-      <tr class="total-row"><td colspan="2">الإجمالي</td><td>${payment.amount.toLocaleString()} ${CUR}</td></tr>
+      <tr class="total-row"><td colspan="2">الإجمالي</td><td>${Number(payment.amount ?? 0).toLocaleString()} ${CUR}</td></tr>
     </tbody>
   </table>
 
@@ -2502,7 +2502,7 @@ ${doctorSettlementRows}
                   <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
                     style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
                 </div>
-                <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${stats.netBalance.toLocaleString()}`} {CUR}</div>
+                <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${Number(stats.netBalance ?? 0).toLocaleString()}`} {CUR}</div>
                 <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
               </div>
               {/* إجمالي السحوبات */}
@@ -2516,7 +2516,7 @@ ${doctorSettlementRows}
                     <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
                   </div>
                 </div>
-                <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{numbersHidden ? "••••••" : `${stats.totalWithdrawals.toLocaleString()}`} {CUR}</div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#c0392b" }}>{numbersHidden ? "••••••" : `${Number(stats.totalWithdrawals ?? 0).toLocaleString()}`} {CUR}</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{withdrawals.length} {isAr?"عملية سحب":"withdrawals"}</div>
               </div>
               {/* مصروفات العيادة */}
@@ -2530,7 +2530,7 @@ ${doctorSettlementRows}
                     <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
                   </div>
                 </div>
-                <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{numbersHidden ? "••••••" : `${stats.totalExpenses.toLocaleString()}`} {CUR}</div>
+                <div style={{ fontSize:26,fontWeight:900,color:"#7b2d8b" }}>{numbersHidden ? "••••••" : `${Number(stats.totalExpenses ?? 0).toLocaleString()}`} {CUR}</div>
                 <div style={{ fontSize:11,color:"#aaa",marginTop:6 }}>{expenses.length} {isAr?"مصروف مسجّل":"recorded expenses"}</div>
               </div>
             </div>
@@ -2632,7 +2632,7 @@ ${doctorSettlementRows}
                                   </div>
                                 </div>
                                 <div style={{ textAlign:"end" }}>
-                                  <div style={{ fontSize:15,fontWeight:800,color:amtColor }}>{p.amount.toLocaleString()} {CUR}</div>
+                                  <div style={{ fontSize:15,fontWeight:800,color:amtColor }}>{Number(p.amount ?? 0).toLocaleString()} {CUR}</div>
                                   <span style={{ fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:ss.bg,color:ss.color,marginTop:3,display:"inline-block" }}>{ss.label}</span>
                                 </div>
                               </div>
@@ -2721,7 +2721,7 @@ ${doctorSettlementRows}
                                 <span style={{ fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:ss.bg,color:ss.color }}>{ss.label}</span>
                               </div>
                               <div style={{ textAlign:"center",fontSize:15,fontWeight:800,color:p.status==="pending"?"#e67e22":p.status==="cancelled"?"#ccc":"#2e7d32" }}>
-                                {p.amount.toLocaleString()} {CUR}
+                                {Number(p.amount ?? 0).toLocaleString()} {CUR}
                               </div>
                               <div style={{ display:"flex",justifyContent:"flex-end",gap:6 }}>
                                 <button className="tx-action-btn tx-action-view" onClick={()=>exportInvoicePDF(p, true)} title={isAr?"معاينة الفاتورة":"Preview Invoice"}>
@@ -2779,7 +2779,7 @@ ${doctorSettlementRows}
                   <div style={{ display:"flex",justifyContent:"flex-end",alignItems:"center",gap:16,marginTop:14,padding:"12px 20px",background:"#fff",borderRadius:12,border:"1.5px solid #eef0f3" }}>
                     <span style={{ fontSize:13,color:"#888" }}>{isAr?"المجموع:":"Total:"}</span>
                     <span style={{ fontSize:18,fontWeight:900,color:"#2e7d32" }}>
-                      {filtered.filter(p=>p.status==="paid").reduce((s,p)=>s+p.amount,0).toLocaleString()} {CUR}
+                      {filtered.filter(p=>p.status==="paid").reduce((s,p)=>s+Number(p.amount ?? 0),0).toLocaleString()} {CUR}
                     </span>
                   </div>
                 )}
@@ -2820,11 +2820,11 @@ ${doctorSettlementRows}
                               </span>
                             </div>
                             <div style={{ textAlign:"end" }}>
-                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{numbersHidden ? "••••••" : doc.shareRevenue.toLocaleString()} {CUR}</span>
+                              <span style={{ fontSize:13,fontWeight:800,color:doc.color||"#0891b2" }}>{numbersHidden ? "••••••" : Number(doc.shareRevenue ?? 0).toLocaleString()} {CUR}</span>
                               <span style={{ fontSize:10,color:"#aaa",marginInlineStart:6 }}>({doc.count} {isAr?"معاملة":"tx"})</span>
                               {!numbersHidden && doc.shareRevenue !== doc.monthlyRevenue && (
                                 <div style={{ fontSize:9.5,color:"#8a97a6",marginTop:2 }}>
-                                  {isAr?"الإجمالي:":"Gross:"} {doc.monthlyRevenue.toLocaleString()} {CUR}
+                                  {isAr?"الإجمالي:":"Gross:"} {Number(doc.monthlyRevenue ?? 0).toLocaleString()} {CUR}
                                   {doc.unspecified>0 && <span style={{ color:"#e67e22" }}> · {doc.unspecified} {isAr?"بدون نسبة":"no %"}</span>}
                                 </div>
                               )}
@@ -2867,7 +2867,7 @@ ${doctorSettlementRows}
                             <div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{p.description}</div>
                           </div>
                           <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6 }}>
-                            <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>{p.amount.toLocaleString()} {CUR}</span>
+                            <span style={{ fontSize:14,fontWeight:800,color:"#e67e22" }}>{Number(p.amount ?? 0).toLocaleString()} {CUR}</span>
                             <button onClick={()=>markPaid(p.id)}
                               style={{ padding:"7px 14px",background:"#2e7d32",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Rubik,sans-serif",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px rgba(46,125,50,.25)",transition:"all .15s" }}
                               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background="#1b5e20"; }}
@@ -2957,7 +2957,7 @@ ${doctorSettlementRows}
                 const w = withdrawals.find(x=>x.id===reverseWithdrawalId);
                 return w ? (
                   <div style={{ background:"rgba(192,57,43,.06)",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:12,padding:"10px 16px",marginBottom:20,display:"inline-flex",alignItems:"center",gap:8 }}>
-                    <span style={{ fontSize:13,fontWeight:700,color:"#c0392b" }}>+{w.amount.toLocaleString()} {CUR}</span>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#c0392b" }}>+{Number(w.amount ?? 0).toLocaleString()} {CUR}</span>
                     <span style={{ fontSize:12,color:"#888" }}>{w.reason}</span>
                   </div>
                 ) : null;
@@ -2991,7 +2991,7 @@ ${doctorSettlementRows}
                 const exp = expenses.find(x=>x.id===reverseExpenseId);
                 return exp ? (
                   <div style={{ background:"rgba(123,45,139,.06)",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:12,padding:"10px 16px",marginBottom:20,display:"inline-flex",alignItems:"center",gap:8 }}>
-                    <span style={{ fontSize:13,fontWeight:700,color:"#7b2d8b" }}>+{exp.amount.toLocaleString()} {CUR}</span>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#7b2d8b" }}>+{Number(exp.amount ?? 0).toLocaleString()} {CUR}</span>
                     <span style={{ fontSize:12,color:"#888" }}>{exp.description}</span>
                   </div>
                 ) : null;
