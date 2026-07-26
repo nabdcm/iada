@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "clinic.nabd.app",
+    "sha256_cert_fingerprints": ["01:02:05:DA:00:3B:5A:6D:BB:A2:68:5E:AF:32:63:83:88:A7:25:6A:13:FE:40:E9:CE:8C:8D:D0:29:6A:4A:96"]
+  }
+}]
