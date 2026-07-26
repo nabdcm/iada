@@ -81,7 +81,10 @@ const T = {
   err: "حدث خطأ. حاول مجدداً.",
   mrnNote: "سيُرسل رقم السجل الطبي تلقائياً ليطابق المخبر المريض.",
   noMrn: "هذا المريض بلا رقم سجل طبي — سيصل الطلب بالاسم والهاتف.",
-  required: "اختر المخبر، وأدخل اسم المريض، وحدّد تحليلاً واحداً على الأقل.",
+  required: "اختر المخبر والمريض، وحدّد تحليلاً واحداً على الأقل.",
+  searchPatient: "ابحث بالاسم أو الهاتف أو رقم السجل...",
+  noPatientMatch: "لا يوجد مريض مطابق",
+  changePatient: "تغيير",
   noCatalog: "لا نتائج في الدليل — استخدم الإضافة المخصّصة",
   loading: "جارٍ التحميل...",
   sentOk: "✓ أُرسل الطلب إلى المخبر",
@@ -164,10 +167,8 @@ export default function LabRequestsPage() {
   // نموذج الطلب
   const [fLab, setFLab] = useState("");
   const [fPatientId, setFPatientId] = useState("");
-  const [fName, setFName] = useState("");
-  const [fPhone, setFPhone] = useState("");
-  const [fGender, setFGender] = useState("");
-  const [fAge, setFAge] = useState("");
+  const [patSearch, setPatSearch] = useState("");
+  const [patListOpen, setPatListOpen] = useState(false);
   const [fDoctor, setFDoctor] = useState("");
   const [fTests, setFTests] = useState<TestItem[]>([]);
   const [fNotes, setFNotes] = useState("");
@@ -226,13 +227,8 @@ export default function LabRequestsPage() {
 
   const pickPatient = (id: string) => {
     setFPatientId(id);
-    const p = patients.find(x => String(x.id) === id);
-    if (p) {
-      setFName(p.name);
-      setFPhone(p.phone ?? "");
-      setFGender(p.gender ?? "");
-      setFAge(ageFromDob(p.date_of_birth));
-    }
+    setPatListOpen(false);
+    setPatSearch("");
   };
 
   const toggleTest = (c: CatalogTest) => {
@@ -253,14 +249,16 @@ export default function LabRequestsPage() {
   };
 
   const resetForm = () => {
-    setFLab(""); setFPatientId(""); setFName(""); setFPhone(""); setFGender("");
-    setFAge(""); setFTests([]); setFNotes(""); setFUrgent(false); setTestSearch("");
+    setFLab(""); setFPatientId(""); setPatSearch(""); setPatListOpen(false);
+    setFTests([]); setFNotes(""); setFUrgent(false); setTestSearch("");
   };
 
-  const canSend = Boolean(fLab && fName.trim() && fTests.length > 0);
+  const canSend = Boolean(fLab && fPatientId && fTests.length > 0);
 
   const submit = async () => {
     if (!canSend) return;
+    const chosen = patients.find(p => String(p.id) === fPatientId);
+    if (!chosen) return;
     setSending(true); setNotice(null);
     const h = await authHeaders();
     if (!h) { setSending(false); return; }
@@ -269,9 +267,12 @@ export default function LabRequestsPage() {
         method: "POST", headers: h,
         body: JSON.stringify({
           action: "create", lab_user_id: fLab,
-          patient_id: fPatientId || null, patient_name: fName.trim(),
-          patient_phone: fPhone || null, patient_gender: fGender || null,
-          patient_age: fAge || null, referring_doctor: fDoctor || null,
+          patient_id: chosen ? chosen.id : null,
+          patient_name: chosen ? chosen.name : "",
+          patient_phone: chosen?.phone || null,
+          patient_gender: chosen?.gender || null,
+          patient_age: chosen ? ageFromDob(chosen.date_of_birth) : null,
+          referring_doctor: fDoctor || null,
           tests: fTests, notes: fNotes || null,
           urgency: fUrgent ? "urgent" : "normal",
         }),
@@ -329,6 +330,16 @@ export default function LabRequestsPage() {
 
   const selectedPatient = patients.find(p => String(p.id) === fPatientId);
 
+  const patientMatches = useMemo(() => {
+    const q = patSearch.trim().toLowerCase();
+    if (!q) return patients.slice(0, 25);
+    return patients.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.phone ?? "").includes(q) ||
+      (p.mrn ?? "").includes(q)
+    ).slice(0, 25);
+  }, [patients, patSearch]);
+
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString(isAr ? "ar-SY" : "en-US", { day: "numeric", month: "short" });
 
@@ -344,7 +355,10 @@ export default function LabRequestsPage() {
           .lr-actionbtn:hover{transform:translateY(-2px)}
           .lr-card{transition:box-shadow .2s ease}
           .lr-card:hover{box-shadow:0 10px 30px rgba(8,99,186,.09)}
-          .lr-sheet{width:min(96vw,620px);max-height:90vh;border-radius:24px}
+          .lr-sheet{width:min(96vw,620px);max-height:90vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column}
+          .lr-body{flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain}
+          .lr-body::-webkit-scrollbar{width:6px}
+          .lr-body::-webkit-scrollbar-thumb{background:#d7e2ee;border-radius:10px}
           .lr-formgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
           @media(max-width:860px){
             .lr-main{margin-right:0!important;margin-left:0!important;padding:0 14px 110px!important}
@@ -560,11 +574,11 @@ export default function LabRequestsPage() {
             background: "rgba(16,42,80,.45)", backdropFilter: "blur(4px)",
           }}>
             <div className="lr-sheet" onClick={e => e.stopPropagation()} style={{
-              background: "#fff", overflowY: "auto",
+              background: "#fff",
               boxShadow: "0 24px 70px rgba(0,0,0,.22)", direction: isAr ? "rtl" : "ltr",
             }}>
               <div style={{
-                position: "sticky", top: 0, zIndex: 5, background: "#fff",
+                flexShrink: 0, background: "#fff",
                 borderBottom: `1px solid ${BRAND.border}`, padding: "18px 24px",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
               }}>
@@ -576,7 +590,7 @@ export default function LabRequestsPage() {
                   }}>✕</button>
               </div>
 
-              <div style={{ padding: "22px 24px", display: "grid", gap: 16 }}>
+              <div className="lr-body" style={{ padding: "22px 24px", display: "grid", gap: 16, alignContent: "start" }}>
 
                 <div>
                   <label style={lbl}>{T.lab} *</label>
@@ -593,44 +607,110 @@ export default function LabRequestsPage() {
                   )}
                 </div>
 
+                {/* ── اختيار المريض: بحث بالاسم أو الهاتف أو رقم السجل ── */}
                 <div>
-                  <label style={lbl}>{T.patient}</label>
-                  <select value={fPatientId} onChange={e => pickPatient(e.target.value)} style={inp}>
-                    <option value="">{T.selectPatient}</option>
-                    {patients.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}{p.mrn ? ` — ${p.mrn}` : ""}</option>
-                    ))}
-                  </select>
-                  {fPatientId && (
+                  <label style={lbl}>{T.patient} *</label>
+
+                  {selectedPatient ? (
                     <div style={{
-                      fontSize: 12, marginTop: 7, lineHeight: 1.7,
-                      color: selectedPatient?.mrn ? BRAND.muted : BRAND.orange,
-                    }}>{selectedPatient?.mrn ? T.mrnNote : T.noMrn}</div>
+                      display: "flex", alignItems: "center", gap: 12,
+                      border: `1.5px solid ${BRAND.primary}`, background: BRAND.sky,
+                      borderRadius: 14, padding: "12px 14px",
+                    }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                        background: `linear-gradient(135deg,${BRAND.primary},${BRAND.primaryLight})`,
+                        color: "#fff", display: "flex", alignItems: "center",
+                        justifyContent: "center", fontSize: 14, fontWeight: 800,
+                      }}>
+                        {selectedPatient.name.split(" ").slice(0, 2).map(w => w[0]).join("")}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14.5, fontWeight: 800, color: BRAND.ink }}>
+                          {selectedPatient.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#5a6b80", marginTop: 3 }}>
+                          {[
+                            selectedPatient.mrn,
+                            selectedPatient.phone,
+                            ageFromDob(selectedPatient.date_of_birth)
+                              ? `${ageFromDob(selectedPatient.date_of_birth)} ${T.years}`
+                              : "",
+                            selectedPatient.gender === "male" ? T.male
+                              : selectedPatient.gender === "female" ? T.female : "",
+                          ].filter(Boolean).join(" · ")}
+                        </div>
+                      </div>
+                      <button onClick={() => { setFPatientId(""); setPatListOpen(true); }}
+                        style={{
+                          padding: "8px 14px", borderRadius: 10, cursor: "pointer",
+                          border: `1.5px solid ${BRAND.border}`, background: "#fff", color: BRAND.muted,
+                          fontFamily: "'Rubik',sans-serif", fontSize: 12, fontWeight: 700, flexShrink: 0,
+                        }}>{T.changePatient}</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ position: "relative" }}>
+                        <input
+                          value={patSearch}
+                          onChange={e => { setPatSearch(e.target.value); setPatListOpen(true); }}
+                          onFocus={() => setPatListOpen(true)}
+                          placeholder={T.searchPatient}
+                          style={{ ...inp, paddingInlineEnd: 40 }}
+                        />
+                        <span style={{
+                          position: "absolute", top: "50%", insetInlineEnd: 14,
+                          transform: "translateY(-50%)", fontSize: 15,
+                          color: BRAND.muted, pointerEvents: "none",
+                        }}>🔍</span>
+                      </div>
+
+                      {/* القائمة تتمدّد داخل التدفّق فلا تُقصّ داخل الورقة */}
+                      {patListOpen && (
+                        <div style={{
+                          marginTop: 8, border: `1.5px solid ${BRAND.border}`, borderRadius: 14,
+                          background: "#fbfdff", maxHeight: 240, overflowY: "auto",
+                        }}>
+                          {patientMatches.length === 0 ? (
+                            <div style={{ padding: "20px 16px", textAlign: "center", color: "#c8d2dc", fontSize: 12.5 }}>
+                              {T.noPatientMatch}
+                            </div>
+                          ) : patientMatches.map((p, i) => (
+                            <button key={p.id} onClick={() => pickPatient(String(p.id))}
+                              style={{
+                                width: "100%", display: "flex", alignItems: "center", gap: 11,
+                                padding: "11px 14px", cursor: "pointer", background: "transparent",
+                                border: "none", textAlign: "start",
+                                borderTop: i === 0 ? "none" : `1px solid ${BRAND.border}`,
+                                fontFamily: "'Rubik',sans-serif",
+                              }}>
+                              <div style={{
+                                width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                                background: BRAND.sky, color: BRAND.primary,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 12, fontWeight: 800,
+                              }}>
+                                {p.name.split(" ").slice(0, 2).map(w => w[0]).join("")}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color: BRAND.ink }}>{p.name}</div>
+                                <div style={{ fontSize: 11.5, color: BRAND.muted, marginTop: 2 }}>
+                                  {[p.mrn, p.phone].filter(Boolean).join(" · ") || "—"}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
-                </div>
 
-                <div>
-                  <label style={lbl}>{T.patientName} *</label>
-                  <input value={fName} onChange={e => setFName(e.target.value)} style={inp} />
-                </div>
-
-                <div className="lr-formgrid">
-                  <div>
-                    <label style={lbl}>{T.phone}</label>
-                    <input value={fPhone} onChange={e => setFPhone(e.target.value)} style={inp} />
-                  </div>
-                  <div>
-                    <label style={lbl}>{T.age}</label>
-                    <input value={fAge} onChange={e => setFAge(e.target.value)} style={inp} />
-                  </div>
-                  <div>
-                    <label style={lbl}>{T.gender}</label>
-                    <select value={fGender} onChange={e => setFGender(e.target.value)} style={inp}>
-                      <option value="">—</option>
-                      <option value="male">{T.male}</option>
-                      <option value="female">{T.female}</option>
-                    </select>
-                  </div>
+                  {selectedPatient && (
+                    <div style={{
+                      fontSize: 12, marginTop: 8, lineHeight: 1.7,
+                      color: selectedPatient.mrn ? BRAND.muted : BRAND.orange,
+                    }}>{selectedPatient.mrn ? T.mrnNote : T.noMrn}</div>
+                  )}
                 </div>
 
                 <div>
@@ -735,7 +815,7 @@ export default function LabRequestsPage() {
               </div>
 
               <div style={{
-                position: "sticky", bottom: 0, background: "#fff",
+                flexShrink: 0, background: "#fff",
                 borderTop: `1px solid ${BRAND.border}`, padding: "14px 24px",
                 display: "flex", gap: 10,
               }}>
@@ -767,11 +847,11 @@ export default function LabRequestsPage() {
             background: "rgba(16,42,80,.45)", backdropFilter: "blur(4px)",
           }}>
             <div className="lr-sheet" onClick={e => e.stopPropagation()} style={{
-              background: "#fff", overflowY: "auto",
+              background: "#fff",
               boxShadow: "0 24px 70px rgba(0,0,0,.22)", direction: isAr ? "rtl" : "ltr",
             }}>
               <div style={{
-                position: "sticky", top: 0, zIndex: 5, background: "#fff",
+                flexShrink: 0, background: "#fff",
                 borderBottom: `1px solid ${BRAND.border}`, padding: "18px 24px",
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
               }}>
@@ -790,7 +870,7 @@ export default function LabRequestsPage() {
                   }}>✕</button>
               </div>
 
-              <div style={{ padding: "20px 24px 26px" }}>
+              <div className="lr-body" style={{ padding: "20px 24px 26px" }}>
                 {resultFor.rows === null ? (
                   <div style={{ padding: "50px", textAlign: "center", color: "#c8d2dc", fontSize: 13.5 }}>{T.loading}</div>
                 ) : resultFor.rows.length === 0 ? (
