@@ -65,8 +65,7 @@ export async function POST(req: Request) {
       .from("prescriptions")
       .select("id, user_id, patient_id, date, diagnosis, notes, medications, doctor_name, clinic_name")
       .in("patient_id", patientIds)
-      .order("date", { ascending: false })
-      .limit(100);
+      .order("date", { ascending: false });
     if (!clinicRx || clinicRx.length === 0) return NextResponse.json({ imported: 0 });
 
     // ── 4) تفادي التكرار — معرّف فريد لكل صيدلية ─────────────
