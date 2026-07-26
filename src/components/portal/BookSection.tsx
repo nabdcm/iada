@@ -34,11 +34,12 @@ export default function BookSection({ patientName, patientPhone }: Props) {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [results, setResults] = useState<DoctorResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const search = useCallback(async (query: string, clinicType: string) => {
-    setLoading(true); setErr(null);
+    setLoading(true); setErr(null); setSearched(true);
     try {
       const params = new URLSearchParams();
       if (query.trim().length >= 2) params.set("q", query.trim());
@@ -53,9 +54,15 @@ export default function BookSection({ patientName, patientPhone }: Props) {
     setLoading(false);
   }, []);
 
-  // تحميل أولي + تهدئة أثناء الكتابة
+  // لا تُعرض أي اقتراحات قبل بحث فعلي — حرفان على الأقل أو اختيار تخصص
   useEffect(() => {
-    const t = setTimeout(() => { void search(q, type); }, q ? 400 : 0);
+    const hasQuery = q.trim().length >= 2;
+    const hasType = Boolean(type);
+    if (!hasQuery && !hasType) {
+      setResults([]); setSearched(false); setLoading(false); setErr(null);
+      return;
+    }
+    const t = setTimeout(() => { void search(q, type); }, hasQuery ? 400 : 0);
     return () => clearTimeout(t);
   }, [q, type, search]);
 
@@ -131,7 +138,20 @@ export default function BookSection({ patientName, patientPhone }: Props) {
       )}
 
       {/* النتائج */}
-      {loading ? (
+      {!searched && !loading ? (
+        <div style={{
+          background: "#fff", border: `1.5px solid ${BRAND.border}`, borderRadius: 20,
+          padding: "50px 24px", textAlign: "center", boxShadow: "0 4px 16px rgba(8,99,186,.05)",
+        }}>
+          <div style={{ fontSize: 40, marginBottom: 12, opacity: .5 }}>🩺</div>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: BRAND.ink, marginBottom: 6 }}>
+            ابحث عن طبيبك
+          </div>
+          <div style={{ fontSize: 13, color: BRAND.muted, lineHeight: 1.8 }}>
+            اكتب اسم الطبيب أو العيادة، أو اختر تخصصاً من الأعلى.
+          </div>
+        </div>
+      ) : loading ? (
         <div style={{
           background: "#fff", border: `1.5px solid ${BRAND.border}`, borderRadius: 20,
           padding: "50px 20px", textAlign: "center", color: "#c8d2dc", fontSize: 14,
