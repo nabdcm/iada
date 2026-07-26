@@ -65,11 +65,13 @@ const APPT_DOC_COLORS = ["#6d28d9","#0863ba","#2e7d32","#c0392b","#e67e22","#089
 const toKeyAppt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
 // ─── نفس حقول السجل الطبي الموجودة في النظام الأصلي ──────────
-type ClinicType = "general"|"dental"|"dermatology"|"cosmetic"|"pediatrics"|"physical_therapy"|"mental_health"|"nutrition"|"ophthalmology"|"orthopedic"|"cardiology"|"gynecology"|"ent"|"urology"|"other";
+import type { ClinicType } from "@/lib/clinicTypes";
+import { NEW_TYPE_MEDICAL_FIELDS } from "@/lib/clinicTypes";
 
 type MedicalField = { key:string; label_ar:string; icon:string };
 
 const MEDICAL_FIELDS_BY_TYPE: Record<string, MedicalField[]> = {
+  ...(NEW_TYPE_MEDICAL_FIELDS as Record<string, MedicalField[]>),
   general:          [ {key:"allergies",icon:"🤧",label_ar:"الحساسية"}, {key:"medications",icon:"💊",label_ar:"الأدوية الحالية"}, {key:"surgeries",icon:"🔪",label_ar:"العمليات السابقة"}, {key:"family_history",icon:"‍‍",label_ar:"التاريخ العائلي"}, {key:"chronic_diseases",icon:"🏥",label_ar:"الأمراض المزمنة"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   dental:           [ {key:"allergies",icon:"💊",label_ar:"حساسية الأدوية"}, {key:"medications",icon:"💉",label_ar:"الأدوية الحالية"}, {key:"dental_history",icon:"🦷",label_ar:"التاريخ الطبي السني"}, {key:"tmj_issues",icon:"🦴",label_ar:"مشاكل مفصل الفك"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],
   dermatology:      [ {key:"allergies",icon:"🤧",label_ar:"الحساسية الجلدية"}, {key:"medications",icon:"💊",label_ar:"الأدوية والكريمات"}, {key:"skin_history",icon:"🧴",label_ar:"التاريخ الجلدي"}, {key:"sun_exposure",icon:"☀️",label_ar:"التعرض للشمس"}, {key:"extended_notes",icon:"📝",label_ar:"ملاحظات الطبيب"} ],

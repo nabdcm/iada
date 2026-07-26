@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase, fetchAll } from "@/lib/supabase";
+import { CLINIC_TYPE_META } from "@/lib/clinicTypes";
 import PageIntro from "@/components/PageIntro";
 import SharedSidebar from "@/components/SharedSidebar";
 import AuthGuard from "@/components/AuthGuard";
@@ -34,23 +35,7 @@ type Referral = {
 type PatientOpt = { id: number; name: string };
 type DoctorResult = { user_id: string; clinic_name: string; doctor_name: string; clinic_type: string };
 
-const CLINIC_TYPES: Record<string, { ar: string; en: string; icon: string }> = {
-  general: { ar: "طب عام", en: "General", icon: "🏥" },
-  dental: { ar: "طب أسنان", en: "Dentistry", icon: "🦷" },
-  dermatology: { ar: "جلدية", en: "Dermatology", icon: "🧴" },
-  cosmetic: { ar: "تجميل", en: "Cosmetic", icon: "💆" },
-  pediatrics: { ar: "أطفال", en: "Pediatrics", icon: "👶" },
-  physical_therapy: { ar: "علاج فيزيائي", en: "Physiotherapy", icon: "🏃" },
-  mental_health: { ar: "صحة نفسية", en: "Mental Health", icon: "🧠" },
-  nutrition: { ar: "تغذية", en: "Nutrition", icon: "🥗" },
-  ophthalmology: { ar: "عينية", en: "Ophthalmology", icon: "👁️" },
-  orthopedic: { ar: "عظمية", en: "Orthopedics", icon: "🦴" },
-  cardiology: { ar: "قلبية", en: "Cardiology", icon: "❤️" },
-  gynecology: { ar: "نسائية", en: "Gynecology", icon: "🌸" },
-  ent: { ar: "أذن أنف حنجرة", en: "ENT", icon: "👂" },
-  urology: { ar: "بولية", en: "Urology", icon: "💧" },
-  other: { ar: "أخرى", en: "Other", icon: "🏨" },
-};
+const CLINIC_TYPES: Record<string, { ar: string; en: string; icon: string }> = CLINIC_TYPE_META;
 
 const T = {
   ar: {

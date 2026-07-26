@@ -14,22 +14,7 @@ import { COUNTRIES } from "@/lib/phone";
 
 type Lang = "ar" | "en";
 
-type ClinicType =
-  | "general"
-  | "dental"
-  | "dermatology"
-  | "cosmetic"
-  | "pediatrics"
-  | "physical_therapy"
-  | "mental_health"
-  | "nutrition"
-  | "ophthalmology"
-  | "orthopedic"
-  | "cardiology"
-  | "gynecology"
-  | "ent"
-  | "urology"
-  | "other";
+import { CLINIC_TYPES, CLINIC_TYPE_META, type ClinicType } from "@/lib/clinicTypes";
 
 // الخطط الفردية: basic, pro, enterprise
 // الخطط المشتركة: shared_basic, shared_pro, shared_enterprise
@@ -560,24 +545,9 @@ const PLAN_FEATURES: Record<string, { ar: string[]; en: string[] }> = {
   },
 };
 
-// Clinic type icons
-const CLINIC_TYPE_ICONS: Record<string, string> = {
-  general:          "🏥",
-  dental:           "🦷",
-  dermatology:      "🧴",
-  cosmetic:         "💆",
-  pediatrics:       "👶",
-  physical_therapy: "🏃",
-  mental_health:    "🧠",
-  nutrition:        "🥗",
-  ophthalmology:    "👁️",
-  orthopedic:       "🦴",
-  cardiology:       "❤️",
-  gynecology:       "🌸",
-  ent:              "👂",
-  urology:          "💧",
-  other:            "🏨",
-};
+const CLINIC_TYPE_ICONS: Record<string, string> = Object.fromEntries(
+  Object.entries(CLINIC_TYPE_META).map(([k, v]) => [k, v.icon])
+);
 const STATUS_COLORS = {
   active:   { bg:"rgba(46,125,50,.1)",   color:"#2e7d32" },
   inactive: { bg:"rgba(230,126,34,.1)",  color:"#e67e22" },
@@ -915,11 +885,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
               {form.account_type !== "pharmacy" && form.account_type !== "lab" && (
               <Field label={tr.modal.clinicType}>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
-                  {([
-                    "general","dental","dermatology","cosmetic","pediatrics",
-                    "physical_therapy","mental_health","nutrition","ophthalmology",
-                    "orthopedic","cardiology","gynecology","ent","urology","other"
-                  ] as ClinicType[]).map(ct => {
+                  {(CLINIC_TYPES as readonly ClinicType[]).map(ct => {
                     const isSelected = form.clinic_type === ct;
                     return (
                       <button key={ct} type="button"
@@ -936,7 +902,7 @@ const ClinicModal = ({ lang, clinic, onSave, onClose }: ModalProps) => {
                         }}>
                         <span style={{ fontSize:22, display:"flex" }}><AppIcon glyph={CLINIC_TYPE_ICONS[ct]} /></span>
                         <span style={{ fontSize:10, fontWeight:isSelected?700:400, color:isSelected?"#0558a8":"#666", textAlign:"center", lineHeight:1.3 }}>
-                          {tr.modal.clinicTypes[ct as keyof typeof tr.modal.clinicTypes]}
+                          {CLINIC_TYPE_META[ct][isAr ? "ar" : "en"]}
                         </span>
                       </button>
                     );
@@ -1570,11 +1536,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                   {tr.modal.clinicType}
                 </label>
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6 }}>
-                  {([
-                    "general","dental","dermatology","cosmetic","pediatrics",
-                    "physical_therapy","mental_health","nutrition","ophthalmology",
-                    "orthopedic","cardiology","gynecology","ent","urology","other"
-                  ] as ClinicType[]).map(ct => {
+                  {(CLINIC_TYPES as readonly ClinicType[]).map(ct => {
                     const isSelected = form.clinic_type === ct;
                     return (
                       <button key={ct} type="button"
@@ -1582,7 +1544,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                         style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"8px 4px",border:`1.5px solid ${isSelected?"#0558a8":"#eef0f3"}`,borderRadius:9,background:isSelected?"rgba(5,88,168,.07)":"#fafbfc",cursor:"pointer",transition:"all .15s",fontFamily:"Rubik,sans-serif",boxShadow:isSelected?"0 2px 8px rgba(5,88,168,.12)":"none" }}>
                         <span style={{ fontSize:18, display:"flex" }}><AppIcon glyph={CLINIC_TYPE_ICONS[ct]} /></span>
                         <span style={{ fontSize:9,fontWeight:isSelected?700:400,color:isSelected?"#0558a8":"#888",textAlign:"center",lineHeight:1.3 }}>
-                          {tr.modal.clinicTypes[ct as keyof typeof tr.modal.clinicTypes]}
+                          {CLINIC_TYPE_META[ct][isAr ? "ar" : "en"]}
                         </span>
                       </button>
                     );

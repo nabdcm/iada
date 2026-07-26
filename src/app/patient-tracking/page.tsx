@@ -10,17 +10,12 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase, fetchAll } from "@/lib/supabase";
+import { CLINIC_TYPE_META, CLINIC_TYPE_TO_TRACKING } from "@/lib/clinicTypes";
 import PageIntro from "@/components/PageIntro";
 
 type Lang = "ar" | "en";
 
-const CLINIC_TYPE_TO_TRACKING: Record<string, string> = {
-  general:"general", dental:"dental", dermatology:"skin_care",
-  cosmetic:"cosmetic", pediatrics:"general", physical_therapy:"physical_therapy",
-  mental_health:"mental_health", nutrition:"nutrition", ophthalmology:"ophthalmology",
-  orthopedic:"orthopedic", cardiology:"general", gynecology:"general",
-  ent:"general", urology:"general", other:"general", skin_care:"skin_care",
-};
+
 
 const CLINIC_LABELS: Record<string, { ar:string; en:string; icon:string; color:string }> = {
   skin_care:        { ar:"عناية بالبشرة",   en:"Skin Care",        icon:"✨", color:"#e67e22" },
@@ -34,23 +29,7 @@ const CLINIC_LABELS: Record<string, { ar:string; en:string; icon:string; color:s
   mental_health:    { ar:"الصحة النفسية",   en:"Mental Health",    icon:"🧠", color:"#6c3fc5" },
 };
 
-const ADMIN_META: Record<string, { ar:string; en:string; icon:string; color:string }> = {
-  general:          { icon:"🏥", color:"#16a085", ar:"طب عام",           en:"General Medicine"   },
-  dental:           { icon:"🦷", color:"#0863ba", ar:"أسنان",            en:"Dental"             },
-  dermatology:      { icon:"🧴", color:"#e67e22", ar:"جلدية",            en:"Dermatology"        },
-  cosmetic:         { icon:"💆", color:"#8e44ad", ar:"تجميلية",          en:"Cosmetic"           },
-  pediatrics:       { icon:"👶", color:"#27ae60", ar:"أطفال",            en:"Pediatrics"         },
-  physical_therapy: { icon:"🏃", color:"#2e7d32", ar:"علاج فيزيائي",    en:"Physical Therapy"   },
-  mental_health:    { icon:"🧠", color:"#6c3fc5", ar:"صحة نفسية",       en:"Mental Health"      },
-  nutrition:        { icon:"🥗", color:"#27ae60", ar:"تغذية",            en:"Nutrition"          },
-  ophthalmology:    { icon:"👁", color:"#2980b9", ar:"عيون",             en:"Ophthalmology"      },
-  orthopedic:       { icon:"🦴", color:"#c0392b", ar:"عظام ومفاصل",     en:"Orthopedics"        },
-  cardiology:       { icon:"❤️", color:"#e74c3c", ar:"قلب وشرايين",     en:"Cardiology"         },
-  gynecology:       { icon:"🌸", color:"#e91e63", ar:"نساء وتوليد",     en:"Gynecology"         },
-  ent:              { icon:"👂", color:"#795548", ar:"أنف وأذن وحنجرة", en:"ENT"                },
-  urology:          { icon:"💧", color:"#2196f3", ar:"مسالك بولية",     en:"Urology"            },
-  other:            { icon:"🏨", color:"#607d8b", ar:"أخرى",            en:"Other"              },
-};
+const ADMIN_META: Record<string, { ar:string; en:string; icon:string; color:string }> = CLINIC_TYPE_META;
 
 const FIELD_LABELS: Record<string,{ar:string;en:string}> = {
   applied_medication:{ar:"طبّق الدواء",en:"Applied medication"},
