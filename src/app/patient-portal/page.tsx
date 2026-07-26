@@ -2,6 +2,8 @@
 
 import AppIcon from "@/components/AppIcon";
 import BookSection from "@/components/portal/BookSection";
+import PrescriptionsSection, { type PortalPrescription } from "@/components/portal/PrescriptionsSection";
+import LabsSection, { type PortalLab } from "@/components/portal/LabsSection";
 import { useState, useEffect } from "react";
 
 // ============================================================
@@ -415,7 +417,9 @@ function PatientDashboard({ master, lang, onLogout }: {
   const [loading, setLoading] = useState(true);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(0);
   const [patientInfo, setPatientInfo] = useState<ClinicRecord["patient_info"] | null>(null);
-  const [portalTab, setPortalTab] = useState<"records" | "book">("records");
+  const [portalTab, setPortalTab] = useState<"records" | "rx" | "labs" | "book">("records");
+  const [prescriptions, setPrescriptions] = useState<PortalPrescription[]>([]);
+  const [labs, setLabs] = useState<PortalLab[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -429,6 +433,8 @@ function PatientDashboard({ master, lang, onLogout }: {
         const json = await res.json();
         const built: ClinicRecord[] = (json.records ?? []) as ClinicRecord[];
         setRecords(built);
+        setPrescriptions((json.prescriptions ?? []) as PortalPrescription[]);
+        setLabs((json.labs ?? []) as PortalLab[]);
         if (built.length > 0) setPatientInfo(built[0].patient_info);
       } catch (e) {
         console.error(e);
@@ -549,30 +555,45 @@ function PatientDashboard({ master, lang, onLogout }: {
 
         {/* ── شريط التبويبات ── */}
         <div style={{
-          display: "flex", gap: 8, marginBottom: 20,
+          display: "flex", gap: 6, marginBottom: 20,
           background: "#fff", border: "1.5px solid #eef0f3", borderRadius: 16,
           padding: 6, boxShadow: "0 4px 16px rgba(8,99,186,.06)",
+          overflowX: "auto", WebkitOverflowScrolling: "touch",
         }}>
           {([
-            { k: "records" as const, label: isAr ? "سجلاتي" : "My Records", icon: "📋" },
-            { k: "book" as const, label: isAr ? "حجز موعد" : "Book", icon: "📅" },
+            { k: "records" as const, label: isAr ? "سجلاتي" : "Records", icon: "📋", n: 0 },
+            { k: "rx" as const, label: isAr ? "وصفاتي" : "Rx", icon: "💊", n: prescriptions.length },
+            { k: "labs" as const, label: isAr ? "تحاليلي" : "Labs", icon: "🧪", n: labs.length },
+            { k: "book" as const, label: isAr ? "حجز موعد" : "Book", icon: "📅", n: 0 },
           ]).map(tb => {
             const on = portalTab === tb.k;
             return (
               <button key={tb.k} onClick={() => setPortalTab(tb.k)}
                 style={{
-                  flex: 1, padding: "11px 0", borderRadius: 12, border: "none", cursor: "pointer",
+                  flex: "1 0 auto", minWidth: 82, padding: "11px 8px", borderRadius: 12, border: "none", cursor: "pointer",
                   background: on ? "linear-gradient(135deg,#0863ba,#3d8fd6)" : "transparent",
                   color: on ? "#fff" : "#8a97a6",
                   fontFamily: "Rubik, sans-serif", fontSize: 13.5, fontWeight: 700,
                   transition: "all .2s",
                   boxShadow: on ? "0 4px 14px rgba(8,99,186,.25)" : "none",
+                  whiteSpace: "nowrap",
                 }}>
                 {tb.icon} {tb.label}
+                {tb.n > 0 && (
+                  <span style={{
+                    marginInlineStart: 5, fontSize: 10.5, fontWeight: 800,
+                    background: on ? "rgba(255,255,255,.25)" : "#f1f5fb",
+                    color: on ? "#fff" : "#8a97a6",
+                    borderRadius: 9, padding: "1px 6px",
+                  }}>{tb.n}</span>
+                )}
               </button>
             );
           })}
         </div>
+
+        {portalTab === "rx" && <PrescriptionsSection items={prescriptions} />}
+        {portalTab === "labs" && <LabsSection items={labs} />}
 
         {/* ── تبويب حجز موعد ── */}
         {portalTab === "book" && (

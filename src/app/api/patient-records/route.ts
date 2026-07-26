@@ -87,7 +87,60 @@ export async function GET(req: NextRequest) {
       };
     }));
 
-    return NextResponse.json({ ok: true, patient: master, records });
+    // ── 4) الوصفات الطبية عبر سجلات المريض في العيادات ──
+    const { data: rxData } = await supabaseAdmin
+      .from("prescriptions")
+      .select("id, user_id, patient_id, date, diagnosis, notes, medications, doctor_name, clinic_name, created_at")
+      .in("patient_id", patientIds)
+      .order("date", { ascending: false })
+      .range(0, 499);
+
+    const prescriptions = (rxData ?? []).map(rx => {
+      const clinic = clinicsMap[rx.user_id as string] ?? {};
+      let meds: unknown = rx.medications;
+      if (typeof meds === "string") { try { meds = JSON.parse(meds); } catch { meds = []; } }
+      return {
+        id: rx.id,
+        date: rx.date,
+        diagnosis: rx.diagnosis ?? null,
+        notes: rx.notes ?? null,
+        medications: Array.isArray(meds) ? meds : [],
+        doctor_name: rx.doctor_name || clinic.owner || "—",
+        clinic_name: rx.clinic_name || clinic.name || "—",
+      };
+    });
+
+    // ── 5) التحاليل المخبرية عبر رقم السجل الطبي ──
+    const { data: labData } = await supabaseAdmin
+      .from("lab_orders")
+      .select("id, user_id, share_token, status, sample_date, result_date, results, referring_doctor, notes, created_at")
+      .eq("mrn", master.mrn)
+      .order("created_at", { ascending: false })
+      .range(0, 499);
+
+    const labUserIds = [...new Set((labData ?? []).map(o => o.user_id as string).filter(Boolean))];
+    const labNames: Record<string, string> = {};
+    if (labUserIds.length > 0) {
+      const { data: labClinics } = await supabaseAdmin
+        .from("clinics").select("user_id, name").in("user_id", labUserIds);
+      (labClinics ?? []).forEach(c => { labNames[c.user_id as string] = (c.name as string) ?? "مخبر"; });
+    }
+
+    // لا تُعرض إلا النتائج الصادرة فعلاً — الطلبات المعلّقة تُخفى عن المريض
+    const labs = (labData ?? [])
+      .filter(o => o.status === "completed")
+      .map(o => ({
+        id: o.id,
+        lab_name: labNames[o.user_id as string] ?? "مخبر",
+        sample_date: o.sample_date,
+        result_date: o.result_date,
+        referring_doctor: o.referring_doctor ?? null,
+        notes: o.notes ?? null,
+        share_token: o.share_token,
+        results: Array.isArray(o.results) ? o.results : [],
+      }));
+
+    return NextResponse.json({ ok: true, patient: master, records, prescriptions, labs });
   } catch {
     return NextResponse.json({ error: "server" }, { status: 500 });
   }
