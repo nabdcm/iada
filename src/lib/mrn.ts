@@ -36,3 +36,5 @@ export async function getOrCreateMRN(phone: string, name: string): Promise<strin
 
   return retry?.mrn ?? null;
 }
+
+export { normalizeMRN, luhnDigit, isValidMRN, formatMRN } from "./mrnFormat";

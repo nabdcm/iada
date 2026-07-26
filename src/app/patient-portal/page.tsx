@@ -1,6 +1,7 @@
 "use client";
 
 import AppIcon from "@/components/AppIcon";
+import BookSection from "@/components/portal/BookSection";
 import { useState, useEffect } from "react";
 
 // ============================================================
@@ -414,6 +415,7 @@ function PatientDashboard({ master, lang, onLogout }: {
   const [loading, setLoading] = useState(true);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(0);
   const [patientInfo, setPatientInfo] = useState<ClinicRecord["patient_info"] | null>(null);
+  const [portalTab, setPortalTab] = useState<"records" | "book">("records");
 
   useEffect(() => {
     (async () => {
@@ -545,6 +547,43 @@ function PatientDashboard({ master, lang, onLogout }: {
           </div>
         </div>
 
+        {/* ── شريط التبويبات ── */}
+        <div style={{
+          display: "flex", gap: 8, marginBottom: 20,
+          background: "#fff", border: "1.5px solid #eef0f3", borderRadius: 16,
+          padding: 6, boxShadow: "0 4px 16px rgba(8,99,186,.06)",
+        }}>
+          {([
+            { k: "records" as const, label: isAr ? "سجلاتي" : "My Records", icon: "📋" },
+            { k: "book" as const, label: isAr ? "حجز موعد" : "Book", icon: "📅" },
+          ]).map(tb => {
+            const on = portalTab === tb.k;
+            return (
+              <button key={tb.k} onClick={() => setPortalTab(tb.k)}
+                style={{
+                  flex: 1, padding: "11px 0", borderRadius: 12, border: "none", cursor: "pointer",
+                  background: on ? "linear-gradient(135deg,#0863ba,#3d8fd6)" : "transparent",
+                  color: on ? "#fff" : "#8a97a6",
+                  fontFamily: "Rubik, sans-serif", fontSize: 13.5, fontWeight: 700,
+                  transition: "all .2s",
+                  boxShadow: on ? "0 4px 14px rgba(8,99,186,.25)" : "none",
+                }}>
+                {tb.icon} {tb.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── تبويب حجز موعد ── */}
+        {portalTab === "book" && (
+          <BookSection
+            patientName={patientInfo?.name ?? master.name ?? ""}
+            patientPhone={master.phone ?? ""}
+          />
+        )}
+
+        {portalTab === "records" && (
+        <>
         {/* Personal Info */}
         {patientInfo && (
           <div style={{
@@ -674,6 +713,8 @@ function PatientDashboard({ master, lang, onLogout }: {
               />
             ))}
           </div>
+        )}
+        </>
         )}
       </div>
 

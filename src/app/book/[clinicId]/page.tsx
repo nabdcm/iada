@@ -170,6 +170,16 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
     notes:            "",
   });
 
+  // تعبئة مسبقة عند القدوم من بوابة المريض (/book/[id]?name=&phone=)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const n = sp.get("name") ?? "";
+    const ph = sp.get("phone") ?? "";
+    if (n || ph) {
+      setForm(f => ({ ...f, name: f.name || n, phone: f.phone || ph }));
+    }
+  }, []);
+
   // المواعيد المحجوزة للتاريخ المختار
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
