@@ -765,7 +765,7 @@ function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHi
   const [activeIdx, setActiveIdx] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  const maskVal = (val: number) => numbersHidden ? "••••••" : val.toLocaleString();
+  const maskVal = (val: number) => numbersHidden ? "••••••" : Number(val ?? 0).toLocaleString();
 
   const cards = [
     {
@@ -1197,10 +1197,10 @@ export default function PaymentsPage() {
           .eq("user_id", user.id)
           .eq("is_hidden", false)
           .order("name")
-          .range(f, t), { onPage: (rows) => { setPayments(rows); setLoading(false); } }),
+          .range(f, t), { onPage: (rows) => { setPayments(rows.filter(Boolean)); setLoading(false); } }),
       ]);
 
-      setPayments(paymentsData || []);
+      setPayments((paymentsData || []).filter(Boolean));
       setPatients((patientsData ?? []) as unknown as Patient[]);
 
       // جلب قائمة الأطباء لخطط العيادات المشتركة
@@ -1222,7 +1222,7 @@ export default function PaymentsPage() {
         .eq("user_id", user.id)
         .order("date", { ascending: false })
         .range(f, t));
-      setWithdrawals(withdrawalsData || []);
+      setWithdrawals((withdrawalsData || []).filter(Boolean));
 
       const expensesData = await fetchAll<any>((f, t) => supabase
         .from("clinic_expenses")
@@ -1230,7 +1230,7 @@ export default function PaymentsPage() {
         .eq("user_id", user.id)
         .order("date", { ascending: false })
         .range(f, t));
-      setExpenses(expensesData || []);
+      setExpenses((expensesData || []).filter(Boolean));
     } catch (err) {
       console.error("loadData error:", err);
     } finally {
@@ -1247,8 +1247,8 @@ export default function PaymentsPage() {
         fetchAll<any>((f, t) => supabase.from("clinic_withdrawals").select("*").eq("user_id", user.id).order("date", { ascending: false }).range(f, t)),
         fetchAll<any>((f, t) => supabase.from("clinic_expenses").select("*").eq("user_id", user.id).order("date", { ascending: false }).range(f, t)),
       ]);
-      if (wData) setWithdrawals(wData);
-      if (eData) setExpenses(eData);
+      if (wData) setWithdrawals(wData.filter(Boolean));
+      if (eData) setExpenses(eData.filter(Boolean));
     } catch (err) {
       console.error("reloadFinancials error:", err);
     }
@@ -1289,7 +1289,7 @@ export default function PaymentsPage() {
       items.push(...withdrawals.filter(w => !q || (w.reason||"").toLowerCase().includes(q) || (w.notes||"").toLowerCase().includes(q)).map(w => ({ ...w, __kind:"withdrawal" })));
     if (showE && selectedDoctor === null)
       items.push(...expenses.filter(e => !q || (e.description||"").toLowerCase().includes(q)).map(e => ({ ...e, __kind:"expense" })));
-    return items.sort((a,b) => (b.date||"").localeCompare(a.date||"") || (b.created_at||"").localeCompare(a.created_at||""));
+    return items.filter(Boolean).sort((a,b) => (b?.date||"").localeCompare(a?.date||"") || (b?.created_at||"").localeCompare(a?.created_at||""));
   }, [filtered, withdrawals, expenses, filter, search, selectedDoctor]);
 
   useEffect(()=>{ setTxPage(1); },[search,filter,selectedDoctor]);
@@ -1321,7 +1321,7 @@ export default function PaymentsPage() {
         </div>
         <span style={{ fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20,background:`${color}12`,color,flexShrink:0 }}>{label}</span>
         <span style={{ fontSize:14,fontWeight:800,color,whiteSpace:"nowrap",flexShrink:0,fontVariantNumeric:"tabular-nums" }}>
-          -{numbersHidden ? "••••" : item.amount.toLocaleString()} {CUR}
+          -{numbersHidden ? "••••" : Number(item.amount ?? 0).toLocaleString()} {CUR}
         </span>
         <button
           onClick={()=> isW ? setReverseWithdrawalId(item.id) : setReverseExpenseId(item.id)}
@@ -1427,7 +1427,7 @@ export default function PaymentsPage() {
         .select()
         .single();
 
-      if (error) { console.error("insert payment error:", error); return; }
+      if (error || !inserted) { console.error("insert payment error:", error); return; }
 
       setPayments(prev => [inserted, ...prev]);
       setAnimIds(prev => [...prev, inserted.id]);
@@ -1604,7 +1604,7 @@ export default function PaymentsPage() {
         <td>${p.description}</td>
         <td>${methodMap[p.method] || p.method}</td>
         <td class="status-${p.status}">${statusMap[p.status] || p.status}</td>
-        <td class="amount-green">+${p.amount.toLocaleString()} ${CUR}</td>
+        <td class="amount-green">+${Number(p.amount ?? 0).toLocaleString()} ${CUR}</td>
       </tr>`;
     }).join("");
 
@@ -1612,7 +1612,7 @@ export default function PaymentsPage() {
         <td>${fmtDateGregorian(w.date)}</td>
         <td colspan="3">${w.reason}</td>
         <td><span style="background:rgba(192,57,43,.1);color:#c0392b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">سحب</span></td>
-        <td class="amount-red">-${w.amount.toLocaleString()} ${CUR}</td>
+        <td class="amount-red">-${Number(w.amount ?? 0).toLocaleString()} ${CUR}</td>
       </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد سحوبات هذا الشهر</td></tr>`;
 
     const catLabelsAr: Record<string,string> = { rent:"إيجار", supplies:"مستلزمات طبية", salary:"رواتب موظفين", utilities:"فواتير كهرباء/ماء", maintenance:"صيانة", other:"أخرى" };
@@ -1621,7 +1621,7 @@ export default function PaymentsPage() {
         <td colspan="2">${e.description}</td>
         <td>${catLabelsAr[e.category] || e.category}</td>
         <td><span style="background:rgba(123,45,139,.1);color:#7b2d8b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">مصروف</span></td>
-        <td class="amount-purple">-${e.amount.toLocaleString()} ${CUR}</td>
+        <td class="amount-purple">-${Number(e.amount ?? 0).toLocaleString()} ${CUR}</td>
       </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد مصروفات هذا الشهر</td></tr>`;
 
     // ── محاسبة الأطباء — للعيادات المشتركة فقط ─────────────
@@ -1883,7 +1883,7 @@ ${doctorSettlementRows}
             <td>${p.description}</td>
             <td>${methodMapAr[p.method] || p.method}</td>
             <td class="status-${p.status}">${statusMapAr[p.status] || p.status}</td>
-            <td class="amount-green">+${p.amount.toLocaleString()} ${CUR}</td>
+            <td class="amount-green">+${Number(p.amount ?? 0).toLocaleString()} ${CUR}</td>
           </tr>`;
         }).join("")
       : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد مدفوعات اليوم</td></tr>`;
@@ -1892,7 +1892,7 @@ ${doctorSettlementRows}
       ? todayWithdrawals.map(w => `<tr>
           <td colspan="3">${w.reason}${w.is_reversed ? ' <span style="color:#bbb;font-size:10px">(مُلغى)</span>' : ""}</td>
           <td><span style="background:rgba(192,57,43,.1);color:#c0392b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">سحب</span></td>
-          <td class="${w.is_reversed?"":"amount-red"}" style="${w.is_reversed?"color:#bbb;text-decoration:line-through":""}">-${w.amount.toLocaleString()} ${CUR}</td>
+          <td class="${w.is_reversed?"":"amount-red"}" style="${w.is_reversed?"color:#bbb;text-decoration:line-through":""}">-${Number(w.amount ?? 0).toLocaleString()} ${CUR}</td>
         </tr>`).join("")
       : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد سحوبات اليوم</td></tr>`;
 
@@ -1901,7 +1901,7 @@ ${doctorSettlementRows}
           <td colspan="2">${e.description}</td>
           <td>${catLabelsAr[e.category] || e.category}</td>
           <td><span style="background:rgba(123,45,139,.1);color:#7b2d8b;padding:2px 8px;border-radius:12px;font-weight:600;font-size:11px">مصروف</span></td>
-          <td class="amount-purple">-${e.amount.toLocaleString()} ${CUR}</td>
+          <td class="amount-purple">-${Number(e.amount ?? 0).toLocaleString()} ${CUR}</td>
         </tr>`).join("")
       : `<tr><td colspan="5" style="text-align:center;color:#aaa;font-style:italic;padding:16px">لا توجد مصروفات اليوم</td></tr>`;
 
