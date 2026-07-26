@@ -1197,7 +1197,7 @@ export default function PaymentsPage() {
           .eq("user_id", user.id)
           .eq("is_hidden", false)
           .order("name")
-          .range(f, t)),
+          .range(f, t), { onPage: (rows) => { setPayments(rows); setLoading(false); } }),
       ]);
 
       setPayments(paymentsData || []);
@@ -1216,18 +1216,20 @@ export default function PaymentsPage() {
       }
 
       // جلب السحوبات والمصروفات
-      const { data: withdrawalsData } = await supabase
+      const withdrawalsData = await fetchAll<any>((f, t) => supabase
         .from("clinic_withdrawals")
         .select("*")
         .eq("user_id", user.id)
-        .order("date", { ascending: false });
+        .order("date", { ascending: false })
+        .range(f, t));
       setWithdrawals(withdrawalsData || []);
 
-      const { data: expensesData } = await supabase
+      const expensesData = await fetchAll<any>((f, t) => supabase
         .from("clinic_expenses")
         .select("*")
         .eq("user_id", user.id)
-        .order("date", { ascending: false });
+        .order("date", { ascending: false })
+        .range(f, t));
       setExpenses(expensesData || []);
     } catch (err) {
       console.error("loadData error:", err);

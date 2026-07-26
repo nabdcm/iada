@@ -19,7 +19,16 @@ const MAX_ROWS = 200_000; // سقف أمان يمنع حلقة لا نهائية
 
 export async function fetchAll<T>(
   build: (from: number, to: number) => PromiseLike<PageResult<T>>,
-  opts?: { pageSize?: number; maxRows?: number }
+  opts?: {
+    pageSize?: number;
+    maxRows?: number;
+    /**
+     * يُستدعى بعد كل دفعة مع المجموع التراكمي — للعرض التدريجي:
+     * تظهر الدفعة الأولى فوراً بينما تُكمل البقية في الخلفية.
+     * done يوضح ما إذا كانت هذه الدفعة الأخيرة.
+     */
+    onPage?: (rowsSoFar: T[], done: boolean) => void;
+  }
 ): Promise<T[]> {
   const page = opts?.pageSize ?? PAGE_SIZE;
   const max = opts?.maxRows ?? MAX_ROWS;
@@ -29,7 +38,9 @@ export async function fetchAll<T>(
     if (error) throw new Error(error.message);
     const rows = data ?? [];
     all.push(...rows);
-    if (rows.length < page) break;
+    const done = rows.length < page || from + page >= max;
+    opts?.onPage?.(all.slice(), done);
+    if (done) break;
   }
   return all;
 }

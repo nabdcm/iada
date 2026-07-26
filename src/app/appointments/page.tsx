@@ -1561,15 +1561,16 @@ export default function AppointmentsPage() {
       const cutoffD = new Date();
       cutoffD.setDate(cutoffD.getDate() - 90);
       const cutoffKey = `${cutoffD.getFullYear()}-${String(cutoffD.getMonth()+1).padStart(2,"0")}-${String(cutoffD.getDate()).padStart(2,"0")}`;
-      const all = await fetchAll<Appointment>((from, to) => supabase
+      // عرض تدريجي: تُرسم الدفعة الأولى فوراً ثم تُكمل البقية في الخلفية
+      await fetchAll<Appointment>((from, to) => supabase
         .from("appointments").select("*")
         .eq("user_id", userId)
         .neq("status", "pending_approval")   // ◀ استثناء المواعيد المعلقة
         .gte("date", cutoffKey)
         .order("date", { ascending: true })
         .order("time", { ascending: true })
-        .range(from, to));
-      setAppointments(all);
+        .range(from, to),
+        { onPage: (rows) => { setAppointments(rows); setLoading(false); } });
 
       // ── الطلبات المعلقة فقط ──
       const pendingData = await fetchAll<Appointment>((from, to) => supabase

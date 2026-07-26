@@ -1950,8 +1950,8 @@ export default function PatientsPage() {
         if (retryCount<3) { await new Promise(r=>setTimeout(r,800*(retryCount+1))); return loadPatients(retryCount+1); }
         setLoading(false); return;
       }
-      const rows = await fetchAll<Patient>((f,t)=>supabase.from("patients").select("*").eq("user_id",userId).order("created_at",{ascending:false}).range(f,t));
-      setPatients(rows);
+      await fetchAll<Patient>((f,t)=>supabase.from("patients").select("*").eq("user_id",userId).order("created_at",{ascending:false}).range(f,t),
+        { onPage: (rows)=>{ setPatients(rows); setLoading(false); } });
     } catch (err) { console.error("Error loading patients:",err); }
     finally { setLoading(false); }
   };
