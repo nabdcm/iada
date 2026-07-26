@@ -62,3 +62,6 @@ export type Payment = {
   notes?: string;
   created_at: string;
 };
+
+// إعادة تصدير مساعد الجلب المقسّم — لتجاوز سقف PostgREST (1000 صف/طلب)
+export { fetchAll } from "./fetchAll";

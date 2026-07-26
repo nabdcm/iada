@@ -5,7 +5,7 @@ import AgentsPanel from "@/components/AgentsPanel";
 import { currencyOptions, DEFAULT_CURRENCY } from "@/lib/currency";
 import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import { COUNTRIES } from "@/lib/phone";
 
 // ============================================================
@@ -2362,10 +2362,10 @@ const ResetPassModal = ({ lang, clinic, onClose }: ResetPassModalProps) => {
 async function exportClinicData(clinic: ClinicData): Promise<Record<string, unknown>> {
   const userId = clinic.user_id!;
 
-  const [{ data: patients }, { data: appointments }, { data: payments }] = await Promise.all([
-    supabase.from("patients").select("*").eq("user_id", userId),
-    supabase.from("appointments").select("*").eq("user_id", userId),
-    supabase.from("payments").select("*").eq("user_id", userId),
+  const [patients, appointments, payments] = await Promise.all([
+    fetchAll<any>((f, t) => supabase.from("patients").select("*").eq("user_id", userId).order("id", { ascending: true }).range(f, t)),
+    fetchAll<any>((f, t) => supabase.from("appointments").select("*").eq("user_id", userId).order("id", { ascending: true }).range(f, t)),
+    fetchAll<any>((f, t) => supabase.from("payments").select("*").eq("user_id", userId).order("id", { ascending: true }).range(f, t)),
   ]);
 
   return {

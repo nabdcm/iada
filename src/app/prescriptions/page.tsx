@@ -3,7 +3,7 @@
 import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useRef, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import PageIntro from "@/components/PageIntro";
 
 // ============================================================
@@ -568,10 +568,10 @@ export default function PrescriptionsPage() {
       const userId = user?.id ?? "00000000-0000-0000-0000-000000000000";
 
       // Load patients
-      const { data: patientsData } = await supabase
+      const patientsData = await fetchAll<any>((f, t) => supabase
         .from("patients").select("id, name")
         .eq("user_id", userId).eq("is_hidden", false)
-        .order("name");
+        .order("name").range(f, t));
       setPatients(patientsData ?? []);
 
       // Load clinic/doctor settings + plan

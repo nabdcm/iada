@@ -3,7 +3,7 @@
 import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import { fmtTime, type TimeFormat } from "@/lib/timeFormat";
@@ -1561,32 +1561,25 @@ export default function AppointmentsPage() {
       const cutoffD = new Date();
       cutoffD.setDate(cutoffD.getDate() - 90);
       const cutoffKey = `${cutoffD.getFullYear()}-${String(cutoffD.getMonth()+1).padStart(2,"0")}-${String(cutoffD.getDate()).padStart(2,"0")}`;
-      const PAGE = 1000;
-      let all: Appointment[] = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data, error } = await supabase
-          .from("appointments").select("*")
-          .eq("user_id", userId)
-          .neq("status", "pending_approval")   // ◀ استثناء المواعيد المعلقة
-          .gte("date", cutoffKey)
-          .order("date", { ascending: true })
-          .order("time", { ascending: true })
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        all = all.concat((data ?? []) as Appointment[]);
-        if (!data || data.length < PAGE) break;
-      }
+      const all = await fetchAll<Appointment>((from, to) => supabase
+        .from("appointments").select("*")
+        .eq("user_id", userId)
+        .neq("status", "pending_approval")   // ◀ استثناء المواعيد المعلقة
+        .gte("date", cutoffKey)
+        .order("date", { ascending: true })
+        .order("time", { ascending: true })
+        .range(from, to));
       setAppointments(all);
 
       // ── الطلبات المعلقة فقط ──
-      const { data: pendingData, error: pendingError } = await supabase
+      const pendingData = await fetchAll<Appointment>((from, to) => supabase
         .from("appointments").select("*")
         .eq("user_id", userId)
         .eq("status", "pending_approval")
         .order("date", { ascending: true })
-        .order("time", { ascending: true });
-      if (pendingError) throw pendingError;
-      setPendingAppointments((pendingData ?? []) as Appointment[]);
+        .order("time", { ascending: true })
+        .range(from, to));
+      setPendingAppointments(pendingData);
 
     } catch (err) { console.error(err); }
     finally { setLoading(false); }

@@ -1,6 +1,7 @@
 // src/app/api/restricted-access/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { fetchAll } from "@/lib/fetchAll";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -94,14 +95,14 @@ export async function POST(req: Request) {
     // action: "appointments" — جلب مواعيد العيادة
     // ─────────────────────────────────────────────────────
     if (action === "appointments") {
-      const { data: appointments } = await supabaseAdmin
+      const appointments = await fetchAll<any>((f, t) => supabaseAdmin
         .from("appointments")
         .select("*")
         .eq("user_id", clinicId)
         .neq("status", "pending_approval")
         .order("date", { ascending: false })
         .order("time", { ascending: true })
-        .range(0, 4999);
+        .range(f, t));
 
       return NextResponse.json({ appointments: appointments || [] });
     }

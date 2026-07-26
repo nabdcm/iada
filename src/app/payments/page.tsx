@@ -3,7 +3,7 @@
 import AppIcon from "@/components/AppIcon";
 import { type CSSProperties, useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import { currencySymbol, DEFAULT_CURRENCY } from "@/lib/currency";
 
 // رمز عملة العيادة الحالي — يُحدَّث عند تحميل بيانات العيادة
@@ -1183,19 +1183,21 @@ export default function PaymentsPage() {
         setNumbersHidden(true); // إخفاء الأرقام افتراضياً فقط عند تفعيل القفل من الأدمن
       }
 
-      const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
-        supabase
+      const [paymentsData, patientsData] = await Promise.all([
+        fetchAll<any>((f, t) => supabase
           .from("payments")
           .select("*")
           .eq("user_id", user.id)
           .order("date", { ascending: false })
-          .order("created_at", { ascending: false }),
-        supabase
+          .order("created_at", { ascending: false })
+          .range(f, t)),
+        fetchAll<any>((f, t) => supabase
           .from("patients")
           .select("id, name")
           .eq("user_id", user.id)
           .eq("is_hidden", false)
-          .order("name"),
+          .order("name")
+          .range(f, t)),
       ]);
 
       setPayments(paymentsData || []);

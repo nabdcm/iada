@@ -4,7 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef, type ReactNode, type CSSProperties } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { getOrCreateMRN } from "@/lib/mrn";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import type { Patient } from "@/lib/supabase";
@@ -1950,8 +1950,8 @@ export default function PatientsPage() {
         if (retryCount<3) { await new Promise(r=>setTimeout(r,800*(retryCount+1))); return loadPatients(retryCount+1); }
         setLoading(false); return;
       }
-      let query = supabase.from("patients").select("*").eq("user_id",userId).order("created_at",{ascending:false});
-      setPatients(((await query).data??[]) as Patient[]);
+      const rows = await fetchAll<Patient>((f,t)=>supabase.from("patients").select("*").eq("user_id",userId).order("created_at",{ascending:false}).range(f,t));
+      setPatients(rows);
     } catch (err) { console.error("Error loading patients:",err); }
     finally { setLoading(false); }
   };

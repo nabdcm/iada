@@ -6,7 +6,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import PageIntro from "@/components/PageIntro";
 import SharedSidebar from "@/components/SharedSidebar";
 import AuthGuard from "@/components/AuthGuard";
@@ -149,12 +149,12 @@ export default function ReferralsPage() {
   }, []);
 
   const loadAll = useCallback(async (uid: string) => {
-    const [{ data: refs }, { data: pats }] = await Promise.all([
-      supabase.from("referrals").select("*")
+    const [refs, pats] = await Promise.all([
+      fetchAll<any>((f, t) => supabase.from("referrals").select("*")
         .or(`from_user_id.eq.${uid},to_user_id.eq.${uid}`)
-        .order("created_at", { ascending: false }),
-      supabase.from("patients").select("id, name")
-        .eq("user_id", uid).eq("is_hidden", false).order("name", { ascending: true }),
+        .order("created_at", { ascending: false }).range(f, t)),
+      fetchAll<any>((f, t) => supabase.from("patients").select("id, name")
+        .eq("user_id", uid).eq("is_hidden", false).order("name", { ascending: true }).range(f, t)),
     ]);
     setReferrals((refs ?? []) as Referral[]);
     setPatients((pats ?? []) as PatientOpt[]);

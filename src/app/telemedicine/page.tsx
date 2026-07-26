@@ -6,7 +6,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import SharedSidebar from "@/components/SharedSidebar";
 import AuthGuard from "@/components/AuthGuard";
 import PageIntro from "@/components/PageIntro";
@@ -94,12 +94,12 @@ export default function TelemedicinePage() {
     if (clinic?.country_code) setCountryCode(clinic.country_code as string);
     setEnabled(!!clinic?.telemedicine_enabled);
 
-    const [{ data: apptData }, { data: patData }] = await Promise.all([
-      supabase.from("appointments")
+    const [apptData, patData] = await Promise.all([
+      fetchAll<any>((f, t) => supabase.from("appointments")
         .select("id, patient_id, date, time, duration, type, status, is_online, call_status")
         .eq("user_id", user.id).eq("is_online", true)
-        .order("date", { ascending: true }).order("time", { ascending: true }),
-      supabase.from("patients").select("id, name, phone").eq("user_id", user.id),
+        .order("date", { ascending: true }).order("time", { ascending: true }).range(f, t)),
+      fetchAll<any>((f, t) => supabase.from("patients").select("id, name, phone").eq("user_id", user.id).order("id", { ascending: true }).range(f, t)),
     ]);
     setAppts((apptData ?? []) as Appt[]);
     const map: Record<number, Patient> = {};

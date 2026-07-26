@@ -9,7 +9,7 @@ import AppIcon from "@/components/AppIcon";
 
 import { useState, useEffect, type JSX } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import PageIntro from "@/components/PageIntro";
 
 type Lang = "ar" | "en";
@@ -333,12 +333,12 @@ export default function PatientTrackingPage() {
     if(cd?.plan)setPlan(cd.plan as PlanType);
     const {data:prof}=await supabase.from("profiles").select("full_name,clinic_name").eq("id",user.id).maybeSingle();
     if(prof){if(!cd?.owner&&prof.full_name)setDoctorName(prof.full_name);if(!cd?.name&&prof.clinic_name)setClinicName(prof.clinic_name);}
-    const {data:pats}=await supabase.from("patients").select("id,name").eq("user_id",user.id).eq("is_hidden",false);
+    const pats=await fetchAll<any>((f,t)=>supabase.from("patients").select("id,name").eq("user_id",user.id).eq("is_hidden",false).order("id",{ascending:true}).range(f,t));
     setPatients(pats??[]);
-    const {data:lks}=await supabase.from("tracking_links").select("*").eq("user_id",user.id).order("created_at",{ascending:false});
+    const lks=await fetchAll<any>((f,t)=>supabase.from("tracking_links").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).range(f,t));
     setLinks(lks??[]);
     const toks=(lks??[]).map(l=>l.token);
-    if(toks.length>0){const {data:logs}=await supabase.from("daily_logs").select("*").in("token",toks).order("log_date",{ascending:false});setDailyLogs(logs??[]);}
+    if(toks.length>0){const logs=await fetchAll<any>((f,t)=>supabase.from("daily_logs").select("*").in("token",toks).order("log_date",{ascending:false}).range(f,t));setDailyLogs(logs??[]);}
     setLoading(false);
   }
 

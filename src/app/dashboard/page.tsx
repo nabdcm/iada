@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, type JSX, type DragEvent } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import NotificationBell from "@/components/NotificationBell";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import PageIntro from "@/components/PageIntro";
 
 // ============================================================
@@ -469,21 +469,21 @@ export default function DashboardPage() {
     const monthStart = `${yyyy}-${mm}-01`;
 
     // patients
-    const { data: patientsData } = await supabase
+    const patients: PatientRow[] = await fetchAll<PatientRow>((from, to) => supabase
       .from("patients").select("id, name, created_at, doctor_id")
-      .eq("user_id", userId).eq("is_hidden", false);
-    const patients: PatientRow[] = (patientsData ?? []) as PatientRow[];
+      .eq("user_id", userId).eq("is_hidden", false)
+      .order("id", { ascending: true }).range(from, to));
     setTotalPatients(patients.length);
     setNewThisMonth(patients.filter(p => (p.created_at ?? "") >= monthStart).length);
     const patientMap: Record<number, string> = {};
     patients.forEach(p => { patientMap[p.id as number] = p.name as string; });
 
     // appointments
-    const { data: apptsData } = await supabase
+    const appts: ApptRow[] = await fetchAll<ApptRow>((from, to) => supabase
       .from("appointments")
       .select("id, patient_id, date, time, duration, type, status, doctor_id")
-      .eq("user_id", userId);
-    const appts: ApptRow[] = (apptsData ?? []) as ApptRow[];
+      .eq("user_id", userId)
+      .order("id", { ascending: true }).range(from, to));
 
     const doctorMap: Record<string, string> = {};
     doctorList.forEach(d => { doctorMap[String(d.id)] = d.name; });

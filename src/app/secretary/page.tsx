@@ -2,7 +2,7 @@
 import AppIcon from "@/components/AppIcon";
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { getOrCreateMRN } from "@/lib/mrn";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAll } from "@/lib/supabase";
 import type { Patient, Appointment, Payment } from "@/lib/supabase";
 
 // ════════════════════════════════════════════════════════════
@@ -1143,23 +1143,14 @@ export default function SecretaryPage() {
       if (clinicRow?.clinic_type) setClinicType(clinicRow.clinic_type as ClinicType);
 
       // جلب المواعيد مقسّماً بصفحات 1000 لتجاوز سقف Supabase
-      const fetchAllAppts = async (): Promise<any[]> => {
-        const d=new Date(); d.setDate(d.getDate()-90);
-        const cutoff=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-        const PAGE=1000; let all:any[]=[];
-        for (let from=0;;from+=PAGE){
-          const { data } = await supabase.from("appointments").select("*").eq("user_id",user.id).gte("date",cutoff).order("date",{ascending:true}).order("time",{ascending:true}).range(from,from+PAGE-1);
-          all=all.concat(data??[]);
-          if (!data || data.length<PAGE) break;
-        }
-        return all;
-      };
-      const [apptData,{ data:patData },{ data:payData },{ data:wdData },{ data:exData }] = await Promise.all([
-        fetchAllAppts(),
-        supabase.from("patients").select("*").eq("user_id",user.id).eq("is_hidden",false).order("name"),
-        supabase.from("payments").select("*").eq("user_id",user.id).order("date",{ascending:false}),
-        supabase.from("clinic_withdrawals").select("*").eq("user_id",user.id).order("date",{ascending:false}),
-        supabase.from("clinic_expenses").select("*").eq("user_id",user.id).order("date",{ascending:false}),
+      const d=new Date(); d.setDate(d.getDate()-90);
+      const cutoff=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      const [apptData,patData,payData,wdData,exData] = await Promise.all([
+        fetchAll<any>((f,t)=>supabase.from("appointments").select("*").eq("user_id",user.id).gte("date",cutoff).order("date",{ascending:true}).order("time",{ascending:true}).range(f,t)),
+        fetchAll<any>((f,t)=>supabase.from("patients").select("*").eq("user_id",user.id).eq("is_hidden",false).order("name").range(f,t)),
+        fetchAll<any>((f,t)=>supabase.from("payments").select("*").eq("user_id",user.id).order("date",{ascending:false}).range(f,t)),
+        fetchAll<any>((f,t)=>supabase.from("clinic_withdrawals").select("*").eq("user_id",user.id).order("date",{ascending:false}).range(f,t)),
+        fetchAll<any>((f,t)=>supabase.from("clinic_expenses").select("*").eq("user_id",user.id).order("date",{ascending:false}).range(f,t)),
       ]);
 
       setAppointments(apptData||[]);
