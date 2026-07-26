@@ -42,9 +42,14 @@ type Expense = {
 };
 
 const CATS: Record<string, { ar: string }> = {
-  hematology: { ar: "دمويات" }, chemistry: { ar: "كيمياء" }, lipids: { ar: "شحوم" },
-  liver: { ar: "كبد" }, hormones: { ar: "هرمونات" }, vitamins: { ar: "فيتامينات" },
-  immunology: { ar: "مناعة" }, urine: { ar: "بول" }, general: { ar: "عام" },
+  hematology: { ar: "دمويات" }, coagulation: { ar: "تخثر" }, chemistry: { ar: "كيمياء" },
+  electrolytes: { ar: "شوارد ومعادن" }, lipids: { ar: "شحوم" }, liver: { ar: "كبد" },
+  kidney: { ar: "كلية" }, cardiac: { ar: "قلبية" }, hormones: { ar: "هرمونات" },
+  pregnancy: { ar: "حمل وخصوبة" }, tumor: { ar: "واسمات ورمية" }, immunology: { ar: "مناعة" },
+  serology: { ar: "مصليات" }, microbiology: { ar: "جراثيم وزروع" }, parasitology: { ar: "طفيليات" },
+  urine: { ar: "بول" }, stool: { ar: "براز" }, fluids: { ar: "سوائل الجسم" },
+  semen: { ar: "سائل منوي" }, vitamins: { ar: "فيتامينات" }, drugs: { ar: "عيارات دوائية" },
+  allergy: { ar: "حساسية" }, genetics: { ar: "وراثيات" }, general: { ar: "عام" },
 };
 const catLabel = (c: string) => CATS[c]?.ar ?? c;
 

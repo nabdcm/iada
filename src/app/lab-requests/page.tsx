@@ -325,8 +325,11 @@ export default function LabRequestsPage() {
     const list = q
       ? catalog.filter(c => c.name_ar.toLowerCase().includes(q) || (c.name_en ?? "").toLowerCase().includes(q))
       : catalog;
-    return list.slice(0, 40);
-  }, [catalog, testSearch]);
+    const top = list.slice(0, 60);
+    // إبقاء التحاليل المختارة ظاهرة دائماً حتى لو خرجت من نتائج البحث
+    const extra = catalog.filter(c => fTests.some(t => t.catalog_id === c.id) && !top.some(x => x.id === c.id));
+    return [...extra, ...top];
+  }, [catalog, testSearch, fTests]);
 
   const selectedPatient = patients.find(p => String(p.id) === fPatientId);
 
