@@ -1,7 +1,7 @@
 "use client";
 
 import AppIcon from "@/components/AppIcon";
-import { type CSSProperties, useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import SharedSidebar from "@/components/SharedSidebar";
 import { supabase, fetchAll } from "@/lib/supabase";
 import { currencySymbol, DEFAULT_CURRENCY } from "@/lib/currency";
@@ -728,7 +728,10 @@ function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, 
   const [val, setVal] = useState("");
   const [err, setErr] = useState(false);
   const submit = () => {
-    if (val.trim() === (expected ?? "").trim()) { onSuccess(); }
+    const entered = val.trim();
+    const target  = (expected ?? "").trim();
+    if (!target) { onSuccess(); return; } // لا توجد كلمة سر فعلية — لا داعي للقفل
+    if (entered && entered === target) { onSuccess(); }
     else setErr(true);
   };
   return (
@@ -738,15 +741,14 @@ function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, 
         <div style={{ width:60,height:60,borderRadius:18,background:"linear-gradient(135deg,#0863ba,#3d8fd6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 14px",boxShadow:"0 8px 20px rgba(8,99,186,.3)" }}>{icon}</div>
         <h3 style={{ fontSize:16,fontWeight:800,color:"#1c2b3a",marginBottom:8 }}>{title}</h3>
         <p style={{ fontSize:13,color:"#8a97a6",marginBottom:20 }}>{desc}</p>
-        {/* type="text" مع إخفاء بصري للأحرف — المتصفح لا يملأ حقول النص تلقائياً أبداً */}
         <input
-          type="text" value={val}
-          autoComplete="off" spellCheck={false} autoCorrect="off" autoCapitalize="off"
-          name="npx-code" data-lpignore="true" data-1p-ignore="true"
+          type="password" value={val} autoFocus
+          autoComplete="new-password" spellCheck={false}
+          name="payments-lock-password" data-lpignore="true" data-1p-ignore="true"
           onChange={e=>{ setVal(e.target.value); if(err) setErr(false); }}
           onKeyDown={e=>{ if(e.key==="Enter" && !e.nativeEvent.isComposing){ e.preventDefault(); submit(); } }}
           placeholder={isAr?"كلمة السر...":"Password..."}
-          style={{ width:"100%",padding:"13px 16px",border:err?"2px solid #c0392b":"1.5px solid #e6edf5",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:16,outline:"none",boxSizing:"border-box",marginBottom:err?8:16,textAlign:"center",letterSpacing:3,direction:"ltr",background:"#f8fbfe",WebkitTextSecurity:"disc",textSecurity:"disc" } as CSSProperties}
+          style={{ width:"100%",padding:"13px 16px",border:err?"2px solid #c0392b":"1.5px solid #e6edf5",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:16,outline:"none",boxSizing:"border-box",marginBottom:err?8:16,textAlign:"center",letterSpacing:3,direction:"ltr",background:"#f8fbfe" }}
         />
         {err && <p style={{ color:"#c0392b",fontSize:12,marginBottom:16,fontWeight:600 }}>{isAr?"كلمة السر غير صحيحة":"Incorrect password"}</p>}
         <div style={{ display:"flex",gap:10 }}>
@@ -758,9 +760,9 @@ function PasswordPromptModal({ isAr, icon, title, desc, confirmLabel, expected, 
   );
 }
 
-function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHidden, onReveal }: {
+function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHidden, lockEnabled, onReveal }: {
   stats: any; methodStats: any[]; methodIcon: any; tr: any; isAr: boolean;
-  numbersHidden: boolean; onReveal: () => void;
+  numbersHidden: boolean; lockEnabled: boolean; onReveal: () => void;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -824,7 +826,7 @@ function MobileStatsSlider({ stats, methodStats, methodIcon, tr, isAr, numbersHi
             <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:c.gradient,borderRadius:"16px 16px 0 0" }}/>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
               <div style={{ width:40,height:40,background:c.iconBg,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}><AppIcon glyph={c.icon} /></div>
-              <button onClick={onReveal} style={{ width:32,height:32,borderRadius:8,background:c.eyeBg,border:`1.5px solid ${c.eyeBorder}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:c.eyeColor,fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
+              {lockEnabled && (<button onClick={onReveal} style={{ width:32,height:32,borderRadius:8,background:c.eyeBg,border:`1.5px solid ${c.eyeBorder}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:c.eyeColor,fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>)}
             </div>
             <div style={{ fontSize:26,fontWeight:900,color:c.valueColor,lineHeight:1 }}>{c.value}</div>
             <div style={{ fontSize:12,color:"#aaa",marginTop:8,fontWeight:500 }}>{c.label}</div>
@@ -1125,13 +1127,9 @@ export default function PaymentsPage() {
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [txPage, setTxPage] = useState(1);
   const TX_PAGE_SIZE = 10;
-  const [revealPasswordInput, setRevealPasswordInput] = useState("");
-  const [revealPasswordError, setRevealPasswordError] = useState(false);
 
   // قفل التقرير الشهري
   const [showMonthlyReportPasswordModal, setShowMonthlyReportPasswordModal] = useState(false);
-  const [monthlyReportPasswordInput, setMonthlyReportPasswordInput] = useState("");
-  const [monthlyReportPasswordError, setMonthlyReportPasswordError] = useState(false);
   // خطط العيادات المشتركة: قائمة الأطباء والفلتر المحدد
   const [doctors, setDoctors] = useState<{id: number; name: string; color?: string}[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<number|null>(null);
@@ -1139,9 +1137,6 @@ export default function PaymentsPage() {
   // ── قفل صفحة المدفوعات بكلمة سر ────────────────────────────
   const [paymentsLockEnabled,  setPaymentsLockEnabled]  = useState(false);
   const [paymentsLockPassword, setPaymentsLockPassword] = useState("");
-  const [isPaymentsUnlocked,   setIsPaymentsUnlocked]   = useState(false);
-  const [lockPasswordInput,    setLockPasswordInput]    = useState("");
-  const [lockPasswordError,    setLockPasswordError]    = useState(false);
 
   // ── جلب البيانات من Supabase ────────────────────────────────
   useEffect(() => {
@@ -1176,11 +1171,16 @@ export default function PaymentsPage() {
       const cCode = (clinicRow as { currency?: string } | null)?.currency || DEFAULT_CURRENCY;
       CUR = currencySymbol(cCode, lang === "ar");
       setCurrency(cCode);
-      // قفل المدفوعات
-      if (clinicRow?.payments_lock_enabled) {
+      // قفل المدفوعات — لا يُعتبر مفعّلاً إلا بوجود كلمة سر فعلية
+      const lockPw = (clinicRow?.payments_lock_password || "").trim();
+      if (clinicRow?.payments_lock_enabled && lockPw) {
         setPaymentsLockEnabled(true);
-        setPaymentsLockPassword(clinicRow.payments_lock_password || "");
+        setPaymentsLockPassword(lockPw);
         setNumbersHidden(true); // إخفاء الأرقام افتراضياً فقط عند تفعيل القفل من الأدمن
+      } else {
+        setPaymentsLockEnabled(false);
+        setPaymentsLockPassword("");
+        setNumbersHidden(false);
       }
 
       const [paymentsData, patientsData] = await Promise.all([
@@ -1535,34 +1535,11 @@ export default function PaymentsPage() {
     return typeof val === "number" ? val.toLocaleString() : val;
   };
 
-  // دالة الكشف عن الأرقام بكلمة السر
-  const handleRevealNumbers = () => {
-    if (paymentsLockEnabled && revealPasswordInput.trim() === (paymentsLockPassword ?? "").trim()) {
-      setNumbersHidden(false);
-      setShowRevealModal(false);
-      setRevealPasswordInput("");
-      setRevealPasswordError(false);
-    } else if (!paymentsLockEnabled) {
-      setNumbersHidden(false);
-      setShowRevealModal(false);
-    } else {
-      setRevealPasswordError(true);
-    }
-  };
-
-  // دالة إصدار التقرير الشهري (محمي بكلمة السر)
-  const handleMonthlyReportPassword = () => {
-    if (paymentsLockEnabled && monthlyReportPasswordInput.trim() === (paymentsLockPassword ?? "").trim()) {
-      setShowMonthlyReportPasswordModal(false);
-      setMonthlyReportPasswordInput("");
-      setMonthlyReportPasswordError(false);
-      exportPDF();
-    } else if (!paymentsLockEnabled) {
-      setShowMonthlyReportPasswordModal(false);
-      exportPDF();
-    } else {
-      setMonthlyReportPasswordError(true);
-    }
+  // إظهار/إخفاء الأرقام — متاح فقط عند تفعيل القفل من الأدمن
+  const toggleNumbersVisibility = () => {
+    if (!paymentsLockEnabled) { setNumbersHidden(false); return; }
+    if (numbersHidden) setShowRevealModal(true);
+    else setNumbersHidden(true);
   };
 
   const fmtDate = (d: string) => new Date(d+"T00:00:00").toLocaleDateString(isAr?"ar-EG-u-ca-gregory-nu-latn":"en-GB",{ year:"numeric",month:"short",day:"numeric",calendar:"gregory" });
@@ -2429,8 +2406,8 @@ ${doctorSettlementRows}
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#2e7d32,#66bb6a)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                   <div style={{ width:40,height:40,background:"rgba(46,125,50,.1)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="💰" /></div>
-                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
-                    style={{ width:32,height:32,borderRadius:8,background:"rgba(46,125,50,.08)",border:"1.5px solid rgba(46,125,50,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#2e7d32",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
+                  {paymentsLockEnabled && (<button onClick={toggleNumbersVisibility} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(46,125,50,.08)",border:"1.5px solid rgba(46,125,50,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#2e7d32",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>)}
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#2e7d32",lineHeight:1 }}>
                   {maskNumber(stats.totalMonth)} {CUR}
@@ -2443,8 +2420,8 @@ ${doctorSettlementRows}
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#0863ba,#a4c4e4)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                   <div style={{ width:40,height:40,background:"rgba(8,99,186,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}><AppIcon glyph="📊" /></div>
-                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
-                    style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#0863ba",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
+                  {paymentsLockEnabled && (<button onClick={toggleNumbersVisibility} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(8,99,186,.08)",border:"1.5px solid rgba(8,99,186,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#0863ba",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>)}
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#0863ba",lineHeight:1 }}>
                   {maskNumber(stats.totalYear)} {CUR}
@@ -2457,8 +2434,8 @@ ${doctorSettlementRows}
                 <div style={{ position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#e67e22,#f39c12)",borderRadius:"18px 18px 0 0" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14 }}>
                   <div style={{ width:40,height:40,background:"rgba(230,126,34,.08)",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>⏳</div>
-                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
-                    style={{ width:32,height:32,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e67e22",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
+                  {paymentsLockEnabled && (<button onClick={toggleNumbersVisibility} title={numbersHidden?(isAr?"إظهار الأرقام":"Show numbers"):(isAr?"إخفاء الأرقام":"Hide numbers")}
+                    style={{ width:32,height:32,borderRadius:8,background:"rgba(230,126,34,.08)",border:"1.5px solid rgba(230,126,34,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#e67e22",fontSize:15,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>)}
                 </div>
                 <div style={{ fontSize:30,fontWeight:900,color:"#e67e22",lineHeight:1 }}>
                   {maskNumber(stats.pendingAmt)} {CUR}
@@ -2490,7 +2467,7 @@ ${doctorSettlementRows}
             </div>
 
             {/* ── MOBILE STATS SLIDER ── */}
-            <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} numbersHidden={numbersHidden} onReveal={()=>{ if(numbersHidden){setRevealPasswordInput("");setRevealPasswordError(false);setShowRevealModal(true);}else{setNumbersHidden(true);}}} />
+            <MobileStatsSlider stats={stats} methodStats={methodStats} methodIcon={methodIcon} tr={tr} isAr={isAr} numbersHidden={numbersHidden} lockEnabled={paymentsLockEnabled} onReveal={toggleNumbersVisibility} />
 
             {/* ── FINANCIAL SUMMARY ROW ── */}
             <div className="fin-summary-grid">
@@ -2499,8 +2476,8 @@ ${doctorSettlementRows}
                 <div style={{ position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.06)" }}/>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <div style={{ fontSize:12,fontWeight:600,opacity:.8 }}>{tr.netBalance} ({isAr?"السنة الحالية":"Current Year"})</div>
-                  <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
-                    style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
+                  {paymentsLockEnabled && (<button onClick={toggleNumbersVisibility}
+                    style={{ width:30,height:30,borderRadius:8,background:"rgba(255,255,255,.15)",border:"1.5px solid rgba(255,255,255,.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>)}
                 </div>
                 <div style={{ fontSize:28,fontWeight:900,lineHeight:1 }}>{numbersHidden ? "••••••" : `${Number(stats.netBalance ?? 0).toLocaleString()}`} {CUR}</div>
                 <div style={{ fontSize:11,opacity:.7,marginTop:8 }}>{isAr?"الإيرادات - السحوبات - المصروفات":"Revenue - Withdrawals - Expenses"}</div>
@@ -2511,8 +2488,8 @@ ${doctorSettlementRows}
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalWithdrawals}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                    <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
-                      style={{ width:30,height:30,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
+                    {paymentsLockEnabled && (<button onClick={toggleNumbersVisibility}
+                      style={{ width:30,height:30,borderRadius:8,background:"rgba(192,57,43,.08)",border:"1.5px solid rgba(192,57,43,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>)}
                     <button onClick={()=>setShowWithdrawModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(192,57,43,.08)",color:"#c0392b",border:"1.5px solid rgba(192,57,43,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.withdrawBtn}</button>
                   </div>
                 </div>
@@ -2525,8 +2502,8 @@ ${doctorSettlementRows}
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10 }}>
                   <span style={{ fontSize:12,fontWeight:600,color:"#888" }}>{tr.totalExpenses}</span>
                   <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                    <button onClick={()=>numbersHidden ? (setRevealPasswordInput(""),setRevealPasswordError(false),setShowRevealModal(true)) : setNumbersHidden(true)}
-                      style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>
+                    {paymentsLockEnabled && (<button onClick={toggleNumbersVisibility}
+                      style={{ width:30,height:30,borderRadius:8,background:"rgba(123,45,139,.08)",border:"1.5px solid rgba(123,45,139,.2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}><AppIcon glyph={numbersHidden?"👁":"🙈"} /></button>)}
                     <button onClick={()=>setShowExpenseModal(true)} style={{ fontSize:11,padding:"4px 10px",background:"rgba(123,45,139,.08)",color:"#7b2d8b",border:"1.5px solid rgba(123,45,139,.15)",borderRadius:8,cursor:"pointer",fontFamily:"Rubik,sans-serif",fontWeight:600 }}>+ {tr.expenseBtn}</button>
                   </div>
                 </div>

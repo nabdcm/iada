@@ -69,9 +69,14 @@ export async function POST(req: NextRequest) {
     if (currency !== undefined && currency) clinicUpdate.currency = currency;
 
     // قفل المدفوعات — نحدّث دائماً (حتى عند إلغاء التفعيل)
+    // القاعدة: لا قفل بدون كلمة سر فعلية، وعند الإلغاء تُمسح كلمة السر نهائياً
     if (payments_lock_enabled !== undefined) {
-      clinicUpdate.payments_lock_enabled  = payments_lock_enabled;
-      clinicUpdate.payments_lock_password = payments_lock_password ?? "";
+      const lockPw = typeof payments_lock_password === "string" ? payments_lock_password.trim() : "";
+      if (payments_lock_enabled && !lockPw) {
+        return NextResponse.json({ error: "payments_lock_password required when enabling lock" }, { status: 400 });
+      }
+      clinicUpdate.payments_lock_enabled  = !!payments_lock_enabled;
+      clinicUpdate.payments_lock_password = payments_lock_enabled ? lockPw : "";
     }
 
     // الدخول المقيّد — نحدّث دائماً (حتى عند إلغاء التفعيل)

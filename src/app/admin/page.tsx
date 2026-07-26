@@ -1321,7 +1321,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
     account_type: clinic.account_type || "clinic",
     max_doctors: form.max_doctors,
     payments_lock_enabled:  form.payments_lock_enabled,
-    payments_lock_password: form.payments_lock_password,
+    payments_lock_password: form.payments_lock_enabled ? form.payments_lock_password.trim() : "",
     restricted_access_enabled: form.restricted_access_enabled,
     restricted_access_pin:     form.restricted_access_pin,
     country_code: form.country_code,
@@ -1994,7 +1994,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
               {/* ── قفل صفحة المدفوعات ── */}
               {(() => {
                 const plansWithPayments = ["pro","enterprise","shared_pro","shared_enterprise"];
-                const planSupportsPayments = plansWithPayments.includes(form.plan);
+                const planSupportsPayments = plansWithPayments.includes(form.plan) || form.payments_lock_enabled;
                 const pl = sm.paymentsLock;
                 return (
                   <div style={{ marginTop:6,borderTop:"1.5px solid #eef0f3",paddingTop:16 }}>
@@ -2023,7 +2023,7 @@ const SubscriptionModal = ({ lang, clinic, onSave, onClose }: SubModalProps) => 
                           </div>
                           <button
                             type="button"
-                            onClick={() => setForm(p => ({ ...p, payments_lock_enabled: !p.payments_lock_enabled }))}
+                            onClick={() => setForm(p => ({ ...p, payments_lock_enabled: !p.payments_lock_enabled, payments_lock_password: p.payments_lock_enabled ? "" : p.payments_lock_password }))}
                             style={{ padding:"7px 16px",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",transition:"all .2s",
                               background: form.payments_lock_enabled ? "rgba(192,57,43,.06)" : "rgba(46,125,50,.08)",
                               color: form.payments_lock_enabled ? "#c0392b" : "#2e7d32",
