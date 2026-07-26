@@ -181,7 +181,7 @@ const NAV_LABELS = {
   ar: {
     dashboard: "الرئيسية", patients: "المرضى", appointments: "المواعيد",
     payments: "المدفوعات", prescriptions: "الوصفات",
-    tracking: "متابعة", clinicManagement: "إدارة العيادة",
+    tracking: "متابعة المرضى", clinicManagement: "إدارة العيادة",
     messages: "الرسائل", referrals: "تحويل المرضى", telemedicine: "العيادة الأونلاين",
     more: "المزيد",
     signOut: "خروج", plan: "خطة", clinic: "عيادة", account: "حسابي",
