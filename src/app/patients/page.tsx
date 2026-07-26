@@ -737,6 +737,25 @@ async function patchProfileInDB(
 }
 
 // ─── Dental Chart ─────────────────────────────────────────
+// قوس سني تشريحي (∩ / U) — تموضع نسبي مئوي، بلا سكرول أفقي إطلاقاً
+const ARCH_ADULT_UPPER = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
+const ARCH_ADULT_LOWER = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+const ARCH_BABY_UPPER  = [55,54,53,52,51,61,62,63,64,65];
+const ARCH_BABY_LOWER  = [85,84,83,82,81,71,72,73,74,75];
+
+function archPositions(count:number, upper:boolean){
+  // نصف قطر أفقي 45%، عمودي 76% — القواطع في مركز القوس، الأرحاء عند الطرفين
+  return Array.from({length:count},(_,i)=>{
+    const th = Math.PI * (1 - (i + 0.5) / count);
+    const x  = 50 + 45 * Math.cos(th);
+    const y  = upper ? 88 - 76 * Math.sin(th) : 12 + 76 * Math.sin(th);
+    // حجم واقعي: أرحاء أكبر من القواطع — يمنع التزاحم في مركز القوس
+    const d    = Math.abs(i - (count - 1) / 2) / ((count - 1) / 2); // 0 مركز → 1 طرف
+    const size = Math.round(25 + d * 11);
+    return { x, y, size };
+  });
+}
+
 function DentalChartSection({ lang, chart, onChange }: { lang:Lang; chart:DentalChart; onChange:(c:DentalChart)=>void }) {
   const t    = T[lang].profile;
   const isAr = lang==="ar";
@@ -756,97 +775,122 @@ function DentalChartSection({ lang, chart, onChange }: { lang:Lang; chart:Dental
     onChange({...chart,[selected]:{status:editStatus,notes:editNote}});
     setSelected(null);
   };
+  const clearTooth = () => {
+    if (selected===null) return;
+    const next = {...chart}; delete next[selected];
+    onChange(next);
+    setSelected(null);
+  };
 
-  const ToothBtn = ({ num }:{ num:number }) => {
+  // عدّادات حيّة لكل حالة مسجّلة
+  const counts = useMemo(()=>{
+    const c:Partial<Record<ToothStatus,number>> = {};
+    Object.values(chart).forEach(d=>{ if(d?.status) c[d.status]=(c[d.status]??0)+1; });
+    return c;
+  },[chart]);
+
+  const ToothBtn = ({ num, x, y, size }:{ num:number; x:number; y:number; size:number }) => {
     const data   = chart[num];
-    const colors = data ? TOOTH_COLORS[data.status] : { bg:"#fff", border:"#dde3ea", text:"#aaa" };
+    const colors = data ? TOOTH_COLORS[data.status] : { bg:"#fff", border:"#dde3ea", text:"#8a94a1" };
     const isSel  = selected===num;
     return (
-      <button onClick={()=>openTooth(num)} title={`${num}${data?` — ${t.statuses[data.status]}`:""}`}
-        style={{ width:34,height:38,borderRadius:8,border:`2px solid ${isSel?"#0863ba":colors.border}`,background:isSel?"rgba(8,99,186,.12)":colors.bg,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,transition:"all .15s",flexShrink:0,boxShadow:isSel?"0 0 0 3px rgba(8,99,186,.2)":"0 1px 3px rgba(0,0,0,.06)",position:"relative" }}>
-        <span style={{ fontSize:7,color:"#aaa",fontWeight:700,lineHeight:1 }}>{num}</span>
-        <svg viewBox="0 0 20 24" width="14" height="16"><path d="M10 1C7 1 4 3 4 7c0 2 .5 4 1 6 .5 2 1 5 1 7 0 1 .5 2 1 2s1-.5 1-2c0-1 .5-2 2-2s2 1 2 2c0 1.5.5 2 1 2s1-1 1-2c0-2 .5-5 1-7 .5-2 1-4 1-6 0-4-3-6-6-6z" fill={data?colors.border:"#dde3ea"} opacity={data?1:0.5}/></svg>
-        {data?.status==="missing"&&<div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center" }}><span style={{ fontSize:16,color:"#9e9e9e",fontWeight:900 }}>×</span></div>}
+      <button onClick={()=>openTooth(num)} title={`${num}${data?` — ${t.statuses[data.status]}`:""}${data?.notes?` · ${data.notes}`:""}`}
+        style={{ position:"absolute", left:`${x}%`, top:`${y}%`, transform:"translate(-50%,-50%)",
+          width:size, height:size, borderRadius:"50%",
+          border:`2px solid ${isSel?"#0863ba":colors.border}`,
+          background:isSel?"rgba(8,99,186,.12)":colors.bg, cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontFamily:"Rubik,sans-serif", fontSize:size>=32?11:9.5, fontWeight:700,
+          color:colors.text, lineHeight:1, padding:0, transition:"box-shadow .15s, border-color .15s",
+          boxShadow:isSel?"0 0 0 3px rgba(8,99,186,.22)":"0 1px 3px rgba(0,0,0,.07)", zIndex:isSel?2:1 }}>
+        {data?.status==="missing" ? <span style={{ fontSize:size>=32?15:12, color:"#9e9e9e", fontWeight:900 }}>×</span> : num}
+        {data?.notes && <span style={{ position:"absolute", top:-2, insetInlineEnd:-2, width:7, height:7, borderRadius:"50%", background:"#0863ba", border:"1.5px solid #fff" }}/>}
       </button>
     );
   };
 
-  const ToothRow = ({ nums,label }:{ nums:number[]; label:string }) => (
-    <div style={{ display:"flex",flexDirection:"column",gap:4 }}>
-      <div style={{ fontSize:9,color:"#bbb",fontWeight:700,textAlign:"center",textTransform:"uppercase" }}>{label}</div>
-      <div style={{ display:"flex",gap:3 }}>{nums.map(n=><ToothBtn key={n} num={n}/>)}</div>
-    </div>
-  );
+  const Arch = ({ nums, upper }:{ nums:number[]; upper:boolean }) => {
+    const pos = archPositions(nums.length, upper);
+    return (
+      <div style={{ position:"relative", width:"100%", height:150 }}>
+        {nums.map((n,i)=><ToothBtn key={n} num={n} x={pos[i].x} y={pos[i].y} size={pos[i].size}/>)}
+        <div style={{ position:"absolute", left:"50%", top:upper?"78%":"6%", transform:"translateX(-50%)",
+          fontSize:11, fontWeight:700, color:"#b6bfc9", pointerEvents:"none", whiteSpace:"nowrap" }}>
+          {upper?t.upper:t.lower}
+        </div>
+      </div>
+    );
+  };
+
+  const upperNums = showBaby ? ARCH_BABY_UPPER : ARCH_ADULT_UPPER;
+  const lowerNums = showBaby ? ARCH_BABY_LOWER : ARCH_ADULT_LOWER;
 
   return (
-    <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
-      <div style={{ display:"flex",gap:8 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      {/* دائم / لبني */}
+      <div style={{ display:"flex", gap:8 }}>
         {[false,true].map(baby=>(
-          <button key={String(baby)} onClick={()=>setShowBaby(baby)} style={{ padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,background:showBaby===baby?"#0863ba":"#f0f4f8",color:showBaby===baby?"#fff":"#888" }}>
+          <button key={String(baby)} onClick={()=>{setShowBaby(baby);setSelected(null);}} style={{ padding:"6px 16px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:12,fontWeight:600,background:showBaby===baby?"#0863ba":"#f0f4f8",color:showBaby===baby?"#fff":"#888",transition:"all .15s" }}>
             {baby?(isAr?"لبني":"Baby"):(isAr?"دائم":"Adult")}
           </button>
         ))}
       </div>
-      <div style={{ background:"#fafbfc",borderRadius:14,padding:16,border:"1.5px solid #eef0f3",overflowX:"auto" }}>
-        {!showBaby?(
-          <div style={{ display:"flex",flexDirection:"column",gap:12,minWidth:580 }}>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:4 }}><AppIcon glyph="🦷" /> {t.upper}</div>
-            <div style={{ display:"flex",justifyContent:"center",gap:16 }}>
-              <ToothRow nums={UPPER_RIGHT} label={isAr?t.left:t.right}/>
-              <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"16px 0 0" }}/>
-              <ToothRow nums={UPPER_LEFT} label={isAr?t.right:t.left}/>
-            </div>
-            <div style={{ height:2,background:"#eef0f3",borderRadius:2,margin:"2px 0" }}/>
-            <div style={{ display:"flex",justifyContent:"center",gap:16 }}>
-              <ToothRow nums={LOWER_RIGHT} label={isAr?t.left:t.right}/>
-              <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"0 0 16px" }}/>
-              <ToothRow nums={LOWER_LEFT} label={isAr?t.right:t.left}/>
-            </div>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginTop:4 }}><AppIcon glyph="🦷" /> {t.lower}</div>
+
+      {/* القوس السني — عرض أقصى 440px، متمركز، بلا سكرول */}
+      <div style={{ background:"#fafbfc", borderRadius:14, border:"1.5px solid #eef0f3", padding:"14px 8px", display:"flex", justifyContent:"center" }}>
+        <div style={{ width:"100%", maxWidth:440, position:"relative" }}>
+          {/* جهتا المريض */}
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2, padding:"0 2px" }}>
+            <span style={{ fontSize:10, fontWeight:700, color:"#c3cbd4" }}>{isAr?"يمين المريض":"Patient right"}</span>
+            <span style={{ fontSize:10, fontWeight:700, color:"#c3cbd4" }}>{isAr?"يسار المريض":"Patient left"}</span>
           </div>
-        ):(
-          <div style={{ display:"flex",flexDirection:"column",gap:12,minWidth:380 }}>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginBottom:4 }}><AppIcon glyph="🦷" /> {t.upper}</div>
-            <div style={{ display:"flex",justifyContent:"center",gap:16 }}>
-              <ToothRow nums={UPPER_RIGHT_BABY} label={isAr?t.left:t.right}/>
-              <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"16px 0 0" }}/>
-              <ToothRow nums={UPPER_LEFT_BABY} label={isAr?t.right:t.left}/>
-            </div>
-            <div style={{ height:2,background:"#eef0f3",borderRadius:2,margin:"2px 0" }}/>
-            <div style={{ display:"flex",justifyContent:"center",gap:16 }}>
-              <ToothRow nums={LOWER_RIGHT_BABY} label={isAr?t.left:t.right}/>
-              <div style={{ width:2,background:"#e0e6ed",borderRadius:2,alignSelf:"stretch",margin:"0 0 16px" }}/>
-              <ToothRow nums={LOWER_LEFT_BABY} label={isAr?t.right:t.left}/>
-            </div>
-            <div style={{ textAlign:"center",fontSize:11,fontWeight:700,color:"#0863ba",marginTop:4 }}><AppIcon glyph="🦷" /> {t.lower}</div>
-          </div>
-        )}
+          <Arch nums={upperNums} upper={true}/>
+          <div style={{ height:1.5, background:"#e6eaef", borderRadius:2, margin:"6px 10%" }}/>
+          <Arch nums={lowerNums} upper={false}/>
+        </div>
       </div>
-      <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
+
+      {/* دليل حيّ بعدّادات */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
         {(Object.keys(TOOTH_COLORS) as ToothStatus[]).map(k=>{
-          const c=TOOTH_COLORS[k];
-          return <span key={k} style={{ fontSize:10,padding:"3px 9px",borderRadius:20,background:c.bg,border:`1.5px solid ${c.border}`,color:c.text,fontWeight:600 }}>{t.statuses[k]}</span>;
+          const c=TOOTH_COLORS[k]; const n=counts[k];
+          return (
+            <span key={k} style={{ fontSize:10.5, padding:"3px 10px", borderRadius:20, background:c.bg, border:`1.5px solid ${c.border}`, color:c.text, fontWeight:700, display:"inline-flex", alignItems:"center", gap:5, opacity:n?1:.55 }}>
+              {t.statuses[k]}{n?<span style={{ background:c.border, color:"#fff", borderRadius:10, padding:"0 6px", fontSize:9.5, lineHeight:"14px" }}>{n}</span>:null}
+            </span>
+          );
         })}
       </div>
+
+      {/* نافذة تعديل السن — منبثقة فوق الخريطة، لا حاجة للتمرير */}
       {selected!==null&&(
-        <div style={{ background:"#fff",borderRadius:14,padding:16,border:"2px solid #0863ba",boxShadow:"0 4px 20px rgba(8,99,186,.12)" }}>
-          <div style={{ fontSize:13,fontWeight:700,color:"#0863ba",marginBottom:12 }}><AppIcon glyph="🦷" /> {isAr?`السن رقم ${selected}`:`Tooth #${selected}`}</div>
-          <div style={{ marginBottom:12 }}>
-            <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:6 }}>{t.toothStatus}</label>
-            <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
-              {(Object.keys(TOOTH_COLORS) as ToothStatus[]).map(s=>{
-                const c=TOOTH_COLORS[s]; const active=editStatus===s;
-                return <button key={s} onClick={()=>setEditStatus(s)} style={{ padding:"5px 12px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:600,fontFamily:"Rubik,sans-serif",background:active?c.border:c.bg,border:`1.5px solid ${c.border}`,color:active?"#fff":c.text,transition:"all .15s" }}>{t.statuses[s]}</button>;
+        <div onClick={()=>setSelected(null)} style={{ position:"fixed", inset:0, background:"rgba(15,25,40,.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:18, padding:20, width:"100%", maxWidth:400, maxHeight:"85vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,.25)", direction:isAr?"rtl":"ltr" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <div style={{ fontSize:15, fontWeight:700, color:"#0863ba", display:"flex", alignItems:"center", gap:8 }}>
+                <AppIcon glyph="🦷" /> {isAr?`السن رقم ${selected}`:`Tooth #${selected}`}
+              </div>
+              <button onClick={()=>setSelected(null)} style={{ width:30, height:30, borderRadius:"50%", border:"none", background:"#f0f4f8", color:"#666", cursor:"pointer", fontSize:15, fontWeight:700, lineHeight:1 }}>×</button>
+            </div>
+            <label style={{ fontSize:11, fontWeight:700, color:"#888", display:"block", marginBottom:8 }}>{t.toothStatus}</label>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7, marginBottom:14 }}>
+              {(Object.keys(TOOTH_COLORS) as ToothStatus[]).map(st=>{
+                const c=TOOTH_COLORS[st]; const active=editStatus===st;
+                return (
+                  <button key={st} onClick={()=>setEditStatus(st)} style={{ padding:"9px 8px", borderRadius:11, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"Rubik,sans-serif", background:active?c.border:c.bg, border:`1.5px solid ${c.border}`, color:active?"#fff":c.text, transition:"all .15s" }}>
+                    {t.statuses[st]}
+                  </button>
+                );
               })}
             </div>
-          </div>
-          <div style={{ marginBottom:12 }}>
-            <label style={{ fontSize:11,fontWeight:700,color:"#888",display:"block",marginBottom:6 }}>{t.toothNotes}</label>
-            <textarea value={editNote} onChange={e=>setEditNote(e.target.value)} rows={2} style={{ width:"100%",padding:"9px 12px",border:"1.5px solid #e8eaed",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,resize:"none" as const,outline:"none",direction:isAr?"rtl":"ltr" }}/>
-          </div>
-          <div style={{ display:"flex",gap:8 }}>
-            <button onClick={saveTooth} style={{ flex:1,padding:"10px",background:"#0863ba",color:"#fff",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer" }}>{t.save}</button>
-            <button onClick={()=>setSelected(null)} style={{ padding:"10px 16px",background:"#f5f5f5",color:"#666",border:"none",borderRadius:10,fontFamily:"Rubik,sans-serif",fontSize:13,cursor:"pointer" }}>{t.close}</button>
+            <label style={{ fontSize:11, fontWeight:700, color:"#888", display:"block", marginBottom:6 }}>{t.toothNotes}</label>
+            <textarea value={editNote} onChange={e=>setEditNote(e.target.value)} rows={2} placeholder={isAr?"ملاحظات اختيارية…":"Optional notes…"} style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #e8eaed", borderRadius:10, fontFamily:"Rubik,sans-serif", fontSize:13, resize:"none" as const, outline:"none", direction:isAr?"rtl":"ltr", marginBottom:14, boxSizing:"border-box" as const }}/>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={saveTooth} style={{ flex:1, padding:"11px", background:"#0863ba", color:"#fff", border:"none", borderRadius:11, fontFamily:"Rubik,sans-serif", fontSize:13, fontWeight:700, cursor:"pointer" }}>{t.save}</button>
+              {chart[selected]&&(
+                <button onClick={clearTooth} style={{ padding:"11px 14px", background:"#fce4ec", color:"#c2185b", border:"none", borderRadius:11, fontFamily:"Rubik,sans-serif", fontSize:12.5, fontWeight:700, cursor:"pointer" }}>{isAr?"مسح التسجيل":"Clear"}</button>
+              )}
+            </div>
           </div>
         </div>
       )}
