@@ -7,7 +7,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import {
-  BODY_SILHOUETTE, BACK_GUIDES, MARKER_META, regionAt, newMarkerId,
+  BODY_HALF, BACK_GUIDES, FRONT_GUIDES, VB_W, VB_H,
+  MARKER_META, regionAt, newMarkerId,
   type BodyMap, type BodyMarker, type BodyView, type MarkerType,
 } from "@/lib/bodyMap";
 
@@ -72,9 +73,13 @@ export default function BodyMapSection({ lang, map, onChange, readOnly = false }
     if (readOnly || draft) return;
     const svg = svgRef.current;
     if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const loc = pt.matrixTransform(ctm.inverse());
+    const x = (loc.x / VB_W) * 100;
+    const y = (loc.y / VB_H) * 100;
     if (x < 0 || x > 100 || y < 0 || y > 100) return;
     setIsNew(true);
     setDraft({
@@ -137,36 +142,53 @@ export default function BodyMapSection({ lang, map, onChange, readOnly = false }
         }}>
           <svg
             ref={svgRef}
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
+            viewBox={`0 0 ${VB_W} ${VB_H}`}
+            preserveAspectRatio="xMidYMid meet"
             onClick={handleSvgClick}
-            style={{ width: "100%", height: 420, cursor: readOnly ? "default" : "crosshair", display: "block" }}
+            style={{ width: "100%", height: 430, cursor: readOnly ? "default" : "crosshair", display: "block" }}
           >
-            <path d={BODY_SILHOUETTE[view]} fill="#eef4fb" stroke="#c7d8ea" strokeWidth={0.4}
-              vectorEffect="non-scaling-stroke" />
-            {view === "back" && (
-              <path d={BACK_GUIDES} stroke="#c7d8ea" strokeWidth={0.4} strokeDasharray="2 2"
-                fill="none" vectorEffect="non-scaling-stroke" />
-            )}
+            <defs>
+              <linearGradient id="bmFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f2f7fd" />
+                <stop offset="100%" stopColor="#e3edf8" />
+              </linearGradient>
+            </defs>
+
+            {/* النصف الأيسر ثم انعكاسه — تناظر تام */}
+            <g fill="url(#bmFill)" stroke="#c2d5e8" strokeWidth={1} strokeLinejoin="round">
+              <path d={BODY_HALF} />
+              <path d={BODY_HALF} transform={`translate(${VB_W},0) scale(-1,1)`} />
+            </g>
+
+            {/* خطوط تشريحية إرشادية */}
+            <g stroke="#cfdeee" strokeWidth={0.9} fill="none" strokeLinecap="round">
+              {(view === "back" ? BACK_GUIDES : FRONT_GUIDES).map((d, i) => (
+                <path key={i} d={d} />
+              ))}
+            </g>
+
             {viewMarkers.map(m => {
               const meta = MARKER_META[m.type];
               const active = draft?.id === m.id;
+              const cx = (m.x / 100) * VB_W;
+              const cy = (m.y / 100) * VB_H;
               return (
                 <g key={m.id}
                   onClick={(e) => { e.stopPropagation(); if (readOnly) return; setIsNew(false); setDraft({ ...m }); }}
                   style={{ cursor: readOnly ? "default" : "pointer" }}>
-                  <circle cx={m.x} cy={m.y} r={active ? 2.6 : 2} fill={meta.color}
-                    stroke="#fff" strokeWidth={0.6} vectorEffect="non-scaling-stroke" opacity={0.92} />
                   {active && (
-                    <circle cx={m.x} cy={m.y} r={4} fill="none" stroke={meta.color}
-                      strokeWidth={0.5} vectorEffect="non-scaling-stroke" opacity={0.6} />
+                    <circle cx={cx} cy={cy} r={7} fill="none" stroke={meta.color}
+                      strokeWidth={1} opacity={0.45} />
                   )}
+                  <circle cx={cx} cy={cy} r={active ? 4.4 : 3.6} fill={meta.color}
+                    stroke="#fff" strokeWidth={1.4} />
                 </g>
               );
             })}
+
             {isNew && draft && draft.view === view && (
-              <circle cx={draft.x} cy={draft.y} r={2.4} fill={MARKER_META[draft.type].color}
-                stroke="#fff" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+              <circle cx={(draft.x / 100) * VB_W} cy={(draft.y / 100) * VB_H} r={4.4}
+                fill={MARKER_META[draft.type].color} stroke="#fff" strokeWidth={1.4} />
             )}
           </svg>
 
