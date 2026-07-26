@@ -1907,7 +1907,7 @@ export default function AppointmentsPage() {
   for (let d=1;d<=daysInMonth;d++) calDays.push(d);
 
   const monthKey   = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}`;
-  const monthAppts = appointments.filter(a=>a.date.startsWith(monthKey));
+  const monthAppts = appointments.filter(a=>((a.date ?? "") as string).startsWith(monthKey));
 
   const todayAppts        = appointments.filter(a => a.date === todayKey);
   const todayMinutes      = todayAppts.reduce((s,a)=>s+(a.duration||30), 0);

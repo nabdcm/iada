@@ -1243,9 +1243,9 @@ export default function PaymentsPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const [{ data: wData }, { data: eData }] = await Promise.all([
-        supabase.from("clinic_withdrawals").select("*").eq("user_id", user.id).order("date", { ascending: false }),
-        supabase.from("clinic_expenses").select("*").eq("user_id", user.id).order("date", { ascending: false }),
+      const [wData, eData] = await Promise.all([
+        fetchAll<any>((f, t) => supabase.from("clinic_withdrawals").select("*").eq("user_id", user.id).order("date", { ascending: false }).range(f, t)),
+        fetchAll<any>((f, t) => supabase.from("clinic_expenses").select("*").eq("user_id", user.id).order("date", { ascending: false }).range(f, t)),
       ]);
       if (wData) setWithdrawals(wData);
       if (eData) setExpenses(eData);
@@ -1337,11 +1337,11 @@ export default function PaymentsPage() {
   // ── إحصائيات ────────────────────────────────────────────────
   const stats = useMemo(() => {
     const thisMonth = new Date().toISOString().slice(0, 7);
-    const monthPayments = payments.filter(p => p.date.startsWith(thisMonth));
+    const monthPayments = payments.filter(p => ((p.date ?? "") as string).startsWith(thisMonth));
     const pending = payments.filter(p => p.status === "pending");
-    const totalRevYear = payments.filter(p => p.status === "paid" && p.date.startsWith(String(new Date().getFullYear()))).reduce((s, p) => s + p.amount, 0);
-    const totalWithdrawYear = withdrawals.filter(w => w.date.startsWith(String(new Date().getFullYear())) && !w.is_reversed).reduce((s, w) => s + w.amount, 0);
-    const totalExpYear = expenses.filter(e => e.date.startsWith(String(new Date().getFullYear()))).reduce((s, e) => s + e.amount, 0);
+    const totalRevYear = payments.filter(p => p.status === "paid" && ((p.date ?? "") as string).startsWith(String(new Date().getFullYear()))).reduce((s, p) => s + p.amount, 0);
+    const totalWithdrawYear = withdrawals.filter(w => ((w.date ?? "") as string).startsWith(String(new Date().getFullYear())) && !w.is_reversed).reduce((s, w) => s + w.amount, 0);
+    const totalExpYear = expenses.filter(e => ((e.date ?? "") as string).startsWith(String(new Date().getFullYear()))).reduce((s, e) => s + e.amount, 0);
     return {
       totalMonth:   monthPayments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0),
       totalYear:    totalRevYear,
@@ -1378,7 +1378,7 @@ export default function PaymentsPage() {
     const thisMonth = new Date().toISOString().slice(0, 7);
     return doctors.map(doc => {
       const docPayments = payments.filter(p =>
-        (p as any).doctor_id === doc.id && p.status === "paid" && p.date.startsWith(thisMonth)
+        (p as any).doctor_id === doc.id && p.status === "paid" && ((p.date ?? "") as string).startsWith(thisMonth)
       );
       let shareRevenue = 0;
       let unspecified = 0;
@@ -1409,7 +1409,7 @@ export default function PaymentsPage() {
       const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       return payments
-        .filter(p => p.status === "paid" && p.date.startsWith(key))
+        .filter(p => p.status === "paid" && ((p.date ?? "") as string).startsWith(key))
         .reduce((s, p) => s + p.amount, 0);
     });
   }, [payments]);
@@ -1576,15 +1576,15 @@ export default function PaymentsPage() {
     const now = new Date();
     const thisMonth = now.toISOString().slice(0,7);
     const monthPayments = payments
-      .filter(p => p.date.startsWith(thisMonth))
+      .filter(p => ((p.date ?? "") as string).startsWith(thisMonth))
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const monthWithdrawals = withdrawals
-      .filter(w => w.date.startsWith(thisMonth) && !w.is_reversed)
+      .filter(w => ((w.date ?? "") as string).startsWith(thisMonth) && !w.is_reversed)
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const monthExpenses = expenses
-      .filter(e => e.date.startsWith(thisMonth) && !e.is_reversed)
+      .filter(e => ((e.date ?? "") as string).startsWith(thisMonth) && !e.is_reversed)
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const monthName = now.toLocaleDateString("ar-EG-u-ca-gregory-nu-latn", { year:"numeric", month:"long" });
