@@ -8,6 +8,7 @@ import { supabase, fetchAll } from "@/lib/supabase";
 import BodyMapSection from "@/components/BodyMapSection";
 import VaccinationsSection from "@/components/VaccinationsSection";
 import PregnancySection from "@/components/PregnancySection";
+import SelfVitalsSection from "@/components/SelfVitalsSection";
 import type { BodyMap } from "@/lib/bodyMap";
 import PageIntro from "@/components/PageIntro";
 import { normalizePhone, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
@@ -1046,7 +1047,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
   const isMounted = useRef(true);
   useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
-  const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental"|"labresults"|"bodymap"|"vaccines"|"pregnancy">("info");
+  const [activeTab, setActiveTab] = useState<"info"|"medical"|"xrays"|"dental"|"labresults"|"bodymap"|"vaccines"|"pregnancy"|"selfvitals">("info");
 
   // إذا لم يكن للخطة صلاحية الأشعة وكان التبويب النشط هو الأشعة، نعيده للمعلومات
   useEffect(() => {
@@ -1132,6 +1133,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
     ...(canXray ? [{ key:"xrays" as const, label:t.tabs.xrays, icon:"🩻" }] : []),
     ...(isDental ? [{ key:"dental" as const, label:t.tabs.dental, icon:"🦷" }] : []),
     { key:"labresults" as const, label: isAr ? "التحاليل" : "Lab Results", icon:"🧪" },
+    { key:"selfvitals" as const, label: isAr ? "قراءات المريض" : "Self Vitals", icon:"📈" },
     { key:"bodymap" as const, label: isAr ? "مخطط الجسم" : "Body Map", icon:"🧍" },
     { key:"vaccines" as const, label: isAr ? "اللقاحات" : "Vaccines", icon:"💉" },
     ...(patient.gender === "female"
@@ -1354,6 +1356,11 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                 {/* ── DENTAL ── */}
                 {activeTab==="dental"&&isDental&&(
                   <DentalChartSection lang={lang} chart={profile.dental_chart} onChange={c=>saveProfile({ dental_chart:c })}/>
+                )}
+
+                {/* ── SELF-REPORTED VITALS ── */}
+                {activeTab==="selfvitals"&&(
+                  <SelfVitalsSection patientId={patient.id} isAr={isAr}/>
                 )}
 
                 {/* ── BODY MAP ── */}

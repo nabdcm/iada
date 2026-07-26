@@ -4,6 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import BookSection from "@/components/portal/BookSection";
 import PrescriptionsSection, { type PortalPrescription } from "@/components/portal/PrescriptionsSection";
 import LabsSection, { type PortalLab } from "@/components/portal/LabsSection";
+import VitalsSection from "@/components/portal/VitalsSection";
 import { useState, useEffect } from "react";
 
 // ============================================================
@@ -417,7 +418,7 @@ function PatientDashboard({ master, lang, onLogout }: {
   const [loading, setLoading] = useState(true);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(0);
   const [patientInfo, setPatientInfo] = useState<ClinicRecord["patient_info"] | null>(null);
-  const [portalTab, setPortalTab] = useState<"records" | "rx" | "labs" | "book">("records");
+  const [portalTab, setPortalTab] = useState<"records" | "rx" | "labs" | "vitals" | "book">("records");
   const [prescriptions, setPrescriptions] = useState<PortalPrescription[]>([]);
   const [labs, setLabs] = useState<PortalLab[]>([]);
 
@@ -564,6 +565,7 @@ function PatientDashboard({ master, lang, onLogout }: {
             { k: "records" as const, label: isAr ? "سجلاتي" : "Records", icon: "📋", n: 0 },
             { k: "rx" as const, label: isAr ? "وصفاتي" : "Rx", icon: "💊", n: prescriptions.length },
             { k: "labs" as const, label: isAr ? "تحاليلي" : "Labs", icon: "🧪", n: labs.length },
+            { k: "vitals" as const, label: isAr ? "مقاييسي" : "Vitals", icon: "📈", n: 0 },
             { k: "book" as const, label: isAr ? "حجز موعد" : "Book", icon: "📅", n: 0 },
           ]).map(tb => {
             const on = portalTab === tb.k;
@@ -594,6 +596,7 @@ function PatientDashboard({ master, lang, onLogout }: {
 
         {portalTab === "rx" && <PrescriptionsSection items={prescriptions} />}
         {portalTab === "labs" && <LabsSection items={labs} />}
+        {portalTab === "vitals" && <VitalsSection />}
 
         {/* ── تبويب حجز موعد ── */}
         {portalTab === "book" && (
