@@ -1753,7 +1753,7 @@ export default function PaymentsPage() {
       ${paymentRows || `<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">لا توجد مدفوعات هذا الشهر</td></tr>`}
       <tr class="total-row">
         <td colspan="5">الإجمالي المدفوع</td>
-        <td>+${totalPaid.toLocaleString()} {CUR}</td>
+        <td>+${totalPaid.toLocaleString()} ${CUR}</td>
       </tr>
     </tbody>
   </table>
@@ -1794,7 +1794,7 @@ ${doctorSettlementRows}
       <div style="font-size:11px;color:#888;margin-top:2px">الدخل المدفوع − السحوبات − المصروفات</div>
     </div>
     <div style="font-size:24px;font-weight:900;color:${netBalance >= 0 ? "#2e7d32" : "#c0392b"}">
-      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} {CUR}
+      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} ${CUR}
     </div>
   </div>
 
@@ -2033,7 +2033,7 @@ ${doctorSettlementRows}
       <div class="net-sub">الدخل المدفوع (${totalPaid.toLocaleString()}) − السحوبات (${totalWD.toLocaleString()}) − المصروفات (${totalEX.toLocaleString()})</div>
     </div>
     <div class="net-val" style="color:${netBalance >= 0 ? "#2e7d32" : "#c0392b"}">
-      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} {CUR}
+      ${netBalance >= 0 ? "+" : ""}${netBalance.toLocaleString()} ${CUR}
     </div>
   </div>
 
@@ -2152,7 +2152,7 @@ ${doctorSettlementRows}
       <tr>
         <td>${payment.description || "—"}</td>
         <td>${(payment as any).session_type ? (sessionTypeMap[(payment as any).session_type] || "—") : "—"}</td>
-        <td>${Number(payment.amount ?? 0).toLocaleString()} {CUR}</td>
+        <td>${Number(payment.amount ?? 0).toLocaleString()} ${CUR}</td>
       </tr>
       <tr class="total-row"><td colspan="2">الإجمالي</td><td>${Number(payment.amount ?? 0).toLocaleString()} ${CUR}</td></tr>
     </tbody>
