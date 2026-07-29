@@ -1007,6 +1007,14 @@ export default function LandingPage() {
         /* ── PRICING ── */
         .pricing-section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
         /* ── PRICING TOGGLE ── */
+        .pricing-controls {
+          display: flex; align-items: center; justify-content: center;
+          gap: 18px; margin-bottom: 48px; flex-wrap: wrap;
+        }
+        .pricing-controls-divider {
+          width: 1px; height: 28px; background: #e2e8f0;
+        }
+        .toggle-pill-wrap { display: flex; align-items: center; gap: 10px; }
         .pricing-toggle {
           display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 48px;
         }
@@ -1156,6 +1164,8 @@ export default function LandingPage() {
           .features-grid { grid-template-columns: 1fr; }
           .ecosystem-grid { grid-template-columns: 1fr; }
           .ecosystem-section { padding: 10px 20px 60px; }
+          .pricing-controls-divider { display: none; }
+          .pricing-controls { gap: 14px; }
           .hiw-steps { grid-template-columns: 1fr; gap: 24px; }
           .hiw-step::after { display: none !important; }
           .stats-section { padding: 0 20px 60px; }
@@ -1394,7 +1404,7 @@ export default function LandingPage() {
             </h2>
             <p className="section-sub">{t.pricing.subtitle}</p>
           </div>
-          <div className="pricing-toggle">
+          <div className="pricing-controls">
             <div className="toggle-pill">
               <div
                 className={`toggle-pill-option${planTab === "individual" ? " active" : ""}`}
@@ -1409,23 +1419,24 @@ export default function LandingPage() {
                 {t.pricing.sharedTab}
               </div>
             </div>
-          </div>
-          <div className="pricing-toggle">
-            <div className="toggle-pill">
-              <div
-                className={`toggle-pill-option${!pricingAnnual ? " active" : ""}`}
-                onClick={() => setPricingAnnual(false)}
-              >
-                {t.pricing.monthly}
+            <div className="pricing-controls-divider" />
+            <div className="toggle-pill-wrap">
+              <div className="toggle-pill">
+                <div
+                  className={`toggle-pill-option${!pricingAnnual ? " active" : ""}`}
+                  onClick={() => setPricingAnnual(false)}
+                >
+                  {t.pricing.monthly}
+                </div>
+                <div
+                  className={`toggle-pill-option${pricingAnnual ? " active" : ""}`}
+                  onClick={() => setPricingAnnual(true)}
+                >
+                  {t.pricing.annual}
+                </div>
               </div>
-              <div
-                className={`toggle-pill-option${pricingAnnual ? " active" : ""}`}
-                onClick={() => setPricingAnnual(true)}
-              >
-                {t.pricing.annual}
-              </div>
+              {pricingAnnual && <span className="pricing-save-badge">{t.pricing.save}</span>}
             </div>
-            {pricingAnnual && <span className="pricing-save-badge">{t.pricing.save}</span>}
           </div>
           <div className="pricing-grid">
             {(planTab === "individual" ? t.pricing.individualPlans : t.pricing.sharedPlans).map((plan: any, i: number) => (
