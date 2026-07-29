@@ -1133,6 +1133,8 @@ export default function PaymentsPage() {
   // خطط العيادات المشتركة: قائمة الأطباء والفلتر المحدد
   const [doctors, setDoctors] = useState<{id: number; name: string; color?: string}[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<number|null>(null);
+  // فلتر نسبة الطبيب: all | withShare | withoutShare — للخطط المشتركة فقط
+  const [shareFilter, setShareFilter] = useState<"all"|"withShare"|"withoutShare">("all");
 
   // ── قفل صفحة المدفوعات بكلمة سر ────────────────────────────
   const [paymentsLockEnabled,  setPaymentsLockEnabled]  = useState(false);
@@ -1269,13 +1271,20 @@ export default function PaymentsPage() {
       if (isSharedClinicPlan(plan) && selectedDoctor !== null) {
         if ((p as any).doctor_id !== selectedDoctor) return false;
       }
+      // فلتر نسبة الطبيب — للخطط المشتركة فقط
+      if (isSharedClinicPlan(plan) && shareFilter !== "all") {
+        const rawPct = (p as any).doctor_share_percentage;
+        const hasShare = rawPct != null && rawPct !== "" && !isNaN(Number(rawPct));
+        if (shareFilter === "withShare" && !hasShare) return false;
+        if (shareFilter === "withoutShare" && hasShare) return false;
+      }
       return true;
     }).sort((a, b) => {
       const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
       if (dateDiff !== 0) return dateDiff;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [payments, patients, search, filter, selectedDoctor, plan]);
+  }, [payments, patients, search, filter, selectedDoctor, shareFilter, plan]);
 
   // ── سجل موحّد كحركة حساب بنكي: مدفوعات + سحوبات + مصروفات ──
   const ledger = useMemo(() => {
@@ -1292,7 +1301,7 @@ export default function PaymentsPage() {
     return items.filter(Boolean).sort((a,b) => (b?.date||"").localeCompare(a?.date||"") || (b?.created_at||"").localeCompare(a?.created_at||""));
   }, [filtered, withdrawals, expenses, filter, search, selectedDoctor]);
 
-  useEffect(()=>{ setTxPage(1); },[search,filter,selectedDoctor]);
+  useEffect(()=>{ setTxPage(1); },[search,filter,selectedDoctor,shareFilter]);
   const txTotalPages = Math.max(1, Math.ceil(ledger.length / TX_PAGE_SIZE));
   const txSafePage = Math.min(txPage, txTotalPages);
   const txPaged = ledger.slice((txSafePage-1)*TX_PAGE_SIZE, txSafePage*TX_PAGE_SIZE);
@@ -2543,6 +2552,9 @@ ${doctorSettlementRows}
                             {isAr ? "د. " : "Dr. "}{doc.name}
                           </button>
                         ))}
+                        <span style={{ width:1,alignSelf:"stretch",background:"#e6edf5",margin:"0 2px" }}/>
+                        <button className={`filter-chip${shareFilter==="withShare"?" active":""}`} onClick={()=>setShareFilter(shareFilter==="withShare"?"all":"withShare")}>{isAr?"بنسبة طبيب":"With Doctor %"}</button>
+                        <button className={`filter-chip${shareFilter==="withoutShare"?" active":""}`} onClick={()=>setShareFilter(shareFilter==="withoutShare"?"all":"withoutShare")}>{isAr?"بدون نسبة":"No %"}</button>
                       </>
                     )}
                   </div>
