@@ -101,6 +101,21 @@ const translations = {
         },
       ],
     },
+    ecosystem: {
+      title: "أكثر من مجرد عيادة",
+      titleHighlight: "منظومة متكاملة",
+      subtitle: "نبض يربط عيادتك بالصيدلية والمختبر ضمن نظام واحد موحّد عبر رقم السجل الطبي",
+      pharmacy: {
+        icon: "💊",
+        title: "نبض صيدلية",
+        desc: "نقطة بيع متكاملة، جرد وباركود، صرف الوصفات مباشرة من العيادة، وتنبيهات انتهاء الصلاحية.",
+      },
+      lab: {
+        icon: "🧪",
+        title: "نبض مخبر",
+        desc: "استقبال العينات وطباعة ملصقات QR، وربط نتائج التحاليل مباشرة بالسجل الطبي للمريض.",
+      },
+    },
     pricing: {
       title: "خطط الأسعار",
       titleHighlight: "المرنة",
@@ -368,6 +383,21 @@ const translations = {
           desc: "Comprehensive view of clinic activity with daily and monthly statistics and performance indicators to simplify your daily tasks.",
         },
       ],
+    },
+    ecosystem: {
+      title: "More Than Just a Clinic —",
+      titleHighlight: "A Complete Ecosystem",
+      subtitle: "NABD connects your clinic with the pharmacy and lab in one unified system via a shared Medical Record Number",
+      pharmacy: {
+        icon: "💊",
+        title: "NABD Pharmacy",
+        desc: "Full POS, inventory & barcode scanning, dispensing prescriptions directly from the clinic, and expiry alerts.",
+      },
+      lab: {
+        icon: "🧪",
+        title: "NABD Lab",
+        desc: "Sample intake with QR label printing, and results linked directly to the patient's medical record.",
+      },
     },
     pricing: {
       title: "Flexible Pricing",
@@ -953,6 +983,27 @@ export default function LandingPage() {
           margin-top: 12px;
         }
 
+        /* ── ECOSYSTEM ── */
+        .ecosystem-section { padding: 20px 40px 80px; max-width: 1100px; margin: 0 auto; }
+        .ecosystem-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; }
+        .ecosystem-card {
+          border-radius: 22px; padding: 36px 32px; position: relative; overflow: hidden;
+          box-shadow: var(--shadow); transition: all 0.3s; border: 1.5px solid transparent;
+        }
+        .ecosystem-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .ecosystem-card.eco-pharmacy { background: linear-gradient(160deg, #fff 55%, rgba(123,45,139,0.05) 100%); }
+        .ecosystem-card.eco-pharmacy:hover { border-color: rgba(123,45,139,0.3); }
+        .ecosystem-card.eco-lab { background: linear-gradient(160deg, #fff 55%, rgba(14,124,106,0.05) 100%); }
+        .ecosystem-card.eco-lab:hover { border-color: rgba(14,124,106,0.3); }
+        .ecosystem-icon {
+          font-size: 32px; width: 60px; height: 60px; border-radius: 16px;
+          display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
+        }
+        .eco-pharmacy .ecosystem-icon { background: rgba(123,45,139,0.1); }
+        .eco-lab .ecosystem-icon { background: rgba(14,124,106,0.1); }
+        .ecosystem-title { font-size: 19px; font-weight: 800; color: var(--dark); margin-bottom: 10px; }
+        .ecosystem-desc { font-size: 14px; color: #888; line-height: 1.75; }
+
         /* ── PRICING ── */
         .pricing-section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
         /* ── PRICING TOGGLE ── */
@@ -1103,6 +1154,8 @@ export default function LandingPage() {
           .hero { padding: 100px 20px 60px; }
           .stats-grid { grid-template-columns: repeat(2,1fr); }
           .features-grid { grid-template-columns: 1fr; }
+          .ecosystem-grid { grid-template-columns: 1fr; }
+          .ecosystem-section { padding: 10px 20px 60px; }
           .hiw-steps { grid-template-columns: 1fr; gap: 24px; }
           .hiw-step::after { display: none !important; }
           .stats-section { padding: 0 20px 60px; }
@@ -1271,6 +1324,28 @@ export default function LandingPage() {
                 )}
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── ECOSYSTEM — نبض صيدلية / نبض مخبر ── */}
+        <section className="ecosystem-section" id="ecosystem">
+          <div className="section-header">
+            <h2 className="section-title">
+              {t.ecosystem.title} <span>{t.ecosystem.titleHighlight}</span>
+            </h2>
+            <p className="section-sub">{t.ecosystem.subtitle}</p>
+          </div>
+          <div className="ecosystem-grid">
+            <div className="ecosystem-card eco-pharmacy">
+              <div className="ecosystem-icon"><AppIcon glyph={t.ecosystem.pharmacy.icon} /></div>
+              <h3 className="ecosystem-title">{t.ecosystem.pharmacy.title}</h3>
+              <p className="ecosystem-desc">{t.ecosystem.pharmacy.desc}</p>
+            </div>
+            <div className="ecosystem-card eco-lab">
+              <div className="ecosystem-icon"><AppIcon glyph={t.ecosystem.lab.icon} /></div>
+              <h3 className="ecosystem-title">{t.ecosystem.lab.title}</h3>
+              <p className="ecosystem-desc">{t.ecosystem.lab.desc}</p>
+            </div>
           </div>
         </section>
 
