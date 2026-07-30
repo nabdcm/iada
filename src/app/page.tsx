@@ -311,7 +311,7 @@ const translations = {
     footer: {
       tagline: "نبض عيادتك في يدك",
       copy: "© 2026 نبض. جميع الحقوق محفوظة.",
-      links: { features: "المميزات", pricing: "الأسعار", faq: "الأسئلة الشائعة", privacy: "سياسة الخصوصية", contact: "تواصل معنا" },
+      links: { features: "المميزات", pricing: "الأسعار", faq: "الأسئلة الشائعة", privacy: "سياسة الخصوصية", contact: "تواصل معنا", pharmacy: "نظام الصيدليات", lab: "نظام المخابر" },
     },
   },
   en: {
@@ -594,7 +594,7 @@ const translations = {
     footer: {
       tagline: "Your Clinic's Pulse in Your Hands",
       copy: "© 2026 NABD. All rights reserved.",
-      links: { features: "Features", pricing: "Pricing", faq: "FAQ", privacy: "Privacy Policy", contact: "Contact Us" },
+      links: { features: "Features", pricing: "Pricing", faq: "FAQ", privacy: "Privacy Policy", contact: "Contact Us", pharmacy: "Pharmacy System", lab: "Lab System" },
     },
   },
 };
@@ -1575,6 +1575,8 @@ export default function LandingPage() {
             <a href="#features">{t.footer.links.features}</a>
             <a href="#pricing">{t.footer.links.pricing}</a>
             <a href="#faq">{t.footer.links.faq}</a>
+            <a href="/pharmacy-system">{t.footer.links.pharmacy}</a>
+            <a href="/lab-system">{t.footer.links.lab}</a>
             <a href="/privacy-policy">{t.footer.links.privacy}</a>
             <a href={WA_LINK} target="_blank" rel="noopener noreferrer">{t.footer.links.contact}</a>
           </div>

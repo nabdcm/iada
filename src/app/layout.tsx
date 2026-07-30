@@ -64,6 +64,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }),
           }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: [
+                { "@type": "Question", name: "هل بيانات مرضاي آمنة؟", acceptedAnswer: { "@type": "Answer", text: "نعم. البيانات مشفّرة أثناء النقل ومخزّنة على بنية سحابية موثوقة، وكل عيادة معزولة تماماً عن غيرها بصلاحيات صارمة." } },
+                { "@type": "Question", name: "هل أحتاج خبرة تقنية لاستخدام نبض؟", acceptedAnswer: { "@type": "Answer", text: "إطلاقاً. النظام مصمم ليكون بسيطاً، ونوفّر شرحاً ودعماً مباشراً عند البدء." } },
+                { "@type": "Question", name: "هل يعمل نبض على الموبايل؟", acceptedAnswer: { "@type": "Answer", text: "نعم، نبض يعمل على الموبايل والكمبيوتر والتابلت من المتصفح مباشرة، ويمكن تثبيته كتطبيق على شاشتك الرئيسية." } },
+                { "@type": "Question", name: "هل يمكن لأكثر من طبيب استخدام نفس الحساب؟", acceptedAnswer: { "@type": "Answer", text: "نعم، الخطط المشتركة تدعم حتى 5 أطباء في العيادة الواحدة مع تخصيص المرضى لكل طبيب." } },
+                { "@type": "Question", name: "كيف أبدأ باستخدام نبض؟", acceptedAnswer: { "@type": "Answer", text: "جرّب النظام مجاناً من زر التجربة، وعندما تكون جاهزاً تواصل معنا عبر واتساب لتفعيل حسابك خلال دقائق." } },
+              ],
+            }),
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

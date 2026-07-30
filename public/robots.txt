@@ -2,6 +2,8 @@ User-agent: *
 Allow: /$
 Allow: /privacy-policy
 Allow: /book
+Allow: /pharmacy-system
+Allow: /lab-system
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /appointments
