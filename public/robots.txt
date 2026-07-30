@@ -4,6 +4,7 @@ Allow: /privacy-policy
 Allow: /book
 Allow: /pharmacy-system
 Allow: /lab-system
+Allow: /blog
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /appointments
