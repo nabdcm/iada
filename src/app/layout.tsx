@@ -45,6 +45,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ar" dir="rtl">
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "نبض NABD",
+              alternateName: "NABD Clinic",
+              applicationCategory: "MedicalApplication",
+              operatingSystem: "Web, Android",
+              url: "https://nabd.clinic",
+              description:
+                "نبض — نظام سحابي لإدارة العيادات الطبية والصيدليات والمخابر: حجز المواعيد، الملفات الطبية، الوصفات، والمدفوعات.",
+              offers: { "@type": "Offer", availability: "https://schema.org/InStock" },
+              areaServed: ["SY", "SA", "EG", "JO", "IQ", "AE"],
+              inLanguage: "ar",
+            }),
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
