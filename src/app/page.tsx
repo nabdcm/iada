@@ -1248,6 +1248,17 @@ export default function LandingPage() {
                   </svg>
                   {t.hero.demo}
                 </a>
+                <a
+                  href="/downloads/nabd.apk"
+                  download
+                  className="btn-secondary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.523 15.34l1.665-2.885a.36.36 0 00-.13-.492.361.361 0 00-.492.13l-1.687 2.922a10.44 10.44 0 00-8.758 0L6.434 12.093a.361.361 0 00-.492-.13.36.36 0 00-.13.492l1.665 2.885C4.279 17.055 2.06 20.148 2 24h20c-.06-3.852-2.279-6.945-4.477-8.66zM7 21a1 1 0 110-2 1 1 0 010 2zm10 0a1 1 0 110-2 1 1 0 010 2z"/>
+                  </svg>
+                  {lang === "ar" ? "حمّل تطبيق أندرويد" : "Download Android App"}
+                </a>
               </div>
             </div>
 
