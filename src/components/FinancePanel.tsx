@@ -65,7 +65,7 @@ const EXPENSE_CATEGORIES: { key: string; ar: string; en: string }[] = [
 function effectivePrice(c: ClinicRow): { amount: number; cycle: "monthly" | "yearly" } {
   const cycle = c.billing_cycle === "yearly" ? "yearly" : "monthly";
   const base = PLAN_PRICING[c.plan]?.[cycle] ?? 0;
-  if (c.price_override !== undefined && c.price_override !== null && c.price_override !== 0) {
+  if (c.price_override !== undefined && c.price_override !== null) {
     return { amount: c.price_override, cycle };
   }
   if (c.discount_percent) return { amount: +(base * (1 - c.discount_percent / 100)).toFixed(2), cycle };
