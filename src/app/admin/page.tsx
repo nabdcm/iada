@@ -50,6 +50,7 @@ interface ClinicData {
   currency?: string;               // عملة العيادة
   price_override?: number | null;  // سعر يدوي (يتجاوز سعر الخطة الافتراضي)
   discount_percent?: number | null; // نسبة خصم على سعر الخطة الافتراضي
+  billing_cycle?: "monthly" | "yearly" | null; // دورة الفوترة
 }
 
 // السعر الفعلي الشهري للعيادة بالدولار: يدوي > خصم > سعر الخطة
