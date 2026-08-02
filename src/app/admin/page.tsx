@@ -2,6 +2,7 @@
 
 import AdminOfflineToggle from "@/components/AdminOfflineToggle";
 import AgentsPanel from "@/components/AgentsPanel";
+import FinancePanel from "@/components/FinancePanel";
 import { currencyOptions, DEFAULT_CURRENCY } from "@/lib/currency";
 import AppIcon from "@/components/AppIcon";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -47,6 +48,16 @@ interface ClinicData {
   country_code?: string;   // رمز بلد العيادة الدولي (لأرقام واتساب)
   telemedicine_enabled?: boolean;  // ميزة العيادة الأونلاين (تفعيل مدفوع)
   currency?: string;               // عملة العيادة
+  price_override?: number | null;  // سعر يدوي (يتجاوز سعر الخطة الافتراضي)
+  discount_percent?: number | null; // نسبة خصم على سعر الخطة الافتراضي
+}
+
+// السعر الفعلي الشهري للعيادة بالدولار: يدوي > خصم > سعر الخطة
+function effectiveMonthlyPrice(c: ClinicData): number {
+  const base = PLAN_PRICING[c.plan]?.monthly ?? 0;
+  if (c.price_override !== undefined && c.price_override !== null && c.price_override !== 0) return c.price_override;
+  if (c.discount_percent) return +(base * (1 - c.discount_percent / 100)).toFixed(2);
+  return base;
 }
 
 interface Doctor {
@@ -67,7 +78,7 @@ interface Doctor {
 const T = {
   ar: {
     appName: "نبض", adminBadge: "لوحة المدير",
-    nav: { clinics:"العيادات", agents:"الوكلاء" },
+    nav: { clinics:"العيادات", finance:"المالية", agents:"الوكلاء" },
     stats: {
       totalClinics:"إجمالي العيادات", activeClinics:"عيادات نشطة",
       totalUsers:"المستخدمون", monthRevenue:"إيرادات الشهر",
@@ -274,7 +285,7 @@ const T = {
   },
   en: {
     appName: "NABD", adminBadge: "Admin Panel",
-    nav: { clinics:"Clinics", agents:"Agents" },
+    nav: { clinics:"Clinics", finance:"Finance", agents:"Agents" },
     stats: {
       totalClinics:"Total Clinics", activeClinics:"Active Clinics",
       totalUsers:"Total Users", monthRevenue:"Monthly Revenue",
@@ -496,6 +507,8 @@ const PLAN_PRICING: Record<string, { monthly: number; yearly: number }> = {
   shared_basic:      { monthly:7.99,  yearly:79  },   // حتى 2 أطباء
   shared_pro:        { monthly:13.99, yearly:139 },   // حتى 3 أطباء
   shared_enterprise: { monthly:21.99, yearly:219 },   // حتى 5 أطباء (مخصص)
+  pharmacy:          { monthly:49,    yearly:490 },
+  lab:               { monthly:49,    yearly:490 },
 };
 
 // Default max doctors per shared plan
@@ -3421,7 +3434,7 @@ export default function AdminPage() {
 
           <nav style={{ flex:1,padding:"16px 12px" }}>
             {Object.entries(tr.nav).map(([k, v]) => {
-              const icons = { clinics:"🏥", agents:"🤝" }; // rendered via AppIcon
+              const icons = { clinics:"🏥", finance:"💰", agents:"🤝" }; // rendered via AppIcon
               const isActive = activeTab === k;
               return (
                 <button key={k} onClick={() => setActiveTab(k)}
@@ -3542,6 +3555,7 @@ export default function AdminPage() {
               );
             })()}
 
+            {activeTab === "finance" && <FinancePanel isAr={isAr} />}
             {activeTab === "agents" && <AgentsPanel isAr={isAr} />}
 
             {/* CLINICS TAB */}

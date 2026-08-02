@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
       restricted_access_pin,
       telemedicine_enabled,
       currency,
+      price_override,
+      discount_percent,
     } = await req.json();
 
     if (!userId)
@@ -67,6 +69,8 @@ export async function POST(req: NextRequest) {
     if (max_doctors !== undefined && max_doctors !== null)   clinicUpdate.max_doctors   = max_doctors;
     if (telemedicine_enabled !== undefined) clinicUpdate.telemedicine_enabled = telemedicine_enabled;
     if (currency !== undefined && currency) clinicUpdate.currency = currency;
+    if (price_override !== undefined) clinicUpdate.price_override = price_override === null || price_override === "" ? null : Number(price_override);
+    if (discount_percent !== undefined) clinicUpdate.discount_percent = discount_percent === null || discount_percent === "" ? null : Number(discount_percent);
 
     // قفل المدفوعات — نحدّث دائماً (حتى عند إلغاء التفعيل)
     // القاعدة: لا قفل بدون كلمة سر فعلية، وعند الإلغاء تُمسح كلمة السر نهائياً
