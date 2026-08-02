@@ -53,14 +53,6 @@ interface ClinicData {
   billing_cycle?: "monthly" | "yearly" | null; // دورة الفوترة
 }
 
-// السعر الفعلي الشهري للعيادة بالدولار: يدوي > خصم > سعر الخطة
-function effectiveMonthlyPrice(c: ClinicData): number {
-  const base = PLAN_PRICING[c.plan]?.monthly ?? 0;
-  if (c.price_override !== undefined && c.price_override !== null) return c.price_override;
-  if (c.discount_percent) return +(base * (1 - c.discount_percent / 100)).toFixed(2);
-  return base;
-}
-
 interface Doctor {
   id?: number;
   user_id: string;

@@ -63,7 +63,7 @@ const EXPENSE_CATEGORIES: { key: string; ar: string; en: string }[] = [
 
 // السعر الفعلي بدورة الفوترة الخاصة بالعيادة (يدوي > خصم > افتراضي الخطة)
 function effectivePrice(c: ClinicRow): { amount: number; cycle: "monthly" | "yearly" } {
-  const cycle = c.billing_cycle === "yearly" ? "yearly" : "monthly";
+  const cycle = c.billing_cycle === "monthly" ? "monthly" : "yearly";
   const base = PLAN_PRICING[c.plan]?.[cycle] ?? 0;
   if (c.price_override !== undefined && c.price_override !== null) {
     return { amount: c.price_override, cycle };
@@ -160,7 +160,7 @@ export default function FinancePanel({ isAr }: { isAr: boolean }) {
     setSaveErr(false);
     setEditingClinic(c);
     setEditForm({
-      billing_cycle: c.billing_cycle === "yearly" ? "yearly" : "monthly",
+      billing_cycle: c.billing_cycle === "monthly" ? "monthly" : "yearly",
       discount_percent: c.discount_percent != null ? String(c.discount_percent) : "",
       price_override: c.price_override != null ? String(c.price_override) : "",
     });
