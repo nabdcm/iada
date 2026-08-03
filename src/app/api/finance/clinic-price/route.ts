@@ -14,11 +14,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const { id, price_override, discount_percent, billing_cycle } = await req.json();
+    const { id, price_override, discount_percent, billing_cycle, next_billing_date, payment_status } = await req.json();
 
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
     if (billing_cycle && !["monthly", "yearly"].includes(billing_cycle)) {
       return NextResponse.json({ error: "invalid billing_cycle" }, { status: 400 });
+    }
+    if (payment_status && !["paid", "due", "overdue"].includes(payment_status)) {
+      return NextResponse.json({ error: "invalid payment_status" }, { status: 400 });
     }
 
     const update: Record<string, unknown> = {
@@ -26,6 +29,8 @@ export async function POST(req: NextRequest) {
       discount_percent: discount_percent === "" || discount_percent === undefined ? null : Number(discount_percent),
     };
     if (billing_cycle) update.billing_cycle = billing_cycle;
+    if (next_billing_date !== undefined) update.next_billing_date = next_billing_date || null;
+    if (payment_status) update.payment_status = payment_status;
 
     const { data, error } = await supabaseAdmin
       .from("clinics")
