@@ -10,6 +10,7 @@ import { currencySymbol, DEFAULT_CURRENCY } from "@/lib/currency";
 let CUR = currencySymbol(DEFAULT_CURRENCY, true);
 import PageIntro from "@/components/PageIntro";
 import type { Patient, Payment } from "@/lib/supabase";
+import PatientLedgerModal from "@/components/PatientLedgerModal";
 
 // ============================================================
 // NABD - نبض | Payments Page
@@ -1136,6 +1137,10 @@ export default function PaymentsPage() {
   // فلتر نسبة الطبيب: all | withShare | withoutShare — للخطط المشتركة فقط
   const [shareFilter, setShareFilter] = useState<"all"|"withShare"|"withoutShare">("all");
 
+  // ── الرصيد التراكمي / الدفعات الجزئية — منفصل تماماً عن المنطق أعلاه ──
+  const [ledgerUserId, setLedgerUserId] = useState<string>("");
+  const [ledgerPatient, setLedgerPatient] = useState<Patient | null>(null);
+
   // ── قفل صفحة المدفوعات بكلمة سر ────────────────────────────
   const [paymentsLockEnabled,  setPaymentsLockEnabled]  = useState(false);
   const [paymentsLockPassword, setPaymentsLockPassword] = useState("");
@@ -1152,6 +1157,7 @@ export default function PaymentsPage() {
       if (!user) { setLoading(false); return; }
 
       // جلب اسم العيادة من user_metadata أو clinic_profiles
+      setLedgerUserId(user.id);
       const clinicMeta = user.user_metadata?.clinic_name as string | undefined;
       if (clinicMeta) {
         setClinicName(clinicMeta);
@@ -2403,6 +2409,21 @@ ${doctorSettlementRows}
                   <span className="add-btn-text-full">{tr.recordPayment}</span>
                   <span className="add-btn-text-short">{isAr?"دفعة":"Add"}</span>
                 </button>
+                {/* رصيد تراكمي / دفعات جزئية — منفصل تماماً، لا يؤثر على أي حساب أعلاه */}
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const p = patients.find(pp => String(pp.id) === e.target.value);
+                    if (p) setLedgerPatient(p);
+                    e.target.value = "";
+                  }}
+                  className="topbar-secondary-btn hero-glass-btn"
+                  style={{ padding:"9px 14px",background:"rgba(255,255,255,.14)",color:"#fff",border:"1.5px solid rgba(255,255,255,.28)",borderRadius:12,fontFamily:"Rubik,sans-serif",fontSize:13,fontWeight:600,cursor:"pointer" }}
+                  title={isAr?"الرصيد التراكمي":"Running balance"}
+                >
+                  <option value="" disabled>{isAr?"الرصيد التراكمي":"Running balance"}</option>
+                  {patients.map(p => <option key={p.id} value={p.id} style={{ color:"#000" }}>{p.name}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -2999,6 +3020,15 @@ ${doctorSettlementRows}
           </div>
         )}
       </div>
+      {ledgerPatient && ledgerUserId && (
+        <PatientLedgerModal
+          userId={ledgerUserId}
+          patientId={ledgerPatient.id}
+          patientName={ledgerPatient.name}
+          currency={currency}
+          onClose={() => setLedgerPatient(null)}
+        />
+      )}
     </>
   );
 }
