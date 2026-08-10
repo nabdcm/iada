@@ -353,7 +353,7 @@ const T = {
 type PatientForm = {
   name:string; phone:string; gender:string;
   date_of_birth:string; has_diabetes:boolean; has_hypertension:boolean;
-  notes:string;
+  notes:string; clinic_file_number:string;
   extra_fields: Record<string, string | boolean>;
 
 };
@@ -1246,6 +1246,7 @@ function PatientProfileDrawer({ lang, patient, clinicType, plan, onClose }: { la
                         { label:t.dob,    value:patient.date_of_birth?new Date(patient.date_of_birth).toLocaleDateString(isAr?"ar-SA-u-ca-gregory-nu-latn":"en-US",{year:"numeric",month:"long",day:"numeric"}):"—", icon:"🎂" },
                         { label:t.age,    value:calcAge(patient.date_of_birth)!=="—"?`${calcAge(patient.date_of_birth)} ${t.years}`:"—", icon:"🎯" },
                         { label:isAr?"الرقم الطبي":"Medical ID", value:(patient as any).mrn||"—", icon:"🪪" },
+                        { label:isAr?"رقم اضبارة العيادة":"Clinic File #", value:(patient as any).clinic_file_number||"—", icon:"🗂️" },
                       ].map(f=>(
                         <div key={f.label} style={{ background:"#f7f9fc",borderRadius:10,padding:"10px 12px",border:"1.5px solid #eef0f3" }}>
                           <div style={{ fontSize:10,fontWeight:700,color:"#bbb",marginBottom:4 }}>{f.icon} {f.label}</div>
@@ -1639,7 +1640,7 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
     name:patient?.name??"", phone:patient?.phone??"",
     gender:patient?.gender??"", date_of_birth:patient?.date_of_birth??"",
     has_diabetes:patient?.has_diabetes??false, has_hypertension:patient?.has_hypertension??false,
-    notes:patient?.notes??"", extra_fields:{},
+    notes:patient?.notes??"", clinic_file_number:(patient as any)?.clinic_file_number??"", extra_fields:{},
   });
   const [error, setError] = useState("");
 
@@ -1728,6 +1729,9 @@ function PatientModal({ lang, patient, clinicType, onSave, onClose, externalErro
           </div>
           <Field label={tr.modal.dob}>
             <input type="date" value={form.date_of_birth} onChange={e=>setForm(p=>({...p,date_of_birth:e.target.value}))} style={inputSt}/>
+          </Field>
+          <Field label={isAr ? "رقم اضبارة المريض في العيادة" : "Patient's Clinic File Number"}>
+            <input value={form.clinic_file_number} onChange={e=>setForm(p=>({...p,clinic_file_number:e.target.value}))} placeholder={isAr ? "اختياري" : "Optional"} style={inputSt}/>
           </Field>
 
           {/* ── حالات مزمنة عامة ── */}
@@ -1864,6 +1868,7 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
           </div>
           <div style={{ display:"flex",alignItems:"center",gap:8,marginTop:4,flexWrap:"wrap" }}>
             {(p as any).mrn && <span style={{ fontSize:10,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.08)",padding:"2px 7px",borderRadius:8,letterSpacing:.3 }}>{(p as any).mrn}</span>}
+            {(p as any).clinic_file_number && <span style={{ fontSize:10,fontWeight:700,color:"#e67e22",background:"rgba(230,126,34,.08)",padding:"2px 7px",borderRadius:8,letterSpacing:.3 }}>{isAr?"اضبارة: ":"File: "}{(p as any).clinic_file_number}</span>}
             {p.gender&&<span style={{ fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:p.gender==="male"?"rgba(41,128,185,.1)":"rgba(142,68,173,.1)",color:p.gender==="male"?"#2980b9":"#8e44ad" }}>{tr.gender[p.gender as keyof typeof tr.gender]}</span>}
             {age!=="—"&&<span style={{ fontSize:11,color:"#aaa" }}>{age} {tr.years}</span>}
             <span style={{ fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:20,background:`${meta.color}15`,color:meta.color }}><AppIcon glyph={meta.icon} /></span>
@@ -2030,7 +2035,7 @@ export default function PatientsPage() {
   const filtered = patients.filter(p=>{
     if (!showHidden&&p.is_hidden) return false;
     const q=search.toLowerCase();
-    if (q&&!p.name.toLowerCase().includes(q)&&!(p.phone??"").includes(q)&&!((p as any).mrn??"").toLowerCase().includes(q)) return false;
+    if (q&&!p.name.toLowerCase().includes(q)&&!(p.phone??"").includes(q)&&!((p as any).mrn??"").toLowerCase().includes(q)&&!((p as any).clinic_file_number??"").toLowerCase().includes(q)) return false;
     if (filter==="male"&&p.gender!=="male") return false;
     if (filter==="female"&&p.gender!=="female") return false;
     if (filter==="diabetic"&&!p.has_diabetes) return false;
@@ -2067,6 +2072,7 @@ export default function PatientsPage() {
           name:form.name, phone:form.phone||null, gender:form.gender,
           date_of_birth:form.date_of_birth||null, has_diabetes:form.has_diabetes,
           has_hypertension:form.has_hypertension, notes:form.notes||null,
+          clinic_file_number:form.clinic_file_number||null,
           ...(mrn ? { mrn } : {}),
         }).eq("id",id);
         // حفظ extra_fields فقط — تحديث جزئي يحافظ على السجل الطبي وخريطة الأسنان والأشعة
@@ -2099,6 +2105,7 @@ export default function PatientsPage() {
           user_id:userId, name:form.name, phone:form.phone, gender:form.gender,
           date_of_birth:form.date_of_birth||null, has_diabetes:form.has_diabetes,
           has_hypertension:form.has_hypertension, notes:form.notes, is_hidden:false, mrn,
+          clinic_file_number:form.clinic_file_number||null,
         }).select().single();
         if (error) throw error;
         if (newPatient) {
@@ -2371,6 +2378,7 @@ export default function PatientsPage() {
                         </div>
                         <div style={{ fontSize:10,color:"#bbb",marginTop:1,display:"flex",alignItems:"center",gap:5 }}>
                           <span>#{p.id}</span>
+                          {(p as any).clinic_file_number && <span style={{ color:"#e67e22",fontWeight:600 }}>· {isAr?"اضبارة":"File"} {(p as any).clinic_file_number}</span>}
                         </div>
                       </div>
                     </div>
