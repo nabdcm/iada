@@ -2378,15 +2378,15 @@ export default function PatientsPage() {
                         </div>
                         <div style={{ fontSize:10,color:"#bbb",marginTop:1,display:"flex",alignItems:"center",gap:5 }}>
                           <span>#{p.id}</span>
-                          {(p as any).clinic_file_number && <span style={{ color:"#e67e22",fontWeight:600 }}>· {isAr?"اضبارة":"File"} {(p as any).clinic_file_number}</span>}
                         </div>
                       </div>
                     </div>
                     {/* الرقم الطبي */}
-                    <div style={{ paddingLeft:12 }}>
+                    <div style={{ paddingLeft:12,display:"flex",flexDirection:"column",gap:3 }}>
                       {(p as any).mrn
-                        ? <span style={{ fontSize:12,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.07)",padding:"3px 9px",borderRadius:7,letterSpacing:.4 }}>{(p as any).mrn}</span>
+                        ? <span style={{ fontSize:12,fontWeight:700,color:"#0863ba",background:"rgba(8,99,186,.07)",padding:"3px 9px",borderRadius:7,letterSpacing:.4,width:"fit-content" }}>{(p as any).mrn}</span>
                         : <span style={{ fontSize:12,color:"#ddd" }}>—</span>}
+                      {(p as any).clinic_file_number && <span style={{ fontSize:10.5,fontWeight:700,color:"#e67e22",background:"rgba(230,126,34,.08)",padding:"2px 8px",borderRadius:7,letterSpacing:.3,width:"fit-content" }}>{isAr?"اضبارة: ":"File: "}{(p as any).clinic_file_number}</span>}
                     </div>
                     {/* الجنس */}
                     <div style={{ paddingLeft:12 }}>
