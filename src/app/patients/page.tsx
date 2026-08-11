@@ -250,7 +250,7 @@ const T = {
     table:{ name:"الاسم", phone:"الهاتف", gender:"الجنس", dob:"تاريخ الميلاد", conditions:"الحالات", actions:"الإجراءات" },
     gender:{ male:"ذكر", female:"أنثى" },
     conditions:{ diabetes:"سكري", hypertension:"ضغط" },
-    actions:{ edit:"تعديل", delete:"حذف", hide:"إخفاء", show:"إظهار", viewAppointments:"المواعيد", whatsapp:"واتساب", profile:"الملف الكامل" },
+    actions:{ edit:"تعديل", delete:"حذف", hide:"إخفاء", show:"إظهار", viewAppointments:"المواعيد", whatsapp:"واتساب", call:"اتصال", profile:"الملف الكامل" },
     noPatients:"لا يوجد مرضى مسجلون",
     noResults:"لا توجد نتائج مطابقة",
     hiddenBadge:"مخفي",
@@ -304,7 +304,7 @@ const T = {
     table:{ name:"Name", phone:"Phone", gender:"Gender", dob:"Date of Birth", conditions:"Conditions", actions:"Actions" },
     gender:{ male:"Male", female:"Female" },
     conditions:{ diabetes:"Diabetes", hypertension:"Hypertension" },
-    actions:{ edit:"Edit", delete:"Delete", hide:"Hide", show:"Show", viewAppointments:"Appointments", whatsapp:"WhatsApp", profile:"Full Profile" },
+    actions:{ edit:"Edit", delete:"Delete", hide:"Hide", show:"Show", viewAppointments:"Appointments", whatsapp:"WhatsApp", call:"Call", profile:"Full Profile" },
     noPatients:"No patients registered",
     noResults:"No matching results",
     hiddenBadge:"Hidden",
@@ -1899,6 +1899,10 @@ function PatientCard({ p, lang, isAr, calcAge, clinicType, onEdit, onDelete, onT
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               <span style={{ fontSize:9,color:"#25d366",fontWeight:600 }}>{tr.actions.whatsapp}</span>
             </button>
+            <a href={p.phone?`tel:${p.phone}`:undefined} aria-disabled={!p.phone} style={{ padding:"10px 0",borderRadius:10,border:"none",cursor:p.phone?"pointer":"not-allowed",background:p.phone?"rgba(8,99,186,.1)":"#f5f5f5",display:"flex",flexDirection:"column",alignItems:"center",gap:4,opacity:p.phone?1:0.4,textDecoration:"none",pointerEvents:p.phone?"auto":"none" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span style={{ fontSize:9,color:"#0863ba",fontWeight:600 }}>{tr.actions.call}</span>
+            </a>
           </div>
         </div>
       )}
@@ -2417,6 +2421,20 @@ export default function PatientsPage() {
                         <button disabled title={tr.actions.whatsapp} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:8,border:"1.5px solid #eee",background:"#f9f9f9",cursor:"not-allowed",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#ccc",opacity:.5,whiteSpace:"nowrap" }}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="#ccc"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                           WhatsApp
+                        </button>
+                      )}
+                      {/* زر الاتصال */}
+                      {p.phone?(
+                        <a href={`tel:${p.phone}`} title={tr.actions.call} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:8,border:"1.5px solid rgba(8,99,186,.3)",background:"rgba(8,99,186,.08)",cursor:"pointer",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#0863ba",whiteSpace:"nowrap",transition:"all .15s",textDecoration:"none" }}
+                          onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="rgba(8,99,186,.16)"}
+                          onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="rgba(8,99,186,.08)"}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0863ba" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                          {tr.actions.call}
+                        </a>
+                      ):(
+                        <button disabled title={tr.actions.call} style={{ display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:8,border:"1.5px solid #eee",background:"#f9f9f9",cursor:"not-allowed",fontFamily:"Rubik,sans-serif",fontSize:11,fontWeight:700,color:"#ccc",opacity:.5,whiteSpace:"nowrap" }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                          {tr.actions.call}
                         </button>
                       )}
                       {/* أزرار أيقونات فقط: تعديل، إخفاء، حذف */}
