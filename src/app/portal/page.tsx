@@ -208,20 +208,30 @@ function ClinicLoginForm({ lang, tr, redirectTo }: {
         return;
       }
       // إصدار cookie جلسة موقّع من الخادم حتى يسمح الـ middleware بالمرور
+      // مهلة 6 ثوانٍ — إن تأخر الخادم لا نعلّق الواجهة، AuthGuard يعيد المحاولة لاحقاً
       if (authData?.session?.access_token) {
         try {
-          await fetch("/api/session-cookie", { method: "POST", headers: { Authorization: `Bearer ${authData.session.access_token}` } });
+          await fetch("/api/session-cookie", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authData.session.access_token}` },
+            signal: AbortSignal.timeout(6000),
+          });
         } catch { /* non-blocking */ }
       }
       // ── التحقق من نوع الحساب وتوجيه كل نوع للمسار الصحيح ──
       // metadata أولاً، ثم fallback من جدول clinics (حسابات الصيدلية القديمة بلا account_type)
       let accountType: string | undefined = authData?.user?.user_metadata?.account_type;
       if (!accountType && authData?.user?.id) {
-        const { data: clinicRow } = await supabase
+        // مهلة 6 ثوانٍ — عند التأخر نفترض عيادة ونترك AuthGuard يصحّح المسار
+        const query = supabase
           .from("clinics")
           .select("account_type, plan")
           .eq("user_id", authData.user.id)
-          .maybeSingle();
+          .maybeSingle()
+          .then(r => r.data)
+          .catch(() => null);
+        const timeout = new Promise<null>(r => setTimeout(() => r(null), 6000));
+        const clinicRow = await Promise.race([query, timeout]);
         accountType = clinicRow?.account_type
           ?? (clinicRow?.plan === "pharmacy" ? "pharmacy" : "clinic");
       }

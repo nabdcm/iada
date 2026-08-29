@@ -12,7 +12,12 @@ import { refreshOfflineFlag } from "@/lib/offline";
 async function issueSessionCookie(accessToken?: string) {
   if (!accessToken) return;
   try {
-    await fetch("/api/session-cookie", { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
+    // مهلة 6 ثوانٍ — لا نحجب الدخول إن تأخر الخادم
+    await fetch("/api/session-cookie", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(6000),
+    });
   } catch { /* non-blocking */ }
 }
 
@@ -56,12 +61,16 @@ export default function AuthGuard({ children, redirectTo = "/login" }: Props) {
 
         // ── فحص حالة الاشتراك (تجميد/تعليق) — بدون تسجيل خروج ──
         try {
-           
-          const { data: row } = await supabase
+          // مهلة 6 ثوانٍ — إن تأخر الفحص لا نمنع الدخول
+          const query = supabase
             .from("clinics")
             .select("status")
             .eq("user_id", session.user.id)
-            .maybeSingle();
+            .maybeSingle()
+            .then(r => r.data)
+            .catch(() => null);
+          const timeout = new Promise<null>(r => setTimeout(() => r(null), 6000));
+          const row = await Promise.race([query, timeout]);
           if (!cancelled && row?.status === "inactive") {
             setStatus("suspended");
             return;
