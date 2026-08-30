@@ -2824,9 +2824,12 @@ const DataToolsModal = ({ lang, clinics, onClose }: DataToolsModalProps) => {
 // ── Admin API helper ────────────────────────────────────────
 // ── Admin API helper — يُرسل x-admin-secret من server env فقط ─
 // الـ secret لم يعد NEXT_PUBLIC — يُرسَل عبر الـ cookie بدلاً منه
+const ADMIN_FETCH_TIMEOUT_MS = 45_000;
 const adminFetch = async (url: string, options: RequestInit = {}) => {
   const res = await fetch(url, {
     ...options,
+    // مهلة زمنية حتى لا تعلّق الواجهة إن لم يستجب الخادم
+    signal: options.signal ?? AbortSignal.timeout(ADMIN_FETCH_TIMEOUT_MS),
     credentials: "include", // يُرسل الـ httpOnly cookie تلقائياً
     headers: {
       "Content-Type": "application/json",
@@ -3314,10 +3317,12 @@ export default function AdminPage() {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         console.error("delete failed:", json.error);
+        alert(json.error || (isAr ? "حدث خطأ أثناء الحذف — لم يُحذف شيء" : "Error during deletion — nothing was deleted"));
         return;
       }
     } catch (err) {
       console.error("delete-clinic error:", err);
+      alert(isAr ? "انتهت مهلة الاتصال — لم يُحذف شيء، أعد المحاولة" : "Connection timed out — nothing was deleted, please retry");
       return;
     }
     setDeleteClinic(null);

@@ -7,7 +7,7 @@
 //   • HS256 (المشاريع القديمة): بـ SUPABASE_JWT_SECRET إن وُجد
 // وإن تعذّر التحقق محلياً نعود لـ getUser مع مهلة زمنية — لا يعلّق الطلب أبداً.
 import { NextResponse } from "next/server";
-import { createHmac, createPublicKey, timingSafeEqual, verify as cryptoVerify, type KeyObject } from "crypto";
+import { createHmac, createPublicKey, timingSafeEqual, verify as cryptoVerify, type KeyObject, type JsonWebKey as NodeJwk } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -26,7 +26,7 @@ const REMOTE_TIMEOUT_MS = 8000;
 const JWKS_TIMEOUT_MS   = 3000;
 
 // المفتاح العام الحالي للمشروع (من /auth/v1/.well-known/jwks.json) — احتياط إن تعذّر الجلب
-const EMBEDDED_JWKS: JsonWebKey[] = [
+const EMBEDDED_JWKS: NodeJwk[] = [
   {
     kty: "EC", crv: "P-256", alg: "ES256", use: "sig",
     kid: "0d194f5b-11b5-400d-a935-763ba7ce5db5",
@@ -35,7 +35,7 @@ const EMBEDDED_JWKS: JsonWebKey[] = [
   },
 ];
 
-type Jwk = JsonWebKey & { kid?: string; alg?: string };
+type Jwk = NodeJwk & { kid?: string; alg?: string };
 let jwksCache: { keys: Jwk[]; fetchedAt: number } = { keys: EMBEDDED_JWKS as Jwk[], fetchedAt: 0 };
 
 async function getJwks(forceRefresh = false): Promise<Jwk[]> {
@@ -110,7 +110,7 @@ async function verifyJwtLocally(token: string): Promise<string | null | undefine
       if (!candidates.length) return undefined;
       for (const jwk of candidates) {
         let key: KeyObject;
-        try { key = createPublicKey({ key: jwk as JsonWebKey, format: "jwk" }); } catch { continue; }
+        try { key = createPublicKey({ key: jwk, format: "jwk" }); } catch { continue; }
         try {
           if (cryptoVerify("sha256", data, { key, dsaEncoding: "ieee-p1363" }, sig)) return true;
         } catch { /* جرّب المفتاح التالي */ }
