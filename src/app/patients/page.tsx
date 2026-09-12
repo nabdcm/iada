@@ -1930,7 +1930,8 @@ export default function PatientsPage() {
   // ── نوع العيادة — يُقرأ من جدول clinics ─────────────────
   const [clinicType, setClinicTypeState] = useState<ClinicType>("general");
   const [clinicMeta, setClinicMeta]      = useState(CLINIC_TYPE_META.general);
-  const [plan,       setPlan]            = useState<PlanType>("basic");
+  // null = لم تُحمَّل الباقة بعد — لا تُعرض أي حدود قبل معرفتها الفعلية
+  const [plan,       setPlan]            = useState<PlanType | null>(null);
   const [maxDoctors, setMaxDoctors]      = useState<number>(2); // الحد المخصص من الأدمن
   // للخطط المشتركة: قائمة الأطباء + الطبيب المحدد لتصفية المرضى
   const [doctors,        setDoctors]        = useState<{id:string; name:string; color?:string; is_active?:boolean}[]>([]);
@@ -2215,7 +2216,7 @@ export default function PatientsPage() {
 
       <div style={{ fontFamily:"'Rubik',sans-serif",direction:isAr?"rtl":"ltr",minHeight:"100vh",background:"#f7f9fc" }}>
         <PageIntro pageKey="patients" lang={lang} />
-        <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
+        <SharedSidebar lang={lang} setLang={setLang} activePage="patients" plan={plan ?? "basic"} planLoading={loading} onCollapse={(c) => setSidebarWidth(c ? 70 : 240)} />
 
         <main className="main-anim main-content" style={{ minHeight:"100vh",padding:"0 32px 48px",transition:"margin .3s" }}>
 
@@ -2237,7 +2238,8 @@ export default function PatientsPage() {
                   <span className="refresh-btn-text">{isAr?"تحديث":"Refresh"}</span>
                 </button>
                 {(() => {
-                  const limit = PLAN_LIMITS[plan];
+                  // قبل تحميل الباقة لا نفرض حداً — نتجنب تعطيل الإضافة خطأً لعملاء الشاملة
+                  const limit = plan ? PLAN_LIMITS[plan] : Infinity;
                   const count = patients.filter(p=>!p.is_hidden).length;
                   const full  = limit !== Infinity && count >= limit;
                   return (
@@ -2257,6 +2259,7 @@ export default function PatientsPage() {
 
             {/* ── عداد حد المرضى v2 ── */}
             {(() => {
+              if (!plan) return null; // لا يُعرض العداد قبل معرفة الباقة الحقيقية
               const limit = PLAN_LIMITS[plan];
               const count = patients.filter(p=>!p.is_hidden).length;
               if (limit === Infinity) return null;
@@ -2496,7 +2499,7 @@ export default function PatientsPage() {
           <PatientModal lang={lang} patient={editPatient} clinicType={clinicType} onSave={handleSave} externalError={saveError} onClose={()=>{ setAddModal(false);setEditPatient(null);setSaveError(""); }}/>
         )}
         {deletePatient&&<DeleteModal lang={lang} patient={deletePatient} onConfirm={handleDelete} onClose={()=>setDeletePatient(null)}/>}
-        {profilePatient&&<PatientProfileDrawer lang={lang} patient={profilePatient} clinicType={clinicType} plan={plan} onClose={()=>setProfilePatient(null)}/>}
+        {profilePatient&&<PatientProfileDrawer lang={lang} patient={profilePatient} clinicType={clinicType} plan={plan ?? "basic"} onClose={()=>setProfilePatient(null)}/>}
 
         {reportEditor&&(
           <div style={{ position:"fixed",inset:0,zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>

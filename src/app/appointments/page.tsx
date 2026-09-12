@@ -39,6 +39,12 @@ type DoctorSchedule = {
   notes: string;
 };
 
+// يوم الأسبوع لتاريخ "YYYY-MM-DD" كتاريخ تقويمي محلي — مستقل عن المنطقة الزمنية للجهاز
+function localDayIndex(dateStr: string): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1).getDay();
+}
+
 function checkDoctorAvailability(
   schedule: DoctorSchedule,
   dateStr: string,
@@ -51,7 +57,9 @@ function checkDoctorAvailability(
     return { available: false, reasonAr: "الطبيب في إجازة في هذا اليوم", reasonEn: "Doctor is on vacation on this day" };
   }
   // 2. يوم العطلة
-  const dayIdx  = new Date(dateStr).getDay();
+  // تحليل يدوي: new Date("YYYY-MM-DD") يُفسَّر UTC بينما getDay() محلي،
+  // فيفحص يوماً خاطئاً على الأجهزة ذات منطقة زمنية غرب غرينتش (آيباد بإعدادات أمريكية مثلاً)
+  const dayIdx  = localDayIndex(dateStr);
   const workDay = schedule.days[dayIdx];
   if (!workDay || !workDay.enabled) {
     return { available: false, reasonAr: "الطبيب لا يعمل في هذا اليوم", reasonEn: "Doctor does not work on this day" };
@@ -2145,7 +2153,7 @@ export default function AppointmentsPage() {
                       const isDoctorOff = isSharedPlan(plan) && selectedDoctorId !== "all" && (() => {
                         const sch = doctorSchedules.find(s => s.doctor_id === Number(selectedDoctorId));
                         if (!sch) return false;
-                        const dayIdx = new Date(k).getDay();
+                        const dayIdx = localDayIndex(k);
                         return sch.vacations.includes(k) || !sch.days[dayIdx]?.enabled;
                       })();
                       return (
