@@ -312,7 +312,9 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
       const { data } = await supabase
         .from("doctor_schedules")
         .select("*")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: true, nullsFirst: true })
+        .order("id", { ascending: true });
       if (data) {
         const map: Record<number, DoctorSchedule> = {};
         for (const row of data) {
@@ -359,40 +361,34 @@ function ScheduleTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors:
     const daysJson = JSON.parse(JSON.stringify(sch.days));
     const vacationsJson = Array.isArray(sch.vacations) ? sch.vacations : [];
 
-    if (sch.id) {
-      // عند التحديث: لا نرسل user_id أو doctor_id (immutable / RLS protected)
-      const updatePayload = {
-        days: daysJson,
-        vacations: vacationsJson,
-        appointment_duration: sch.appointment_duration,
-        max_daily_appointments: sch.max_daily_appointments,
-        notes: sch.notes ?? "",
-        updated_at: new Date().toISOString(),
-      };
-      const { error } = await supabase
-        .from("doctor_schedules")
-        .update(updatePayload)
-        .eq("id", sch.id)
-        .eq("user_id", userId); // ضمان الأمان عبر user_id في الـ filter
-      if (error) {
-        console.error("Save error:", error.message, error.details, error.hint);
-        setSaveStatus(p => ({ ...p, [doctorId]: "idle" }));
-        return;
-      }
+    // نحدّث كل صفوف هذا الطبيب (قد توجد صفوف مكررة) حتى تقرأ كل الصفحات نفس الجدول
+    const updatePayload = {
+      days: daysJson,
+      vacations: vacationsJson,
+      appointment_duration: sch.appointment_duration,
+      max_daily_appointments: sch.max_daily_appointments,
+      notes: sch.notes ?? "",
+      updated_at: new Date().toISOString(),
+    };
+    const { data: updatedRows, error: updErr } = await supabase
+      .from("doctor_schedules")
+      .update(updatePayload)
+      .eq("doctor_id", doctorId)
+      .eq("user_id", userId)
+      .select("id");
+    if (updErr) {
+      console.error("Save error:", updErr.message, updErr.details, updErr.hint);
+      setSaveStatus(p => ({ ...p, [doctorId]: "idle" }));
+      return;
+    }
+    if (updatedRows && updatedRows.length > 0) {
+      const keepId = updatedRows[updatedRows.length - 1].id;
+      setSchedules(prev => ({ ...prev, [doctorId]: { ...sch, id: keepId } }));
     } else {
-      // عند الإنشاء: نرسل كل الحقول
-      const insertPayload = {
-        doctor_id: doctorId,
-        user_id: userId,
-        days: daysJson,
-        vacations: vacationsJson,
-        appointment_duration: sch.appointment_duration,
-        max_daily_appointments: sch.max_daily_appointments,
-        notes: sch.notes ?? "",
-      };
+      // لا يوجد صف بعد: ننشئ واحداً
       const { data, error } = await supabase
         .from("doctor_schedules")
-        .insert(insertPayload)
+        .insert({ doctor_id: doctorId, user_id: userId, ...updatePayload })
         .select()
         .single();
       if (error) {
@@ -641,7 +637,8 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
   useEffect(() => {
     if (!doctors.length) return;
     const fetchSchedules = async () => {
-      const { data } = await supabase.from("doctor_schedules").select("*").eq("user_id", userId);
+      const { data } = await supabase.from("doctor_schedules").select("*").eq("user_id", userId)
+        .order("updated_at", { ascending: true, nullsFirst: true }).order("id", { ascending: true });
       if (data) {
         const map: Record<number, DoctorSchedule> = {};
         for (const row of data) {
@@ -679,7 +676,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
       notes: updated.notes,
     };
     if (sch.id) {
-      await supabase.from("doctor_schedules").update(payload).eq("id", sch.id);
+      await supabase.from("doctor_schedules").update({ ...payload, updated_at: new Date().toISOString() }).eq("doctor_id", selectedDoctorId).eq("user_id", userId);
       setSchedules(prev => ({ ...prev, [selectedDoctorId]: { ...updated } }));
     } else {
       const { data } = await supabase.from("doctor_schedules").insert(payload).select().single();
@@ -694,7 +691,7 @@ function VacationsTab({ lang, doctors, userId, isMobile }: { lang: Lang; doctors
     const updated = { ...sch, vacations: sch.vacations.filter(d => d !== dateStr) };
     setSchedules(prev => ({ ...prev, [selectedDoctorId]: updated }));
     if (sch.id) {
-      await supabase.from("doctor_schedules").update({ vacations: updated.vacations }).eq("id", sch.id);
+      await supabase.from("doctor_schedules").update({ vacations: updated.vacations, updated_at: new Date().toISOString() }).eq("doctor_id", selectedDoctorId).eq("user_id", userId);
     }
   };
 
@@ -1458,9 +1455,11 @@ export default function ClinicManagementPage() {
       for (let i = 0; i < 7; i++) if (!(i in result)) result[i] = defaultWorkDay(i >= 1 && i <= 4);
       return result;
     };
-    supabase.from("doctor_schedules").select("*").eq("user_id", userId).then(({ data }) => {
+    supabase.from("doctor_schedules").select("*").eq("user_id", userId)
+      .order("updated_at", { ascending: false, nullsFirst: false }).order("id", { ascending: false }).then(({ data }) => {
       if (data) {
-        setSchedulesForStats(data.map(row => ({
+        const seenSt = new Set<number>();
+        setSchedulesForStats(data.filter(r => !seenSt.has(r.doctor_id) && !!seenSt.add(r.doctor_id)).map(row => ({
           ...row,
           days: normalizeStDays(row.days),
           vacations: typeof row.vacations === "string" ? JSON.parse(row.vacations) : (row.vacations ?? []),
