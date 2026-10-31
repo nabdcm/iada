@@ -285,7 +285,10 @@ export default function BookingPage({ params }: { params: Promise<{ clinicId: st
         .from("doctor_schedules")
         .select("*")
         .eq("doctor_id", doctorId)
-        .single();
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (data) {
         setDoctorSchedule({
           days: typeof data.days === "string" ? JSON.parse(data.days) : (data.days ?? {}),
