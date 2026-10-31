@@ -53,7 +53,10 @@ export async function getDoctorSchedule(
     .select("*")
     .eq("doctor_id", doctorId)
     .eq("user_id", userId)
-    .single();
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (error || !data) return null;
 
