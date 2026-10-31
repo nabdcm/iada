@@ -1626,9 +1626,13 @@ export default function AppointmentsPage() {
             const { data: schedData } = await supabase
               .from("doctor_schedules")
               .select("*")
-              .eq("user_id", user.id);
+              .eq("user_id", user.id)
+              .order("updated_at", { ascending: false, nullsFirst: false })
+              .order("id", { ascending: false });
             if (schedData) {
-              setDoctorSchedules(schedData.map(row => ({
+              // صف واحد (الأحدث) لكل طبيب
+              const seen = new Set<number>();
+              setDoctorSchedules(schedData.filter(r => !seen.has(r.doctor_id) && !!seen.add(r.doctor_id)).map(row => ({
                 ...row,
                 days:      typeof row.days      === "string" ? JSON.parse(row.days)      : row.days,
                 vacations: typeof row.vacations === "string" ? JSON.parse(row.vacations) : (row.vacations ?? []),
